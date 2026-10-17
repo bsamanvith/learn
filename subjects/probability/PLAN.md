@@ -182,7 +182,7 @@ Each part lists **concepts**, **signature visuals** (🎛 interactive, 🎞 anim
 
 | Source | Role | Notes |
 |---|---|---|
-| Blitzstein & Hwang, *Introduction to Probability* (2nd ed., CRC) | **Primary spine** | Story proofs, conditioning-first; free PDF and Stat 110 lectures/problem sets from the authors |
+| Blitzstein & Hwang, *Introduction to Probability* (2nd ed., CRC) | **Primary spine** | Story proofs, conditioning-first; Stat 110 lectures + problem sets online; a free download is listed on Stanford Stats 116's reading list |
 | Bertsekas & Tsitsiklis, *Introduction to Probability* (2nd ed., Athena) | Second voice | Engineering style, clear; MIT 6.041 OCW lectures + recitations |
 | Ross, *A First Course in Probability* | Problem bank | Huge set of exercises incl. theoretical problems |
 | Grimmett & Stirzaker, *Probability and Random Processes* | Depth for Parts 6–8 | Rigorous, excellent problems (with companion *One Thousand Exercises*) |

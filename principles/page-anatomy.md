@@ -39,9 +39,9 @@ Every chapter file starts with:
 ---
 title: Conditional probability
 part: 2
-chapter: 2.1
-prerequisites: [1.2, 1.3]
-leads_to: [2.2, 2.3, 5.4]
+chapter: "2.1"                 # quoted: YAML would read 2.10 as 2.1
+prerequisites: ["1.2", "1.3"]
+leads_to: ["2.2", "2.3", "5.4"]
 status: draft   # idea | draft | reviewed | polished
 ---
 ```

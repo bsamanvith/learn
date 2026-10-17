@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lattice Paths</title>
+<link rel="stylesheet" href="../../../tools/widgets/base.css">
+<style>
+  .sum { font: 15px ui-monospace, monospace; background: var(--panel); border-radius: 8px; padding: 8px 12px; overflow-x: auto; white-space: nowrap; }
+</style>
+</head>
+<body>
+<!-- Chapter 1.4. Question: "Why do the same numbers (binomial coefficients) count so many different things?" -->
+<h3>Counting paths two ways</h3>
+<p class="question">Walk from the bottom-left corner to the top-right, one step <b>right</b> or <b>up</b> at a time.
+Each dot shows how many routes reach it. Every route crosses the <span class="both">purple diagonal</span> at exactly one dot —
+so splitting by crossing point counts the same routes a second way.</p>
+
+<div class="controls">
+  <label>right steps a <input id="a" type="range" min="1" max="8" step="1" value="5"> <b id="a-value"></b></label>
+  <label>up steps b <input id="b" type="range" min="1" max="8" step="1" value="4"> <b id="b-value"></b></label>
+  <label>diagonal t <input id="t" type="range" min="0" max="16" step="1" value="4"> <b id="t-value"></b></label>
+  <button id="walk">Random route</button>
+</div>
+
+<svg id="grid" viewBox="0 0 460 400" role="img" aria-label="Grid of lattice points labelled with path counts"></svg>
+<div class="sum" id="sum"></div>
+<p class="caption" id="note"></p>
+<p class="caption">Each number is the sum of the one to its left and the one below (you arrive from one or the other) — that's
+<b>Pascal's rule</b>, and tilting the grid 45° gives Pascal's triangle. The diagonal split is <b>Vandermonde's identity</b>.</p>
+
+<script src="../../../tools/widgets/lib.js"></script>
+<script>
+  const state = { a: 5, b: 4, t: 4, path: null, seed: 2 };
+  const C = (n, k) => { if (k < 0 || k > n) return 0; let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); };
+
+  function draw(s) {
+    const c = Learn.palette(), svg = document.getElementById("grid");
+    s.t = Math.min(s.t, s.a + s.b);
+    document.getElementById("t").max = s.a + s.b; document.getElementById("t-value").textContent = s.t;
+    svg.innerHTML = "";
+    const step = Math.min(380 / s.a, 340 / s.b, 60), x0 = 40, y0 = 34 + s.b * step;
+    const X = (i) => x0 + i * step, Y = (j) => y0 - j * step;
+    svg.setAttribute("viewBox", `0 0 ${x0 * 2 + s.a * step} ${y0 + 30}`);
+    for (let i = 0; i <= s.a; i++) Learn.el("line", { x1: X(i), x2: X(i), y1: Y(0), y2: Y(s.b), stroke: c.muted, opacity: 0.4 }, svg);
+    for (let j = 0; j <= s.b; j++) Learn.el("line", { x1: X(0), x2: X(s.a), y1: Y(j), y2: Y(j), stroke: c.muted, opacity: 0.4 }, svg);
+    // diagonal i + j = t
+    const lo = Math.max(0, s.t - s.b), hi = Math.min(s.a, s.t);
+    Learn.el("line", { x1: X(lo) - 10, y1: Y(s.t - lo) - 10, x2: X(hi) + 10, y2: Y(s.t - hi) + 10, stroke: c.both, "stroke-width": 10, opacity: 0.25, "stroke-linecap": "round" }, svg);
+    if (s.path) {
+      let i = 0, j = 0; const pts = [`${X(0)},${Y(0)}`];
+      for (const m of s.path) { m === "R" ? i++ : j++; pts.push(`${X(i)},${Y(j)}`); }
+      Learn.el("polyline", { points: pts.join(" "), fill: "none", stroke: c.a, "stroke-width": 4, "stroke-linejoin": "round", opacity: 0.85 }, svg);
+    }
+    const r = Math.min(14, step / 2.6);
+    for (let i = 0; i <= s.a; i++) for (let j = 0; j <= s.b; j++) {
+      const onDiag = i + j === s.t;
+      Learn.el("circle", { cx: X(i), cy: Y(j), r, fill: onDiag ? c.both : c.panel, stroke: onDiag ? c.both : c.muted }, svg);
+      Learn.el("text", { x: X(i), y: Y(j) + 4, "text-anchor": "middle", "font-size": Math.min(12, r * 0.9), fill: onDiag ? "#fff" : c.fg, text: C(i + j, i) }, svg);
+    }
+    Learn.el("text", { x: X(0), y: Y(0) + r + 14, "text-anchor": "middle", fill: c.muted, "font-size": 11, text: "start" }, svg);
+    Learn.el("text", { x: X(s.a), y: Y(s.b) - r - 6, "text-anchor": "middle", fill: c.muted, "font-size": 11, text: "end" }, svg);
+
+    // Vandermonde decomposition
+    const terms = [];
+    let total = 0;
+    for (let i = lo; i <= hi; i++) { const v = C(s.t, i) * C(s.a + s.b - s.t, s.a - i); total += v; terms.push(`${C(s.t, i)}·${C(s.a + s.b - s.t, s.a - i)}`); }
+    document.getElementById("sum").innerHTML =
+      `routes = C(${s.a + s.b}, ${s.a}) = <b>${C(s.a + s.b, s.a)}</b><br>` +
+      `split at diagonal t=${s.t}: ${terms.join(" + ")} = <b>${total}</b>`;
+    document.getElementById("note").innerHTML =
+      `A route is a word of ${s.a} R's and ${s.b} U's, so there are C(${s.a + s.b}, ${s.a}) of them. ` +
+      `Through the diagonal dot with i right-steps: C(${s.t}, i) ways to reach it times C(${s.a + s.b - s.t}, ${s.a}−i) ways to finish.` +
+      (s.path ? ` Your random route: <b>${s.path.join("")}</b>.` : "");
+  }
+
+  document.getElementById("walk").onclick = () => {
+    const r = Learn.rng(state.seed++);
+    state.path = Learn.shuffle([...Array(state.a).fill("R"), ...Array(state.b).fill("U")], r);
+    draw(state);
+  };
+  Learn.slider("a", state, "a", (s) => { s.path = null; draw(s); });
+  Learn.slider("b", state, "b", (s) => { s.path = null; draw(s); });
+  Learn.slider("t", state, "t", draw);
+  Learn.onThemeChange(() => draw(state));
+</script>
+</body>
+</html>

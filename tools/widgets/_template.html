@@ -4,22 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Coin Flip Convergence</title>
-<style>
-  :root {
-    --bg: #fdfcf9; --fg: #1f2328; --muted: #8b949e;
-    --event-a: #2f6feb; --event-b: #e8833a; --event-both: #8e5cd9;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #15171a; --fg: #e6edf3; --muted: #6e7681;
-            --event-a: #58a6ff; --event-b: #f0a35e; --event-both: #b392f0; }
-  }
-  body { background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif;
-         max-width: 720px; margin: 0 auto; padding: 16px; }
-  .controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; margin: 12px 0; }
-  button { font: inherit; padding: 4px 12px; cursor: pointer; }
-  svg { width: 100%; height: auto; display: block; }
-  .caption { color: var(--muted); font-size: 14px; }
-</style>
+<link rel="stylesheet" href="base.css">
 </head>
 <body>
 <!--
@@ -28,6 +13,7 @@
   Copy this file next to a chapter, keep the structure, replace the question and draw().
 -->
 <h3>Does the fraction of heads settle down?</h3>
+<p class="question">Flip a coin many times and track the fraction of heads.</p>
 
 <div class="controls">
   <label>p (chance of heads) <input id="p" type="range" min="0.05" max="0.95" step="0.05" value="0.5">

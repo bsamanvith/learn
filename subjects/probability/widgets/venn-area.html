@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Area Is Probability</title>
+<link rel="stylesheet" href="../../../tools/widgets/base.css">
+<style>
+  :root { --event-c: #1f9e89; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --event-c: #4fd1b5; } }
+  .c { color: var(--event-c); }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 640px) { .wrap { grid-template-columns: 1fr; } }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  td { padding: 4px 6px; border-bottom: 1px solid var(--panel); }
+  td:last-child { text-align: right; }
+  tr.total td { font-weight: 700; border-top: 2px solid var(--muted); }
+</style>
+</head>
+<body>
+<!-- Chapter 1.2. Question: "Why is P(A ∪ B) = P(A) + P(B) − P(A ∩ B)?" -->
+<h3>Area is probability</h3>
+<p class="question">The square is the sample space Ω with total area 1. Throw a dart uniformly at random:
+the chance it lands in an event is that event's area. <b>Drag the circles</b>; resize them with the sliders.</p>
+
+<div class="controls">
+  <label><span class="a">A</span> radius <input id="ra" type="range" min="0.05" max="0.5" step="0.01" value="0.28"></label>
+  <label><span class="b">B</span> radius <input id="rb" type="range" min="0.05" max="0.5" step="0.01" value="0.22"></label>
+  <label><input id="useC" type="checkbox"> add <span class="c">C</span></label>
+  <button id="darts">Throw 500 darts</button>
+  <button id="clear">Clear darts</button>
+</div>
+
+<div class="wrap">
+  <svg id="sq" viewBox="0 0 320 320" role="img" aria-label="Unit square with draggable circles A and B"></svg>
+  <div>
+    <table id="tbl"></table>
+    <p class="caption" id="dartinfo"></p>
+  </div>
+</div>
+<p class="caption">Adding P(A) and P(B) counts the purple overlap twice, so subtract it once. With three events,
+pairwise overlaps are subtracted — but then the centre (A∩B∩C) has been added 3 times and removed 3 times, so it's added back.
+That alternating pattern is <b>inclusion–exclusion</b>.</p>
+
+<script src="../../../tools/widgets/lib.js"></script>
+<script>
+  const S = 300, PAD = 10; // square side in px, offset
+  const state = {
+    circles: { A: { x: 0.38, y: 0.45, r: 0.28 }, B: { x: 0.64, y: 0.55, r: 0.22 }, C: { x: 0.5, y: 0.75, r: 0.2 } },
+    useC: false, darts: [], seed: 3,
+  };
+  const svg = document.getElementById("sq");
+  const colourOf = () => { const p = Learn.palette(); p.c = getComputedStyle(document.documentElement).getPropertyValue("--event-c").trim(); return p; };
+  const inside = (cir, x, y) => (x - cir.x) ** 2 + (y - cir.y) ** 2 <= cir.r ** 2;
+
+  // Areas by fine grid (400×400 cell centres): exact to ~3 decimals, and shows the idea of "measure by counting".
+  function areas() {
+    const G = 400, keys = state.useC ? ["A", "B", "C"] : ["A", "B"];
+    const cnt = {}; // bitmask -> count
+    for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) {
+      const x = (i + 0.5) / G, y = (j + 0.5) / G; let m = 0;
+      keys.forEach((k, b) => { if (inside(state.circles[k], x, y)) m |= 1 << b; });
+      cnt[m] = (cnt[m] || 0) + 1;
+    }
+    const P = (pred) => Object.entries(cnt).reduce((s, [m, n]) => s + (pred(Number(m)) ? n : 0), 0) / (G * G);
+    return { keys, P };
+  }
+
+  function draw() {
+    const c = colourOf();
+    svg.innerHTML = "";
+    Learn.el("rect", { x: PAD, y: PAD, width: S, height: S, fill: c.panel, stroke: c.muted }, svg);
+    Learn.el("text", { x: PAD + 6, y: PAD + 16, fill: c.muted, "font-size": 12, text: "Ω  (area 1)" }, svg);
+    const clip = Learn.el("clipPath", { id: "clip" }, Learn.el("defs", {}, svg));
+    Learn.el("rect", { x: PAD, y: PAD, width: S, height: S }, clip);
+    const g = Learn.el("g", { "clip-path": "url(#clip)" }, svg);
+    const cols = { A: c.a, B: c.b, C: c.c };
+    for (const k of state.useC ? ["A", "B", "C"] : ["A", "B"]) {
+      const cir = state.circles[k];
+      const e = Learn.el("circle", { cx: PAD + cir.x * S, cy: PAD + (1 - cir.y) * S, r: cir.r * S, fill: cols[k], "fill-opacity": 0.35,
+        stroke: cols[k], "stroke-width": 2, style: "cursor:grab" }, g);
+      Learn.el("text", { x: PAD + cir.x * S, y: PAD + (1 - cir.y) * S + 5, "text-anchor": "middle", "font-size": 16, "font-weight": 700, fill: cols[k], "pointer-events": "none", text: k }, g);
+      e.addEventListener("pointerdown", (ev) => startDrag(ev, k));
+    }
+    const { keys, P } = areas();
+    for (const d of state.darts) Learn.el("circle", { cx: PAD + d[0] * S, cy: PAD + (1 - d[1]) * S, r: 1.8, fill: c.fg, opacity: 0.7 }, svg);
+
+    const f = (x) => x.toFixed(3);
+    let rows;
+    if (!state.useC) {
+      const a = P((m) => m & 1), b = P((m) => m & 2), ab = P((m) => (m & 3) === 3), u = P((m) => m & 3);
+      rows = `<tr><td><span class="a">P(A)</span></td><td>${f(a)}</td></tr>
+        <tr><td>+ <span class="b">P(B)</span></td><td>${f(b)}</td></tr>
+        <tr><td>− <span class="both">P(A ∩ B)</span></td><td>${f(ab)}</td></tr>
+        <tr class="total"><td>= P(A) + P(B) − P(A ∩ B)</td><td>${f(a + b - ab)}</td></tr>
+        <tr><td>measured P(A ∪ B)</td><td>${f(u)}</td></tr>
+        <tr><td>P((A ∪ B)ᶜ) = 1 − P(A ∪ B)</td><td>${f(1 - u)}</td></tr>`;
+      state.unionPred = (x, y) => inside(state.circles.A, x, y) || inside(state.circles.B, x, y);
+      state.union = u;
+    } else {
+      const s1 = [1, 2, 4].map((bit) => P((m) => m & bit));
+      const s2 = [3, 5, 6].map((mask) => P((m) => (m & mask) === mask));
+      const s3 = P((m) => m === 7), u = P((m) => m > 0);
+      rows = `<tr><td>P(A) + P(B) + P(C)</td><td>${f(s1[0] + s1[1] + s1[2])}</td></tr>
+        <tr><td>− [P(A∩B) + P(A∩C) + P(B∩C)]</td><td>${f(s2[0] + s2[1] + s2[2])}</td></tr>
+        <tr><td>+ P(A∩B∩C)</td><td>${f(s3)}</td></tr>
+        <tr class="total"><td>= inclusion–exclusion</td><td>${f(s1[0] + s1[1] + s1[2] - s2[0] - s2[1] - s2[2] + s3)}</td></tr>
+        <tr><td>measured P(A ∪ B ∪ C)</td><td>${f(u)}</td></tr>`;
+      state.unionPred = (x, y) => ["A", "B", "C"].some((k) => inside(state.circles[k], x, y));
+      state.union = u;
+    }
+    document.getElementById("tbl").innerHTML = rows;
+    const hits = state.darts.filter((d) => state.unionPred(d[0], d[1])).length;
+    document.getElementById("dartinfo").innerHTML = state.darts.length
+      ? `Darts: ${hits} of ${state.darts.length} landed in the union → estimate ${f(hits / state.darts.length)} (true area ${f(state.union)}).`
+      : "Throw darts to <i>estimate</i> the union's area by frequency — the frequentist view of the same number.";
+  }
+
+  function toUnit(ev) {
+    const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return [(p.x - PAD) / S, 1 - (p.y - PAD) / S];
+  }
+  function startDrag(ev, k) {
+    ev.preventDefault();
+    const cir = state.circles[k], [ux, uy] = toUnit(ev), dx = cir.x - ux, dy = cir.y - uy;
+    const move = (e) => { const [x, y] = toUnit(e); cir.x = Math.min(1, Math.max(0, x + dx)); cir.y = Math.min(1, Math.max(0, y + dy)); draw(); };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  }
+
+  document.getElementById("ra").oninput = (e) => { state.circles.A.r = Number(e.target.value); draw(); };
+  document.getElementById("rb").oninput = (e) => { state.circles.B.r = Number(e.target.value); draw(); };
+  document.getElementById("useC").onchange = (e) => { state.useC = e.target.checked; draw(); };
+  document.getElementById("darts").onclick = () => { const r = Learn.rng(state.seed++); for (let i = 0; i < 500; i++) state.darts.push([r(), r()]); draw(); };
+  document.getElementById("clear").onclick = () => { state.darts = []; draw(); };
+  draw();
+  Learn.onThemeChange(draw);
+</script>
+</body>
+</html>

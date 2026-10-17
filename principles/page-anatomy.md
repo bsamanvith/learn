@@ -18,18 +18,17 @@ without a reason.
 12. Connections     ← prerequisites it used, → where it's used next
 ```
 
-## The three books per topic
+## Where the sections live
 
-Each topic folder holds three views of the same material:
-
-| Folder | Role | Reads like |
+| Folder | Holds | Why separate |
 |---|---|---|
-| `concept/` | Intuition-first, visual, playful. Sections 1, 2, 6, 8. | A great popular-science chapter with sliders |
-| `text/` | The rigorous textbook. Sections 3, 4, 5, 7, 9, 12. | Blitzstein & Hwang with better pictures |
-| `exercises/` | Problems and solutions. Sections 10, 11 + callbacks. | A problem book you actually want to finish |
+| `text/` | Sections 1–9 and 12: intuition and rigour in one flow | "Never only one" — the picture and the proof belong on the same page |
+| `exercises/` | Sections 10–11: problems, then solutions at the end of the file | Solutions out of sight make you actually attempt the problem (retrieval practice) |
+| `widgets/` | Interactive HTML for the chapter | Opened from links in `text/` |
+| `sims/` | Python scripts that check results | Referenced from the text and solutions |
 
-In practice a chapter can live as one file with all twelve sections; split into the
-three folders when a chapter grows large. The contract is the sections, not the files.
+Each chapter is one file in `text/` and one matching file in `exercises/`, both named
+`NN-topic.md` (e.g. `text/1.3-counting.md` ↔ `exercises/1.3-counting.md`).
 
 ## Front matter
 

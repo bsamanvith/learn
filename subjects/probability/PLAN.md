@@ -201,8 +201,8 @@ Each part lists **concepts**, **signature visuals** (🎛 interactive, 🎞 anim
 
 | Part | Status |
 |---|---|
-| 0 | idea |
-| 1 | idea |
+| 0 | draft (0.1–0.3: text, exercises, widgets, sims) |
+| 1 | draft (1.1–1.5: text, exercises, widgets, sims) |
 | 2 | idea |
 | 3 | idea |
 | 4 | idea |

@@ -20,7 +20,7 @@
 ## Files
 
 - Markdown (`.md`) by default; `.mdx` only when a page embeds a widget component.
-- Filenames: `NN-kebab-case.md`, e.g. `02-conditional-probability.md`.
+- Filenames: `<chapter>-kebab-case.md`, e.g. `2.1-conditioning.md`.
 - Code for simulations: Python, standard library + numpy + matplotlib unless there's a reason.
 
 ## Citations

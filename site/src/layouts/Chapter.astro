@@ -4,14 +4,17 @@ import BookNav from "../components/BookNav.astro";
 import PageToc from "../components/PageToc.astro";
 import type { MarkdownHeading } from "astro";
 
+import { subjectOf, meta } from "../subjects";
+
 interface Props { title: string; id: string; headings: MarkdownHeading[]; }
 const { title, id, headings } = Astro.props;
+const subject = subjectOf(id);
 ---
-<Base title={title}>
+<Base title={title} subject={{ slug: subject, title: meta(subject)?.title ?? subject }}>
   <div class="reader">
-    <BookNav current={id} />
+    <BookNav subject={subject} current={id} />
     <main class="prose">
-      <details class="mobile-nav"><summary>Chapters</summary><BookNav current={id} /></details>
+      <details class="mobile-nav"><summary>Chapters</summary><BookNav subject={subject} current={id} /></details>
       <slot />
     </main>
     <PageToc headings={headings} />

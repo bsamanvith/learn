@@ -9,8 +9,6 @@
 import { visit } from "unist-util-visit";
 import path from "node:path";
 
-const BASE = "/probability";
-
 const KINDS = [
   ["hook", /^hook/i], ["intuition", /^intuition/i], ["definition", /^definition/i],
   ["worked", /^worked/i], ["faded", /^faded/i], ["checks", /^quick check/i],
@@ -26,11 +24,13 @@ export function rewriteHref(href, fromFile) {
   const [rel, hash = ""] = href.split("#");
   const abs = path.resolve(path.dirname(fromFile), rel);
   const parts = abs.split(path.sep);
-  const i = parts.lastIndexOf("probability");
-  if (i < 0) return href;
-  const [dir, file] = parts.slice(i + 1);
+  const i = parts.lastIndexOf("subjects");
+  if (i < 0 || !parts[i + 1]) return href;
+  const subject = parts[i + 1];
+  const BASE = `/${subject}`;
+  const [dir, file] = parts.slice(i + 2);
   const frag = hash ? `#${hash}` : "";
-  if (dir === "widgets" && file) return `${BASE}/widgets/${file}${frag}`;
+  if (dir === "widgets" && file) return `/subjects/${subject}/widgets/${file}${frag}`;
   if (dir === "text" && file) return `${BASE}/${file.replace(/\.md$/, "")}/${frag}`;
   if (dir === "exercises" && file) return `${BASE}/${file.replace(/\.md$/, "")}/exercises/${frag}`;
   if (dir === "sims" && file) return `${BASE}/sims/${file.replace(/\.py$/, "")}/`;

@@ -5,7 +5,8 @@ description: The working loop for this repo, where the owner is both the learner
 
 # Learn and create
 
-The owner of this repo is **learning the material while building it**. They are not an
+The repo covers many subjects (probability is the first, not the only one). The owner is
+**learning each subject while building it**. They are not an
 editor reviewing finished text. They are the first student. Every part goes round this loop:
 
 ```
@@ -36,8 +37,8 @@ editor reviewing finished text. They are the first student. Every part goes roun
 
 ## 3. Read and play (user)
 
-Point them at the exact URLs: `http://localhost:4321/probability/<id>/`, its
-`/exercises/`, and `/animations/#<widget>`. Suggest they try the quick checks and a few
+Point them at the exact URLs: `http://localhost:4321/<subject>/<id>/`, its
+`/exercises/`, and `/animations/#<subject>-<widget>`. Suggest they try the quick checks and a few
 exercises before opening the solutions. Don't race on to the next part unasked; the
 point is that they learn it.
 
@@ -48,7 +49,7 @@ On `/animations/` they mark each widget **keep / revise / drop** and write notes
 
 ```
 ## Animation review (2026-10-18)
-- **birthday.html** (1.3, The birthday problem): **revise** — calendar too small on phone
+- **probability/widgets/birthday.html** (1.3, The birthday problem): **revise** — calendar too small on phone
 ```
 
 They may also paste reading notes ("1.4 hockey stick didn't click"), or replace
@@ -73,5 +74,15 @@ They may also paste reading notes ("1.4 hockey stick didn't click"), or replace
 | Chapter → site rules | `site/src/plugins/remark-learn.mjs` |
 | Themes (one source) | `tools/widgets/tokens.css` |
 | Site styles | `site/src/styles/global.css` |
+| Subject list (home page) | `subjects/index.json` |
+| Book title, intro, parts | `subjects/<subject>/meta.json` |
 | Widget registry | `subjects/<subject>/widgets/index.json` |
 | Plan + progress | `subjects/<subject>/PLAN.md` |
+| Site routes | `/<subject>/`, `/<subject>/<id>/`, `/subjects/<subject>/widgets/x.html` |
+
+## Starting a new subject
+
+1. Add or update its entry in `subjects/index.json` (slug, title, mode, tagline).
+2. Write `subjects/<slug>/PLAN.md`, then `meta.json` with the parts from the plan.
+3. Write the first chapter in `text/`. The subject goes live on the home page as soon as
+   it has one, and its widgets show up on `/animations/` once `widgets/index.json` exists.

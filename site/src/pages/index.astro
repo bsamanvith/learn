@@ -1,56 +1,58 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../layouts/Base.astro";
-import { PARTS, byChapter } from "../book";
-import registry from "../../../subjects/probability/widgets/index.json";
+import { SUBJECTS, subjectOf, widgetsOf, meta } from "../subjects";
 
-const chapters = (await getCollection("text")).sort(byChapter);
+const text = await getCollection("text");
 const exercises = await getCollection("exercises");
-const written = [...new Set(chapters.map((c) => c.data.part))];
-const upcoming = Object.keys(PARTS).map(Number).filter((p) => !written.includes(p));
-const widgetFor = (ch: string) => registry.widgets.find((w) => w.chapter === ch);
-const first = chapters[0];
+const subjects = SUBJECTS.map((s) => {
+  const chapters = text.filter((e) => subjectOf(e.id) === s.slug);
+  const problems = exercises.filter((e) => subjectOf(e.id) === s.slug)
+    .reduce((n, e) => n + (e.body?.match(/^### \d/gm)?.length ?? 0), 0);
+  const parts = new Set(chapters.map((c) => c.data.part)).size;
+  return { ...s, tagline: meta(s.slug)?.tagline ?? s.tagline, live: chapters.length > 0, chapters: chapters.length, problems, parts, widgets: widgetsOf(s.slug).length };
+});
+const live = subjects.filter((s) => s.live);
+const planned = subjects.filter((s) => !s.live);
 ---
-<Base title="Probability · learn">
+<Base title="learn">
   <main class="home">
     <section class="hero">
       <div class="dice" aria-hidden="true">
-        <span style="background:var(--event-a)"></span><span style="background:var(--event-b)"></span><span style="background:var(--event-both)"></span><span style="background:var(--muted)"></span>
+        <span style="background:var(--event-a)"></span><span style="background:var(--event-b)"></span><span style="background:var(--event-both)"></span><span style="background:var(--event-c)"></span>
       </div>
-      <h1>Probability, from <em>“what does 70% mean?”</em> to measure theory.</h1>
-      <p>Fun to read, detailed to understand. Every idea comes with a puzzle, a picture you can play with, and exercises with full solutions.</p>
+      <h1>Science, from first questions to <em>real understanding.</em></h1>
+      <p>A personal library for learning deeply: chapters that put intuition and rigour side by side, animations to play with, and exercises with full solutions.</p>
       <div class="actions">
-        {first && <a class="btn primary" href={`/probability/${first.id}/`}>Start reading · {first.data.chapter}</a>}
-        <a class="btn" href="/animations/">Browse the animations</a>
+        {live[0] && <a class="btn primary" href={`/${live[0].slug}/`}>Continue with {live[0].title}</a>}
+        <a class="btn" href="/animations/">Browse all animations</a>
       </div>
     </section>
 
-    {written.map((p) => (
-      <section class="part">
-        <div class="part-label">
-          <div class="n">Part {p}</div>
-          <h2>{PARTS[p]?.title}</h2>
-          <p>{PARTS[p]?.blurb}</p>
-        </div>
-        <div class="chapters">
-          {chapters.filter((c) => c.data.part === p).map((c) => {
-            const w = widgetFor(c.data.chapter);
-            const n = exercises.find((e) => e.id === c.id)?.body?.match(/^### \d/gm)?.length;
-            return (
-              <a class="chapter-card" href={`/probability/${c.id}/`}>
-                <span class="num">{c.data.chapter}</span>
-                <span class="t">{c.data.title}</span>
-                <span class="meta">{[n && `${n} exercises`, w && "▶︎ " + w.title.replace(/\?$/, "")].filter(Boolean).join(" · ")}</span>
-              </a>
-            );
-          })}
-        </div>
-      </section>
-    ))}
-
-    <section class="part upcoming">
-      <div class="part-label"><div class="n">Coming next</div><h2>Parts {upcoming[0]}–{upcoming.at(-1)}</h2></div>
-      <ul class="upcoming-list">{upcoming.map((p) => <li>Part {p} · {PARTS[p].title}</li>)}</ul>
+    <section class="subjects">
+      <h2 class="section-label">Subjects</h2>
+      <div class="subject-grid">
+        {live.map((s) => (
+          <a class="subject-card live" href={`/${s.slug}/`}>
+            <span class="mode">{s.mode}</span>
+            <span class="t">{s.title}</span>
+            <span class="tag">{s.tagline}</span>
+            <span class="stats">
+              <span><b>{s.chapters}</b> chapters</span>
+              <span><b>{s.problems}</b> exercises</span>
+              <span><b>{s.widgets}</b> animations</span>
+            </span>
+          </a>
+        ))}
+        {planned.map((s) => (
+          <div class="subject-card planned">
+            <span class="mode">{s.mode}</span>
+            <span class="t">{s.title}</span>
+            <span class="tag">{s.tagline}</span>
+            <span class="stats"><span>Planned</span></span>
+          </div>
+        ))}
+      </div>
     </section>
   </main>
 </Base>

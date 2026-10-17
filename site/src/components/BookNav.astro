@@ -1,25 +1,25 @@
 ---
-import { getCollection } from "astro:content";
-import { PARTS, byChapter } from "../book";
+import { chaptersOf, partTitle, slugIn, meta } from "../subjects";
 
-interface Props { current?: string; }
-const { current } = Astro.props;
-const chapters = (await getCollection("text")).sort(byChapter);
+interface Props { subject: string; current?: string; }
+const { subject, current } = Astro.props;
+const chapters = await chaptersOf(subject);
 const parts = [...new Set(chapters.map((c) => c.data.part))];
 const path = Astro.url.pathname;
 ---
 <nav class="book-nav" aria-label="Chapters">
+  <a class="book-title" href={`/${subject}/`}>{meta(subject)?.title ?? subject}</a>
   {parts.map((p) => (
     <>
-      <h4>Part {p} · {PARTS[p]?.title}</h4>
+      <h4>Part {p} · {partTitle(subject, p)}</h4>
       <ol>
         {chapters.filter((c) => c.data.part === p).map((c) => (
           <li>
-            <a href={`/probability/${c.id}/`} aria-current={path === `/probability/${c.id}/` ? "page" : undefined}>
+            <a href={`/${c.id}/`} aria-current={path === `/${c.id}/` ? "page" : undefined}>
               <span class="num">{c.data.chapter}</span><span>{c.data.title}</span>
             </a>
             {current === c.id && (
-              <a class="sub" href={`/probability/${c.id}/exercises/`}
+              <a class="sub" href={`/${c.id}/exercises/`}
                  aria-current={path.endsWith("/exercises/") ? "page" : undefined}>Exercises</a>
             )}
           </li>
@@ -28,5 +28,5 @@ const path = Astro.url.pathname;
     </>
   ))}
   <h4>Play</h4>
-  <ol><li><a href="/animations/"><span class="num">▶︎</span><span>All animations</span></a></li></ol>
+  <ol><li><a href={`/animations/#${subject}`}><span class="num">▶︎</span><span>{meta(subject)?.title} animations</span></a></li></ol>
 </nav>

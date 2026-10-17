@@ -1,20 +1,25 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import registry from "../../../../subjects/probability/widgets/index.json";
+import { liveSubjects, widgetsOf, meta, subjectOf } from "../../subjects";
 
-const chapters = await getCollection("text");
-const widgets = registry.widgets.map((w) => {
-  const c = chapters.find((x) => x.data.chapter === w.chapter);
-  return { ...w, name: w.file.replace(/\.html$/, ""), chapterTitle: c?.data.title, chapterId: c?.id };
-});
+const text = await getCollection("text");
+const groups = (await liveSubjects()).map((s) => ({
+  slug: s.slug,
+  title: meta(s.slug)?.title ?? s.title,
+  widgets: widgetsOf(s.slug).map((w) => {
+    const c = text.find((x) => subjectOf(x.id) === s.slug && x.data.chapter === w.chapter);
+    return { ...w, key: `${s.slug}/${w.file}`, name: `${s.slug}-${w.file.replace(/\.html$/, "")}`, chapterTitle: c?.data.title, chapterId: c?.id };
+  }),
+})).filter((g) => g.widgets.length > 0);
+const registries = Object.fromEntries(groups.map((g) => [g.slug, widgetsOf(g.slug)]));
 ---
-<Base title="Animations · Probability" description="Every interactive animation in the book, in one place, ready to play with and curate.">
+<Base title="Animations" description="Every interactive animation in the book, in one place, ready to play with and curate.">
   <main class="gallery">
     <header class="gallery-head">
       <p class="kicker">The lab</p>
       <h1>Animations</h1>
-      <p>Every interactive in the book, full size. Play with each one, then give it a verdict and a note.
+      <p>Every interactive across all subjects, full size. Play with each one, then give it a verdict and a note.
       Your notes stay in this browser; copy them out and hand them back when you want changes made.</p>
     </header>
 
@@ -26,21 +31,23 @@ const widgets = registry.widgets.map((w) => {
       <button data-filter="drop" aria-pressed="false">Drop <span data-count="drop"></span></button>
       <span class="spacer"></span>
       <button id="copy-md">Copy review as Markdown</button>
-      <button id="download-json">Download index.json</button>
     </div>
 
-    {widgets.map((w) => (
-      <section class="exhibit" id={w.name} data-file={w.file} data-default-status={w.status} data-default-notes={w.notes}>
+    {groups.map((g) => (
+      <section class="gallery-group" id={g.slug}>
+        <h2 class="gallery-subject">{g.title} <small>{g.widgets.length} animations · <button class="linklike" data-download={g.slug}>download index.json</button></small></h2>
+      {g.widgets.map((w) => (
+      <section class="exhibit" id={w.name} data-file={w.key} data-subject={g.slug} data-default-status={w.status} data-default-notes={w.notes}>
         <figure class="widget" data-widget={w.name}>
-          <a class="widget-open" href={`/probability/widgets/${w.file}`} target="_blank" rel="noopener">Open full size ↗</a>
-          <div class="widget-frame"><iframe data-src={`/probability/widgets/${w.file}`} title={w.title} loading="lazy"></iframe></div>
+          <a class="widget-open" href={`/subjects/${g.slug}/widgets/${w.file}`} target="_blank" rel="noopener">Open full size ↗</a>
+          <div class="widget-frame"><iframe data-src={`/subjects/${g.slug}/widgets/${w.file}`} title={w.title} loading="lazy"></iframe></div>
         </figure>
         <aside class="curate">
-          <span class="num">Chapter {w.chapter}</span>
+          <span class="num">{g.title} · Chapter {w.chapter}</span>
           <h2>{w.title}</h2>
           <p>{w.idea}</p>
           <div class="links">
-            {w.chapterId && <a href={`/probability/${w.chapterId}/`}>Read {w.chapter} {w.chapterTitle}</a>}
+            {w.chapterId && <a href={`/${w.chapterId}/`}>Read {w.chapter} {w.chapterTitle}</a>}
             <a href={`#${w.name}`}>Link here</a>
           </div>
           <label>Verdict</label>
@@ -55,11 +62,15 @@ const widgets = registry.widgets.map((w) => {
         </aside>
       </section>
     ))}
+      </section>
+    ))}
+    <script type="application/json" id="registries" set:html={JSON.stringify(registries)} />
     <div class="toast" role="status"></div>
   </main>
 
   <script>
-    import registry from "../../../../subjects/probability/widgets/index.json";
+    const registries: Record<string, { file: string; chapter: string; title: string }[]> =
+      JSON.parse(document.getElementById("registries")!.textContent || "{}");
     const KEY = "learn-curation";
     type Entry = { status: string; notes: string };
     let store: Record<string, Entry> = {};
@@ -111,27 +122,29 @@ const widgets = registry.widgets.map((w) => {
 
     document.getElementById("copy-md")!.addEventListener("click", async () => {
       const lines = [`## Animation review (${new Date().toISOString().slice(0, 10)})`, ""];
-      for (const w of registry.widgets) {
-        const ex = exhibits.find((e) => e.dataset.file === w.file)!;
+      for (const [subject, widgets] of Object.entries(registries)) for (const w of widgets) {
+        const ex = exhibits.find((e) => e.dataset.file === `${subject}/${w.file}`)!;
         const { status, notes } = get(ex);
         if (status === "new" && !notes.trim()) continue;
-        lines.push(`- **${w.file}** (${w.chapter}, ${w.title}): **${status}**${notes.trim() ? ` — ${notes.trim().replace(/\n+/g, " ")}` : ""}`);
+        lines.push(`- **${subject}/widgets/${w.file}** (${w.chapter}, ${w.title}): **${status}**${notes.trim() ? ` — ${notes.trim().replace(/\n+/g, " ")}` : ""}`);
       }
       if (lines.length === 2) lines.push("_No verdicts or notes yet._");
       try { await navigator.clipboard.writeText(lines.join("\n")); toast("Review copied — paste it to Claude"); }
       catch { prompt("Copy your review:", lines.join("\n")); }
     });
 
-    document.getElementById("download-json")!.addEventListener("click", () => {
-      const out = { ...registry, widgets: registry.widgets.map((w) => {
-        const ex = exhibits.find((e) => e.dataset.file === w.file)!;
+    document.querySelectorAll<HTMLButtonElement>("[data-download]").forEach((b) => b.addEventListener("click", async () => {
+      const subject = b.dataset.download!;
+      const original = await (await fetch(`/subjects/${subject}/widgets/index.json`)).json();
+      const out = { ...original, widgets: original.widgets.map((w: { file: string }) => {
+        const ex = exhibits.find((e) => e.dataset.file === `${subject}/${w.file}`)!;
         return { ...w, ...get(ex) };
       }) };
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2) + "\n"], { type: "application/json" }));
       a.download = "index.json"; a.click();
-      toast("Save it over subjects/probability/widgets/index.json");
-    });
+      toast(`Save it over subjects/${subject}/widgets/index.json`);
+    }));
 
     refresh();
   </script>

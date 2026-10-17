@@ -34,7 +34,13 @@ turns the repo's conventions into page structure:
 Themes (light, beige "paper", dark) live in one file, [`widgets/tokens.css`](widgets/tokens.css),
 shared by the site and every widget. Widgets read `?theme=` and `?embed=1`, and `lib.js`
 redraws them when the site switches theme. The **Animations** page (`/animations/`) shows every
-widget from `subjects/<subject>/widgets/index.json` for review: verdict, notes, and export.
+widget from every `subjects/<subject>/widgets/index.json`, grouped by subject, for review:
+verdict, notes, and export.
+
+The site is subject-agnostic. Routes are `/<subject>/` (the book), `/<subject>/<chapter>/`,
+`/<subject>/<chapter>/exercises/` and `/<subject>/sims/<name>/`. A subject is listed from
+[`subjects/index.json`](../subjects/index.json) and becomes a live book as soon as it has a
+`text/*.md`; `subjects/<subject>/meta.json` gives the book its title, intro and part names.
 
 ## For polished animations
 

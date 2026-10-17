@@ -16,8 +16,10 @@ principles/            how we teach: philosophy, learning science, page anatomy,
                        exercises, visuals, how subjects differ, style guide
 tools/                 shared tooling: widget template, theme tokens + JS helpers,
                        figure style, Python requirements
-site/                  the website (Astro): renders subjects/ as a book
+site/                  the website (Astro): one book per subject, plus the animations lab
+subjects/index.json    every subject, in display order (slug, title, tagline)
 subjects/<subject>/
+  meta.json            book title, intro, part titles and blurbs (for the site)
   README.md            notation, colour vocabulary, layout
   PLAN.md              syllabus: parts → chapters → concepts, visuals, problems
   text/                chapters: hook → intuition → definitions → proofs → pitfalls
@@ -39,4 +41,5 @@ subjects/<subject>/
 1. [principles/philosophy.md](principles/philosophy.md)
 2. [subjects/probability/PLAN.md](subjects/probability/PLAN.md)
 3. Read it as a website: `pnpm -C site install && pnpm -C site dev` → <http://localhost:4321>
-   (light, paper and dark themes; animations inline; the **Animations** page for reviewing them)
+   The home page lists every subject; each live one is a book at `/<subject>/`. Light, paper and
+   dark themes; animations inline; the **Animations** page reviews them across all subjects.

@@ -2,11 +2,12 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
-// The chapters are read straight from subjects/; the site never copies or rewrites them.
-const id = ({ entry }: { entry: string }) => entry.replace(/\.md$/, "");
+// Every subject's chapters are read straight from subjects/<slug>/; the site never copies
+// or rewrites them. Ids look like "probability/1.3-counting".
+const id = ({ entry }: { entry: string }) => entry.replace(/\/(text|exercises)\//, "/").replace(/\.md$/, "");
 
 const text = defineCollection({
-  loader: glob({ pattern: "*.md", base: "../subjects/probability/text", generateId: id }),
+  loader: glob({ pattern: "*/text/*.md", base: "../subjects", generateId: id }),
   schema: z.object({
     title: z.string(),
     part: z.number(),
@@ -18,7 +19,7 @@ const text = defineCollection({
 });
 
 const exercises = defineCollection({
-  loader: glob({ pattern: "*.md", base: "../subjects/probability/exercises", generateId: id }),
+  loader: glob({ pattern: "*/exercises/*.md", base: "../subjects", generateId: id }),
   schema: z.object({ title: z.string(), chapter: z.string() }),
 });
 

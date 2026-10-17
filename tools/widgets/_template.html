@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coin Flip Convergence</title>
+<style>
+  :root {
+    --bg: #fdfcf9; --fg: #1f2328; --muted: #8b949e;
+    --event-a: #2f6feb; --event-b: #e8833a; --event-both: #8e5cd9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15171a; --fg: #e6edf3; --muted: #6e7681;
+            --event-a: #58a6ff; --event-b: #f0a35e; --event-both: #b392f0; }
+  }
+  body { background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif;
+         max-width: 720px; margin: 0 auto; padding: 16px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; margin: 12px 0; }
+  button { font: inherit; padding: 4px 12px; cursor: pointer; }
+  svg { width: 100%; height: auto; display: block; }
+  .caption { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<!--
+  Widget template. Pattern: controls → state → draw(state) → SVG.
+  Question this widget answers: "Does the fraction of heads really settle at p?"
+  Copy this file next to a chapter, keep the structure, replace the question and draw().
+-->
+<h3>Does the fraction of heads settle down?</h3>
+
+<div class="controls">
+  <label>p (chance of heads) <input id="p" type="range" min="0.05" max="0.95" step="0.05" value="0.5">
+    <b id="p-value"></b></label>
+  <label>flips <input id="n" type="range" min="10" max="2000" step="10" value="500">
+    <b id="n-value"></b></label>
+  <button id="resim">Flip again</button>
+</div>
+
+<svg id="plot" viewBox="0 0 600 300" role="img" aria-label="Running fraction of heads"></svg>
+<p class="caption">The line is the running fraction of heads; the dashed line is p.
+The wiggles shrink as flips grow — that's the law of large numbers.</p>
+
+<script src="lib.js"></script>
+<script>
+  const state = { p: 0.5, n: 500, seed: 1 };
+  const svg = document.getElementById("plot");
+  const W = 600, H = 300, M = 30;
+
+  function draw({ p, n, seed }) {
+    const c = Learn.palette();
+    const rand = Learn.rng(seed);
+    let heads = 0, pts = [];
+    for (let i = 1; i <= n; i++) {
+      if (rand() < p) heads++;
+      const x = M + (W - 2 * M) * (i / n);
+      const y = H - M - (H - 2 * M) * (heads / i);
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    const py = H - M - (H - 2 * M) * p;
+    svg.innerHTML = `
+      <line x1="${M}" y1="${H - M}" x2="${W - M}" y2="${H - M}" stroke="${c.muted}"/>
+      <line x1="${M}" y1="${M}" x2="${M}" y2="${H - M}" stroke="${c.muted}"/>
+      <text x="${M - 6}" y="${M + 4}" text-anchor="end" fill="${c.muted}" font-size="12">1</text>
+      <text x="${M - 6}" y="${H - M + 4}" text-anchor="end" fill="${c.muted}" font-size="12">0</text>
+      <line x1="${M}" y1="${py}" x2="${W - M}" y2="${py}" stroke="${c.b}" stroke-dasharray="6 4"/>
+      <text x="${W - M}" y="${py - 6}" text-anchor="end" fill="${c.b}" font-size="12">p = ${p}</text>
+      <polyline points="${pts.join(" ")}" fill="none" stroke="${c.a}" stroke-width="1.5"/>
+      <text x="${W - M}" y="${H - 8}" text-anchor="end" fill="${c.muted}" font-size="12">${n} flips</text>`;
+  }
+
+  Learn.slider("p", state, "p", draw);
+  Learn.slider("n", state, "n", draw);
+  document.getElementById("resim").onclick = () => { state.seed++; draw(state); };
+</script>
+</body>
+</html>

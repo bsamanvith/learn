@@ -1,0 +1,138 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import registry from "../../../../subjects/probability/widgets/index.json";
+
+const chapters = await getCollection("text");
+const widgets = registry.widgets.map((w) => {
+  const c = chapters.find((x) => x.data.chapter === w.chapter);
+  return { ...w, name: w.file.replace(/\.html$/, ""), chapterTitle: c?.data.title, chapterId: c?.id };
+});
+---
+<Base title="Animations · Probability" description="Every interactive animation in the book, in one place, ready to play with and curate.">
+  <main class="gallery">
+    <header class="gallery-head">
+      <p class="kicker">The lab</p>
+      <h1>Animations</h1>
+      <p>Every interactive in the book, full size. Play with each one, then give it a verdict and a note.
+      Your notes stay in this browser; copy them out and hand them back when you want changes made.</p>
+    </header>
+
+    <div class="gallery-tools" role="toolbar" aria-label="Filter and export">
+      <button data-filter="all" aria-pressed="true">All <span data-count="all"></span></button>
+      <button data-filter="new" aria-pressed="false">To review <span data-count="new"></span></button>
+      <button data-filter="keep" aria-pressed="false">Keep <span data-count="keep"></span></button>
+      <button data-filter="revise" aria-pressed="false">Revise <span data-count="revise"></span></button>
+      <button data-filter="drop" aria-pressed="false">Drop <span data-count="drop"></span></button>
+      <span class="spacer"></span>
+      <button id="copy-md">Copy review as Markdown</button>
+      <button id="download-json">Download index.json</button>
+    </div>
+
+    {widgets.map((w) => (
+      <section class="exhibit" id={w.name} data-file={w.file} data-default-status={w.status} data-default-notes={w.notes}>
+        <figure class="widget" data-widget={w.name}>
+          <a class="widget-open" href={`/probability/widgets/${w.file}`} target="_blank" rel="noopener">Open full size ↗</a>
+          <div class="widget-frame"><iframe data-src={`/probability/widgets/${w.file}`} title={w.title} loading="lazy"></iframe></div>
+        </figure>
+        <aside class="curate">
+          <span class="num">Chapter {w.chapter}</span>
+          <h2>{w.title}</h2>
+          <p>{w.idea}</p>
+          <div class="links">
+            {w.chapterId && <a href={`/probability/${w.chapterId}/`}>Read {w.chapter} {w.chapterTitle}</a>}
+            <a href={`#${w.name}`}>Link here</a>
+          </div>
+          <label>Verdict</label>
+          <div class="verdicts">
+            <button data-v="keep" aria-pressed="false">Keep</button>
+            <button data-v="revise" aria-pressed="false">Revise</button>
+            <button data-v="drop" aria-pressed="false">Drop</button>
+          </div>
+          <label for={`notes-${w.name}`}>Notes</label>
+          <textarea id={`notes-${w.name}`} placeholder="What works? What's confusing? What should it show instead?"></textarea>
+          <div class="saved" aria-live="polite"></div>
+        </aside>
+      </section>
+    ))}
+    <div class="toast" role="status"></div>
+  </main>
+
+  <script>
+    import registry from "../../../../subjects/probability/widgets/index.json";
+    const KEY = "learn-curation";
+    type Entry = { status: string; notes: string };
+    let store: Record<string, Entry> = {};
+    try { store = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch {}
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {} };
+
+    const exhibits = [...document.querySelectorAll<HTMLElement>(".exhibit")];
+    const get = (ex: HTMLElement): Entry => store[ex.dataset.file!] ?? { status: ex.dataset.defaultStatus || "new", notes: ex.dataset.defaultNotes || "" };
+    let filter = "all";
+
+    function refresh() {
+      const counts: Record<string, number> = { all: exhibits.length, new: 0, keep: 0, revise: 0, drop: 0 };
+      for (const ex of exhibits) {
+        const { status } = get(ex);
+        counts[status] = (counts[status] || 0) + 1;
+        ex.hidden = filter !== "all" && status !== filter;
+        ex.querySelectorAll<HTMLButtonElement>("[data-v]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === status)));
+      }
+      document.querySelectorAll<HTMLElement>("[data-count]").forEach((s) => (s.textContent = `(${counts[s.dataset.count!] ?? 0})`));
+    }
+
+    for (const ex of exhibits) {
+      const ta = ex.querySelector("textarea")!;
+      const note = ex.querySelector(".saved")!;
+      ta.value = get(ex).notes;
+      let t: number | undefined;
+      ta.addEventListener("input", () => {
+        store[ex.dataset.file!] = { ...get(ex), notes: ta.value };
+        clearTimeout(t); t = window.setTimeout(() => { save(); note.textContent = "Saved in this browser"; }, 400);
+      });
+      ex.querySelectorAll<HTMLButtonElement>("[data-v]").forEach((b) => b.addEventListener("click", () => {
+        const cur = get(ex);
+        store[ex.dataset.file!] = { ...cur, status: cur.status === b.dataset.v ? "new" : b.dataset.v! };
+        save(); refresh();
+      }));
+    }
+
+    document.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((b) => b.addEventListener("click", () => {
+      filter = b.dataset.filter!;
+      document.querySelectorAll("[data-filter]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      refresh();
+    }));
+
+    const toast = (msg: string) => {
+      const el = document.querySelector(".toast")!;
+      el.textContent = msg; el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1800);
+    };
+
+    document.getElementById("copy-md")!.addEventListener("click", async () => {
+      const lines = [`## Animation review (${new Date().toISOString().slice(0, 10)})`, ""];
+      for (const w of registry.widgets) {
+        const ex = exhibits.find((e) => e.dataset.file === w.file)!;
+        const { status, notes } = get(ex);
+        if (status === "new" && !notes.trim()) continue;
+        lines.push(`- **${w.file}** (${w.chapter}, ${w.title}): **${status}**${notes.trim() ? ` — ${notes.trim().replace(/\n+/g, " ")}` : ""}`);
+      }
+      if (lines.length === 2) lines.push("_No verdicts or notes yet._");
+      try { await navigator.clipboard.writeText(lines.join("\n")); toast("Review copied — paste it to Claude"); }
+      catch { prompt("Copy your review:", lines.join("\n")); }
+    });
+
+    document.getElementById("download-json")!.addEventListener("click", () => {
+      const out = { ...registry, widgets: registry.widgets.map((w) => {
+        const ex = exhibits.find((e) => e.dataset.file === w.file)!;
+        return { ...w, ...get(ex) };
+      }) };
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2) + "\n"], { type: "application/json" }));
+      a.download = "index.json"; a.click();
+      toast("Save it over subjects/probability/widgets/index.json");
+    });
+
+    refresh();
+  </script>
+</Base>

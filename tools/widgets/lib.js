@@ -4,6 +4,11 @@
 const Learn = (() => {
   const SVGNS = "http://www.w3.org/2000/svg";
 
+  // ?theme=light|beige|dark picks a theme (the site sets it on embeds); ?embed=1 drops the page chrome.
+  const params = new URLSearchParams(location.search);
+  if (params.get("theme")) document.documentElement.dataset.theme = params.get("theme");
+  if (params.has("embed")) document.documentElement.dataset.embed = "";
+
   // Seeded RNG (mulberry32) so a "simulate" run can be reproduced.
   function rng(seed = Date.now()) {
     let a = seed >>> 0;
@@ -104,9 +109,11 @@ const Learn = (() => {
   // Fixed-decimal formatting that trims "-0.000".
   const fmt = (x, d = 3) => (Math.abs(x) < 0.5 * 10 ** -d ? 0 : x).toFixed(d);
 
-  // Re-render on light/dark switch so palette-derived colours stay right.
+  // Re-render on a theme switch so palette-derived colours stay right: either the system
+  // light/dark setting, or the site setting data-theme on this document.
   function onThemeChange(fn) {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", fn);
+    new MutationObserver(fn).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   }
 
   return { rng, randInt, shuffle, histogram, palette, slider, scale, el, axes, fmt, onThemeChange };

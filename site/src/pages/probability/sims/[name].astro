@@ -1,0 +1,23 @@
+---
+import { Code } from "astro:components";
+import Base from "../../../layouts/Base.astro";
+
+export async function getStaticPaths() {
+  const files = import.meta.glob("../../../../../subjects/probability/sims/*.py", { query: "?raw", import: "default", eager: true });
+  return Object.entries(files).map(([p, code]) => ({
+    params: { name: p.split("/").pop()!.replace(/\.py$/, "") },
+    props: { code: code as string },
+  }));
+}
+const { name } = Astro.params;
+const { code } = Astro.props;
+---
+<Base title={`${name}.py · Simulation`}>
+  <main class="sim-page prose" style="max-width:900px">
+    <p class="kicker"><a href="/">Simulation</a></p>
+    <h1 style="font-family:var(--mono);font-size:1.8rem;letter-spacing:0">{name}.py</h1>
+    <p>Run it from the repo root (after the setup in <code>tools/README.md</code>):</p>
+    <pre><code>.venv/bin/python subjects/probability/sims/{name}.py</code></pre>
+    <Code code={code} lang="python" themes={{ light: "github-light", dark: "github-dark" }} defaultColor={false} />
+  </main>
+</Base>

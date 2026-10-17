@@ -20,19 +20,21 @@ controls (sliders, buttons) → a pure `draw(state)` function → SVG/canvas out
 "simulate" button where randomness is involved. Shared helpers (RNG with seed,
 histogram, axis drawing, palette) live in [`widgets/lib.js`](widgets/lib.js).
 
-## The open decision: how we publish
+## Publishing: the site
 
-Right now everything reads fine on GitHub. When we want a real site with live widgets:
+Decided: **Astro**, in [`site/`](../site/). The chapter Markdown stays where it is and is never
+edited for the site. [`site/src/plugins/remark-learn.mjs`](../site/src/plugins/remark-learn.mjs)
+turns the repo's conventions into page structure:
 
-| Option | Strengths | Weaknesses |
-|---|---|---|
-| **Astro + MDX** (+ remark-math / KaTeX) | Most control over custom interactive widgets (islands: any JS framework); fast static site; looks however we want | We wire up math, cross-refs, sidebar ourselves (Starlight theme helps) |
-| **MyST / Jupyter Book 2** | Built for textbooks: numbered theorems, cross-refs, exercises/solutions directives, executable notebooks, PDF export | Custom JS widgets are less natural; more "document" than "app" |
-| **Quarto** | Excellent books + PDF; built-in Observable JS for reactive widgets; Python execution | Widget styling less flexible than Astro; another toolchain to install |
+- a `> 🎛 **Play:** [..](../widgets/x.html)` blockquote becomes an embedded, theme-synced widget;
+- `## 1. Hook: …` style headings become styled anatomy sections with an eyebrow label;
+- exercise `###` headings become problem cards linked to their `<details>` solutions;
+- relative links to `text/`, `exercises/`, `sims/` and `widgets/` become site routes.
 
-Leaning: **Astro + MDX** if animations/widgets are the star; **MyST** if the textbook +
-exercise structure is the star. Our content format works with either, so this can be
-decided after the first chapter.
+Themes (light, beige "paper", dark) live in one file, [`widgets/tokens.css`](widgets/tokens.css),
+shared by the site and every widget. Widgets read `?theme=` and `?embed=1`, and `lib.js`
+redraws them when the site switches theme. The **Animations** page (`/animations/`) shows every
+widget from `subjects/<subject>/widgets/index.json` for review: verdict, notes, and export.
 
 ## For polished animations
 
@@ -43,6 +45,13 @@ where a narrated animation beats a slider. Optional, added only when needed.
 
 ```bash
 uv venv .venv
-uv pip install --python .venv/bin/python -r tools/requirements.txt
+uv pip install --python .venv/bin/python -r tools/requirements.txt   # for sims/
+pnpm -C site install
+pnpm -C site dev               # the site: http://localhost:4321
+```
+
+Widgets also work on their own without the site:
+
+```bash
 python3 -m http.server 8000   # then open http://localhost:8000/tools/widgets/_template.html
 ```

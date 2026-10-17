@@ -10,7 +10,7 @@ The mathematics of uncertainty — from coin flips to martingales.
 ```
 text/        chapters: intuition, definitions, worked examples, theory, pitfalls
 exercises/   problems per chapter, solutions at the bottom of each file
-widgets/     interactive HTML (run `python3 -m http.server` from the repo root)
+widgets/     interactive HTML, shown inline on the site; index.json lists them for review
 sims/        Python simulations that check results (`.venv/bin/python subjects/probability/sims/<name>.py`)
 assets/      generated figures
 ```

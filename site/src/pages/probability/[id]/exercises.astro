@@ -1,0 +1,28 @@
+---
+import { getCollection, render } from "astro:content";
+import Chapter from "../../../layouts/Chapter.astro";
+import { PARTS, byChapter } from "../../../book";
+
+export async function getStaticPaths() {
+  const chapters = (await getCollection("text")).sort(byChapter);
+  const exercises = await getCollection("exercises");
+  return exercises.map((entry) => {
+    const i = chapters.findIndex((c) => c.id === entry.id);
+    return { params: { id: entry.id }, props: { entry, chapter: chapters[i], next: chapters[i + 1] } };
+  });
+}
+const { entry, chapter, next } = Astro.props;
+const { Content, headings } = await render(entry);
+---
+<Chapter title={`Exercises ${entry.data.chapter} · Probability`} id={entry.id} headings={headings}>
+  {chapter && <p class="kicker"><a href="/">Part {chapter.data.part} · {PARTS[chapter.data.part]?.title}</a></p>}
+  <nav class="tabs" aria-label="Chapter views">
+    <a href={`/probability/${entry.id}/`}>Read</a>
+    <a href={`/probability/${entry.id}/exercises/`} aria-current="page">Exercises</a>
+  </nav>
+  <Content />
+  <nav class="pager">
+    {chapter && <a href={`/probability/${entry.id}/`}><small>Back to</small>← {chapter.data.chapter} {chapter.data.title}</a>}
+    {next && <a class="next" href={`/probability/${next.id}/`}><small>Next chapter</small>{next.data.chapter} {next.data.title} →</a>}
+  </nav>
+</Chapter>

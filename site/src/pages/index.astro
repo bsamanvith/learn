@@ -1,0 +1,56 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../layouts/Base.astro";
+import { PARTS, byChapter } from "../book";
+import registry from "../../../subjects/probability/widgets/index.json";
+
+const chapters = (await getCollection("text")).sort(byChapter);
+const exercises = await getCollection("exercises");
+const written = [...new Set(chapters.map((c) => c.data.part))];
+const upcoming = Object.keys(PARTS).map(Number).filter((p) => !written.includes(p));
+const widgetFor = (ch: string) => registry.widgets.find((w) => w.chapter === ch);
+const first = chapters[0];
+---
+<Base title="Probability · learn">
+  <main class="home">
+    <section class="hero">
+      <div class="dice" aria-hidden="true">
+        <span style="background:var(--event-a)"></span><span style="background:var(--event-b)"></span><span style="background:var(--event-both)"></span><span style="background:var(--muted)"></span>
+      </div>
+      <h1>Probability, from <em>“what does 70% mean?”</em> to measure theory.</h1>
+      <p>Fun to read, detailed to understand. Every idea comes with a puzzle, a picture you can play with, and exercises with full solutions.</p>
+      <div class="actions">
+        {first && <a class="btn primary" href={`/probability/${first.id}/`}>Start reading · {first.data.chapter}</a>}
+        <a class="btn" href="/animations/">Browse the animations</a>
+      </div>
+    </section>
+
+    {written.map((p) => (
+      <section class="part">
+        <div class="part-label">
+          <div class="n">Part {p}</div>
+          <h2>{PARTS[p]?.title}</h2>
+          <p>{PARTS[p]?.blurb}</p>
+        </div>
+        <div class="chapters">
+          {chapters.filter((c) => c.data.part === p).map((c) => {
+            const w = widgetFor(c.data.chapter);
+            const n = exercises.find((e) => e.id === c.id)?.body?.match(/^### \d/gm)?.length;
+            return (
+              <a class="chapter-card" href={`/probability/${c.id}/`}>
+                <span class="num">{c.data.chapter}</span>
+                <span class="t">{c.data.title}</span>
+                <span class="meta">{[n && `${n} exercises`, w && "▶︎ " + w.title.replace(/\?$/, "")].filter(Boolean).join(" · ")}</span>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    ))}
+
+    <section class="part upcoming">
+      <div class="part-label"><div class="n">Coming next</div><h2>Parts {upcoming[0]}–{upcoming.at(-1)}</h2></div>
+      <ul class="upcoming-list">{upcoming.map((p) => <li>Part {p} · {PARTS[p].title}</li>)}</ul>
+    </section>
+  </main>
+</Base>

@@ -30,7 +30,7 @@ lets the reader ask their own question.
    intersection purple, complement grey).
 5. **Show the numbers.** A slider should display its value; a histogram should show
    the theoretical curve overlaid.
-6. **Works in light and dark mode**, and is readable on a phone.
+6. **Works in every theme** (light, paper, dark: colours only from `tools/widgets/tokens.css`), and is readable on a phone.
 7. **Accessible:** never encode meaning in colour alone; add shape or label.
 8. **Visualise answers, not just questions** — e.g. plot P(at least one shared birthday)
    against group size, not just the formula.

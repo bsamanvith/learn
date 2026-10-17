@@ -1,0 +1,32 @@
+---
+import { getCollection } from "astro:content";
+import { PARTS, byChapter } from "../book";
+
+interface Props { current?: string; }
+const { current } = Astro.props;
+const chapters = (await getCollection("text")).sort(byChapter);
+const parts = [...new Set(chapters.map((c) => c.data.part))];
+const path = Astro.url.pathname;
+---
+<nav class="book-nav" aria-label="Chapters">
+  {parts.map((p) => (
+    <>
+      <h4>Part {p} · {PARTS[p]?.title}</h4>
+      <ol>
+        {chapters.filter((c) => c.data.part === p).map((c) => (
+          <li>
+            <a href={`/probability/${c.id}/`} aria-current={path === `/probability/${c.id}/` ? "page" : undefined}>
+              <span class="num">{c.data.chapter}</span><span>{c.data.title}</span>
+            </a>
+            {current === c.id && (
+              <a class="sub" href={`/probability/${c.id}/exercises/`}
+                 aria-current={path.endsWith("/exercises/") ? "page" : undefined}>Exercises</a>
+            )}
+          </li>
+        ))}
+      </ol>
+    </>
+  ))}
+  <h4>Play</h4>
+  <ol><li><a href="/animations/"><span class="num">▶︎</span><span>All animations</span></a></li></ol>
+</nav>

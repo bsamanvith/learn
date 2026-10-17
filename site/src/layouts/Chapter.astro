@@ -1,0 +1,19 @@
+---
+import Base from "./Base.astro";
+import BookNav from "../components/BookNav.astro";
+import PageToc from "../components/PageToc.astro";
+import type { MarkdownHeading } from "astro";
+
+interface Props { title: string; id: string; headings: MarkdownHeading[]; }
+const { title, id, headings } = Astro.props;
+---
+<Base title={title}>
+  <div class="reader">
+    <BookNav current={id} />
+    <main class="prose">
+      <details class="mobile-nav"><summary>Chapters</summary><BookNav current={id} /></details>
+      <slot />
+    </main>
+    <PageToc headings={headings} />
+  </div>
+</Base>

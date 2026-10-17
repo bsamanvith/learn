@@ -14,8 +14,9 @@ solutions, simulations that check the maths, and visuals you can play with.
 ```
 principles/            how we teach: philosophy, learning science, page anatomy,
                        exercises, visuals, how subjects differ, style guide
-tools/                 shared tooling: widget template + JS helpers, figure style,
-                       Python requirements, publishing decision
+tools/                 shared tooling: widget template, theme tokens + JS helpers,
+                       figure style, Python requirements
+site/                  the website (Astro): renders subjects/ as a book
 subjects/<subject>/
   README.md            notation, colour vocabulary, layout
   PLAN.md              syllabus: parts → chapters → concepts, visuals, problems
@@ -37,4 +38,5 @@ subjects/<subject>/
 
 1. [principles/philosophy.md](principles/philosophy.md)
 2. [subjects/probability/PLAN.md](subjects/probability/PLAN.md)
-3. Try the widget template: `python3 -m http.server 8000` → <http://localhost:8000/tools/widgets/_template.html>
+3. Read it as a website: `pnpm -C site install && pnpm -C site dev` → <http://localhost:4321>
+   (light, paper and dark themes; animations inline; the **Animations** page for reviewing them)

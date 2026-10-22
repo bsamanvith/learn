@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Learn Machine Learning</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A visual, model-first path through machine learning, from linear regression to neural nets and reinforcement learning.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<style>
+  .intro { display: grid; grid-template-columns: 1.1fr 1fr; gap: 32px; align-items: center; }
+  @media (max-width: 760px) { .intro { grid-template-columns: 1fr; } }
+  .intro .text { display: grid; gap: 14px; min-width: 0; }
+  .intro .stage { padding: 10px; }
+  .status { font-family: var(--f-mono); font-size: 12px; white-space: nowrap; }
+  .status.now { color: var(--good); }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="top">
+    <a class="brand" href="index.html">learn</a>
+    <div class="links">
+      <a href="ml/watch-it-learn.html">Watch it learn</a>
+      <a href="ml/gradient-descent-lab.html">Gradient descent lab</a>
+      <a href="https://github.com/bsamanvith/learn">Repo</a>
+    </div>
+  </nav>
+
+  <section class="intro">
+    <div class="text">
+      <div class="eyebrow">A personal learning notebook</div>
+      <h1>Machine learning, one moving picture at a time</h1>
+      <p class="lede">Start with a model you can see, like a line through some points. Pull in the probability, statistics and calculus only when the model needs them. Every idea gets an animation you can watch or steer.</p>
+    </div>
+    <div class="stage" data-scene="linefit" data-ambient>
+      <canvas data-role="fit" aria-label="A line fitting itself to data by gradient descent, looping"></canvas>
+    </div>
+  </section>
+
+  <section class="plate">
+    <div class="plate-head"><h2>Start here</h2></div>
+    <div class="cards">
+      <a class="card" href="ml/watch-it-learn.html">
+        <div class="eyebrow">Animations</div>
+        <h3>Watch it learn</h3>
+        <p>A line fitting itself, four learning rates racing in the same bowl, and logistic regression bending into an S-curve.</p>
+        <span class="go">Open →</span>
+      </a>
+      <a class="card" href="ml/gradient-descent-lab.html">
+        <div class="eyebrow">Interactive lab</div>
+        <h3>Gradient descent lab</h3>
+        <p>Click anywhere on the loss map to start a walk. Change the learning rate, then see why scaling your inputs matters.</p>
+        <span class="go">Open →</span>
+      </a>
+      <a class="card" href="https://github.com/bsamanvith/learn/tree/main/books/machine-learning">
+        <div class="eyebrow">Written lessons</div>
+        <h3>Lessons and exercises</h3>
+        <p>Linear regression, gradient descent and the delta rule, logistic regression and log-loss. Each with exercises and answers.</p>
+        <span class="go">On GitHub →</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="plate">
+    <div class="plate-head">
+      <h2>The road ahead</h2>
+      <p class="muted">Five stages. Trees and boosting are a side branch you can take at any time.</p>
+    </div>
+    <ol class="stages">
+      <li><span class="n">1</span><div class="what">Learning from data<span>Linear regression, gradient descent, logistic regression</span></div><span class="status now">you are here</span></li>
+      <li><span class="n">2</span><div class="what">Making models honest<span>Train and test splits, regularisation, feature scaling, softmax, SGD and Adam, metrics</span></div><span class="status muted">next</span></li>
+      <li><span class="n">3</span><div class="what">Trees and boosting<span>Decision trees, random forests, gradient boosting</span></div><span class="status muted">side branch</span></li>
+      <li><span class="n">4</span><div class="what">Neural networks<span>Neurons, backpropagation, CNNs, attention and transformers</span></div><span class="status muted">later</span></li>
+      <li><span class="n">5</span><div class="what">Reinforcement learning<span>Bandits, Bellman, Q-learning, policy gradients, AlphaZero</span></div><span class="status muted">later</span></li>
+    </ol>
+  </section>
+
+  <footer>Built with plain HTML, CSS and Canvas. No build step, so every page here is just a file you can open.</footer>
+</div>
+<script src="assets/learn.js"></script>
+</body>
+</html>

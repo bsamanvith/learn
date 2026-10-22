@@ -16,6 +16,17 @@ books/<subject>/<topic>/
   code/        # from-scratch implementations, where useful
 ```
 
+## Website
+
+The animated site is in [`docs/`](docs) and is served by GitHub Pages at
+**https://bsamanvith.github.io/learn/**. It is plain HTML, CSS and Canvas with no build step: edit a
+file, push to `main`, and Pages republishes it.
+
+One-time setup: repo **Settings → Pages → Build and deployment →
+Deploy from a branch → `main` / `/docs`**.
+
+To preview locally: `python3 -m http.server -d docs` and open http://localhost:8000.
+
 ## Books
 
 - [Machine learning](books/machine-learning/README.md): model-first roadmap from linear regression to neural nets, trees and RL

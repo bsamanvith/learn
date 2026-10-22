@@ -14,9 +14,10 @@ you hit it, not before.
 | 02 | [Gradient descent](02-gradient-descent/concept/README.md) | Walk downhill on the loss surface, one small step at a time | Derivatives as slope, partial derivatives, the gradient vector, the chain rule |
 | 03 | [Logistic regression](03-logistic-regression/concept/README.md) | Squash a line through a sigmoid to get a probability, then score it with log-loss | Logarithms, the Bernoulli distribution, likelihood and maximum likelihood |
 
-Interactive lab for lesson 02:
-[`gradient-descent-lab.html`](02-gradient-descent/concept/gradient-descent-lab.html)
-(open it in a browser).
+Animations and the interactive lab live on the site
+([https://bsamanvith.github.io/learn](https://bsamanvith.github.io/learn/), source in [`docs/`](../../docs)):
+[Watch it learn](https://bsamanvith.github.io/learn/ml/watch-it-learn.html) and the
+[gradient descent lab](https://bsamanvith.github.io/learn/ml/gradient-descent-lab.html).
 
 ## Stage 2: Making models honest (next)
 

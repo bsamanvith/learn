@@ -1,7 +1,8 @@
 # 02 · Gradient descent and the delta rule
 
-> **Open the lab first:** [`gradient-descent-lab.html`](gradient-descent-lab.html).
-> Open it in any browser. Press **Run**, then play with the learning rate.
+> **Open the lab first:** [gradient descent lab](https://bsamanvith.github.io/learn/ml/gradient-descent-lab.html)
+> (source: [`docs/ml/gradient-descent-lab.html`](../../../../docs/ml/gradient-descent-lab.html)).
+> For a hands-off version, watch the [animations](https://bsamanvith.github.io/learn/ml/watch-it-learn.html). Press **Run**, then play with the learning rate.
 > Come back here to understand what you saw.
 
 ## The picture to keep in your head

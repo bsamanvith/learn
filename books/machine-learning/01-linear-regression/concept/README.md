@@ -70,7 +70,7 @@ the bowl.
    all lines ─────────────────────▶  the whole map, with height = loss
 ```
 
-Open the [gradient descent lab](../../02-gradient-descent/concept/gradient-descent-lab.html)
+Open the [gradient descent lab](https://bsamanvith.github.io/learn/ml/gradient-descent-lab.html)
 now and click around the right-hand map. Every click is a different line on
 the left. Watch the line get better as you click lower in the bowl.
 

@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gradient Descent Lab</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,7 +41,10 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+nav.back { font-size: 14px; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
+nav.back a { color: inherit; text-underline-offset: 3px; text-decoration-color: var(--accent); }
 body {
+  margin: 0;
   background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -91,8 +99,11 @@ dd { margin: 0; text-align: right; }
 .notes b { color: var(--ink); font-weight: 600; }
 .key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: baseline; margin-right: 4px; }
 </style>
+</head>
+<body>
 
 <div class="wrap">
+  <nav class="back"><a href="../index.html">← learn</a><a href="watch-it-learn.html">Watch it learn</a></nav>
   <header>
     <div class="eyebrow">Lesson 02 · Machine learning</div>
     <h1>Walking downhill on a loss surface</h1>
@@ -465,3 +476,5 @@ dd { margin: 0; text-align: right; }
   buildMap(); render();
 })();
 </script>
+</body>
+</html>

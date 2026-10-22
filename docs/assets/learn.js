@@ -312,8 +312,164 @@
     return { el: root, tick(dt) { if (S.playing) { S.t += dt; if (S.t > tl.total) S.t = 0; } draw(); } };
   }
 
+  // ---------- interactive figures (sliders instead of a clock) ----------
+  // Binds <input type=range data-k="name"> to S[name] and mirrors the value into [data-out="name"].
+  function knobs(root, S, digits = 2) {
+    const inputs = [...root.querySelectorAll("input[data-k]")];
+    const show = () => inputs.forEach(el => {
+      el.value = S[el.dataset.k];
+      const o = root.querySelector(`[data-out="${el.dataset.k}"]`); if (o) o.textContent = fmt(S[el.dataset.k], digits);
+    });
+    inputs.forEach(el => el.addEventListener("input", () => { S[el.dataset.k] = +el.value; S.tween = null; show(); }));
+    show();
+    return show;
+  }
+  // Smoothly moves some keys of S to target values over ms.
+  function tweenTo(S, target, ms = 700) { S.tween = { from: Object.fromEntries(Object.keys(target).map(k => [k, S[k]])), to: target, t: 0, ms }; }
+  function stepTween(S, dt, show) {
+    if (!S.tween) return;
+    const tw = S.tween; tw.t = reduced() ? tw.ms : tw.t + dt;
+    const f = ease(Math.min(1, tw.t / tw.ms));
+    for (const k in tw.to) S[k] = lerp(tw.from[k], tw.to[k], f);
+    show();
+    if (f >= 1) S.tween = null;
+  }
+
+  // Lesson 01: drag w and b; each error is drawn as an actual square, and MSE is their average area.
+  function Squares(root) {
+    const cv = root.querySelector("canvas"), out = root.querySelector("[data-role=readout]");
+    const S = { w: 0.7, b: 1.1, tween: null };
+    const show = knobs(root, S);
+    root.querySelector("[data-act=best]")?.addEventListener("click", () => tweenTo(S, { w: D.wStar, b: D.bStar }));
+    root.querySelector("[data-act=reset]")?.addEventListener("click", () => tweenTo(S, { w: 0.7, b: 1.1 }));
+    const best = D.loss(D.wStar, D.bStar);
+    function draw() {
+      const { k, W, H } = fit(cv, cv.clientWidth < 600 ? 0.8 : 0.5);
+      // Each square's side is the residual's length on screen, so its area is proportional to r².
+      const B = box(-1.25, 1.25, D.yMin, D.yMax, 8, 8, W - 16, H - 16);
+      k.save(); k.beginPath(); k.rect(B.left, B.top, B.width, B.height); k.clip();
+      D.xs.forEach((x, i) => {
+        const y = D.ys[i], yh = S.w * x + S.b, s = Math.abs(B.Y(yh) - B.Y(y));
+        const px = B.X(x), py = Math.min(B.Y(yh), B.Y(y)), dir = px + s > B.left + B.width ? -1 : 1;
+        k.fillStyle = alpha(C.accent, 0.07); k.strokeStyle = alpha(C.accent, 0.4); k.lineWidth = 1;
+        k.fillRect(dir > 0 ? px : px - s, py, s, s); k.strokeRect(dir > 0 ? px : px - s, py, s, s);
+      });
+      k.restore();
+      drawScatter(k, B, S.w, S.b, { residuals: true });
+      const L = D.loss(S.w, S.b);
+      out.innerHTML = `mean squared error <b>${fmt(L, 3)}</b> · best possible <b>${fmt(best, 3)}</b>${L - best < 0.002 ? " · <b>you found it</b>" : ""}`;
+    }
+    return { el: root, tick(dt) { stepTween(S, dt, show); draw(); } };
+  }
+
+  // Lesson 02: slide w along the bowl; the tangent's slope is the derivative and the arrow is the next step.
+  function Tangent(root) {
+    const cv = root.querySelector("canvas"), out = root.querySelector("[data-role=readout]");
+    const curv = 2 * D.Sxx, eta = 0.5 / curv, wS = D.wStar, bS = D.bStar, span = 3;
+    const Lw = w => D.loss(w, bS), dLw = w => 2 * (D.Sxx * w + bS * D.Sx - D.Sxy);
+    const S = { w: +(wS - 2.2).toFixed(2), tween: null };
+    root.querySelectorAll("input[data-k=w]").forEach(el => { el.min = (wS - span).toFixed(2); el.max = (wS + span).toFixed(2); });
+    const show = knobs(root, S);
+    root.querySelector("[data-act=step]")?.addEventListener("click", () => tweenTo(S, { w: S.w - eta * dLw(S.w) }, 600));
+    root.querySelector("[data-act=reset]")?.addEventListener("click", () => tweenTo(S, { w: +(wS - 2.2).toFixed(2) }, 600));
+    function draw() {
+      const { k, W, H } = fit(cv, cv.clientWidth < 600 ? 0.7 : 0.42);
+      const Lmax = Lw(wS + span) * 1.05;
+      const B = box(wS - span, wS + span, -Lmax * 0.12, Lmax, 44, 16, W - 60, H - 44);
+      k.strokeStyle = C.line; k.lineWidth = 1;
+      k.beginPath(); k.moveTo(B.left, B.Y(0)); k.lineTo(B.left + B.width, B.Y(0)); k.stroke();
+      label(k, "loss L(w)", B.left, 8, { base: "top", size: 11 });
+      label(k, "w →", B.left + B.width, B.Y(0) + 16, { align: "right", base: "middle", size: 11 });
+      k.save(); k.beginPath(); k.rect(B.left, B.top, B.width, B.height); k.clip();
+      k.strokeStyle = C.data; k.lineWidth = 2.5; k.beginPath();
+      for (let s = 0; s <= 160; s++) { const w = wS - span + 2 * span * s / 160; s ? k.lineTo(B.X(w), B.Y(Lw(w))) : k.moveTo(B.X(w), B.Y(Lw(w))); }
+      k.stroke();
+      const L0 = Lw(S.w), g = dLw(S.w), h = 1.1;
+      k.strokeStyle = C.ink; k.lineWidth = 1.5; k.setLineDash([6, 5]);
+      k.beginPath(); k.moveTo(B.X(S.w - h), B.Y(L0 - g * h)); k.lineTo(B.X(S.w + h), B.Y(L0 + g * h)); k.stroke(); k.setLineDash([]);
+      k.restore();
+      // the step arrow, drawn on the w axis
+      const w1 = S.w - eta * g, ax0 = B.X(S.w), ax1 = B.X(Math.max(wS - span, Math.min(wS + span, w1))), ay = B.Y(0) - 0;
+      if (Math.abs(ax1 - ax0) > 3) {
+        const d = Math.sign(ax1 - ax0);
+        k.strokeStyle = C.accent; k.fillStyle = C.accent; k.lineWidth = 2.5;
+        k.beginPath(); k.moveTo(ax0, ay); k.lineTo(ax1 - d * 6, ay); k.stroke();
+        k.beginPath(); k.moveTo(ax1, ay); k.lineTo(ax1 - d * 9, ay - 5); k.lineTo(ax1 - d * 9, ay + 5); k.closePath(); k.fill();
+      }
+      k.strokeStyle = alpha(C.muted, 0.5); k.lineWidth = 1; k.setLineDash([2, 3]);
+      k.beginPath(); k.moveTo(B.X(S.w), B.Y(L0)); k.lineTo(B.X(S.w), B.Y(0)); k.stroke(); k.setLineDash([]);
+      dot(k, B.X(S.w), B.Y(L0), 6.5, C.panel, C.accent, 3);
+      const dir = Math.abs(g) < 0.02 ? "flat: you are at the bottom" : g < 0 ? "negative: downhill is to the right" : "positive: downhill is to the left";
+      out.innerHTML = `slope dL/dw = <b>${fmt(g, 2)}</b> (${dir}) · step Δw = −η·slope = <b>${fmt(-eta * g, 2)}</b> with η = ${fmt(eta, 2)}`;
+    }
+    return { el: root, tick(dt) { stepTween(S, dt, show); draw(); } };
+  }
+
+  // Lesson 03: what w and b do to the sigmoid.
+  function Sigmoid(root) {
+    const cv = root.querySelector("canvas"), out = root.querySelector("[data-role=readout]");
+    const S = { w: 1.5, b: -1, tween: null };
+    const show = knobs(root, S, 1);
+    function draw() {
+      const { k, W, H } = fit(cv, cv.clientWidth < 600 ? 0.7 : 0.4);
+      const B = box(-5, 5, -0.08, 1.08, 40, 16, W - 52, H - 44);
+      for (const p of [0, 0.5, 1]) {
+        k.strokeStyle = C.line; k.lineWidth = 1; k.setLineDash(p === 0.5 ? [4, 4] : []);
+        k.beginPath(); k.moveTo(B.left, B.Y(p)); k.lineTo(B.left + B.width, B.Y(p)); k.stroke(); k.setLineDash([]);
+        label(k, String(p), B.left - 8, B.Y(p), { align: "right", base: "middle", size: 11 });
+      }
+      for (const x of [-4, -2, 0, 2, 4]) label(k, String(x), B.X(x), B.top + B.height + 16, { align: "center", size: 11 });
+      label(k, "x →", B.left + B.width, B.top + B.height + 30, { align: "right", size: 11 });
+      k.save(); k.beginPath(); k.rect(B.left, B.top - 10, B.width, B.height + 20); k.clip();
+      // the straight line z = wx + b underneath, scaled so z = ±5 spans the plot
+      k.strokeStyle = alpha(C.muted, 0.45); k.lineWidth = 1.5; k.setLineDash([3, 4]);
+      k.beginPath(); k.moveTo(B.X(-5), B.Y(0.5 + (S.w * -5 + S.b) / 10)); k.lineTo(B.X(5), B.Y(0.5 + (S.w * 5 + S.b) / 10)); k.stroke(); k.setLineDash([]);
+      k.strokeStyle = C.accent; k.lineWidth = 3; k.beginPath();
+      for (let s = 0; s <= 200; s++) { const x = -5 + 10 * s / 200; s ? k.lineTo(B.X(x), B.Y(sigmoid(S.w * x + S.b))) : k.moveTo(B.X(x), B.Y(sigmoid(S.w * x + S.b))); }
+      k.stroke();
+      const xb = Math.abs(S.w) > 0.05 ? -S.b / S.w : null;
+      if (xb !== null && Math.abs(xb) < 5) {
+        k.strokeStyle = C.ink; k.lineWidth = 1.2; k.setLineDash([5, 4]);
+        k.beginPath(); k.moveTo(B.X(xb), B.top); k.lineTo(B.X(xb), B.top + B.height); k.stroke(); k.setLineDash([]);
+        dot(k, B.X(xb), B.Y(0.5), 5, C.panel, C.ink, 2);
+      }
+      k.restore();
+      out.innerHTML = `p = σ(<b>${fmt(S.w, 1)}</b>·x ${S.b < 0 ? "−" : "+"} <b>${fmt(Math.abs(S.b), 1)}</b>) · boundary at x = <b>${xb === null ? "none (w ≈ 0)" : fmt(xb, 2)}</b> · each +1 in x multiplies the odds by e<sup>w</sup> = <b>${fmt(Math.exp(S.w), 2)}</b>`;
+    }
+    return { el: root, tick(dt) { stepTween(S, dt, show); draw(); } };
+  }
+
+  // Lesson 03: the cost of one prediction under log-loss.
+  function LogCost(root) {
+    const cv = root.querySelector("canvas"), out = root.querySelector("[data-role=readout]");
+    const S = { p: 0.3, tween: null };
+    const show = knobs(root, S);
+    function draw() {
+      const { k, W, H } = fit(cv, cv.clientWidth < 600 ? 0.7 : 0.4);
+      const B = box(0, 1, 0, 5, 40, 16, W - 52, H - 44);
+      k.strokeStyle = C.line; k.lineWidth = 1;
+      k.beginPath(); k.moveTo(B.left, B.top); k.lineTo(B.left, B.top + B.height); k.lineTo(B.left + B.width, B.top + B.height); k.stroke();
+      for (const v of [0, 1, 2, 3, 4, 5]) label(k, String(v), B.left - 8, B.Y(v), { align: "right", base: "middle", size: 11 });
+      for (const v of [0, 0.25, 0.5, 0.75, 1]) label(k, String(v), B.X(v), B.top + B.height + 16, { align: "center", size: 11 });
+      label(k, "model's p →", B.left + B.width, B.top + B.height + 30, { align: "right", size: 11 });
+      label(k, "cost", B.left + 6, B.top + 2, { base: "top", size: 11 });
+      k.save(); k.beginPath(); k.rect(B.left, B.top, B.width, B.height); k.clip();
+      const curve = (f, color) => { k.strokeStyle = color; k.lineWidth = 2.5; k.beginPath(); for (let s = 1; s < 400; s++) { const p = s / 400; s > 1 ? k.lineTo(B.X(p), B.Y(f(p))) : k.moveTo(B.X(p), B.Y(f(p))); } k.stroke(); };
+      curve(p => -Math.log(p), C.class1); curve(p => -Math.log(1 - p), C.data);
+      k.strokeStyle = alpha(C.muted, 0.5); k.setLineDash([3, 4]); k.lineWidth = 1;
+      k.beginPath(); k.moveTo(B.X(S.p), B.top); k.lineTo(B.X(S.p), B.top + B.height); k.stroke(); k.setLineDash([]);
+      dot(k, B.X(S.p), B.Y(-Math.log(S.p)), 6, C.panel, C.class1, 3);
+      dot(k, B.X(S.p), B.Y(-Math.log(1 - S.p)), 6, C.panel, C.data, 3);
+      k.restore();
+      label(k, "truth = 1: cost −log p", B.X(0.03) + 10, B.Y(4.4), { color: C.class1, size: 12, base: "middle" });
+      label(k, "truth = 0: cost −log(1 − p)", B.X(0.97) - 10, B.Y(4.4), { color: C.data, size: 12, base: "middle", align: "right" });
+      out.innerHTML = `p = <b>${fmt(S.p, 2)}</b> · if the truth is 1, cost <b>${fmt(-Math.log(S.p), 2)}</b> · if the truth is 0, cost <b>${fmt(-Math.log(1 - S.p), 2)}</b>`;
+    }
+    return { el: root, tick(dt) { stepTween(S, dt, show); draw(); } };
+  }
+
   // ---------- mount and run ----------
-  const SCENES = { linefit: LineFit, race: Race, logistic: Logistic };
+  const SCENES = { linefit: LineFit, race: Race, logistic: Logistic, squares: Squares, tangent: Tangent, sigmoid: Sigmoid, logcost: LogCost };
   readColors();
   const scenes = [...document.querySelectorAll("[data-scene]")].map(el => {
     const s = SCENES[el.dataset.scene](el); s.visible = true; return s;

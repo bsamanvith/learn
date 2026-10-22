@@ -1,5 +1,7 @@
 # 01 · Linear regression
 
+> **Full version on the site:** [https://bsamanvith.github.io/learn/ml/01-linear-regression.html](https://bsamanvith.github.io/learn/ml/01-linear-regression.html) has the complete derivations, interactive figures and exercises. This file is the short summary.
+
 ## The question
 
 You have points. Each point is an input $x$ (say, house size in 100 m²) and an

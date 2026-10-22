@@ -23,8 +23,9 @@
   <nav class="top">
     <a class="brand" href="index.html">learn</a>
     <div class="links">
-      <a href="ml/watch-it-learn.html">Watch it learn</a>
-      <a href="ml/gradient-descent-lab.html">Gradient descent lab</a>
+      <a href="ml/01-linear-regression.html">Lessons</a>
+      <a href="ml/watch-it-learn.html">Animations</a>
+      <a href="ml/gradient-descent-lab.html">Lab</a>
       <a href="https://github.com/bsamanvith/learn">Repo</a>
     </div>
   </nav>
@@ -32,8 +33,8 @@
   <section class="intro">
     <div class="text">
       <div class="eyebrow">A personal learning notebook</div>
-      <h1>Machine learning, one moving picture at a time</h1>
-      <p class="lede">Start with a model you can see, like a line through some points. Pull in the probability, statistics and calculus only when the model needs them. Every idea gets an animation you can watch or steer.</p>
+      <h1>Machine learning, from the equations up</h1>
+      <p class="lede">Start from a model you can see, then do the math properly: derivations, proofs and code, with probability, statistics and calculus pulled in when the model needs them. Interactive figures sit next to the equations they explain.</p>
     </div>
     <div class="stage" data-scene="linefit" data-ambient>
       <canvas data-role="fit" aria-label="A line fitting itself to data by gradient descent, looping"></canvas>
@@ -41,25 +42,49 @@
   </section>
 
   <section class="plate">
-    <div class="plate-head"><h2>Start here</h2></div>
+    <div class="plate-head">
+      <h2>Stage 1: learning from data</h2>
+      <p class="muted">Full lessons: intuition, then the math in full, with interactive figures, from-scratch code and exercises with answers.</p>
+    </div>
+    <div class="cards">
+      <a class="card" href="ml/01-linear-regression.html">
+        <div class="eyebrow">Lesson 01</div>
+        <h3>Linear regression</h3>
+        <p>Squared error, the normal equations, least squares as projection, and the Gaussian maximum-likelihood view.</p>
+        <span class="go">Read →</span>
+      </a>
+      <a class="card" href="ml/02-gradient-descent.html">
+        <div class="eyebrow">Lesson 02</div>
+        <h3>Gradient descent and the delta rule</h3>
+        <p>Gradients, steepest descent, the delta rule, and why the learning rate must stay below 2/λ<sub>max</sub>.</p>
+        <span class="go">Read →</span>
+      </a>
+      <a class="card" href="ml/03-logistic-regression.html">
+        <div class="eyebrow">Lesson 03</div>
+        <h3>Logistic regression and log-loss</h3>
+        <p>Sigmoid and log-odds, Bernoulli likelihood, cross-entropy, its gradient and Hessian, and separable data.</p>
+        <span class="go">Read →</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="plate">
+    <div class="plate-head">
+      <h2>Play with it</h2>
+      <p class="muted">The figures from the lessons, gathered in one place.</p>
+    </div>
     <div class="cards">
       <a class="card" href="ml/watch-it-learn.html">
         <div class="eyebrow">Animations</div>
         <h3>Watch it learn</h3>
-        <p>A line fitting itself, four learning rates racing in the same bowl, and logistic regression bending into an S-curve.</p>
+        <p>A line fitting itself, four learning rates in the same bowl, and logistic regression bending into an S-curve.</p>
         <span class="go">Open →</span>
       </a>
       <a class="card" href="ml/gradient-descent-lab.html">
         <div class="eyebrow">Interactive lab</div>
         <h3>Gradient descent lab</h3>
-        <p>Click anywhere on the loss map to start a walk. Change the learning rate, then see why scaling your inputs matters.</p>
+        <p>Click anywhere on the loss map to start a walk, change the learning rate, and see why input scaling matters.</p>
         <span class="go">Open →</span>
-      </a>
-      <a class="card" href="https://github.com/bsamanvith/learn/tree/main/books/machine-learning">
-        <div class="eyebrow">Written lessons</div>
-        <h3>Lessons and exercises</h3>
-        <p>Linear regression, gradient descent and the delta rule, logistic regression and log-loss. Each with exercises and answers.</p>
-        <span class="go">On GitHub →</span>
       </a>
     </div>
   </section>

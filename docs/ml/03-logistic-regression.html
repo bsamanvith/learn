@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Logistic Regression</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Lesson 03: the sigmoid, log-odds, maximum likelihood, log-loss, its gradient and why it is convex.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [["$", "$"]], displayMath: [["$$", "$$"]] }, svg: { fontCache: "global" }, options: { skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"] } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+  <nav class="top">
+    <a class="brand" href="../index.html">learn</a>
+    <div class="links">
+      <a href="01-linear-regression.html">01 Linear regression</a>
+      <a href="02-gradient-descent.html">02 Gradient descent</a>
+      <a href="03-logistic-regression.html" aria-current="page">03 Logistic regression</a>
+    </div>
+  </nav>
+
+  <header class="lesson-head">
+    <div class="eyebrow">Lesson 03 · Stage 1: learning from data</div>
+    <h1>Logistic regression and log-loss</h1>
+    <p class="lede">Turn a line into a probability, score it by how surprised it is by the truth, and train it with gradient descent. The loss you meet here, cross-entropy, is the same one that trains every classifier network and every large language model.</p>
+    <div class="meta"><span><b>Prerequisites:</b> <a href="01-linear-regression.html">01</a> and <a href="02-gradient-descent.html">02</a></span><span><b>Math pulled in:</b> exponentials and logarithms, odds, the Bernoulli distribution, likelihood, cross-entropy, positive semidefinite matrices</span></div>
+  </header>
+
+  <nav class="toc" aria-label="Sections">
+    <ol>
+      <li><a href="#problem">From numbers to yes or no</a></li>
+      <li><a href="#sigmoid">The sigmoid</a></li>
+      <li><a href="#logodds">The model reads as log-odds</a></li>
+      <li><a href="#likelihood">Maximum likelihood gives log-loss</a></li>
+      <li><a href="#entropy">Cross-entropy: the information view</a></li>
+      <li><a href="#gradient">The gradient: the delta rule again</a></li>
+      <li><a href="#convex">Convexity, and why not squared error</a></li>
+      <li><a href="#training">Training it</a></li>
+      <li><a href="#separable">Separable data and exploding weights</a></li>
+      <li><a href="#code">Code from scratch</a></li>
+      <li><a href="#exercises">Exercises</a></li>
+      <li><a href="#reading">Further reading</a></li>
+    </ol>
+  </nav>
+
+  <article class="lesson">
+    <section id="problem">
+      <h2>From numbers to yes or no</h2>
+      <p>Now each label is binary: $y_i \in \{0, 1\}$. Did a student pass, given hours studied? Is an email spam? We want the model to output a <b>probability</b> $p = P(y = 1 \mid \mathbf{x})$, a number in $[0, 1]$.</p>
+      <p>Linear regression is a poor fit. Its output $\mathbf{w}^\top\mathbf{x} + b$ is unbounded, so it predicts "probabilities" like 1.4 and −0.3. And squared error treats a confident correct answer far from the boundary as an error to be fixed, so a few easy examples can drag the boundary off course. We keep the line, and change what we do with it.</p>
+    </section>
+
+    <section id="sigmoid">
+      <h2>The sigmoid</h2>
+      <p>Compute a score $z = \mathbf{w}^\top\mathbf{x} + b$, called the <b>logit</b>, then squash it into $(0, 1)$ with the logistic sigmoid:</p>
+      <div class="eq">$$\sigma(z) = \frac{1}{1 + e^{-z}}, \qquad p = \sigma(\mathbf{w}^\top\mathbf{x} + b).$$</div>
+      <p>Properties used constantly:</p>
+      <ul>
+        <li>$\sigma(0) = \tfrac12$, $\sigma(z) \to 1$ as $z \to \infty$, $\sigma(z) \to 0$ as $z \to -\infty$.</li>
+        <li>Symmetry: $\sigma(-z) = 1 - \sigma(z)$.</li>
+        <li>Derivative: $\sigma'(z) = \sigma(z)\big(1 - \sigma(z)\big)$, largest (¼) at $z = 0$ and nearly zero in the tails.</li>
+      </ul>
+      <p>The <b>decision boundary</b>, where $p = \tfrac12$, is where the logit is zero: $\mathbf{w}^\top\mathbf{x} + b = 0$, a hyperplane. With one input, $x = -b/w$. So logistic regression is still a <i>linear</i> classifier: the boundary is flat, only the probabilities curve.</p>
+      <figure class="plate wide" data-scene="sigmoid">
+        <div class="stage">
+          <canvas aria-label="A sigmoid curve controlled by w and b, with the straight logit underneath"></canvas>
+          <div class="toolbar">
+            <div class="sliders">
+              <label for="sg-w">w <input id="sg-w" type="range" data-k="w" min="-4" max="4" step="0.1"><output data-out="w"></output></label>
+              <label for="sg-b">b <input id="sg-b" type="range" data-k="b" min="-4" max="4" step="0.1"><output data-out="b"></output></label>
+            </div>
+            <div class="readout" data-role="readout"></div>
+          </div>
+        </div>
+      </figure>
+      <p class="muted">The faint dashed line is the logit $z = wx + b$ (scaled to fit); the orange curve is $\sigma(z)$. $w$ sets how sharp the S is and which way it faces; $b$ slides it. Set $w$ to 0 and the model can only say one probability everywhere.</p>
+    </section>
+
+    <section id="logodds">
+      <h2>The model reads as log-odds</h2>
+      <div class="detour">
+        <div class="label">Math detour · odds and logarithms</div>
+        <p>The <b>odds</b> of an event with probability $p$ are $p/(1-p)$: $p = 0.8$ is odds of 4 to 1. The natural log undoes $e^x$, and turns products into sums: $\log(ab) = \log a + \log b$. Logs of numbers near 0 are large and negative ($\log 0.01 \approx -4.6$).</p>
+      </div>
+      <p>Invert the sigmoid and the model becomes a statement about odds:</p>
+      <div class="eq">$$\log\frac{p}{1 - p} = \mathbf{w}^\top\mathbf{x} + b .$$</div>
+      <p>So logistic regression says <b>the log-odds are linear in the inputs</b>. Each unit increase in $x_j$ adds $w_j$ to the log-odds, which multiplies the odds by $e^{w_j}$. This is why the coefficients are interpretable in medicine and social science: $w = 0.7$ means "each extra unit roughly doubles the odds" ($e^{0.7} \approx 2.01$).</p>
+    </section>
+
+    <section id="likelihood">
+      <h2>Maximum likelihood gives log-loss</h2>
+      <p>Follow the recipe from lesson 01: choose a noise model, write the likelihood, take $-\log$.</p>
+      <div class="detour">
+        <div class="label">Math detour · Bernoulli</div>
+        <p>A yes/no outcome with $P(y = 1) = p$ is a <b>Bernoulli</b> variable. Its probability mass function, in one line, is $P(y) = p^{\,y}(1 - p)^{1 - y}$: it equals $p$ when $y = 1$ and $1 - p$ when $y = 0$.</p>
+      </div>
+      <p>With independent examples and $p_i = \sigma(\mathbf{w}^\top\mathbf{x}_i + b)$, the likelihood and its negative average log are</p>
+      <div class="eq">$$\mathcal{L}(\mathbf{w}) = \prod_{i=1}^n p_i^{\,y_i}(1 - p_i)^{1 - y_i}, \qquad J(\mathbf{w}) = -\frac1n\sum_{i=1}^n\Big[\,y_i\log p_i + (1 - y_i)\log(1 - p_i)\Big].$$</div>
+      <p>This is <b>log-loss</b>, or <b>binary cross-entropy</b>. Only one term is active per example: $-\log p_i$ if the truth is 1, $-\log(1 - p_i)$ if it is 0.</p>
+      <figure class="plate wide" data-scene="logcost">
+        <div class="stage">
+          <canvas aria-label="The cost of a prediction p under log-loss, for truth 1 and truth 0"></canvas>
+          <div class="toolbar">
+            <div class="sliders">
+              <label for="lc-p">p <input id="lc-p" type="range" data-k="p" min="0.01" max="0.99" step="0.01"><output data-out="p"></output></label>
+            </div>
+            <div class="readout" data-role="readout"></div>
+          </div>
+        </div>
+      </figure>
+      <p class="muted">Slide $p$ toward the wrong end. The cost of a confident mistake grows without bound ($-\log 0.01 \approx 4.6$), while a confident correct answer costs almost nothing. A model trained this way learns to be honest about its uncertainty.</p>
+    </section>
+
+    <section id="entropy">
+      <h2>Cross-entropy: the information view</h2>
+      <p>The same formula has a second meaning. For a true distribution $q$ and a model distribution $p$ over outcomes, the <b>cross-entropy</b> is</p>
+      <div class="eq">$$H(q, p) = -\sum_{\text{outcomes } k} q_k \log p_k = H(q) + D_{\mathrm{KL}}(q \,\Vert\, p).$$</div>
+      <p>It is the average number of nats needed to encode outcomes drawn from $q$ using a code built for $p$. For one example the true distribution puts all its mass on $y_i$, so $H(q) = 0$, and the cross-entropy is exactly the log-loss term. Minimising log-loss is minimising the KL divergence from the labels to the model. With $K$ classes and a softmax instead of a sigmoid, this is the loss of every classifier network and of next-token prediction in LLMs (lesson 07).</p>
+    </section>
+
+    <section id="gradient">
+      <h2>The gradient: the delta rule again</h2>
+      <p>Chain rule through $z_i = \mathbf{w}^\top\mathbf{x}_i + b$ and $p_i = \sigma(z_i)$, for one example's loss $\ell_i$:</p>
+      <div class="eq">$$\frac{\partial \ell_i}{\partial p_i} = -\frac{y_i}{p_i} + \frac{1 - y_i}{1 - p_i} = \frac{p_i - y_i}{p_i(1 - p_i)}, \qquad \frac{\partial p_i}{\partial z_i} = p_i(1 - p_i).$$</div>
+      <p>Multiply them, and everything messy cancels:</p>
+      <div class="eq">$$\frac{\partial \ell_i}{\partial z_i} = p_i - y_i .$$</div>
+      <p>With $\partial z_i/\partial\mathbf{w} = \mathbf{x}_i$ and $\partial z_i/\partial b = 1$:</p>
+      <div class="result">
+        <div class="label">Gradient of log-loss</div>
+        <div class="eq">$$\nabla_{\mathbf{w}} J = \frac1n\sum_{i=1}^n (p_i - y_i)\,\mathbf{x}_i = \frac1n X^\top(\mathbf{p} - \mathbf{y}), \qquad \frac{\partial J}{\partial b} = \frac1n\sum_{i=1}^n (p_i - y_i).$$</div>
+      </div>
+      <p>Compare with lesson 02: <b>it is the delta rule</b>, error times input, with the prediction now a probability. This is no coincidence. Squared error with a linear output, log-loss with a sigmoid, and cross-entropy with a softmax are each the <i>canonical</i> pairing for their output (they come from exponential-family likelihoods), and for every canonical pair the gradient at the logit is simply prediction minus truth (up to a constant factor). Backpropagation in a classifier network starts from exactly this $\mathbf{p} - \mathbf{y}$.</p>
+    </section>
+
+    <section id="convex">
+      <h2>Convexity, and why not squared error</h2>
+      <p>Differentiate once more. Using $\partial p_i/\partial z_i = p_i(1 - p_i)$:</p>
+      <div class="eq">$$\nabla^2 J = \frac1n\sum_{i=1}^n p_i(1 - p_i)\,\mathbf{x}_i\mathbf{x}_i^\top = \frac1n X^\top S X, \qquad S = \operatorname{diag}\big(p_i(1 - p_i)\big).$$</div>
+      <p>Every weight $p_i(1-p_i)$ is positive, so $\mathbf{v}^\top X^\top S X\mathbf{v} = \sum_i p_i(1-p_i)(\mathbf{x}_i^\top\mathbf{v})^2 \ge 0$. The Hessian is positive semidefinite and <b>log-loss is convex</b>: gradient descent cannot get stuck in a false minimum.</p>
+      <p>Now try squared error on the probability, $\frac1n\sum_i(p_i - y_i)^2$. Its gradient at the logit is $2(p_i - y_i)\,p_i(1 - p_i)$. When the model is confidently wrong ($p_i \approx 0$ but $y_i = 1$), the factor $p_i(1-p_i)$ is nearly zero, so the gradient vanishes exactly when learning should be fastest. The loss surface also stops being convex. The logarithm in log-loss cancels the sigmoid's flat tails; that is why the pairing matters.</p>
+    </section>
+
+    <section id="training">
+      <h2>Training it</h2>
+      <p>Set the gradient to zero and you get $X^\top(\sigma(X\mathbf{w}) - \mathbf{y}) = \mathbf{0}$, which is nonlinear in $\mathbf{w}$: <b>no closed form exists</b>. So we iterate. Plain gradient descent works; the classical alternative is Newton's method, $\mathbf{w} \leftarrow \mathbf{w} - (X^\top S X)^{-1}X^\top(\mathbf{p} - \mathbf{y})$, which statisticians call iteratively reweighted least squares. It converges in a handful of steps but needs a $d \times d$ solve each time.</p>
+      <figure class="plate wide" data-scene="logistic">
+        <div class="stage">
+          <canvas aria-label="Points at 0 and 1 with a sigmoid curve being fitted and a moving decision boundary"></canvas>
+          <div class="toolbar">
+            <div class="group">
+              <button class="primary" type="button" data-act="play" id="log-play">Pause</button>
+              <button type="button" data-act="restart" id="log-restart">Restart</button>
+            </div>
+            <div class="readout" data-role="readout"></div>
+          </div>
+        </div>
+      </figure>
+      <p class="muted">Gradient descent on log-loss, starting from $w = b = 0$ (a flat $p = 0.5$). Passes are on the top row, fails on the bottom. The thin lines are each example's $p_i - y_i$, the delta that drives the update. The curve never becomes a perfect step, because a few students near the middle went the "wrong" way, and log-loss prefers honest uncertainty to confident mistakes.</p>
+    </section>
+
+    <section id="separable">
+      <h2>Separable data and exploding weights</h2>
+      <p>If a hyperplane separates the classes perfectly, scaling $\mathbf{w}$ and $b$ up by any factor $c &gt; 1$ pushes every $p_i$ closer to its label and lowers the loss further. The infimum is 0 and is never reached: the MLE does not exist, and gradient descent sends $\lVert\mathbf{w}\rVert \to \infty$, slowly. (The direction of $\mathbf{w}$ does converge, to the maximum-margin separator, a result with real consequences for deep nets.)</p>
+      <p>The practical fix is regularisation: minimise $J(\mathbf{w}) + \frac{\lambda}{2}\lVert\mathbf{w}\rVert^2$, which keeps the weights finite and the probabilities calibrated (lesson 05).</p>
+    </section>
+
+    <section id="code">
+      <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+x = np.array([0.0, 1.0, 2.0, 3.0])   # hours studied
+y = np.array([0.0, 0.0, 1.0, 1.0])   # passed?
+X = np.column_stack([x, np.ones_like(x)])
+
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def log_loss(w):
+    p = np.clip(sigmoid(X @ w), 1e-12, 1 - 1e-12)   # avoid log(0)
+    return -np.mean(y * np.log(p) + (1 - y) * np.log(1 - p))
+
+def grad(w):
+    return X.T @ (sigmoid(X @ w) - y) / len(y)      # (1/n) X^T (p - y)
+
+w = np.zeros(2)
+for step in range(5000):
+    w -= 0.5 * grad(w)
+print(w, log_loss(w))   # w keeps growing: this data is separable</code></pre>
+    </section>
+
+    <section id="exercises">
+      <h2>Exercises</h2>
+      <p>Data: hours $x = (0, 1, 2, 3)$, passed $y = (0, 0, 1, 1)$.</p>
+      <ol>
+        <li>Compute $\sigma(-2)$, $\sigma(0)$ and $\sigma(2)$.</li>
+        <li>For $w = 2$, $b = -3$, compute each $p_i$, the decision boundary, and the log-loss.</li>
+        <li>At that $(w, b)$, compute $\partial J/\partial w$ and $\partial J/\partial b$. Which way should each move?</li>
+        <li>Prove $\sigma'(z) = \sigma(z)(1 - \sigma(z))$ and $\sigma(-z) = 1 - \sigma(z)$.</li>
+        <li>Derive the Hessian $\frac1n X^\top S X$ and show it is positive semidefinite.</li>
+        <li>Show that for separable data the loss has no minimiser. What does gradient descent do?</li>
+        <li>With labels in $\{-1, +1\}$ instead of $\{0, 1\}$, show the log-loss can be written $\frac1n\sum_i \log\!\left(1 + e^{-y_i(\mathbf{w}^\top\mathbf{x}_i + b)}\right)$.</li>
+      </ol>
+      <details>
+        <summary>Answers</summary>
+        <div>
+          <p><b>1.</b> $\sigma(-2) \approx 0.119$, $\sigma(0) = 0.5$, $\sigma(2) \approx 0.881$.</p>
+          <p><b>2.</b> $z = -3, -1, 1, 3$ so $p \approx 0.047, 0.269, 0.731, 0.953$. Boundary at $x = 1.5$. Costs $\approx 0.049, 0.313, 0.313, 0.049$, mean $\approx 0.181$.</p>
+          <p><b>3.</b> $p - y \approx 0.047, 0.269, -0.269, -0.047$. $\partial J/\partial b = 0$ by symmetry and $\partial J/\partial w = \tfrac14(0 + 0.269 - 0.538 - 0.142) \approx -0.103$. So $w$ should grow (a sharper S) and $b$ is balanced for this $w$.</p>
+          <p><b>4.</b> $\sigma = (1 + e^{-z})^{-1}$, so $\sigma' = e^{-z}(1 + e^{-z})^{-2} = \sigma\cdot\frac{e^{-z}}{1 + e^{-z}} = \sigma(1 - \sigma)$. And $1 - \sigma(z) = \frac{e^{-z}}{1 + e^{-z}} = \frac{1}{e^{z} + 1} = \sigma(-z)$.</p>
+          <p><b>5.</b> $\nabla J = \frac1n\sum_i (p_i - y_i)\mathbf{x}_i$; differentiating $p_i$ gives $p_i(1-p_i)\mathbf{x}_i^\top$, so $\nabla^2 J = \frac1n\sum_i p_i(1-p_i)\mathbf{x}_i\mathbf{x}_i^\top$. For any $\mathbf{v}$, $\mathbf{v}^\top\nabla^2 J\,\mathbf{v} = \frac1n\sum_i p_i(1 - p_i)(\mathbf{x}_i^\top\mathbf{v})^2 \ge 0$.</p>
+          <p><b>6.</b> If $(\mathbf{w}, b)$ separates the data, every $z_i$ has the sign of its label, and $J(c\mathbf{w}, cb)$ strictly decreases toward 0 as $c \to \infty$, yet every term stays positive, so no finite point attains the infimum. Gradient descent keeps increasing $\lVert\mathbf{w}\rVert$ roughly logarithmically in the number of steps.</p>
+          <p><b>7.</b> For $y = +1$ the term is $-\log\sigma(z) = \log(1 + e^{-z})$. For $y = -1$ (old label 0) it is $-\log(1 - \sigma(z)) = -\log\sigma(-z) = \log(1 + e^{z})$. Both are $\log(1 + e^{-yz})$.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="reading">
+      <h2>Further reading</h2>
+      <ul class="refs">
+        <li><b>Bishop, <i>Pattern Recognition and Machine Learning</i></b>, section 4.3. Logistic regression, IRLS, and the canonical link.</li>
+        <li><b>Murphy, <i>Probabilistic Machine Learning: An Introduction</i></b>, chapter 10. A modern, thorough treatment.</li>
+        <li><b>Stanford CS229 lecture notes</b>, part 2 (classification) and part 3 (generalised linear models).</li>
+        <li><b>Soudry et al., "The Implicit Bias of Gradient Descent on Separable Data"</b> (2018). Why the weight direction converges to the max-margin solution.</li>
+      </ul>
+    </section>
+  </article>
+
+  <nav class="pager" aria-label="Lessons">
+    <a href="02-gradient-descent.html"><span>Previous lesson</span><b>← 02 · Gradient descent</b></a>
+    <a class="next" href="../index.html"><span>Up next</span><b>Stage 2 · Making models honest →</b></a>
+  </nav>
+</div>
+<script src="../assets/learn.js"></script>
+</body>
+</html>

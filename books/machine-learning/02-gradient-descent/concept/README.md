@@ -1,5 +1,7 @@
 # 02 · Gradient descent and the delta rule
 
+> **Full version on the site:** [https://bsamanvith.github.io/learn/ml/02-gradient-descent.html](https://bsamanvith.github.io/learn/ml/02-gradient-descent.html) has the complete derivations, interactive figures and exercises. This file is the short summary.
+
 > **Open the lab first:** [gradient descent lab](https://bsamanvith.github.io/learn/ml/gradient-descent-lab.html)
 > (source: [`docs/ml/gradient-descent-lab.html`](../../../../docs/ml/gradient-descent-lab.html)).
 > For a hands-off version, watch the [animations](https://bsamanvith.github.io/learn/ml/watch-it-learn.html). Press **Run**, then play with the learning rate.

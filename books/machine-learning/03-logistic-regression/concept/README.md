@@ -1,5 +1,7 @@
 # 03 · Logistic regression and log-loss
 
+> **Full version on the site:** [https://bsamanvith.github.io/learn/ml/03-logistic-regression.html](https://bsamanvith.github.io/learn/ml/03-logistic-regression.html) has the complete derivations, interactive figures and exercises. This file is the short summary.
+
 > **Name check.** This is the "logarithmic" model you may have heard of. Its
 > real name is **logistic** regression, after the logistic (sigmoid) curve.
 > Logarithms show up twice inside it, in the *log-odds* and in the *log-loss*,

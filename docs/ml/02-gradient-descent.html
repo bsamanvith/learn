@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gradient Descent</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Lesson 02: gradients, the delta rule, and why the learning rate must stay below 2 over the largest curvature.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [["$", "$"]], displayMath: [["$$", "$$"]] }, svg: { fontCache: "global" }, options: { skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"] } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+  <nav class="top">
+    <a class="brand" href="../index.html">learn</a>
+    <div class="links">
+      <a href="01-linear-regression.html">01 Linear regression</a>
+      <a href="02-gradient-descent.html" aria-current="page">02 Gradient descent</a>
+      <a href="03-logistic-regression.html">03 Logistic regression</a>
+    </div>
+  </nav>
+
+  <header class="lesson-head">
+    <div class="eyebrow">Lesson 02 · Stage 1: learning from data</div>
+    <h1>Gradient descent and the delta rule</h1>
+    <p class="lede">The algorithm that trains almost every model in modern machine learning, from a two-parameter line to a trillion-parameter language model. It needs only one thing from the model: the slope of the loss.</p>
+    <div class="meta"><span><b>Prerequisites:</b> <a href="01-linear-regression.html">lesson 01</a></span><span><b>Math pulled in:</b> derivatives, partial derivatives, the gradient, the chain rule, directional derivatives, eigenvalues of the Hessian</span></div>
+  </header>
+
+  <nav class="toc" aria-label="Sections">
+    <ol>
+      <li><a href="#idea">The idea</a></li>
+      <li><a href="#derivative">Slope in one dimension</a></li>
+      <li><a href="#gradient">Many parameters: the gradient</a></li>
+      <li><a href="#steepest">Why minus the gradient is steepest</a></li>
+      <li><a href="#linreg">The gradient of the squared error</a></li>
+      <li><a href="#delta">The delta rule</a></li>
+      <li><a href="#worked">A worked example</a></li>
+      <li><a href="#rate">The learning rate, analysed</a></li>
+      <li><a href="#conditioning">Conditioning and feature scaling</a></li>
+      <li><a href="#beyond">Stopping, convexity, and what comes next</a></li>
+      <li><a href="#code">Code from scratch</a></li>
+      <li><a href="#exercises">Exercises</a></li>
+      <li><a href="#reading">Further reading</a></li>
+    </ol>
+  </nav>
+
+  <article class="lesson">
+    <section id="idea">
+      <h2>The idea</h2>
+      <p>You are on a hillside in fog and want to reach the valley floor. You can't see it, but you can feel the slope under your feet. So you step downhill, feel again, and repeat. In symbols, with parameters $\theta$, loss $J$ and step size $\eta$:</p>
+      <div class="result">
+        <div class="label">Gradient descent</div>
+        <div class="eq">$$\theta_{k+1} = \theta_k - \eta\,\nabla J(\theta_k).$$</div>
+      </div>
+      <p>$\eta$ (eta) is the <b>learning rate</b>. The rest of this lesson unpacks each symbol, then proves exactly when this converges.</p>
+      <figure class="plate wide" data-scene="linefit">
+        <div class="stage">
+          <div class="split">
+            <canvas data-role="fit" aria-label="Data points with the line being fitted and its errors"></canvas>
+            <canvas data-role="loss" aria-label="Loss falling over the steps, on a log scale"></canvas>
+          </div>
+          <div class="toolbar">
+            <div class="group">
+              <button class="primary" type="button" data-act="play" id="fit-play">Pause</button>
+              <button type="button" data-act="restart" id="fit-restart">Restart</button>
+              <span class="muted" style="font-size:14px">η</span>
+              <div class="seg" role="group" aria-label="Learning rate">
+                <button type="button" data-lr="0.05" aria-pressed="false" id="fit-lr-1">0.05</button>
+                <button type="button" data-lr="0.3" aria-pressed="true" id="fit-lr-2">0.3</button>
+                <button type="button" data-lr="0.9" aria-pressed="false" id="fit-lr-3">0.9</button>
+              </div>
+            </div>
+            <div class="readout" data-role="readout"></div>
+          </div>
+        </div>
+      </figure>
+      <p class="muted">Every frame is a real step $\theta \leftarrow \theta - \eta\nabla J$ on the data from lesson 01's figure. The faint lines are the last few steps; the right panel is the loss on a log scale.</p>
+    </section>
+
+    <section id="derivative">
+      <h2>Slope in one dimension</h2>
+      <div class="detour">
+        <div class="label">Math detour · the derivative</div>
+        <p>The derivative answers: if I nudge $w$ by a tiny amount, how much does $J$ change, per unit of nudge?</p>
+        <div class="eq">$$J'(w) = \frac{dJ}{dw} = \lim_{h\to 0}\frac{J(w+h) - J(w)}{h}.$$</div>
+        <p>Geometrically it is the slope of the tangent line. Near $w$, the function is almost that line: $J(w + h) \approx J(w) + J'(w)\,h$. This first-order approximation is the whole basis of gradient descent.</p>
+      </div>
+      <p>If $J'(w) &lt; 0$, increasing $w$ lowers the loss, so move right. If $J'(w) &gt; 0$, move left. Either way, move <b>against the sign of the slope</b>, and move further when it is steep:</p>
+      <div class="eq">$$w \leftarrow w - \eta\,J'(w), \qquad \Delta w = -\eta\,J'(w).$$</div>
+      <figure class="plate wide" data-scene="tangent">
+        <div class="stage">
+          <canvas aria-label="The loss as a function of w with a tangent line and the next step drawn as an arrow"></canvas>
+          <div class="toolbar">
+            <div class="sliders">
+              <label for="tg-w">w <input id="tg-w" type="range" data-k="w" min="-2" max="4" step="0.01"><output data-out="w"></output></label>
+              <button type="button" class="primary" data-act="step" id="tg-step">Take a step</button>
+              <button type="button" data-act="reset" id="tg-reset">Reset</button>
+            </div>
+            <div class="readout" data-role="readout"></div>
+          </div>
+        </div>
+      </figure>
+      <p class="muted">The dashed line is the tangent; its slope is $J'(w)$. The orange arrow on the axis is the step $-\eta J'(w)$: long where the bowl is steep, shrinking to nothing at the bottom. Press <b>Take a step</b> a few times and watch the steps shrink on their own, with $\eta$ fixed.</p>
+    </section>
+
+    <section id="gradient">
+      <h2>Many parameters: the gradient</h2>
+      <p>With several parameters, ask the same question about each one while freezing the others. That is a <b>partial derivative</b>, written with a curly $\partial$. Stack them into a vector and you have the <b>gradient</b>:</p>
+      <div class="eq">$$\nabla J(\theta) = \begin{bmatrix} \partial J/\partial\theta_1 \\ \vdots \\ \partial J/\partial\theta_p \end{bmatrix}, \qquad J(\theta + \mathbf{h}) \approx J(\theta) + \nabla J(\theta)^\top\mathbf{h}.$$</div>
+      <p>The gradient is perpendicular to the contour lines of $J$ (moving along a contour doesn't change $J$, so $\nabla J^\top\mathbf{h} = 0$ for such moves) and points in the direction of fastest increase. The next section proves that.</p>
+    </section>
+
+    <section id="steepest">
+      <h2>Why minus the gradient is steepest</h2>
+      <p>Take a unit direction $\mathbf{u}$ ($\lVert\mathbf{u}\rVert = 1$). The rate of change of $J$ along $\mathbf{u}$ is the <b>directional derivative</b> $D_{\mathbf{u}}J = \nabla J^\top\mathbf{u}$. By the Cauchy–Schwarz inequality,</p>
+      <div class="eq">$$-\lVert\nabla J\rVert \;\le\; \nabla J^\top\mathbf{u} \;\le\; \lVert\nabla J\rVert,$$</div>
+      <p>with the lower bound reached exactly at $\mathbf{u} = -\nabla J/\lVert\nabla J\rVert$. So among all directions, minus the gradient decreases $J$ fastest, at rate $\lVert\nabla J\rVert$. And for small enough $\eta$, a step strictly lowers the loss: $J(\theta - \eta\nabla J) \approx J(\theta) - \eta\lVert\nabla J\rVert^2 &lt; J(\theta)$.</p>
+      <p class="muted">"Steepest" depends on how you measure distance. Using the ordinary Euclidean length gives plain gradient descent; other choices give Newton's method and natural gradient, which you will meet later.</p>
+    </section>
+
+    <section id="linreg">
+      <h2>The gradient of the squared error</h2>
+      <p>For linear regression $J(w, b) = \frac1n\sum_i r_i^2$ with residual $r_i = w x_i + b - y_i$.</p>
+      <div class="detour">
+        <div class="label">Math detour · the chain rule</div>
+        <p>If $J$ depends on $r$ and $r$ depends on $w$, then $\dfrac{\partial J}{\partial w} = \dfrac{\partial J}{\partial r}\cdot\dfrac{\partial r}{\partial w}$: "how fast $J$ moves per unit of $r$" times "how fast $r$ moves per unit of $w$". Applied repeatedly through many layers, this one rule is backpropagation (lesson 11).</p>
+      </div>
+      <p>Here $\partial(r_i^2)/\partial r_i = 2r_i$, $\partial r_i/\partial w = x_i$ and $\partial r_i/\partial b = 1$, so</p>
+      <div class="eq">$$\frac{\partial J}{\partial w} = \frac{2}{n}\sum_{i=1}^n r_i\,x_i, \qquad \frac{\partial J}{\partial b} = \frac{2}{n}\sum_{i=1}^n r_i .$$</div>
+      <p>In matrix form, with the bias absorbed into $X$ as in lesson 01, this is the gradient we set to zero there:</p>
+      <div class="eq">$$\nabla J(\mathbf{w}) = \frac{2}{n}\,X^\top\!\left(X\mathbf{w} - \mathbf{y}\right).$$</div>
+    </section>
+
+    <section id="delta">
+      <h2>The delta rule</h2>
+      <p>Substitute into the update and write the error as truth minus guess, $\delta_i = y_i - \hat y_i$ (the <b>delta</b>):</p>
+      <div class="result">
+        <div class="label">The delta rule (Widrow–Hoff, 1960)</div>
+        <div class="eq">$$\Delta w = \eta\,\frac{2}{n}\sum_{i=1}^n \delta_i\,x_i, \qquad \Delta b = \eta\,\frac{2}{n}\sum_{i=1}^n \delta_i .$$</div>
+      </div>
+      <p>In words: <b>change each weight in proportion to the error times the input attached to that weight.</b> It matches common sense row by row:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Situation</th><th class="num">$\delta$</th><th class="num">$x$</th><th class="num">$\Delta w$</th><th>Effect</th></tr></thead>
+          <tbody>
+            <tr><td>Guess too low, positive input</td><td class="num">+</td><td class="num">+</td><td class="num">+</td><td>raise $w$, guess rises</td></tr>
+            <tr><td>Guess too low, negative input</td><td class="num">+</td><td class="num">−</td><td class="num">−</td><td>lower $w$, so $wx$ rises</td></tr>
+            <tr><td>Guess too high, positive input</td><td class="num">−</td><td class="num">+</td><td class="num">−</td><td>lower $w$</td></tr>
+            <tr><td>Guess exactly right</td><td class="num">0</td><td class="num">any</td><td class="num">0</td><td>leave it</td></tr>
+            <tr><td>Input is zero</td><td class="num">any</td><td class="num">0</td><td class="num">0</td><td>this weight didn't cause the error</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The last row is the deep idea: <b>each weight is blamed in proportion to how much it contributed to the output.</b> Using one example at a time instead of the average gives the stochastic form $w \leftarrow w + \eta\,\delta_i x_i$, the LMS algorithm that ran in 1960s adaptive filters, and the ancestor of SGD (lesson 08). Lesson 03 will show logistic regression produces the same rule, and in a neural network each neuron gets its own $\delta$, passed backwards through the layers.</p>
+    </section>
+
+    <section id="worked">
+      <h2>A worked example</h2>
+      <p>Data from lesson 01: $x = (1, 2, 3)$, $y = (2, 4, 5)$. Start at $w = b = 0$, with $\eta = 0.1$.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>step</th><th class="num">$w$</th><th class="num">$b$</th><th class="num">$\hat y$</th><th class="num">$\delta = y - \hat y$</th><th class="num">$\partial J/\partial w$</th><th class="num">$\partial J/\partial b$</th><th class="num">$J$</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td class="num">0</td><td class="num">0</td><td class="num">0, 0, 0</td><td class="num">2, 4, 5</td><td class="num">−16.67</td><td class="num">−7.33</td><td class="num">15.00</td></tr>
+            <tr><td>1</td><td class="num">1.667</td><td class="num">0.733</td><td class="num">2.40, 4.07, 5.73</td><td class="num">−0.40, −0.07, −0.73</td><td class="num">1.82</td><td class="num">0.80</td><td class="num">0.234</td></tr>
+            <tr><td>2</td><td class="num">1.484</td><td class="num">0.653</td><td class="num"></td><td class="num"></td><td class="num">−0.20</td><td class="num">−0.09</td><td class="num">0.058</td></tr>
+            <tr><td>∞</td><td class="num">1.500</td><td class="num">0.667</td><td class="num"></td><td class="num"></td><td class="num">0</td><td class="num">0</td><td class="num">0.056</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Step 0: $\partial J/\partial w = \frac23(-2 - 8 - 15) = -16.67$, so $\Delta w = -0.1 \times (-16.67) = +1.667$. One step takes the loss from 15 to 0.23, and the iterates settle on the exact answer from the normal equations. Notice the sign of $\partial J/\partial w$ flipping between steps: a small overshoot, which section 8 explains.</p>
+    </section>
+
+    <section id="rate">
+      <h2>The learning rate, analysed</h2>
+      <p>For squared error we can say exactly what happens, because $J$ is quadratic. Let $H = \nabla^2 J = \frac2n X^\top X$ and let $\mathbf{w}^*$ be the minimiser, so $\nabla J(\mathbf{w}) = H(\mathbf{w} - \mathbf{w}^*)$. Track the error $\mathbf{e}_k = \mathbf{w}_k - \mathbf{w}^*$:</p>
+      <div class="eq">$$\mathbf{e}_{k+1} = \mathbf{e}_k - \eta H\mathbf{e}_k = (I - \eta H)\,\mathbf{e}_k \quad\Longrightarrow\quad \mathbf{e}_k = (I - \eta H)^k\,\mathbf{e}_0 .$$</div>
+      <p>$H$ is symmetric, so it has orthogonal eigenvectors $\mathbf{q}_j$ with eigenvalues $\lambda_j \ge 0$, the <b>curvatures</b> of the bowl along those axes. Along each axis, every step multiplies the error by the same factor:</p>
+      <div class="eq">$$e^{(j)}_{k} = \left(1 - \eta\lambda_j\right)^k e^{(j)}_0 .$$</div>
+      <p>That single factor explains every behaviour in the figure below:</p>
+      <ul>
+        <li>$0 &lt; \eta\lambda &lt; 1$: factor in $(0, 1)$. Smooth, monotone approach. Too small $\eta$ means a factor near 1: very slow.</li>
+        <li>$\eta\lambda = 1$: factor 0. That direction is solved in one step.</li>
+        <li>$1 &lt; \eta\lambda &lt; 2$: factor in $(-1, 0)$. It overshoots, flipping sides each step, but each jump is shorter. A zig-zag that converges.</li>
+        <li>$\eta\lambda &gt; 2$: factor below $-1$. Each jump is longer than the last. <b>Divergence.</b></li>
+      </ul>
+      <div class="result">
+        <div class="label">Stability condition</div>
+        <div class="eq">$$\text{gradient descent on a quadratic converges} \iff 0 &lt; \eta &lt; \frac{2}{\lambda_{\max}} .$$</div>
+      </div>
+      <figure class="plate wide" data-scene="race">
+        <div class="stage">
+          <div class="lanes">
+            <div class="lane" data-lane="0.06">
+              <div class="lane-head"><h3>ηλ = 0.06</h3><span class="tag" data-role="state">hop 0</span></div>
+              <canvas aria-label="Learning rate too small: tiny hops"></canvas>
+              <div class="readout"><span data-role="eta"></span> · <span data-role="readout"></span></div>
+            </div>
+            <div class="lane" data-lane="0.8">
+              <div class="lane-head"><h3>ηλ = 0.8</h3><span class="tag" data-role="state">hop 0</span></div>
+              <canvas aria-label="Learning rate just right: lands in a few hops"></canvas>
+              <div class="readout"><span data-role="eta"></span> · <span data-role="readout"></span></div>
+            </div>
+            <div class="lane" data-lane="1.75">
+              <div class="lane-head"><h3>ηλ = 1.75</h3><span class="tag" data-role="state">hop 0</span></div>
+              <canvas aria-label="Learning rate large: jumps across the bowl but still settles"></canvas>
+              <div class="readout"><span data-role="eta"></span> · <span data-role="readout"></span></div>
+            </div>
+            <div class="lane" data-lane="2.12">
+              <div class="lane-head"><h3>ηλ = 2.12</h3><span class="tag" data-role="state">hop 0</span></div>
+              <canvas aria-label="Learning rate too big: each jump lands higher until it flies off"></canvas>
+              <div class="readout"><span data-role="eta"></span> · <span data-role="readout"></span></div>
+            </div>
+          </div>
+          <div class="toolbar">
+            <div class="group">
+              <button class="primary" type="button" data-act="play" id="race-play">Pause</button>
+              <button type="button" data-act="restart" id="race-restart">Restart</button>
+            </div>
+            <div class="readout">factor per hop: 0.94 · 0.20 · −0.75 · −1.12</div>
+          </div>
+        </div>
+      </figure>
+      <p class="muted">Only the slope learns here (the intercept is held at its best value), so the bowl is one-dimensional with curvature $\lambda = 2\,\overline{x^2}$. Each lane uses a different $\eta\lambda$. Underneath, the line that each ball's $w$ draws on the data.</p>
+    </section>
+
+    <section id="conditioning">
+      <h2>Conditioning and feature scaling</h2>
+      <p>With several directions, one $\eta$ must serve them all. Stability is set by the steepest direction, $\eta &lt; 2/\lambda_{\max}$, but progress along the flattest direction goes at rate $1 - \eta\lambda_{\min}$. The best fixed step, $\eta = 2/(\lambda_{\max} + \lambda_{\min})$, gives the error contraction per step</p>
+      <div class="eq">$$\max_j\,\lvert 1 - \eta\lambda_j\rvert = \frac{\kappa - 1}{\kappa + 1}, \qquad \kappa = \frac{\lambda_{\max}}{\lambda_{\min}} .$$</div>
+      <p>$\kappa$ is the <b>condition number</b>. A round bowl ($\kappa \approx 1$) is solved in a handful of steps. A long narrow valley ($\kappa \gg 1$) needs on the order of $\kappa$ steps, while the iterates zig-zag across the valley.</p>
+      <p>For linear regression $H \propto X^\top X$, so $\kappa$ comes from the inputs. Inputs far from zero, or on very different scales, make $X^\top X$ badly conditioned. The fix is to <b>standardise</b> each feature, $x \leftarrow (x - \bar x)/s_x$, before training. In the <a href="gradient-descent-lab.html">gradient descent lab</a>, switch the data to "raw x": inputs between 2 and 4 instead of −1 and 1 push $\kappa$ to about 300, and you can watch the walk crawl.</p>
+      <p class="muted">This is why every ML pipeline normalises its inputs, and why deep nets use batch and layer normalisation: they keep the effective $\kappa$ of each layer under control.</p>
+    </section>
+
+    <section id="beyond">
+      <h2>Stopping, convexity, and what comes next</h2>
+      <ul>
+        <li><b>When to stop:</b> when $\lVert\nabla J\rVert$ falls below a tolerance, when the loss stops improving, or after a fixed budget of steps. In practice, the last one plus a validation check (lesson 04).</li>
+        <li><b>Convex losses</b>, like squared error on a linear model, have one basin, so gradient descent with a safe $\eta$ finds the global minimum from any start.</li>
+        <li><b>Neural nets are not convex.</b> They have saddle points, plateaus and many minima. Gradient descent still works remarkably well on them, especially with the noise of mini-batches.</li>
+        <li><b>Coming up:</b> stochastic and mini-batch gradients, momentum and Adam (lesson 08) all modify the same update to cope with noise and bad conditioning.</li>
+      </ul>
+    </section>
+
+    <section id="code">
+      <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+x = np.array([1.0, 2.0, 3.0])
+y = np.array([2.0, 4.0, 5.0])
+
+def loss(w, b):
+    return np.mean((w * x + b - y) ** 2)
+
+def grad(w, b):
+    r = w * x + b - y                    # residuals: guess minus truth
+    return 2 * np.mean(r * x), 2 * np.mean(r)
+
+# The largest stable learning rate is 2 / (largest eigenvalue of the Hessian).
+H = 2 * np.array([[np.mean(x * x), np.mean(x)], [np.mean(x), 1.0]])
+print("max stable eta:", 2 / np.linalg.eigvalsh(H).max())   # ~0.18
+
+w, b, eta = 0.0, 0.0, 0.1
+for step in range(200):
+    gw, gb = grad(w, b)
+    w, b = w - eta * gw, b - eta * gb    # the update
+print(w, b, loss(w, b))                  # 1.5 0.667 0.0556</code></pre>
+      <p class="muted">The full script, with a numerical gradient check and a divergence demo, is <code>books/machine-learning/02-gradient-descent/code/gradient_descent.py</code> in the repo.</p>
+    </section>
+
+    <section id="exercises">
+      <h2>Exercises</h2>
+      <ol>
+        <li>For $J(w) = (w-3)^2$, starting at $w = 0$ with $\eta = 0.25$, do three steps by hand. What fraction of the remaining distance does each step close?</li>
+        <li>Same function with $\eta = 1.1$. Do three steps. Why does it diverge?</li>
+        <li>Check numerically that $\frac{\partial J}{\partial w} \approx \frac{J(w+h) - J(w)}{h}$ at $w = b = 0$ for the worked example, with $h = 10^{-5}$.</li>
+        <li>Prove that for $J(\theta) = \frac12\theta^\top A\theta$ with $A$ symmetric positive definite, gradient descent converges if and only if $0 &lt; \eta &lt; 2/\lambda_{\max}(A)$.</li>
+        <li>Show that $\eta = 2/(\lambda_{\max} + \lambda_{\min})$ minimises $\max_j \lvert 1 - \eta\lambda_j\rvert$, and that the minimum equals $(\kappa - 1)/(\kappa + 1)$.</li>
+        <li>For one input, the Hessian of the MSE is $2\begin{bmatrix}\overline{x^2} &amp; \bar x\\ \bar x &amp; 1\end{bmatrix}$. Show that centring the inputs ($\bar x = 0$) makes it diagonal. What is $\kappa$ then?</li>
+        <li>Replace the full gradient with the gradient of one random example per step. Plot the loss. Why does it never settle exactly with a fixed $\eta$?</li>
+      </ol>
+      <details>
+        <summary>Answers</summary>
+        <div>
+          <p><b>1.</b> $J'(w) = 2(w-3)$. Iterates $0 \to 1.5 \to 2.25 \to 2.625$. Each step multiplies the distance to 3 by $1 - \eta\lambda = 1 - 0.25\cdot 2 = 0.5$.</p>
+          <p><b>2.</b> $0 \to 6.6 \to -1.32 \to 8.18$. The factor is $1 - 1.1\cdot 2 = -1.2$: the sign flips and the distance grows 20% per step, because $\eta = 1.1 &gt; 2/\lambda = 1$.</p>
+          <p><b>3.</b> The analytic values are $-16.667$ and $-7.333$; the forward difference agrees to about 5 digits.</p>
+          <p><b>4.</b> $\nabla J = A\theta$, so $\theta_k = (I - \eta A)^k\theta_0$. In the eigenbasis each coordinate is multiplied by $(1 - \eta\lambda_j)^k$, which tends to 0 for every start if and only if $\lvert 1 - \eta\lambda_j\rvert &lt; 1$ for all $j$, that is $0 &lt; \eta\lambda_j &lt; 2$. The binding constraint is $\lambda_{\max}$.</p>
+          <p><b>5.</b> $\max_j\lvert 1 - \eta\lambda_j\rvert = \max(\lvert 1 - \eta\lambda_{\min}\rvert, \lvert 1 - \eta\lambda_{\max}\rvert)$. The first falls and the second rises with $\eta$, so the max is smallest where $1 - \eta\lambda_{\min} = \eta\lambda_{\max} - 1$, giving $\eta = 2/(\lambda_{\max} + \lambda_{\min})$ and value $(\lambda_{\max} - \lambda_{\min})/(\lambda_{\max} + \lambda_{\min}) = (\kappa-1)/(\kappa+1)$.</p>
+          <p><b>6.</b> With $\bar x = 0$ the off-diagonal entries vanish, leaving eigenvalues $2\overline{x^2}$ and $2$. So $\kappa = \max(\overline{x^2}, 1)/\min(\overline{x^2}, 1)$, which is 1 if you also scale $x$ to unit variance.</p>
+          <p><b>7.</b> Each single-example gradient is a noisy estimate of the full gradient. At the minimum the full gradient is zero but the single-example gradients are not, so with a fixed $\eta$ the iterates keep jittering in a small region. Shrinking $\eta$ over time removes the jitter.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="reading">
+      <h2>Further reading</h2>
+      <ul class="refs">
+        <li><b>Goodfellow, Bengio, Courville, <i>Deep Learning</i></b>, section 4.3. Gradient-based optimisation and the role of the Hessian.</li>
+        <li><b>Boyd and Vandenberghe, <i>Convex Optimization</i></b>, section 9.3. The convergence analysis above, in full generality.</li>
+        <li><b>Gabriel Goh, "Why Momentum Really Works"</b> (Distill, 2017). The eigenvalue picture, with superb interactive figures.</li>
+        <li><b>Widrow and Hoff, "Adaptive switching circuits"</b> (1960). The original delta rule.</li>
+      </ul>
+    </section>
+  </article>
+
+  <nav class="pager" aria-label="Lessons">
+    <a href="01-linear-regression.html"><span>Previous lesson</span><b>← 01 · Linear regression</b></a>
+    <a class="next" href="03-logistic-regression.html"><span>Next lesson</span><b>03 · Logistic regression →</b></a>
+  </nav>
+</div>
+<script src="../assets/learn.js"></script>
+</body>
+</html>

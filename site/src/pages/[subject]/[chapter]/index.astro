@@ -1,0 +1,50 @@
+---
+import { getCollection, render } from "astro:content";
+import Chapter from "../../../layouts/Chapter.astro";
+import { byChapter, subjectOf, slugIn, partTitle } from "../../../subjects";
+
+export async function getStaticPaths() {
+  const all = (await getCollection("text")).sort(byChapter);
+  return all.map((entry) => {
+    const siblings = all.filter((c) => subjectOf(c.id) === subjectOf(entry.id));
+    const i = siblings.indexOf(entry);
+    return {
+      params: { subject: subjectOf(entry.id), chapter: slugIn(entry.id) },
+      props: { entry, siblings, prev: siblings[i - 1], next: siblings[i + 1] },
+    };
+  });
+}
+const { entry, siblings, prev, next } = Astro.props;
+const subject = subjectOf(entry.id);
+const { Content, headings } = await render(entry);
+const hasExercises = (await getCollection("exercises")).some((e) => e.id === entry.id);
+const link = (ch: string) => {
+  const c = siblings.find((x) => x.data.chapter === ch);
+  return c ? { href: `/${c.id}/`, label: `${ch} ${c.data.title}` } : { href: undefined, label: ch };
+};
+---
+<Chapter title={`${entry.data.chapter} ${entry.data.title}`} id={entry.id} headings={headings}>
+  <p class="kicker"><a href={`/${subject}/`}>Part {entry.data.part} · {partTitle(subject, entry.data.part)}</a></p>
+  <nav class="tabs" aria-label="Chapter views">
+    <a href={`/${entry.id}/`} aria-current="page">Read</a>
+    {hasExercises && <a href={`/${entry.id}/exercises/`}>Exercises</a>}
+  </nav>
+  <div class="chapter-meta">
+    {entry.data.prerequisites.length > 0 && <span>Builds on</span>}
+    {entry.data.prerequisites.map((p) => { const l = link(p); return l.href ? <a class="chip" href={l.href}>← {l.label}</a> : <span class="chip">← {p}</span>; })}
+    {entry.data.status === "draft" && <span class="chip status">draft</span>}
+  </div>
+  <Content />
+  {entry.data.leads_to.length > 0 && (
+    <div class="chapter-meta" style="margin-top:2.5em">
+      <span>Leads to</span>
+      {entry.data.leads_to.map((p) => { const l = link(p); return l.href ? <a class="chip" href={l.href}>{l.label} →</a> : <span class="chip" title="Not written yet">{p} →</span>; })}
+    </div>
+  )}
+  <nav class="pager">
+    {hasExercises
+      ? <a class="next" href={`/${entry.id}/exercises/`}><small>Practice</small>Exercises {entry.data.chapter} →</a>
+      : next && <a class="next" href={`/${next.id}/`}><small>Next</small>{next.data.chapter} {next.data.title} →</a>}
+    {prev && <a href={`/${prev.id}/`} style="grid-row:1;grid-column:1"><small>Previous</small>← {prev.data.chapter} {prev.data.title}</a>}
+  </nav>
+</Chapter>

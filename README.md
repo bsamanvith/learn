@@ -1,33 +1,45 @@
 # learn
 
-Personal learning repo for science: probability, machine learning, physics (relativity), astronomy and more.
+Personal learning repo for science: probability, machine learning, physics, astronomy,
+chemistry, biology and more — written to be **fun to read, deep enough to trust, and
+impossible to finish without doing something.**
 
-Each subject and topic gets visually intuitive material: concept books, textbooks and exercise books.
+Every topic gets chapters that put intuition and rigour side by side, exercises with full
+solutions, simulations that check the maths, and visuals you can play with.
 
-**Status:** machine learning stage 1 written. Start at [`books/machine-learning`](books/machine-learning/README.md).
+**Status:** probability Parts 0–1 drafted (8 chapters, exercises, widgets, sims); Part 2 next.
 
-## Planned structure
+## Layout
 
 ```
-books/<subject>/<topic>/
-  concept/     # visual, intuition-first concept book
-  text/        # textbook-style write-up
-  exercises/   # exercise book
-  code/        # from-scratch implementations, where useful
+principles/            how we teach: philosophy, learning science, page anatomy,
+                       exercises, visuals, how subjects differ, style guide
+tools/                 shared tooling: widget template, theme tokens + JS helpers,
+                       figure style, Python requirements
+site/                  the website (Astro): one book per subject, plus the animations lab
+subjects/index.json    every subject, in display order (slug, title, tagline)
+subjects/<subject>/
+  meta.json            book title, intro, part titles and blurbs (for the site)
+  README.md            notation, colour vocabulary, layout
+  PLAN.md              syllabus: parts → chapters → concepts, visuals, problems
+  text/                chapters: hook → intuition → definitions → proofs → pitfalls
+  exercises/           problems + full solutions
+  widgets/             interactive HTML
+  sims/                Python simulations
+  assets/              figures and images
 ```
 
-## Website
+## Subjects
 
-The animated site is in [`docs/`](docs) and is served by GitHub Pages at
-**https://bsamanvith.github.io/learn/**. It is plain HTML, CSS and Canvas with no build step: edit a
-file, push to `main`, and Pages republishes it.
+| Subject | Status |
+|---|---|
+| [Probability](subjects/probability/) | Parts 0–1 drafted — see [PLAN.md](subjects/probability/PLAN.md) |
+| Statistics, ML, physics, astronomy, chemistry, biology | later |
 
-One-time setup: repo **Settings → Pages → Build and deployment →
-Deploy from a branch → `main` / `/docs`**.
+## Start here
 
-To preview locally: `python3 -m http.server -d docs` and open http://localhost:8000.
-
-## Books
-
-- [Machine learning](books/machine-learning/README.md): model-first roadmap from linear regression to neural nets, trees and RL
-- [Math on demand](books/math/README.md): calculus, probability, statistics and linear algebra, each pulled in by the ML lesson that needs it
+1. [principles/philosophy.md](principles/philosophy.md)
+2. [subjects/probability/PLAN.md](subjects/probability/PLAN.md)
+3. Read it as a website: `pnpm -C site install && pnpm -C site dev` → <http://localhost:4321>
+   The home page lists every subject; each live one is a book at `/<subject>/`. Light, paper and
+   dark themes; animations inline; the **Animations** page reviews them across all subjects.

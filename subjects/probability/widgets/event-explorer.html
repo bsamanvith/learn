@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Explorer</title>
+<link rel="stylesheet" href="../../../tools/widgets/base.css">
+<style>
+  select { font: inherit; padding: 2px 6px; background: var(--panel); color: var(--fg); border: 1px solid var(--muted); border-radius: 6px; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+  .verdict { font-weight: 600; margin: 8px 0; }
+</style>
+</head>
+<body>
+<!-- Chapter 1.1. Question: "What are events, and what do union, intersection and complement look like?" -->
+<h3>Events are just sets of outcomes</h3>
+<p class="question">Roll two dice. The sample space Ω is all 36 (first, second) pairs — each square below.
+An <b>event</b> is any set of squares. Build events with "or", "and", "not", and compare two expressions side by side.</p>
+
+<div class="controls">
+  <label><span class="a">A</span> = <select id="evA"></select></label>
+  <label><span class="b">B</span> = <select id="evB"></select></label>
+</div>
+
+<div class="pair">
+  <div>
+    <label>Left: <select id="op1"></select></label>
+    <svg id="g1" viewBox="0 0 300 300" role="img" aria-label="Left event on the 6 by 6 grid"></svg>
+    <div class="stats" id="s1"></div>
+  </div>
+  <div>
+    <label>Right: <select id="op2"></select></label>
+    <svg id="g2" viewBox="0 0 300 300" role="img" aria-label="Right event on the 6 by 6 grid"></svg>
+    <div class="stats" id="s2"></div>
+  </div>
+</div>
+<p class="verdict" id="verdict"></p>
+<p class="caption">Faint colours show where <span class="a">A</span>, <span class="b">B</span> and <span class="both">both</span> live; bright squares are the selected event.
+Try: is (A ∪ B)ᶜ the same as Aᶜ ∩ Bᶜ? What about (A ∩ B)ᶜ and Aᶜ ∪ Bᶜ? (De Morgan's laws.) Find A and B that are <i>disjoint</i>.</p>
+
+<script src="../../../tools/widgets/lib.js"></script>
+<script>
+  const events = {
+    "sum is 7": (i, j) => i + j === 7,
+    "first die is even": (i) => i % 2 === 0,
+    "doubles": (i, j) => i === j,
+    "sum ≥ 10": (i, j) => i + j >= 10,
+    "at least one 6": (i, j) => i === 6 || j === 6,
+    "first < second": (i, j) => i < j,
+    "both odd": (i, j) => i % 2 === 1 && j % 2 === 1,
+    "sum is prime": (i, j) => [2, 3, 5, 7, 11].includes(i + j),
+    "max is 3 or less": (i, j) => Math.max(i, j) <= 3,
+  };
+  const ops = {
+    "A": (a, b) => a, "B": (a, b) => b,
+    "A ∪ B   (A or B)": (a, b) => a || b, "A ∩ B   (A and B)": (a, b) => a && b,
+    "Aᶜ   (not A)": (a) => !a, "Bᶜ   (not B)": (a, b) => !b,
+    "A \\ B   (A but not B)": (a, b) => a && !b, "A △ B   (exactly one)": (a, b) => a !== b,
+    "(A ∪ B)ᶜ": (a, b) => !(a || b), "Aᶜ ∩ Bᶜ": (a, b) => !a && !b,
+    "(A ∩ B)ᶜ": (a, b) => !(a && b), "Aᶜ ∪ Bᶜ": (a, b) => !a || !b,
+  };
+  const state = { A: "sum is 7", B: "first die is even", op1: "(A ∪ B)ᶜ", op2: "Aᶜ ∩ Bᶜ" };
+
+  function fill(id, obj, key) {
+    const s = document.getElementById(id);
+    for (const k of Object.keys(obj)) { const o = document.createElement("option"); o.textContent = k; s.appendChild(o); }
+    s.value = state[key];
+    s.onchange = () => { state[key] = s.value; draw(); };
+  }
+  fill("evA", events, "A"); fill("evB", events, "B"); fill("op1", ops, "op1"); fill("op2", ops, "op2");
+
+  const gcd = (x, y) => (y ? gcd(y, x % y) : x);
+  function grid(svgId, statsId, opName) {
+    const c = Learn.palette(), svg = document.getElementById(svgId);
+    svg.innerHTML = "";
+    const size = 42, x0 = 36, y0 = 8; let count = 0; const cells = [];
+    for (let i = 1; i <= 6; i++) for (let j = 1; j <= 6; j++) {
+      const a = events[state.A](i, j), b = events[state.B](i, j), sel = ops[opName](a, b);
+      cells.push(sel); if (sel) count++;
+      const base = a && b ? c.both : a ? c.a : b ? c.b : c.muted;
+      const x = x0 + (i - 1) * size, y = y0 + (6 - j) * size;
+      Learn.el("rect", { x, y, width: size - 3, height: size - 3, rx: 5, fill: base, opacity: sel ? 0.95 : 0.16,
+        stroke: sel ? c.fg : "none", "stroke-width": 1.5 }, svg);
+      Learn.el("text", { x: x + size / 2 - 1.5, y: y + size / 2 + 4, "text-anchor": "middle", "font-size": 11,
+        fill: sel ? "#fff" : c.muted, text: `${i},${j}` }, svg);
+    }
+    for (let k = 1; k <= 6; k++) {
+      Learn.el("text", { x: x0 + (k - 1) * size + size / 2, y: y0 + 6 * size + 14, "text-anchor": "middle", fill: c.muted, "font-size": 12, text: k }, svg);
+      Learn.el("text", { x: x0 - 8, y: y0 + (6 - k) * size + size / 2 + 4, "text-anchor": "end", fill: c.muted, "font-size": 12, text: k }, svg);
+    }
+    Learn.el("text", { x: x0 + 3 * size, y: 296, "text-anchor": "middle", fill: c.muted, "font-size": 11, text: "first die →" }, svg);
+    const g = gcd(count, 36) || 1;
+    document.getElementById(statsId).innerHTML = `
+      <div class="stat"><div class="label">outcomes in event</div><div class="value">${count} / 36</div></div>
+      <div class="stat"><div class="label">probability</div><div class="value">${count ? `${count / g}/${36 / g}` : "0"} ≈ ${(count / 36).toFixed(3)}</div></div>`;
+    return cells;
+  }
+
+  function draw() {
+    const l = grid("g1", "s1", state.op1), r = grid("g2", "s2", state.op2);
+    const same = l.every((v, k) => v === r[k]);
+    const disjoint = [...Array(36).keys()].every((k) => { const i = Math.floor(k / 6) + 1, j = (k % 6) + 1; return !(events[state.A](i, j) && events[state.B](i, j)); });
+    const v = document.getElementById("verdict");
+    v.innerHTML = (same ? `<span class="good">Same event.</span> These two expressions pick out exactly the same outcomes.`
+      : `<span class="bad">Different events.</span>`) + (disjoint ? ` &nbsp;·&nbsp; A and B are <b>disjoint</b> (A ∩ B = ∅).` : "");
+  }
+  draw();
+  Learn.onThemeChange(draw);
+</script>
+</body>
+</html>

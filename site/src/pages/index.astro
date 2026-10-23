@@ -1,0 +1,58 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../layouts/Base.astro";
+import { SUBJECTS, subjectOf, widgetsOf, meta } from "../subjects";
+
+const text = await getCollection("text");
+const exercises = await getCollection("exercises");
+const subjects = SUBJECTS.map((s) => {
+  const chapters = text.filter((e) => subjectOf(e.id) === s.slug);
+  const problems = exercises.filter((e) => subjectOf(e.id) === s.slug)
+    .reduce((n, e) => n + (e.body?.match(/^### \d/gm)?.length ?? 0), 0);
+  const parts = new Set(chapters.map((c) => c.data.part)).size;
+  return { ...s, tagline: meta(s.slug)?.tagline ?? s.tagline, live: chapters.length > 0, chapters: chapters.length, problems, parts, widgets: widgetsOf(s.slug).length };
+});
+const live = subjects.filter((s) => s.live);
+const planned = subjects.filter((s) => !s.live);
+---
+<Base title="learn">
+  <main class="home">
+    <section class="hero">
+      <div class="dice" aria-hidden="true">
+        <span style="background:var(--event-a)"></span><span style="background:var(--event-b)"></span><span style="background:var(--event-both)"></span><span style="background:var(--event-c)"></span>
+      </div>
+      <h1>Science, from first questions to <em>real understanding.</em></h1>
+      <p>A personal library for learning deeply: chapters that put intuition and rigour side by side, animations to play with, and exercises with full solutions.</p>
+      <div class="actions">
+        {live[0] && <a class="btn primary" href={`/${live[0].slug}/`}>Continue with {live[0].title}</a>}
+        <a class="btn" href="/animations/">Browse all animations</a>
+      </div>
+    </section>
+
+    <section class="subjects">
+      <h2 class="section-label">Subjects</h2>
+      <div class="subject-grid">
+        {live.map((s) => (
+          <a class="subject-card live" href={`/${s.slug}/`}>
+            <span class="mode">{s.mode}</span>
+            <span class="t">{s.title}</span>
+            <span class="tag">{s.tagline}</span>
+            <span class="stats">
+              <span><b>{s.chapters}</b> chapters</span>
+              <span><b>{s.problems}</b> exercises</span>
+              <span><b>{s.widgets}</b> animations</span>
+            </span>
+          </a>
+        ))}
+        {planned.map((s) => (
+          <div class="subject-card planned">
+            <span class="mode">{s.mode}</span>
+            <span class="t">{s.title}</span>
+            <span class="tag">{s.tagline}</span>
+            <span class="stats"><span>Planned</span></span>
+          </div>
+        ))}
+      </div>
+    </section>
+  </main>
+</Base>

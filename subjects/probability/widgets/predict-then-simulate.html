@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predict Then Simulate</title>
+<link rel="stylesheet" href="../../../tools/widgets/base.css">
+<style>
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .tabs button.active { border-color: var(--event-a); color: var(--event-a); }
+  .puzzle { background: var(--panel); border-radius: 10px; padding: 12px 16px; margin: 8px 0; }
+  .guess { font-size: 28px; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: min(420px, 100%); }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<!-- Chapter 0.3. Question: "How good is my gut at probability? (Spoiler: not very.)" -->
+<h3>Predict, then simulate</h3>
+<p class="question">Pick a puzzle. Commit to a guess <b>before</b> you think too hard — then let the computer run the experiment thousands of times.</p>
+
+<div class="tabs" id="tabs"></div>
+<div class="puzzle">
+  <p id="qtext"></p>
+  <label>Your gut says: <span class="guess" id="guess-value">50%</span><br>
+    <input id="guess" type="range" min="0" max="100" step="1" value="50"></label>
+  <div class="controls"><button id="go">Lock in &amp; simulate</button></div>
+</div>
+
+<svg id="plot" viewBox="0 0 680 260" role="img" aria-label="Running estimate from simulation"></svg>
+<div class="stats" id="stats"></div>
+<p class="caption hidden" id="explain"></p>
+
+<script src="../../../tools/widgets/lib.js"></script>
+<script>
+  // Each puzzle: question, one random trial (returns true/false), exact answer, and a one-line "why".
+  const birthdayExact = (() => { let q = 1; for (let k = 0; k < 23; k++) q *= (365 - k) / 365; return 1 - q; })();
+  const hatExact = (() => { let s = 0, f = 1; for (let k = 0; k <= 10; k++) { if (k) f *= k; s += (k % 2 ? -1 : 1) / f; } return s; })();
+  const streakExact = (() => { // P(at least one run of 6 heads in 100 fair flips), DP on current run length
+    let d = new Array(6).fill(0); d[0] = 1; let hit = 0;
+    for (let t = 0; t < 100; t++) {
+      const nd = new Array(6).fill(0);
+      for (let r = 0; r < 6; r++) { nd[0] += d[r] / 2; if (r + 1 === 6) hit += d[r] / 2; else nd[r + 1] += d[r] / 2; }
+      d = nd;
+    }
+    return hit;
+  })();
+
+  const puzzles = [
+    { name: "Shared birthday", q: "23 people are in a room. What's the chance at least two share a birthday? (365 equally likely days, ignore leap years.)",
+      trial: (r) => { const seen = new Set(); for (let i = 0; i < 23; i++) { const d = Learn.randInt(r, 365); if (seen.has(d)) return true; seen.add(d); } return false; },
+      exact: birthdayExact, why: "There are 23·22/2 = 253 pairs of people, and each pair is a chance for a match. We count people; the problem counts pairs. (Chapter 1.3)" },
+    { name: "Monty Hall", q: "A prize is behind one of 3 doors. You pick one. The host, who knows where the prize is, opens a different door with no prize, and offers a switch. If you always switch, how often do you win?",
+      trial: (r) => { const prize = Learn.randInt(r, 3), pick = Learn.randInt(r, 3); return pick !== prize; },
+      exact: 2 / 3, why: "Switching wins exactly when your first pick was wrong — which happens 2/3 of the time. The host's door gives information because he is not allowed to open the prize door. (Chapter 2.5)" },
+    { name: "Hat check", q: "10 people check their hats; the hats are handed back in a completely random order. What's the chance nobody gets their own hat back?",
+      trial: (r) => { const p = Learn.shuffle([...Array(10).keys()], r); return p.every((h, i) => h !== i); },
+      exact: hatExact, why: "The answer is almost exactly 1/e ≈ 0.368 — and stays there whether it's 10 people or 10 million. (Chapter 1.5)" },
+    { name: "Six heads in a row", q: "Flip a fair coin 100 times. What's the chance that somewhere there is a run of at least 6 heads in a row?",
+      trial: (r) => { let run = 0; for (let i = 0; i < 100; i++) { run = r() < 0.5 ? run + 1 : 0; if (run >= 6) return true; } return false; },
+      exact: streakExact, why: "A run of 6 has chance 1/64 at any spot, and there are ~95 spots. Real randomness is far streakier than people expect — which is why fake 'random' sequences written by humans are easy to spot." },
+  ];
+
+  let current = 0, seed = 11, guess = 50, timer = null;
+  const tabs = document.getElementById("tabs");
+  puzzles.forEach((p, k) => {
+    const b = document.createElement("button"); b.textContent = p.name;
+    b.onclick = () => select(k); tabs.appendChild(b);
+  });
+
+  function select(k) {
+    current = k; clearInterval(timer);
+    [...tabs.children].forEach((b, i) => b.classList.toggle("active", i === k));
+    document.getElementById("qtext").textContent = puzzles[k].q;
+    document.getElementById("explain").classList.add("hidden");
+    document.getElementById("stats").innerHTML = "";
+    drawPlot([], false);
+  }
+
+  function drawPlot(series, reveal) {
+    const c = Learn.palette(), svg = document.getElementById("plot");
+    svg.innerHTML = "";
+    const g = Learn.el("g", {}, svg);
+    const N = 10000;
+    const { sx, sy } = Learn.axes(g, { x: [0, N], y: [0, 1], W: 680, H: 260, xTicks: [0, 2500, 5000, 7500, 10000],
+      yTicks: [0, 0.25, 0.5, 0.75, 1], fmtY: (t) => `${t * 100}%`, xLabel: "simulated trials", yLabel: "estimate" });
+    Learn.el("line", { x1: sx(0), x2: sx(N), y1: sy(guess / 100), y2: sy(guess / 100), stroke: c.b, "stroke-dasharray": "6 4" }, g);
+    Learn.el("text", { x: sx(N), y: sy(guess / 100) - 6, "text-anchor": "end", fill: c.b, "font-size": 12, text: "your guess" }, g);
+    if (reveal) {
+      const e = puzzles[current].exact;
+      Learn.el("line", { x1: sx(0), x2: sx(N), y1: sy(e), y2: sy(e), stroke: c.good, "stroke-width": 1.5 }, g);
+      Learn.el("text", { x: sx(0) + 6, y: sy(e) - 6, fill: c.good, "font-size": 12, text: "exact answer" }, g);
+    }
+    if (series.length) Learn.el("polyline", { points: series.map(([n, v]) => `${sx(n)},${sy(v)}`).join(" "), fill: "none", stroke: c.a, "stroke-width": 1.5 }, g);
+  }
+
+  document.getElementById("guess").oninput = (e) => {
+    guess = Number(e.target.value);
+    document.getElementById("guess-value").textContent = guess + "%";
+    drawPlot([], false);
+  };
+
+  document.getElementById("go").onclick = () => {
+    clearInterval(timer);
+    const p = puzzles[current], rand = Learn.rng(seed++);
+    let n = 0, hits = 0; const series = [];
+    timer = setInterval(() => {
+      for (let k = 0; k < 250; k++) { n++; if (p.trial(rand)) hits++; if (n % 25 === 0) series.push([n, hits / n]); }
+      const done = n >= 10000;
+      drawPlot(series, done);
+      document.getElementById("stats").innerHTML = `
+        <div class="stat"><div class="label">your guess</div><div class="value b">${guess}%</div></div>
+        <div class="stat"><div class="label">simulated (${n.toLocaleString()} trials)</div><div class="value a">${(100 * hits / n).toFixed(1)}%</div></div>
+        <div class="stat"><div class="label">exact</div><div class="value good">${done ? (100 * p.exact).toFixed(1) + "%" : "…"}</div></div>
+        <div class="stat"><div class="label">you were off by</div><div class="value">${done ? Math.abs(guess - 100 * p.exact).toFixed(1) + " pts" : "…"}</div></div>`;
+      if (done) {
+        clearInterval(timer);
+        const ex = document.getElementById("explain"); ex.textContent = "Why: " + p.why; ex.classList.remove("hidden");
+      }
+    }, 30);
+  };
+
+  select(0);
+  Learn.onThemeChange(() => drawPlot([], false));
+</script>
+</body>
+</html>

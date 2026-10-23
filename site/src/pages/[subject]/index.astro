@@ -1,0 +1,63 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { liveSubjects, chaptersOf, meta, widgetsOf, partTitle, SUBJECTS } from "../../subjects";
+
+export async function getStaticPaths() {
+  return (await liveSubjects()).map((s) => ({ params: { subject: s.slug } }));
+}
+const { subject } = Astro.params;
+const m = meta(subject);
+const info = SUBJECTS.find((s) => s.slug === subject);
+const title = m?.title ?? info?.title ?? subject;
+const chapters = await chaptersOf(subject);
+const exercises = await getCollection("exercises");
+const widgets = widgetsOf(subject);
+const written = [...new Set(chapters.map((c) => c.data.part))];
+const upcoming = Object.keys(m?.parts ?? {}).map(Number).filter((p) => !written.includes(p));
+const first = chapters[0];
+---
+<Base title={title} subject={{ slug: subject, title }} description={m?.tagline}>
+  <main class="home">
+    <section class="hero">
+      <p class="kicker">{info?.mode ?? "Subject"}</p>
+      <h1>{title}</h1>
+      <p class="tagline">{m?.tagline ?? info?.tagline}</p>
+      {m?.intro && <p>{m.intro}</p>}
+      <div class="actions">
+        {first && <a class="btn primary" href={`/${first.id}/`}>Start reading · {first.data.chapter}</a>}
+        {widgets.length > 0 && <a class="btn" href={`/animations/#${subject}`}>Browse its {widgets.length} animations</a>}
+      </div>
+    </section>
+
+    {written.map((p) => (
+      <section class="part">
+        <div class="part-label">
+          <div class="n">Part {p}</div>
+          <h2>{partTitle(subject, p)}</h2>
+          <p>{m?.parts[String(p)]?.blurb}</p>
+        </div>
+        <div class="chapters">
+          {chapters.filter((c) => c.data.part === p).map((c) => {
+            const w = widgets.find((x) => x.chapter === c.data.chapter);
+            const n = exercises.find((e) => e.id === c.id)?.body?.match(/^### \d/gm)?.length;
+            return (
+              <a class="chapter-card" href={`/${c.id}/`}>
+                <span class="num">{c.data.chapter}</span>
+                <span class="t">{c.data.title}</span>
+                <span class="meta">{[n && `${n} exercises`, w && "▶︎ " + w.title.replace(/\?$/, "")].filter(Boolean).join(" · ")}</span>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    ))}
+
+    {upcoming.length > 0 && (
+      <section class="part upcoming">
+        <div class="part-label"><div class="n">Coming next</div><h2>Parts {upcoming[0]}–{upcoming.at(-1)}</h2></div>
+        <ul class="upcoming-list">{upcoming.map((p) => <li>Part {p} · {partTitle(subject, p)}</li>)}</ul>
+      </section>
+    )}
+  </main>
+</Base>

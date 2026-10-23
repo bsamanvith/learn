@@ -1,0 +1,21 @@
+{
+  "_about": "Registry of this subject's widgets, shown in the site's Animations gallery. status: new | keep | revise | drop. Edit status and notes as you curate.",
+  "widgets": [
+    { "file": "coin-convergence.html", "title": "Does the fraction of heads settle down?", "chapter": "0.1",
+      "idea": "Relative frequency converges, and the error shrinks like 1/√n.", "status": "new", "notes": "" },
+    { "file": "problem-of-points.html", "title": "The problem of points (1654)", "chapter": "0.2",
+      "idea": "Split an unfinished game fairly: Pascal's recursion and Fermat's count agree.", "status": "new", "notes": "" },
+    { "file": "predict-then-simulate.html", "title": "Predict, then simulate", "chapter": "0.3",
+      "idea": "Commit to a guess on four famous puzzles, then watch a simulation correct you.", "status": "new", "notes": "" },
+    { "file": "event-explorer.html", "title": "Events are just sets of outcomes", "chapter": "1.1",
+      "idea": "Two dice: build events, combine them with ∪ ∩ ᶜ, and see De Morgan's laws.", "status": "new", "notes": "" },
+    { "file": "venn-area.html", "title": "Area is probability", "chapter": "1.2",
+      "idea": "Drag circles in the unit square; darts estimate areas and check inclusion–exclusion.", "status": "new", "notes": "" },
+    { "file": "birthday.html", "title": "The birthday problem", "chapter": "1.3",
+      "idea": "Why 23 people suffice: the curve, the √d rule and simulated rooms.", "status": "new", "notes": "" },
+    { "file": "lattice-paths.html", "title": "Counting paths two ways", "chapter": "1.4",
+      "idea": "Lattice paths give Pascal's rule and Vandermonde's identity as stories.", "status": "new", "notes": "" },
+    { "file": "hat-check.html", "title": "The hat-check problem", "chapter": "1.5",
+      "idea": "P(no one gets their own hat) → 1/e, and the match count looks Poisson(1).", "status": "new", "notes": "" }
+  ]
+}

@@ -1,19 +1,47 @@
 {
-  "_about": "Every subject in the repo, in display order. A subject with a folder here (subjects/<slug>/) and chapters in text/ is live on the site; the rest show as planned. Per-subject details live in subjects/<slug>/meta.json.",
+  "_about": "Every subject in the repo, in display order. A subject with a folder here (subjects/<slug>/) and chapters in text/ (or hand-written lessons in lessons.json) is live on the site; the rest show as planned. Per-subject details live in subjects/<slug>/meta.json.",
   "subjects": [
-    { "slug": "probability", "title": "Probability", "mode": "Mathematics",
-      "tagline": "From “what does 70% mean?” to measure theory." },
-    { "slug": "statistics", "title": "Statistics", "mode": "Statistics",
-      "tagline": "Learning from data: estimation, inference and checking your assumptions." },
-    { "slug": "machine-learning", "title": "Machine learning", "mode": "AI / ML",
-      "tagline": "Derive it, code it from scratch, then compare with the library." },
-    { "slug": "physics", "title": "Physics", "mode": "Physics",
-      "tagline": "Phenomenon → model → prediction → measurement." },
-    { "slug": "astronomy", "title": "Astronomy", "mode": "Astronomy",
-      "tagline": "What the light tells us, across forty powers of ten." },
-    { "slug": "chemistry", "title": "Chemistry", "mode": "Chemistry",
-      "tagline": "Structure, mechanism and energy." },
-    { "slug": "biology", "title": "Biology", "mode": "Biology",
-      "tagline": "From molecules to populations, held together by evolution." }
+    {
+      "slug": "machine-learning",
+      "title": "Machine learning",
+      "mode": "AI / ML",
+      "tagline": "Derive it, code it from scratch, then compare with the library."
+    },
+    {
+      "slug": "probability",
+      "title": "Probability",
+      "mode": "Mathematics",
+      "tagline": "From “what does 70% mean?” to measure theory."
+    },
+    {
+      "slug": "statistics",
+      "title": "Statistics",
+      "mode": "Statistics",
+      "tagline": "Learning from data: estimation, inference and checking your assumptions."
+    },
+    {
+      "slug": "physics",
+      "title": "Physics",
+      "mode": "Physics",
+      "tagline": "Phenomenon → model → prediction → measurement."
+    },
+    {
+      "slug": "astronomy",
+      "title": "Astronomy",
+      "mode": "Astronomy",
+      "tagline": "What the light tells us, across forty powers of ten."
+    },
+    {
+      "slug": "chemistry",
+      "title": "Chemistry",
+      "mode": "Chemistry",
+      "tagline": "Structure, mechanism and energy."
+    },
+    {
+      "slug": "biology",
+      "title": "Biology",
+      "mode": "Biology",
+      "tagline": "From molecules to populations, held together by evolution."
+    }
   ]
 }

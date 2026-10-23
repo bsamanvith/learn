@@ -1,15 +1,16 @@
 ---
-import "@fontsource-variable/source-serif-4";
-import "@fontsource-variable/source-serif-4/wght-italic.css";
-import "@fontsource-variable/inter";
+import "@fontsource-variable/newsreader/opsz.css";
+import "@fontsource-variable/newsreader/opsz-italic.css";
+import "@fontsource-variable/public-sans";
 import "@fontsource-variable/jetbrains-mono";
 import "katex/dist/katex.min.css";
 import "../styles/global.css";
+import { u } from "../subjects";
 
-interface Props { title: string; description?: string; subject?: { slug: string; title: string }; }
-const { title, subject, description = "Science from first questions to deep understanding: fun to read, detailed to understand." } = Astro.props;
+interface Props { title: string; description?: string; subject?: { slug: string; title: string }; crumb?: string; }
+const { title, subject, crumb, description = "Science from first questions to deep understanding: fun to read, detailed to understand." } = Astro.props;
 const path = Astro.url.pathname;
-const active = (p: string) => (path === p) ? "active" : undefined;
+const active = (p: string) => (path === u(p)) ? "active" : undefined;
 ---
 <!doctype html>
 <html lang="en">
@@ -18,8 +19,9 @@ const active = (p: string) => (path === p) ? "active" : undefined;
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   <meta name="description" content={description} />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232f6feb'/><circle cx='11' cy='11' r='3' fill='white'/><circle cx='21' cy='21' r='3' fill='white'/><circle cx='21' cy='11' r='3' fill='white'/><circle cx='11' cy='21' r='3' fill='white'/></svg>" />
-  <link rel="stylesheet" href="/tools/widgets/tokens.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23c2410c'/><path d='M7 23 L25 9' stroke='white' stroke-width='3' stroke-linecap='round'/><circle cx='11' cy='13' r='2.4' fill='white'/><circle cx='21' cy='21' r='2.4' fill='white'/></svg>" />
+  <link rel="stylesheet" href={u("/tools/widgets/tokens.css")} />
+  <slot name="head" />
   <script is:inline>
     // Apply the saved theme before first paint (no flash). "system" = no data-theme attribute.
     try {
@@ -30,11 +32,15 @@ const active = (p: string) => (path === p) ? "active" : undefined;
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="/"><svg class="brand-mark" viewBox="0 0 20 20" aria-hidden="true"><rect x="1" y="1" width="18" height="18" rx="5" fill="currentColor"/><circle cx="6.5" cy="6.5" r="1.7" fill="var(--bg)"/><circle cx="13.5" cy="13.5" r="1.7" fill="var(--bg)"/><circle cx="10" cy="10" r="1.7" fill="var(--bg)"/><circle cx="13.5" cy="6.5" r="1.7" fill="var(--bg)"/><circle cx="6.5" cy="13.5" r="1.7" fill="var(--bg)"/></svg> learn</a>
-    {subject && <><span class="crumb-sep" aria-hidden="true">/</span><a class="crumb" href={`/${subject.slug}/`}>{subject.title}</a></>}
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a class="brand" href={u("/")}>learn</a>
+      {subject && <><span class="crumb-sep" aria-hidden="true">›</span><a class="crumb" href={u(`/${subject.slug}/`)}>{subject.title}</a></>}
+      {crumb && <><span class="crumb-sep crumb-extra" aria-hidden="true">›</span><span class="crumb crumb-extra" aria-current="page">{crumb}</span></>}
+    </nav>
     <nav class="site-nav">
-      <a href="/" class={active("/")}>Subjects</a>
-      <a href="/animations/" class={active("/animations/")}>Animations</a>
+      <a href={u("/")} class={active("/")}>Subjects</a>
+      <a href={u("/animations/")} class={active("/animations/")}>Playground</a>
+      <a class="gh" href="https://github.com/bsamanvith/learn">GitHub</a>
     </nav>
     <div class="theme-switch" role="radiogroup" aria-label="Colour theme">
       <button data-set-theme="light" title="Light" aria-label="Light theme">☀︎</button>
@@ -47,7 +53,7 @@ const active = (p: string) => (path === p) ? "active" : undefined;
   <slot />
 
   <footer class="site-footer">
-    <p>Written to be read slowly, played with, and argued over. Every number is checked by a simulation.</p>
+    <p>Written to be read slowly, played with, and argued over. Plain HTML, CSS and canvas, built by Astro. <a href="https://github.com/bsamanvith/learn">Source on GitHub</a>.</p>
   </footer>
 
   <script>

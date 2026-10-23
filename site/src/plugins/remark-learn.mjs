@@ -19,7 +19,7 @@ const KINDS = [
 const kindOf = (title) => (KINDS.find(([, re]) => re.test(title)) || ["other"])[0];
 
 // Map a link written relative to a chapter file onto a site URL.
-export function rewriteHref(href, fromFile) {
+export function rewriteHref(href, fromFile, base = "") {
   if (!href || /^(https?:|mailto:|#|\/)/.test(href)) return href;
   const [rel, hash = ""] = href.split("#");
   const abs = path.resolve(path.dirname(fromFile), rel);
@@ -27,10 +27,11 @@ export function rewriteHref(href, fromFile) {
   const i = parts.lastIndexOf("subjects");
   if (i < 0 || !parts[i + 1]) return href;
   const subject = parts[i + 1];
-  const BASE = `/${subject}`;
+  const root = base.replace(/\/$/, "");
+  const BASE = `${root}/${subject}`;
   const [dir, file] = parts.slice(i + 2);
   const frag = hash ? `#${hash}` : "";
-  if (dir === "widgets" && file) return `/subjects/${subject}/widgets/${file}${frag}`;
+  if (dir === "widgets" && file) return `${root}/subjects/${subject}/widgets/${file}${frag}`;
   if (dir === "text" && file) return `${BASE}/${file.replace(/\.md$/, "")}/${frag}`;
   if (dir === "exercises" && file) return `${BASE}/${file.replace(/\.md$/, "")}/exercises/${frag}`;
   if (dir === "sims" && file) return `${BASE}/sims/${file.replace(/\.py$/, "")}/`;
@@ -42,13 +43,13 @@ const textOf = (node) =>
   node.type === "text" || node.type === "inlineCode" ? node.value
   : node.children ? node.children.map(textOf).join("") : "";
 
-function widgetEmbed(quote, file) {
+function widgetEmbed(quote, file, base) {
   const para = quote.children[0];
   if (!para || para.type !== "paragraph" || !textOf(para).trim().startsWith("🎛")) return false;
   let src = null, title = "";
   visit(para, "link", (link) => {
     if (!src && /widgets\/[^/]+\.html$/.test(link.url)) {
-      src = rewriteHref(link.url, file);
+      src = rewriteHref(link.url, file, base);
       title = textOf(link);
     }
   });
@@ -84,13 +85,14 @@ function splitHeading(heading) {
   return { kind, eyebrow };
 }
 
-export default function remarkLearn() {
+export default function remarkLearn({ base = "" } = {}) {
   return (tree, vfile) => {
     const file = vfile.path || (vfile.history && vfile.history[0]) || "";
     const isExercises = file.includes(`${path.sep}exercises${path.sep}`);
 
-    visit(tree, "link", (link) => { link.url = rewriteHref(link.url, file); });
-    visit(tree, "blockquote", (quote) => { widgetEmbed(quote, file); });
+    // Widget links are rewritten inside widgetEmbed, so embed first, then fix every other link.
+    visit(tree, "blockquote", (quote) => { widgetEmbed(quote, file, base); });
+    visit(tree, "link", (link) => { link.url = rewriteHref(link.url, file, base); });
     // KaTeX's blackboard font has no digits; draw the indicator 1 in bold instead.
     visit(tree, ["math", "inlineMath"], (m) => { m.value = m.value.replace(/\\mathbb\{1\}/g, "\\mathbf{1}"); });
     visit(tree, "html", (h) => {

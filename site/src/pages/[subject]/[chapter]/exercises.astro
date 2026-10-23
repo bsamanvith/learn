@@ -1,33 +1,32 @@
 ---
 import { getCollection, render } from "astro:content";
 import Chapter from "../../../layouts/Chapter.astro";
-import { byChapter, subjectOf, slugIn, partTitle } from "../../../subjects";
+import { chaptersOf, subjectOf, slugIn, partTitle, partLabel, chapterUrl, u } from "../../../subjects";
 
 export async function getStaticPaths() {
-  const text = (await getCollection("text")).sort(byChapter);
   const exercises = await getCollection("exercises");
-  return exercises.map((entry) => {
-    const siblings = text.filter((c) => subjectOf(c.id) === subjectOf(entry.id));
+  return Promise.all(exercises.map(async (entry) => {
+    const siblings = await chaptersOf(subjectOf(entry.id));
     const i = siblings.findIndex((c) => c.id === entry.id);
     return {
       params: { subject: subjectOf(entry.id), chapter: slugIn(entry.id) },
       props: { entry, chapter: siblings[i], next: siblings[i + 1] },
     };
-  });
+  }));
 }
 const { entry, chapter, next } = Astro.props;
 const subject = subjectOf(entry.id);
 const { Content, headings } = await render(entry);
 ---
-<Chapter title={`Exercises ${entry.data.chapter}`} id={entry.id} headings={headings}>
-  {chapter && <p class="kicker"><a href={`/${subject}/`}>Part {chapter.data.part} · {partTitle(subject, chapter.data.part)}</a></p>}
+<Chapter title={`Exercises ${entry.data.chapter}`} id={entry.id} headings={headings} crumb={`${entry.data.chapter} exercises`}>
+  {chapter && <p class="kicker"><a href={u(`/${subject}/`)}>{partLabel(subject)} {chapter.part} · {partTitle(subject, chapter.part)}</a></p>}
   <nav class="tabs" aria-label="Chapter views">
-    <a href={`/${entry.id}/`}>Read</a>
-    <a href={`/${entry.id}/exercises/`} aria-current="page">Exercises</a>
+    <a href={chapterUrl(entry.id)}>Read</a>
+    <a href={u(`/${entry.id}/exercises/`)} aria-current="page">Exercises</a>
   </nav>
   <Content />
   <nav class="pager">
-    {chapter && <a href={`/${entry.id}/`}><small>Back to</small>← {chapter.data.chapter} {chapter.data.title}</a>}
-    {next && <a class="next" href={`/${next.id}/`}><small>Next chapter</small>{next.data.chapter} {next.data.title} →</a>}
+    {chapter && <a href={chapterUrl(entry.id)}><small>Back to</small>← {chapter.chapter} {chapter.title}</a>}
+    {next && <a class="next" href={chapterUrl(next.id)}><small>Next chapter</small>{next.chapter} {next.title} →</a>}
   </nav>
 </Chapter>

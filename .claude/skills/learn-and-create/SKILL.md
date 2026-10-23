@@ -37,7 +37,7 @@ editor reviewing finished text. They are the first student. Every part goes roun
 
 ## 3. Read and play (user)
 
-Point them at the exact URLs: `http://localhost:4321/<subject>/<id>/`, its
+Point them at the exact URLs: `http://localhost:4321/learn/<subject>/<id>/`, its
 `/exercises/`, and `/animations/#<subject>-<widget>`. Suggest they try the quick checks and a few
 exercises before opening the solutions. Don't race on to the next part unasked; the
 point is that they learn it.
@@ -70,7 +70,7 @@ They may also paste reading notes ("1.4 hockey stick didn't click"), or replace
 
 | What | Where |
 |---|---|
-| Run the site | `pnpm -C site dev` → http://localhost:4321 |
+| Run the site | `pnpm -C site dev` → http://localhost:4321/learn/ |
 | Chapter → site rules | `site/src/plugins/remark-learn.mjs` |
 | Themes (one source) | `tools/widgets/tokens.css` |
 | Site styles | `site/src/styles/global.css` |

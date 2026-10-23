@@ -53,7 +53,7 @@ where a narrated animation beats a slider. Optional, added only when needed.
 uv venv .venv
 uv pip install --python .venv/bin/python -r tools/requirements.txt   # for sims/
 pnpm -C site install
-pnpm -C site dev               # the site: http://localhost:4321
+pnpm -C site dev               # the site: http://localhost:4321/learn/
 ```
 
 Widgets also work on their own without the site:

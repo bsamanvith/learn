@@ -1,24 +1,24 @@
 ---
-import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { liveSubjects, widgetsOf, meta, subjectOf } from "../../subjects";
+import { liveSubjects, widgetsOf, pagesOf, meta, entries, chapterUrl, u } from "../../subjects";
 
-const text = await getCollection("text");
+const text = await entries();
 const groups = (await liveSubjects()).map((s) => ({
   slug: s.slug,
   title: meta(s.slug)?.title ?? s.title,
   widgets: widgetsOf(s.slug).map((w) => {
-    const c = text.find((x) => subjectOf(x.id) === s.slug && x.data.chapter === w.chapter);
-    return { ...w, key: `${s.slug}/${w.file}`, name: `${s.slug}-${w.file.replace(/\.html$/, "")}`, chapterTitle: c?.data.title, chapterId: c?.id };
+    const c = text.find((x) => x.subject === s.slug && x.chapter === w.chapter);
+    return { ...w, key: `${s.slug}/${w.file}`, name: `${s.slug}-${w.file.replace(/\.html$/, "")}`, chapterTitle: c?.title, chapterId: c?.id };
   }),
-})).filter((g) => g.widgets.length > 0);
+  pages: pagesOf(s.slug),
+})).filter((g) => g.widgets.length + g.pages.length > 0);
 const registries = Object.fromEntries(groups.map((g) => [g.slug, widgetsOf(g.slug)]));
 ---
-<Base title="Animations" description="Every interactive animation in the book, in one place, ready to play with and curate.">
+<Base title="Playground" description="Every interactive animation in the book, in one place, ready to play with and curate.">
   <main class="gallery">
     <header class="gallery-head">
-      <p class="kicker">The lab</p>
-      <h1>Animations</h1>
+      <p class="kicker">Playground</p>
+      <h1>Animations and labs</h1>
       <p>Every interactive across all subjects, full size. Play with each one, then give it a verdict and a note.
       Your notes stay in this browser; copy them out and hand them back when you want changes made.</p>
     </header>
@@ -35,19 +35,24 @@ const registries = Object.fromEntries(groups.map((g) => [g.slug, widgetsOf(g.slu
 
     {groups.map((g) => (
       <section class="gallery-group" id={g.slug}>
-        <h2 class="gallery-subject">{g.title} <small>{g.widgets.length} animations · <button class="linklike" data-download={g.slug}>download index.json</button></small></h2>
+        <h2 class="gallery-subject">{g.title} <small>{g.widgets.length + g.pages.length} animations · <button class="linklike" data-download={g.slug}>download index.json</button></small></h2>
+        {g.pages.length > 0 && (
+          <div class="play-grid gallery-pages">
+            {g.pages.map((p) => <a class="play-card" href={u(`/${g.slug}/${p.file}/`)}><span class="subj">Full page</span><b>{p.title}</b><span>{p.idea}</span></a>)}
+          </div>
+        )}
       {g.widgets.map((w) => (
       <section class="exhibit" id={w.name} data-file={w.key} data-subject={g.slug} data-default-status={w.status} data-default-notes={w.notes}>
         <figure class="widget" data-widget={w.name}>
-          <a class="widget-open" href={`/subjects/${g.slug}/widgets/${w.file}`} target="_blank" rel="noopener">Open full size ↗</a>
-          <div class="widget-frame"><iframe data-src={`/subjects/${g.slug}/widgets/${w.file}`} title={w.title} loading="lazy"></iframe></div>
+          <a class="widget-open" href={u(`/subjects/${g.slug}/widgets/${w.file}`)} target="_blank" rel="noopener">Open full size ↗</a>
+          <div class="widget-frame"><iframe data-src={u(`/subjects/${g.slug}/widgets/${w.file}`)} title={w.title} loading="lazy"></iframe></div>
         </figure>
         <aside class="curate">
           <span class="num">{g.title} · Chapter {w.chapter}</span>
           <h2>{w.title}</h2>
           <p>{w.idea}</p>
           <div class="links">
-            {w.chapterId && <a href={`/${w.chapterId}/`}>Read {w.chapter} {w.chapterTitle}</a>}
+            {w.chapterId && <a href={chapterUrl(w.chapterId)}>Read {w.chapter} {w.chapterTitle}</a>}
             <a href={`#${w.name}`}>Link here</a>
           </div>
           <label>Verdict</label>
@@ -65,6 +70,7 @@ const registries = Object.fromEntries(groups.map((g) => [g.slug, widgetsOf(g.slu
       </section>
     ))}
     <script type="application/json" id="registries" set:html={JSON.stringify(registries)} />
+    <script type="application/json" id="base" set:html={JSON.stringify(u("/"))} />
     <div class="toast" role="status"></div>
   </main>
 
@@ -135,7 +141,8 @@ const registries = Object.fromEntries(groups.map((g) => [g.slug, widgetsOf(g.slu
 
     document.querySelectorAll<HTMLButtonElement>("[data-download]").forEach((b) => b.addEventListener("click", async () => {
       const subject = b.dataset.download!;
-      const original = await (await fetch(`/subjects/${subject}/widgets/index.json`)).json();
+      const base: string = JSON.parse(document.getElementById("base")!.textContent || "\"/\"");
+      const original = await (await fetch(`${base}subjects/${subject}/widgets/index.json`)).json();
       const out = { ...original, widgets: original.widgets.map((w: { file: string }) => {
         const ex = exhibits.find((e) => e.dataset.file === `${subject}/${w.file}`)!;
         return { ...w, ...get(ex) };

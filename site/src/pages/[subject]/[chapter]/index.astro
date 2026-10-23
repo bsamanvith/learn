@@ -1,50 +1,92 @@
 ---
 import { getCollection, render } from "astro:content";
 import Chapter from "../../../layouts/Chapter.astro";
-import { byChapter, subjectOf, slugIn, partTitle } from "../../../subjects";
+import Base from "../../../layouts/Base.astro";
+import HandWritten from "../../../components/HandWritten.astro";
+import {
+  entries, chaptersOf, SUBJECTS, pagesOf, partTitle, partLabel, subjectTitle, chapterUrl, u,
+  lessonBody, lessonHeadings, pageBody, type Entry,
+} from "../../../subjects";
 
+// One route for every chapter-level page:
+//   md    a markdown chapter from subjects/<s>/text/
+//   html  a hand-written lesson from subjects/<s>/lessons/
+//   page  a hand-written page (an animation gallery, a lab) from subjects/<s>/pages/
 export async function getStaticPaths() {
-  const all = (await getCollection("text")).sort(byChapter);
-  return all.map((entry) => {
-    const siblings = all.filter((c) => subjectOf(c.id) === subjectOf(entry.id));
-    const i = siblings.indexOf(entry);
+  const chapters = await Promise.all((await entries()).map(async (entry) => {
+    const siblings = await chaptersOf(entry.subject);
+    const i = siblings.findIndex((c) => c.id === entry.id);
     return {
-      params: { subject: subjectOf(entry.id), chapter: slugIn(entry.id) },
-      props: { entry, siblings, prev: siblings[i - 1], next: siblings[i + 1] },
+      params: { subject: entry.subject, chapter: entry.slug },
+      props: { kind: entry.kind, entry, siblings, prev: siblings[i - 1], next: siblings[i + 1] },
     };
-  });
+  }));
+  const pages = SUBJECTS.flatMap((s) => pagesOf(s.slug).map((p) => ({
+    params: { subject: s.slug, chapter: p.file },
+    props: { kind: "page" as const, page: p },
+  })));
+  return [...chapters, ...pages];
 }
-const { entry, siblings, prev, next } = Astro.props;
-const subject = subjectOf(entry.id);
-const { Content, headings } = await render(entry);
-const hasExercises = (await getCollection("exercises")).some((e) => e.id === entry.id);
-const link = (ch: string) => {
-  const c = siblings.find((x) => x.data.chapter === ch);
-  return c ? { href: `/${c.id}/`, label: `${ch} ${c.data.title}` } : { href: undefined, label: ch };
+
+const props = Astro.props as
+  | { kind: "md" | "html"; entry: Entry; siblings: Entry[]; prev?: Entry; next?: Entry }
+  | { kind: "page"; page: { file: string; title: string; idea?: string } };
+const { subject } = Astro.params;
+
+let Content: any = null, headings: { depth: number; slug: string; text: string }[] = [], body = "", hasExercises = false;
+if (props.kind === "md") {
+  const md = (await getCollection("text")).find((e) => e.id === props.entry.id)!;
+  ({ Content, headings } = await render(md));
+  hasExercises = (await getCollection("exercises")).some((e) => e.id === props.entry.id);
+} else if (props.kind === "html") {
+  body = lessonBody(props.entry.id);
+  headings = lessonHeadings(body);
+} else {
+  body = pageBody(subject, props.page.file);
+}
+const link = (siblings: Entry[], ch: string) => {
+  const c = siblings.find((x) => x.chapter === ch);
+  return c ? { href: chapterUrl(c.id), label: `${ch} ${c.title}` } : { href: undefined, label: ch };
 };
 ---
-<Chapter title={`${entry.data.chapter} ${entry.data.title}`} id={entry.id} headings={headings}>
-  <p class="kicker"><a href={`/${subject}/`}>Part {entry.data.part} · {partTitle(subject, entry.data.part)}</a></p>
-  <nav class="tabs" aria-label="Chapter views">
-    <a href={`/${entry.id}/`} aria-current="page">Read</a>
-    {hasExercises && <a href={`/${entry.id}/exercises/`}>Exercises</a>}
-  </nav>
-  <div class="chapter-meta">
-    {entry.data.prerequisites.length > 0 && <span>Builds on</span>}
-    {entry.data.prerequisites.map((p) => { const l = link(p); return l.href ? <a class="chip" href={l.href}>← {l.label}</a> : <span class="chip">← {p}</span>; })}
-    {entry.data.status === "draft" && <span class="chip status">draft</span>}
-  </div>
-  <Content />
-  {entry.data.leads_to.length > 0 && (
-    <div class="chapter-meta" style="margin-top:2.5em">
-      <span>Leads to</span>
-      {entry.data.leads_to.map((p) => { const l = link(p); return l.href ? <a class="chip" href={l.href}>{l.label} →</a> : <span class="chip" title="Not written yet">{p} →</span>; })}
-    </div>
-  )}
-  <nav class="pager">
-    {hasExercises
-      ? <a class="next" href={`/${entry.id}/exercises/`}><small>Practice</small>Exercises {entry.data.chapter} →</a>
-      : next && <a class="next" href={`/${next.id}/`}><small>Next</small>{next.data.chapter} {next.data.title} →</a>}
-    {prev && <a href={`/${prev.id}/`} style="grid-row:1;grid-column:1"><small>Previous</small>← {prev.data.chapter} {prev.data.title}</a>}
-  </nav>
-</Chapter>
+{props.kind === "page" ? (
+  <Base title={props.page.title} subject={{ slug: subject, title: subjectTitle(subject) }} crumb={props.page.title} description={props.page.idea}>
+    <Fragment slot="head"><link rel="stylesheet" href={u(`/subjects/${subject}/assets/ml.css`)} /></Fragment>
+    <main class="ml ml-page" set:html={body} />
+    <HandWritten subject={subject} />
+  </Base>
+) : (
+  <Chapter title={`${props.entry.chapter} ${props.entry.title}`} id={props.entry.id} headings={headings} crumb={props.kind === "html" ? `Lesson ${props.entry.chapter}` : props.entry.chapter} ml={props.kind === "html"}>
+    {props.kind === "md" && (
+      <>
+        <p class="kicker"><a href={u(`/${subject}/`)}>{partLabel(subject)} {props.entry.part} · {partTitle(subject, props.entry.part)}</a></p>
+        <nav class="tabs" aria-label="Chapter views">
+          <a href={chapterUrl(props.entry.id)} aria-current="page">Read</a>
+          {hasExercises && <a href={u(`/${props.entry.id}/exercises/`)}>Exercises</a>}
+        </nav>
+        <div class="chapter-meta">
+          {props.entry.prerequisites.length > 0 && <span>Builds on</span>}
+          {props.entry.prerequisites.map((p) => { const l = link(props.siblings, p); return l.href ? <a class="chip" href={l.href}>← {l.label}</a> : <span class="chip">← {p}</span>; })}
+          {props.entry.status === "draft" && <span class="chip status">draft</span>}
+        </div>
+        <Content />
+        {props.entry.leads_to.length > 0 && (
+          <div class="chapter-meta" style="margin-top:2.5em">
+            <span>Leads to</span>
+            {props.entry.leads_to.map((p) => { const l = link(props.siblings, p); return l.href ? <a class="chip" href={l.href}>{l.label} →</a> : <span class="chip" title="Not written yet">{p} →</span>; })}
+          </div>
+        )}
+      </>
+    )}
+    {props.kind === "html" && <Fragment set:html={body} />}
+    <nav class="pager">
+      {hasExercises
+        ? <a class="next" href={u(`/${props.entry.id}/exercises/`)}><small>Practice</small>Exercises {props.entry.chapter} →</a>
+        : props.next
+          ? <a class="next" href={chapterUrl(props.next.id)}><small>Next</small>{props.next.chapter} {props.next.title} →</a>
+          : <a class="next" href={u(`/${subject}/`)}><small>Up next</small>{partLabel(subject)} {props.entry.part + 1} · {partTitle(subject, props.entry.part + 1)} →</a>}
+      {props.prev && <a href={chapterUrl(props.prev.id)} style="grid-row:1;grid-column:1"><small>Previous</small>← {props.prev.chapter} {props.prev.title}</a>}
+    </nav>
+    {props.kind === "html" && <HandWritten subject={subject} />}
+  </Chapter>
+)}

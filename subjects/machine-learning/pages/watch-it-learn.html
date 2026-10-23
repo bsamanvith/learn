@@ -1,0 +1,94 @@
+<header class="hero">
+  <div class="eyebrow">Machine learning · Lessons 01 to 03</div>
+  <h1>Watch it learn</h1>
+  <p class="lede">Three short animations of the same idea: a model starts wrong, measures how wrong it is, and nudges its knobs downhill. Nothing here is faked. Every frame is a real gradient descent step on real data.</p>
+</header>
+
+<section class="plate" data-scene="linefit" aria-labelledby="h-fit">
+  <div class="plate-head">
+    <div class="eyebrow">Animation 1</div>
+    <h2 id="h-fit">A line finding its place</h2>
+    <p class="muted">The orange line starts tilted the wrong way. The thin orange ticks are the errors, one per point. Each step moves the slope <span class="eta">w</span> and the intercept <span class="eta">b</span> against the gradient, the errors shrink, and the loss on the right falls. The faint lines are the last few steps.</p>
+  </div>
+  <div class="stage">
+    <div class="split">
+      <canvas data-role="fit" aria-label="Data points with the line being fitted and its errors"></canvas>
+      <canvas data-role="loss" aria-label="Loss falling over the steps, on a log scale"></canvas>
+    </div>
+    <div class="toolbar">
+      <div class="group">
+        <button class="primary" type="button" data-act="play" id="fit-play">Pause</button>
+        <button type="button" data-act="restart" id="fit-restart">Restart</button>
+        <span class="muted" style="font-size:14px">Learning rate</span>
+        <div class="seg" role="group" aria-label="Learning rate">
+          <button type="button" data-lr="0.05" aria-pressed="false" id="fit-lr-1">0.05</button>
+          <button type="button" data-lr="0.3" aria-pressed="true" id="fit-lr-2">0.3</button>
+          <button type="button" data-lr="0.9" aria-pressed="false" id="fit-lr-3">0.9</button>
+        </div>
+      </div>
+      <div class="readout" data-role="readout" aria-live="off"></div>
+    </div>
+  </div>
+  <p class="takeaway">Try <b>0.05</b>: the same walk, just slower, and it runs out of steps before it lands. Try <b>0.9</b>: the intercept overshoots back and forth before it settles.</p>
+</section>
+
+<section class="plate" data-scene="race" aria-labelledby="h-race">
+  <div class="plate-head">
+    <div class="eyebrow">Animation 2</div>
+    <h2 id="h-race">Four learning rates, one bowl</h2>
+    <p class="muted">Here only the slope <span class="eta">w</span> learns, so the loss is a simple bowl. Each lane starts from the same spot and takes 16 hops of size <span class="eta">η</span> × slope. The bottom of each lane shows the line that the ball's current <span class="eta">w</span> draws on the data.</p>
+  </div>
+  <div class="stage">
+    <div class="lanes">
+      <div class="lane" data-lane="0.06">
+        <div class="lane-head"><h3>Too small</h3><span class="tag" data-role="state">hop 0</span></div>
+        <canvas aria-label="Learning rate too small: tiny hops"></canvas>
+        <div class="readout"><span data-role="eta"></span> · <span data-role="readout"></span></div>
+      </div>
+      <div class="lane" data-lane="0.8">
+        <div class="lane-head"><h3>Just right</h3><span class="tag" data-role="state">hop 0</span></div>
+        <canvas aria-label="Learning rate just right: lands in a few hops"></canvas>
+        <div class="readout"><span data-role="eta"></span> · <span data-role="readout"></span></div>
+      </div>
+      <div class="lane" data-lane="1.75">
+        <div class="lane-head"><h3>Big: zig-zags</h3><span class="tag" data-role="state">hop 0</span></div>
+        <canvas aria-label="Learning rate large: jumps across the bowl but still settles"></canvas>
+        <div class="readout"><span data-role="eta"></span> · <span data-role="readout"></span></div>
+      </div>
+      <div class="lane" data-lane="2.12">
+        <div class="lane-head"><h3>Too big</h3><span class="tag" data-role="state">hop 0</span></div>
+        <canvas aria-label="Learning rate too big: each jump lands higher until it flies off"></canvas>
+        <div class="readout"><span data-role="eta"></span> · <span data-role="readout"></span></div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="group">
+        <button class="primary" type="button" data-act="play" id="race-play">Pause</button>
+        <button type="button" data-act="restart" id="race-restart">Restart</button>
+      </div>
+      <div class="readout">bowl curvature c = 2·mean(x²) · stable only while η &lt; 2 / c</div>
+    </div>
+  </div>
+  <p class="takeaway">Every hop multiplies the distance to the bottom by (1 − <span class="eta">η</span>·c). Below 1 in size, the ball settles. Between 1 and 2, it overshoots but each jump is smaller, so it zig-zags in. Past 2, each jump is bigger than the last.</p>
+</section>
+
+<section class="plate" data-scene="logistic" aria-labelledby="h-log">
+  <div class="plate-head">
+    <div class="eyebrow">Animation 3</div>
+    <h2 id="h-log">Logistic regression: bending a line into a probability</h2>
+    <p class="muted">Students who passed sit on the top row, those who failed on the bottom. The model starts as a flat 0.5 ("no idea"). Gradient descent on log-loss tilts and slides the S-curve until it rises where passes begin. The dashed line is the decision boundary, where the model says 50/50. The thin lines are each student's error, <span class="eta">p − y</span>: the same "delta" as in linear regression.</p>
+  </div>
+  <div class="stage">
+    <canvas aria-label="Points at 0 and 1 with a sigmoid curve being fitted and a moving decision boundary"></canvas>
+    <div class="toolbar">
+      <div class="group">
+        <button class="primary" type="button" data-act="play" id="log-play">Pause</button>
+        <button type="button" data-act="restart" id="log-restart">Restart</button>
+      </div>
+      <div class="readout" data-role="readout"></div>
+    </div>
+  </div>
+  <p class="takeaway">The curve never becomes a perfect step, because a few students near the middle went the "wrong" way. Log-loss would rather be honestly unsure about them than confidently wrong.</p>
+</section>
+
+<p class="muted">Want to steer it yourself? Open the <a href="/subjects/machine-learning/widgets/gradient-descent-lab.html">gradient descent lab</a> and click anywhere on the loss map.</p>

@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { liveSubjects, chaptersOf, meta, widgetsOf, partTitle, SUBJECTS } from "../../subjects";
+import { liveSubjects, chaptersOf, meta, widgetsOf, pagesOf, partTitle, partLabel, SUBJECTS, chapterUrl, u } from "../../subjects";
 
 export async function getStaticPaths() {
   return (await liveSubjects()).map((s) => ({ params: { subject: s.slug } }));
@@ -10,54 +10,104 @@ const { subject } = Astro.params;
 const m = meta(subject);
 const info = SUBJECTS.find((s) => s.slug === subject);
 const title = m?.title ?? info?.title ?? subject;
+const label = partLabel(subject);
 const chapters = await chaptersOf(subject);
 const exercises = await getCollection("exercises");
 const widgets = widgetsOf(subject);
-const written = [...new Set(chapters.map((c) => c.data.part))];
+const pages = pagesOf(subject);
+const written = [...new Set(chapters.map((c) => c.part))];
 const upcoming = Object.keys(m?.parts ?? {}).map(Number).filter((p) => !written.includes(p));
 const first = chapters[0];
 ---
 <Base title={title} subject={{ slug: subject, title }} description={m?.tagline}>
-  <main class="home">
+  <main class="home subject-page">
     <section class="hero">
       <p class="kicker">{info?.mode ?? "Subject"}</p>
       <h1>{title}</h1>
       <p class="tagline">{m?.tagline ?? info?.tagline}</p>
       {m?.intro && <p>{m.intro}</p>}
+      <div class="progress-line" data-progress={JSON.stringify(chapters.map((c) => c.id))}>
+        <div class="bar"><span></span></div>
+        <span class="mono">{chapters.length} {chapters.length === 1 ? "chapter" : "chapters"} written<span data-read-count></span></span>
+      </div>
       <div class="actions">
-        {first && <a class="btn primary" href={`/${first.id}/`}>Start reading · {first.data.chapter}</a>}
-        {widgets.length > 0 && <a class="btn" href={`/animations/#${subject}`}>Browse its {widgets.length} animations</a>}
+        {first && <a class="btn primary" href={chapterUrl(first.id)} data-resume={subject}>Start reading · {first.chapter}</a>}
+        {(widgets.length + pages.length) > 0 && <a class="btn" href={u(`/animations/#${subject}`)}>{widgets.length + pages.length} animations</a>}
       </div>
     </section>
 
-    {written.map((p) => (
-      <section class="part">
-        <div class="part-label">
-          <div class="n">Part {p}</div>
-          <h2>{partTitle(subject, p)}</h2>
-          <p>{m?.parts[String(p)]?.blurb}</p>
-        </div>
-        <div class="chapters">
-          {chapters.filter((c) => c.data.part === p).map((c) => {
-            const w = widgets.find((x) => x.chapter === c.data.chapter);
-            const n = exercises.find((e) => e.id === c.id)?.body?.match(/^### \d/gm)?.length;
-            return (
-              <a class="chapter-card" href={`/${c.id}/`}>
-                <span class="num">{c.data.chapter}</span>
-                <span class="t">{c.data.title}</span>
-                <span class="meta">{[n && `${n} exercises`, w && "▶︎ " + w.title.replace(/\?$/, "")].filter(Boolean).join(" · ")}</span>
-              </a>
-            );
-          })}
-        </div>
-      </section>
-    ))}
+    <div class="subject-layout">
+      <div class="subject-main">
+        {written.map((p) => (
+          <section class="part">
+            <div class="part-label">
+              <div class="n">{label} {p}</div>
+              <h2>{partTitle(subject, p)}</h2>
+              <p>{m?.parts[String(p)]?.blurb}</p>
+            </div>
+            <div class="chapters">
+              {chapters.filter((c) => c.part === p).map((c) => {
+                const w = widgets.find((x) => x.chapter === c.chapter);
+                const n = exercises.find((e) => e.id === c.id)?.body?.match(/^### \d/gm)?.length;
+                return (
+                  <a class="chapter-card" href={chapterUrl(c.id)} data-entry={c.id}>
+                    <span class="num">{c.chapter}<span class="state" data-state></span></span>
+                    <span class="t">{c.title}</span>
+                    {c.blurb && <span class="blurb">{c.blurb}</span>}
+                    <span class="meta">{[n && `${n} exercises`, w && "▶︎ " + w.title.replace(/\?$/, "")].filter(Boolean).join(" · ")}</span>
+                  </a>
+                );
+              })}
+            </div>
+          </section>
+        ))}
 
-    {upcoming.length > 0 && (
-      <section class="part upcoming">
-        <div class="part-label"><div class="n">Coming next</div><h2>Parts {upcoming[0]}–{upcoming.at(-1)}</h2></div>
-        <ul class="upcoming-list">{upcoming.map((p) => <li>Part {p} · {partTitle(subject, p)}</li>)}</ul>
-      </section>
-    )}
+        {upcoming.length > 0 && (
+          <section class="part upcoming">
+            <div class="part-label"><div class="n">Coming next</div><h2>{label}s {upcoming[0]}–{upcoming.at(-1)}</h2></div>
+            <ul class="upcoming-list">{upcoming.map((p) => <li><b>{label} {p} · {partTitle(subject, p)}</b>{m?.parts[String(p)]?.blurb && <span>{m.parts[String(p)].blurb}</span>}</li>)}</ul>
+          </section>
+        )}
+      </div>
+
+      {(pages.length + widgets.length) > 0 && (
+        <aside class="subject-side">
+          <div class="side-card">
+            <h4>Playground</h4>
+            {pages.map((p) => <a href={u(`/${subject}/${p.file}/`)}><b>{p.title}</b><span>{p.idea}</span></a>)}
+            {widgets.slice(0, 4).map((w) => <a href={u(`/subjects/${subject}/widgets/${w.file}`)}><b>{w.title}</b><span>{w.idea}</span></a>)}
+            {widgets.length > 4 && <a href={u(`/animations/#${subject}`)}><b>All {widgets.length} animations →</b></a>}
+          </div>
+        </aside>
+      )}
+    </div>
   </main>
 </Base>
+
+<script>
+  // Mark chapters read or in progress, from what this browser has seen (set by the chapter pages).
+  let store: { last?: { id: string; href: string; section?: string }; read?: Record<string, string> } = {};
+  try { store = JSON.parse(localStorage.getItem("learn-progress") || "{}"); } catch {}
+  const read = store.read ?? {};
+  for (const card of document.querySelectorAll<HTMLElement>(".chapter-card[data-entry]")) {
+    const s = read[card.dataset.entry!];
+    const tag = card.querySelector<HTMLElement>("[data-state]")!;
+    if (s === "read") { card.classList.add("is-read"); tag.textContent = "Read"; }
+    else if (s) { card.classList.add("is-started"); tag.textContent = store.last?.id === card.dataset.entry && store.last?.section ? `In progress · ${store.last.section}` : "In progress"; }
+  }
+  const line = document.querySelector<HTMLElement>("[data-progress]");
+  if (line) {
+    const ids: string[] = JSON.parse(line.dataset.progress!);
+    const done = ids.filter((id) => read[id] === "read").length;
+    const seen = ids.filter((id) => read[id]).length;
+    line.querySelector<HTMLElement>(".bar span")!.style.width = `${(100 * done) / Math.max(ids.length, 1)}%`;
+    if (seen) line.querySelector("[data-read-count]")!.textContent = " · " + [done && `${done} read`, seen > done && `${seen - done} in progress`].filter(Boolean).join(", ");
+  }
+  // "Start reading" becomes "Continue" when this subject was the last thing read.
+  const btn = document.querySelector<HTMLAnchorElement>("[data-resume]");
+  const subject = btn?.dataset.resume;
+  if (btn && store.last?.id?.startsWith(`${subject}/`)) {
+    btn.href = store.last.href;
+    btn.textContent = "Continue where you left off";
+  }
+</script>

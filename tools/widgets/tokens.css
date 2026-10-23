@@ -1,32 +1,42 @@
 /* Colour tokens shared by the widgets and the site. The single source of truth for themes.
+   The look is a field notebook: off-white paper, ink, one burnt-orange accent for "the thing
+   that is learning", and teal for observed data.
    Themes: light, beige (warm paper), dark. With no data-theme set, follow the system. */
 :root, :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #ffffff; --fg: #1f2328; --muted: #6e7781; --panel: #f4f5f7; --rule: #d8dce1;
-  --accent: #2f6feb; --code-bg: #f4f5f7;
-  --event-a: #2f6feb; --event-b: #e8833a; --event-both: #8e5cd9; --event-c: #1a9e8f;
-  --good: #1a7f37; --bad: #cf222e;
+  --bg: #f6f7f4; --fg: #1d2626; --muted: #5d6b69; --panel: #eef2ef; --rule: #d9dfdc;
+  --card: #ffffff; --accent: #c2410c; --code-bg: #eef2ef;
+  --event-a: #1f5f73; --event-b: #c2410c; --event-both: #6b4c9a; --event-c: #2f7d4f;
+  --good: #2f7d4f; --bad: #b42318;
 }
 :root[data-theme="beige"] {
   color-scheme: light;
   --bg: #f7f1e5; --fg: #2b2620; --muted: #7d7263; --panel: #eee5d3; --rule: #ddd0b8;
-  --accent: #9c4f1c; --code-bg: #efe6d4;
-  --event-a: #2b62c9; --event-b: #c8661f; --event-both: #7d4cc4; --event-c: #1d8a7e;
+  --card: #fbf7ef; --accent: #a8430f; --code-bg: #efe6d4;
+  --event-a: #1f5a6e; --event-b: #b8551a; --event-both: #6d4a96; --event-c: #2f7a32;
   --good: #2f7a32; --bad: #b3261e;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
-    --bg: #15171a; --fg: #e3e8ee; --muted: #8b949e; --panel: #1f2328; --rule: #30363d;
-    --accent: #79b0ff; --code-bg: #1c1f24;
-    --event-a: #58a6ff; --event-b: #f0a35e; --event-both: #b392f0; --event-c: #3cc8b4;
-    --good: #3fb950; --bad: #f85149;
+    --bg: #131a1a; --fg: #e4ebe8; --muted: #9aaba7; --panel: #1e2928; --rule: #2c3a39;
+    --card: #1a2323; --accent: #fb923c; --code-bg: #1a2323;
+    --event-a: #7cc4d8; --event-b: #fb923c; --event-both: #c4a5f0; --event-c: #6fcf97;
+    --good: #6fcf97; --bad: #f97066;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #15171a; --fg: #e3e8ee; --muted: #8b949e; --panel: #1f2328; --rule: #30363d;
-  --accent: #79b0ff; --code-bg: #1c1f24;
-  --event-a: #58a6ff; --event-b: #f0a35e; --event-both: #b392f0; --event-c: #3cc8b4;
-  --good: #3fb950; --bad: #f85149;
+  --bg: #131a1a; --fg: #e4ebe8; --muted: #9aaba7; --panel: #1e2928; --rule: #2c3a39;
+  --card: #1a2323; --accent: #fb923c; --code-bg: #1a2323;
+  --event-a: #7cc4d8; --event-b: #fb923c; --event-both: #c4a5f0; --event-c: #6fcf97;
+  --good: #6fcf97; --bad: #f97066;
+}
+/* Names used by the machine-learning scenes (learn.js) and lessons. */
+:root {
+  --ink: var(--fg); --line: var(--rule); --tint: var(--panel);
+  --data: var(--event-a); --class1: var(--event-c);
+  --f-display: "Newsreader Variable", "Newsreader", Georgia, "Times New Roman", serif;
+  --f-body: "Public Sans Variable", "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }

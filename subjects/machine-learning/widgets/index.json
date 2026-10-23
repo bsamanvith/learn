@@ -1,0 +1,7 @@
+{
+  "_about": "Registry of this subject's widgets, shown in the site's Animations gallery. status: new | keep | revise | drop. Edit status and notes as you curate.",
+  "widgets": [
+    { "file": "gradient-descent-lab.html", "title": "Gradient descent lab", "chapter": "02",
+      "idea": "Click the loss map to start a walk, change the learning rate, and see why input scaling matters.", "status": "new", "notes": "" }
+  ]
+}

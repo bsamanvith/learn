@@ -1,0 +1,13 @@
+{
+  "title": "Machine learning",
+  "tagline": "Derive it, code it from scratch, then compare with the library.",
+  "intro": "Model-first: each lesson starts from a model you can picture and pulls in the probability, statistics and calculus it needs as a detour. Every result is derived in full, with figures you can move.",
+  "partLabel": "Stage",
+  "parts": {
+    "1": { "title": "Learning from data", "blurb": "Linear regression, gradient descent and the delta rule, logistic regression." },
+    "2": { "title": "Making models honest", "blurb": "Train and test splits, regularisation, feature scaling, softmax, SGD and Adam, metrics." },
+    "3": { "title": "Trees and boosting", "blurb": "A side branch: decision trees, random forests, gradient boosting." },
+    "4": { "title": "Neural networks", "blurb": "Neurons, backpropagation, CNNs, attention and transformers." },
+    "5": { "title": "Reinforcement learning", "blurb": "Bandits, Bellman, Q-learning, policy gradients, AlphaZero." }
+  }
+}

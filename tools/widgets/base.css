@@ -11,6 +11,7 @@ h3 { margin: 0 0 4px; }
 button { font: inherit; padding: 4px 12px; cursor: pointer; border-radius: 6px;
          border: 1px solid var(--muted); background: var(--panel); color: var(--fg); }
 button:hover { border-color: var(--fg); }
+input[type="range"], input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 svg { width: 100%; height: auto; display: block; touch-action: none; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 12px 0; }
 .stat { background: var(--panel); border-radius: 8px; padding: 8px 12px; }

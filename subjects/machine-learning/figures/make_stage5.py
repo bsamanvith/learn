@@ -242,3 +242,38 @@ p.text(x0 + 12.5 * cw, y0 + L * ch + 32, "outputs so far", color="muted", size=1
 p.text(x0 - 40, 22, f"layer 1, head {h + 1}: where each output digit looks", color="fg", size=12, px=True)
 print("20 head scores", np.round(score, 2))
 p.save(OUT / "transformer.svg", "Left: the training loss of the numpy GPT falls from 2.7 to below one in a thousand within 300 steps, and to about one in a billion by step 3000. Right: one first-layer attention head, averaged over 200 test sequences; the output digit j attends to input digit 9 minus j, an anti-diagonal")
+
+
+# ---------- 21: toy CLIP: example images and captions; class-image vs caption similarities ----------
+ns = run("21-vision-transformers-and-clip")
+V_, S_ = ns["VOCAB"], list(ns["SHAPES"])
+Xs, ws, ss, qs = ns["make"](8)
+p = Plot(900, 360)
+p.text(20, 22, "training pairs: image and caption", color="fg", size=12, px=True)
+for i in range(8):
+    x0, y0 = 20 + (i % 4) * 100, 44 + (i // 4) * 150
+    image(p, Xs[i].reshape(12, 12), x0, y0, 84)
+    words = [V_[w] for w in ws[i]]
+    for k, line in enumerate([" ".join(words[:2]), " ".join(words[2:])]):
+        p.text(x0 + 42, y0 + 100 + 14 * k, line, color="muted", size=10, anchor="middle", px=True)
+Xte, ste, qte = ns["Xte"], ns["ste"], ns["qte"]
+U = ns["encode_images"](Xte)[0]
+cls = 4 * ste + qte
+C = np.array([U[cls == c].mean(0) for c in range(24)]); C /= np.linalg.norm(C, axis=1, keepdims=True)
+T = ns["encode_text"](ns["bag"]([[i, 6 + j] for i in range(6) for j in range(4)]))[0]
+Sim = C @ T.T
+x0, y0, cs = 520, 40, 12.5
+for i in range(24):
+    for j in range(24):
+        v = max(Sim[i, j], 0) ** 2
+        p.rect(x0 + j * cs, y0 + i * cs, cs - 0.8, cs - 0.8, color="accent", opacity=round(float(v) * 0.95, 2), px=True)
+for k in range(6):
+    p.text(x0 - 6, y0 + (4 * k + 2) * cs + 4, S_[k], color="muted", size=10, anchor="end", px=True)
+    p.text(x0 + (4 * k + 2) * cs, y0 + 24 * cs + 14, S_[k], color="muted", size=10, anchor="middle", px=True)
+    if k:
+        p.items.append(f'<line x1="{x0 + 4 * k * cs - 0.4}" y1="{y0}" x2="{x0 + 4 * k * cs - 0.4}" y2="{y0 + 24 * cs}" style="stroke:{c("card")};stroke-width:1.5"/>')
+        p.items.append(f'<line x1="{x0}" y1="{y0 + 4 * k * cs - 0.4}" x2="{x0 + 24 * cs}" y2="{y0 + 4 * k * cs - 0.4}" style="stroke:{c("card")};stroke-width:1.5"/>')
+p.text(x0 + 12 * cs, y0 + 24 * cs + 30, "caption (shape, then 4 quadrants)", color="muted", size=10.5, anchor="middle", px=True)
+p.text(x0 - 60, 22, "class-average image vs caption: similarity²", color="fg", size=12, px=True)
+print("21 diag mean", Sim.diagonal().mean().round(3), "off", (Sim.sum() - Sim.trace()) / 552)
+p.save(OUT / "clip.svg", "Left: eight toy images, each with a shape in one quadrant, and their captions. Right: a 24 by 24 grid of cosine similarities between the average image embedding of each shape and quadrant class and the embedding of each two-word caption; the diagonal is brightest")

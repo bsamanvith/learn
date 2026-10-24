@@ -1,0 +1,242 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 21 · Stage 5: deep architectures</div>
+  <h1>Vision transformers and contrastive learning</h1>
+  <p class="lede">Two ideas that made the Transformer the default architecture for images too. The Vision Transformer cuts an image into patches and treats them as a sequence of tokens. CLIP trains an image encoder and a text encoder together, on hundreds of millions of captioned images from the web, by asking which caption in a batch belongs to which image, with no labels at all. This lesson derives the patch embedding, the trade-off ViTs make against convolutions, the InfoNCE loss and its connection to mutual information, the role of the temperature, and zero-shot classification. Then it trains a small CLIP from scratch, with the gradients worked out by hand.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/06-softmax-regression/">lesson 06</a>, <a href="/machine-learning/15-convolutional-networks/">lesson 15</a>, <a href="/machine-learning/20-transformer/">lesson 20</a></span><span><b>Math pulled in:</b> mutual information, density ratios, Jensen's inequality, the gradient of normalisation</span></div>
+</header>
+
+<article class="lesson">
+  <section id="vit">
+    <h2>Images as sequences of patches</h2>
+    <p>A Transformer takes a sequence of vectors. An image of $224\times224$ pixels has 50,176 of them, and self-attention over 50,176 tokens would need an attention matrix of 2.5 billion entries per head. Dosovitskiy et al. (2020) used a cruder tokenisation: cut the $H\times W\times C$ image into non-overlapping $P\times P$ patches, flatten each into a vector of length $P^2C$, and map it to width $d$ with one shared matrix $E\in\mathbb{R}^{P^2C\times d}$. With $P = 16$ a $224\times224$ image becomes $N = (224/16)^2 = 196$ tokens, a sequence the size of a paragraph. Then</p>
+    <div class="eq">$$\mathbf{z}_0 = [\mathbf{x}_\text{cls};\ \mathbf{x}_1E;\ \mathbf{x}_2E;\ \dots;\ \mathbf{x}_NE] + E_\text{pos}, \qquad \mathbf{z}_\ell = \operatorname{Block}_\ell(\mathbf{z}_{\ell-1}), \qquad \hat{\mathbf{y}} = \operatorname{softmax}(W\operatorname{LN}(\mathbf{z}_L^\text{cls})).$$</div>
+    <p>The blocks are lesson 20's, without a causal mask: every patch attends to every patch. $E_\text{pos}$ holds learned position embeddings, one per patch. $\mathbf{x}_\text{cls}$ is a learned extra token, borrowed from BERT, whose final state is used for classification; averaging the patch tokens works as well. The patch embedding is a convolution in disguise: the token for the patch at $(i, j)$ is $\sum_{a,b,c}x_{Pi+a,\,Pj+b,\,c}E_{(a,b,c),:}$, which is a convolution with $d$ filters of size $P\times P$ and stride $P$ (part 1 of the code checks this numerically).</p>
+    <p><b>The trade-off against convolutions.</b> A CNN builds in two assumptions (lesson 15): locality, since each unit sees a small window, and translation equivariance, since the same filter is used everywhere. A ViT keeps a little of both inside each patch and the shared $E$, and otherwise has neither: attention connects any patch with any other from the first layer, and the position embeddings start random, so the model must learn from data that nearby patches are related. Assumptions that are true save data. Dosovitskiy et al. found that trained on ImageNet's 1.3 million images, a ViT is worse than a ResNet of similar size; pretrained on 300 million images, it is better, and it keeps improving with more data where the ResNet levels off. The learned position embeddings, when visualised, turn out to encode the 2-D grid: each patch's embedding is most similar to its row and column neighbours. DeiT (Touvron et al., 2021) later trained ViTs well on ImageNet alone, with heavy data augmentation and distillation from a CNN, which act as the missing prior.</p>
+    <p><b>Cost.</b> Attention costs $O(N^2d)$ per layer with $N = HW/P^2$. Halving the patch size quadruples $N$ and multiplies the attention cost by 16. This is why ViTs use large patches, and why hierarchical designs such as the Swin Transformer restrict attention to local windows, which reintroduces locality.</p>
+  </section>
+
+  <section id="contrastive">
+    <h2>Learning from pairs: the contrastive loss</h2>
+    <p>Labelled datasets are expensive; images with captions are on the web by the billion. CLIP (Radford et al., 2021) trains on 400 million (image, text) pairs. An image encoder $f$ (a ResNet or a ViT) and a text encoder $g$ (a Transformer) map their inputs to vectors in a shared space, normalised to unit length:</p>
+    <div class="eq">$$\mathbf{u}_i = \frac{f(x_i)}{\lVert f(x_i)\rVert}, \qquad \mathbf{v}_j = \frac{g(y_j)}{\lVert g(y_j)\rVert}, \qquad s_{ij} = \frac{\mathbf{u}_i^\top\mathbf{v}_j}{\tau} .$$</div>
+    <p>In a batch of $N$ pairs, each image's own caption is the right answer to an $N$-way classification problem whose "classes" are the batch's captions, and the same holds in the other direction. The loss is the average of the two cross-entropies:</p>
+    <div class="eq">$$\mathcal{L} = \frac{1}{2N}\sum_{i=1}^N\left[-\log\frac{e^{s_{ii}}}{\sum_je^{s_{ij}}} - \log\frac{e^{s_{ii}}}{\sum_je^{s_{ji}}}\right].$$</div>
+    <p>This is the <b>InfoNCE</b> loss (van den Oord et al., 2018), in its symmetric form. The other $N - 1$ captions in the batch act as negatives: the loss pulls each image towards its caption and pushes it away from the rest. Differentiating the image-to-text term with respect to $\mathbf{u}_i$, with $p_{ij} = \operatorname{softmax}_j(s_{ij})$, gives</p>
+    <div class="eq">$$\frac{\partial\mathcal{L}_i}{\partial\mathbf{u}_i} = \frac{1}{\tau}\Big(\sum_jp_{ij}\mathbf{v}_j - \mathbf{v}_i\Big),$$</div>
+    <p>a pull towards the positive $\mathbf{v}_i$ and a push away from each negative in proportion to the probability the model gives it. Negatives the model already rejects contribute almost nothing; the gradient is concentrated on <i>hard negatives</i>, the wrong captions most similar to the image. Since $\mathbf{u}_i$ is normalised, the gradient with respect to the unnormalised $\mathbf{z} = f(x_i)$ passes through the Jacobian of $\mathbf{z}/\lVert\mathbf{z}\rVert$, which is $(I - \mathbf{u}\mathbf{u}^\top)/\lVert\mathbf{z}\rVert$: it removes the radial component, since changing the length of $\mathbf{z}$ doesn't change $\mathbf{u}$.</p>
+    <p>The same loss powers self-supervised learning without any text. SimCLR (Chen et al., 2020) takes two random augmentations (crops, colour changes) of the same image as the positive pair, and other images in the batch as negatives; the network must learn what is invariant to the augmentations, which turns out to be most of what matters for recognition.</p>
+  </section>
+
+  <section id="mi">
+    <h2>What InfoNCE estimates</h2>
+    <p>The mutual information between two random variables measures how much knowing one tells you about the other:</p>
+    <div class="eq">$$I(X;Y) = \mathbb{E}_{p(x,y)}\left[\log\frac{p(y\mid x)}{p(y)}\right] = H(Y) - H(Y\mid X) \ge 0 .$$</div>
+    <p>It is 0 when the variables are independent, and it is the quantity a contrastive model is implicitly trying to capture: what an image and its caption have in common. Van den Oord et al. showed that</p>
+    <div class="result">
+      <div class="label">The InfoNCE bound</div>
+      <p>$$I(X;Y) \ \ge\ \log N - \mathcal{L}_\text{InfoNCE} .$$</p>
+    </div>
+    <p>To see why, consider one image $x$ with its true caption $y_1\sim p(y\mid x)$ and $N - 1$ negatives $y_2, \dots, y_N$ drawn independently from $p(y)$. Given the $N$ captions, the posterior probability that caption $k$ is the true one is, by Bayes' rule,</p>
+    <div class="eq">$$P(\text{true} = k\mid x, y_{1:N}) = \frac{p(y_k\mid x)\prod_{j\ne k}p(y_j)}{\sum_lp(y_l\mid x)\prod_{j\ne l}p(y_j)} = \frac{r(x, y_k)}{\sum_lr(x, y_l)}, \qquad r(x, y) = \frac{p(y\mid x)}{p(y)} .$$</div>
+    <p>So the best possible classifier is a softmax over scores $s(x, y) = \log r(x, y) + c(x)$, which is exactly the form the model uses: at its optimum the critic $\mathbf{u}^\top\mathbf{v}/\tau$ learns the log density ratio. No classifier can have lower cross-entropy than the true posterior, so for any model, using that optimal form,</p>
+    <div class="eq">$$\mathcal{L} \ge \mathbb{E}\left[-\log\frac{r(x, y_1)}{r(x, y_1) + \sum_{j\ge2}r(x, y_j)}\right] = \mathbb{E}\left[\log\Big(1 + \frac{1}{r(x, y_1)}\sum_{j\ge2}r(x, y_j)\Big)\right].$$</div>
+    <p>For large $N$, $\frac{1}{N-1}\sum_{j\ge2}r(x, y_j)\approx\mathbb{E}_{p(y)}[r(x, y)] = \int p(y\mid x)\,dy = 1$, so the right side is approximately $\mathbb{E}[\log(1 + (N-1)/r(x, y_1))] \ge \mathbb{E}[\log((N-1)/r(x, y_1))] = \log(N-1) - I(X;Y)$, since $\mathbb{E}_{p(x,y)}[\log r(x, y)]$ is exactly the mutual information. That is the bound with $\log(N-1)$ in place of $\log N$, a negligible difference for large $N$; Poole et al. (2019) prove the exact version without the approximation. Two consequences matter in practice:</p>
+    <ul>
+      <li><b>The bound can never exceed $\log N$.</b> The loss is non-negative, so $\log N - \mathcal{L}\le\log N$. To capture a lot of information you need many negatives: CLIP uses batches of 32,768, for which $\log N = 10.4$ nats. This is the main reason contrastive models are trained with very large batches.</li>
+      <li><b>False negatives cap the loss.</b> If another caption in the batch also describes the image, the true posterior splits between them. In the code below's toy world there are only 24 distinct descriptions, so a batch of 256 contains about 11 equally correct captions for each image, the loss can't fall much below $\log 11$, and the bound tops out near $\log 24 = 3.18$ nats, the true mutual information.</li>
+    </ul>
+  </section>
+
+  <section id="temperature">
+    <h2>The temperature</h2>
+    <p>Cosine similarities lie in $[-1, 1]$, so the scores lie in $[-1/\tau, 1/\tau]$. With $\tau = 1$ even an impossibly good model, with $\mathbf{u}_i^\top\mathbf{v}_i = 1$ and every negative at $-1$, gives its positive a probability of at most</p>
+    <div class="eq">$$\frac{e^{1}}{e^{1} + (N-1)e^{-1}} = \frac{e^2}{e^2 + N - 1},$$</div>
+    <p>which for $N = 256$ is 0.028, a loss of at least 3.57. The model would keep pushing on pairs it already ranks correctly, because the loss can't express confidence. A small $\tau$ lets scores spread apart. It also sharpens the softmax over negatives, which, by the gradient above, concentrates learning on the hardest negatives; too small, and the gradient comes from one negative at a time and is noisy. CLIP learns $\tau$ as a parameter, initialised to 0.07 and clipped at 0.01. SigLIP (Zhai et al., 2023) replaces the softmax with an independent sigmoid per pair, which removes the need to normalise over the batch and makes very large batches cheaper.</p>
+  </section>
+
+  <section id="zeroshot">
+    <h2>Zero-shot classification</h2>
+    <p>A trained CLIP can classify images into classes it was never trained on as classes. For each class, write a caption, such as "a photo of a dog", and embed it with the text encoder; classify an image by the caption whose embedding is closest to the image's. The text encoder has turned a class <i>name</i> into a classifier weight vector: in effect this is lesson 06's softmax regression, with weight vectors $\mathbf{w}_c = \mathbf{v}(\text{caption}_c)$ produced from language instead of learned from labelled examples. CLIP's zero-shot accuracy on ImageNet (76% for its largest model) matched a ResNet-50 trained on ImageNet's 1.3 million labelled images, and it degraded much less on shifted versions of ImageNet (sketches, renditions, adversarially selected photos).</p>
+    <p>Two practical findings. <b>Prompt engineering</b>: the caption should look like the training captions; "a photo of a dog" works better than "dog", because single words rarely occurred alone in the training text. <b>Prompt ensembling</b>: average the embeddings of several captions per class ("a photo of a big dog", "a drawing of a dog", …). The code below shows both effects on a small scale.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch: a small CLIP</h2>
+    <p>Part 1 checks that patchifying and multiplying by $E$ is a stride-$P$ convolution. Part 2 builds a toy world: $12\times12$ images, each containing one of 6 shapes at a random position in one of 4 quadrants, with Gaussian noise of standard deviation 0.3; each comes with a caption that names the shape and the quadrant, in random order, padded with 0 to 2 filler words ("a", "photo", …). The image encoder is a two-layer MLP, the text encoder a bag of word embeddings followed by a linear map, both into 32 dimensions. The symmetric InfoNCE gradient, including the backward pass through the normalisation, is written out by hand and checked against finite differences. Training never sees a label. Afterwards the model classifies test images zero-shot by shape and by quadrant, using the captions as prompts.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. A vision transformer's first layer: cut the image into P x P patches, flatten each, apply one linear map.
+def patchify(img, P):
+    """(H, W, C) image -&gt; (number of patches, P*P*C) matrix, patches in row-major order."""
+    H, W, C = img.shape
+    return img.reshape(H // P, P, W // P, P, C).transpose(0, 2, 1, 3, 4).reshape(-1, P * P * C)
+
+img, P, d = rng.standard_normal((32, 32, 3)), 8, 16
+E = rng.standard_normal((P * P * 3, d))
+tokens = patchify(img, P) @ E                                     # (16 patches, d)
+# the same thing as a convolution with a P x P kernel and stride P
+conv = np.array([[np.sum(img[i:i + P, j:j + P, :][..., None] * E.reshape(P, P, 3, d), (0, 1, 2))
+                  for j in range(0, 32, P)] for i in range(0, 32, P)]).reshape(-1, d)
+print(f"patch embedding: {tokens.shape[0]} tokens of width {d}; equals a stride-{P} convolution: {np.allclose(tokens, conv)}")
+
+# 2. CLIP on a toy world. Images are 12x12 with one of 6 shapes in one of 4 quadrants, plus noise.
+# Captions are bags of words: the shape's name, the quadrant's name, and 0-2 filler words, in any order.
+SHAPES = {
+    "cross":  [[0, 1, 0], [1, 1, 1], [0, 1, 0]], "square": [[1, 1, 1], [1, 0, 1], [1, 1, 1]],
+    "diag":   [[1, 0, 0], [0, 1, 0], [0, 0, 1]], "vbar":   [[0, 1, 0], [0, 1, 0], [0, 1, 0]],
+    "hbar":   [[0, 0, 0], [1, 1, 1], [0, 0, 0]], "corner": [[1, 0, 0], [1, 0, 0], [1, 1, 1]]}
+QUADS = ["top-left", "top-right", "bottom-left", "bottom-right"]
+FILLER = ["a", "the", "photo", "of", "picture"]
+VOCAB = list(SHAPES) + QUADS + FILLER
+glyphs = np.array(list(SHAPES.values()), float)
+
+def make(n):
+    s, q = rng.integers(0, 6, n), rng.integers(0, 4, n)
+    X = 0.3 * rng.standard_normal((n, 12, 12))
+    for i in range(n):
+        r, c = 6 * (q[i] // 2) + rng.integers(0, 4), 6 * (q[i] % 2) + rng.integers(0, 4)
+        X[i, r:r + 3, c:c + 3] += glyphs[s[i]]
+    words = [[s[i], 6 + q[i]] + list(10 + rng.integers(0, 5, rng.integers(0, 3))) for i in range(n)]
+    return X.reshape(n, -1), [list(rng.permutation(w)) for w in words], s, q
+
+def bag(words):
+    """Bag-of-words matrix: row i averages one-hot vectors of caption i's words."""
+    B = np.zeros((len(words), len(VOCAB)))
+    for i, w in enumerate(words):
+        np.add.at(B[i], w, 1 / len(w))
+    return B
+
+k = 32
+W1 = rng.standard_normal((144, 128)) * np.sqrt(2 / 144); b1 = np.zeros(128)
+W2 = rng.standard_normal((128, k)) * np.sqrt(1 / 128)            # image encoder: 144 -&gt; 128 -&gt; 32
+Et = rng.standard_normal((len(VOCAB), k)); Wt = rng.standard_normal((k, k)) * np.sqrt(1 / k)   # text encoder
+params = [W1, b1, W2, Et, Wt]
+
+def normalise(Z):
+    n = np.linalg.norm(Z, axis=1, keepdims=True); return Z / n, n
+
+def encode_images(X):
+    H = np.maximum(X @ W1 + b1, 0); return normalise(H @ W2) + (H,)
+
+def encode_text(B):
+    M = B @ Et; return normalise(M @ Wt) + (M,)
+
+def clip_loss(X, B, tau):
+    """Symmetric InfoNCE. Returns the loss and the gradients of all parameters."""
+    (U, nu, H), (V, nv, M) = encode_images(X), encode_text(B)
+    N = len(X); S = U @ V.T / tau                                  # S[i, j]: image i against caption j
+    def ce_rows(S):                                                # cross-entropy with the diagonal as targets
+        Z = S - S.max(1, keepdims=True); Pr = np.exp(Z) / np.exp(Z).sum(1, keepdims=True)
+        return -np.mean(np.log(np.diag(Pr))), (Pr - np.eye(N)) / N
+    li, gi = ce_rows(S); lt, gt = ce_rows(S.T)
+    G = (gi + gt.T) / 2 / tau                                      # d loss / d (U V^T)
+    gU, gV = G @ V, G.T @ U
+    gU = (gU - U * (gU * U).sum(1, keepdims=True)) / nu            # back through z / |z|
+    gV = (gV - V * (gV * V).sum(1, keepdims=True)) / nv
+    gH = (gU @ W2.T) * (H &gt; 0)
+    return (li + lt) / 2, [X.T @ gH, gH.sum(0), H.T @ gU, B.T @ (gV @ Wt.T), M.T @ gV]
+
+# gradient check
+X, words, _, _ = make(16); B = bag(words)
+_, grads = clip_loss(X, B, 0.1); worst = 0
+for p, g in zip(params, grads):
+    for i in [tuple(rng.integers(0, s) for s in p.shape) for _ in range(4)]:
+        old = p[i]; p[i] = old + 1e-6; up = clip_loss(X, B, 0.1)[0]
+        p[i] = old - 1e-6; dn = clip_loss(X, B, 0.1)[0]; p[i] = old
+        worst = max(worst, abs((up - dn) / 2e-6 - g[i]) / (abs(g[i]) + 1e-6))
+print(f"gradient check: max relative error {worst:.1e}")
+
+# train with Adam, batch 256, temperature 0.07 as in CLIP
+N, tau = 256, 0.07
+m = [np.zeros_like(p) for p in params]; v = [np.zeros_like(p) for p in params]
+Xte, wte, ste, qte = make(2000); Bte = bag(wte)
+def zero_shot(prompts, labels, groups=None):
+    """Classify test images by the nearest prompt embedding; no labels were used in training.
+    groups[i] is the class of prompt i, when several prompts describe one class."""
+    T, _, _ = encode_text(bag(prompts))
+    pred = np.argmax(encode_images(Xte)[0] @ T.T, 1)
+    return np.mean((pred if groups is None else np.array(groups)[pred]) == labels)
+def retrieval(n=256):
+    """For each of n images, retrieve the best of the n captions; is it a correct description?"""
+    U, V = encode_images(Xte[:n])[0], encode_text(Bte[:n])[0]
+    j = np.argmax(U @ V.T, 1); key = 4 * ste[:n] + qte[:n]
+    return np.mean(j == np.arange(n)), np.mean(key[j] == key)
+for t in range(1, 6001):
+    X, words, _, _ = make(N)
+    loss, grads = clip_loss(X, bag(words), tau)
+    for p, g, mi, vi in zip(params, grads, m, v):
+        mi *= 0.9; mi += 0.1 * g; vi *= 0.999; vi += 0.001 * g * g
+        p -= 3e-3 * (mi / (1 - 0.9 ** t)) / (np.sqrt(vi / (1 - 0.999 ** t)) + 1e-8)
+    if t in (1, 100, 300, 1000, 3000, 6000):
+        print(f"step {t:4d}: loss {loss:.3f}  (log N = {np.log(N):.3f}; MI bound {np.log(N) - loss:.2f} nats)"
+              f"  zero-shot shape {zero_shot([[i] for i in range(6)], ste):.3f}"
+              f"  quadrant {zero_shot([[6 + j] for j in range(4)], qte):.3f}")
+
+# prompts shaped like the training captions work better than a bare word ("a photo of a ..." in CLIP)
+full = [[i, 6 + j] for i in range(6) for j in range(4)]
+print(f"zero-shot shape with two-word prompts (any quadrant counts): {zero_shot(full, ste, [i for i in range(6) for j in range(4)]):.3f}")
+# a caption names both shape and quadrant: 24 combinations
+both = zero_shot([[i, 6 + j] for i in range(6) for j in range(4)], 4 * ste + qte)
+print(f"zero-shot over all 24 (shape, quadrant) captions: {both:.3f}   (chance {1 / 24:.3f})")
+exact, right = retrieval()
+print(f"retrieval among 256 test captions: its own caption {exact:.3f}, a correct description {right:.3f}")
+print(f"I(image; caption) is at most log 24 = {np.log(24):.2f} nats here; the InfoNCE bound can never exceed log N")
+
+# patch embedding: 16 tokens of width 16; equals a stride-8 convolution: True
+# gradient check: max relative error 1.6e-06
+# step    1: loss 7.715  (log N = 5.545; MI bound -2.17 nats)  zero-shot shape 0.164  quadrant 0.303
+# step  100: loss 4.426  (log N = 5.545; MI bound 1.12 nats)  zero-shot shape 0.232  quadrant 0.898
+# step  300: loss 3.974  (log N = 5.545; MI bound 1.57 nats)  zero-shot shape 0.221  quadrant 0.934
+# step 1000: loss 3.348  (log N = 5.545; MI bound 2.20 nats)  zero-shot shape 0.465  quadrant 0.965
+# step 3000: loss 3.061  (log N = 5.545; MI bound 2.48 nats)  zero-shot shape 0.568  quadrant 0.979
+# step 6000: loss 2.992  (log N = 5.545; MI bound 2.55 nats)  zero-shot shape 0.672  quadrant 0.988
+# zero-shot shape with two-word prompts (any quadrant counts): 0.828
+# zero-shot over all 24 (shape, quadrant) captions: 0.819   (chance 0.042)
+# retrieval among 256 test captions: its own caption 0.066, a correct description 0.805
+# I(image; caption) is at most log 24 = 3.18 nats here; the InfoNCE bound can never exceed log N</code></pre>
+    <p class="muted">The loss falls from 7.7 to 3.0, so the bound $\log N - \mathcal{L}$ rises to 2.55 nats, against the maximum of about $\log 24 = 3.18$ that false negatives allow. Quadrants are learned almost at once (98.8% zero-shot), shapes slowly: one word as a prompt gives 67%, but a prompt shaped like the training captions, two words, with all four quadrants counted, gives 83%. Over all 24 (shape, quadrant) descriptions it is right 82% of the time, against 4% for chance. Retrieving an image's <i>own</i> caption among 256 succeeds only 6.6% of the time, which is as expected: about 11 captions in the batch say the same thing, and the model has no way to pick its own from them, but 80% of retrieved captions describe the image correctly.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: clip --></div>
+    </figure>
+    <p class="muted">Left: test images with their captions. Right: the cosine similarity (squared, with negative values shown as 0, for contrast) between the average test-image embedding of each (shape, quadrant) class (rows) and the text embedding of the matching two-word caption (columns). The bright diagonal (average 0.95) is zero-shot classification working. The space is organised by quadrant first: an image and a caption with the same quadrant and a different shape have similarity 0.59 on average, with the same shape and a different quadrant only 0.26. So mistakes are almost always about the shape (17% of test images) and rarely about the quadrant (1.3%), and the shapes that get confused share strokes: the cross with the two bars (0.72), the square with the corner (0.73), while the diagonal and the square are far apart (0.08).</p>
+    <p>Why are shapes harder than quadrants? The quadrant is a linear function of where the bright pixels are, which a first layer can read directly. A shape can appear at 16 positions within its quadrant, and an MLP has no translation equivariance: it must learn each shape separately at each position (lesson 15's argument). With a convolutional image encoder the shape accuracy would rise quickly; exercise 6 asks you to check.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>ViT-B/16 has $d = 768$ and 12 layers. At resolution 224, how many tokens does it process, and how many entries does each attention matrix have? At resolution 384, which is used for fine-tuning? The position embeddings were learned for 196 patches; what would you do with them at 384?</li>
+      <li>Show that $\mathcal{L}_\text{InfoNCE} = \log N$ when all scores are equal, and that a model that ignores its inputs therefore has $\log N - \mathcal{L} = 0$.</li>
+      <li>Derive the gradient $\partial\mathcal{L}_i/\partial\mathbf{u}_i$ in the text, and then the gradient with respect to $\mathbf{v}_j$ for $j\ne i$. Show that $\partial(\mathbf{z}/\lVert\mathbf{z}\rVert)/\partial\mathbf{z} = (I - \mathbf{u}\mathbf{u}^\top)/\lVert\mathbf{z}\rVert$ and that it annihilates $\mathbf{z}$.</li>
+      <li>For a batch of $N$ pairs with temperature $\tau$, what is the smallest possible loss? For what $\tau$ is it below 0.01 when $N = 32{,}768$?</li>
+      <li>In the toy world, compute the expected number of captions in a batch of 256 that describe a given image correctly (including its own), and hence estimate the minimum achievable loss. Compare with the loss the code reaches. How would you change the loss so that equally correct captions count as positives?</li>
+      <li>Replace the image encoder with a small CNN (one $3\times3$ convolution with 16 filters, ReLU, global max pooling, then a linear map) and compare zero-shot shape accuracy after the same number of steps. You need lesson 15's convolution backward pass.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> 196 patch tokens plus the class token, 197; each attention matrix has $197^2\approx 38{,}800$ entries. At 384: $(384/16)^2 = 576$ patches, 577 tokens, $3.3\times10^5$ entries per matrix, 8.6 times as many. The position embeddings form a $14\times14$ grid; interpolate them in 2-D (bicubically) to $24\times24$, as the ViT paper does.</p>
+        <p><b>2.</b> Equal scores make every softmax uniform, so each term is $-\log(1/N) = \log N$.</p>
+        <p><b>3.</b> $\mathcal{L}_i = -s_{ii} + \log\sum_je^{s_{ij}}$ with $s_{ij} = \mathbf{u}_i^\top\mathbf{v}_j/\tau$, so $\partial\mathcal{L}_i/\partial\mathbf{u}_i = (-\mathbf{v}_i + \sum_jp_{ij}\mathbf{v}_j)/\tau$, and for $j\ne i$, $\partial\mathcal{L}_i/\partial\mathbf{v}_j = p_{ij}\mathbf{u}_i/\tau$: each negative caption is pushed away from the image with weight $p_{ij}$. For the normalisation, $\partial(z_k/\lVert\mathbf{z}\rVert)/\partial z_l = \delta_{kl}/\lVert\mathbf{z}\rVert - z_kz_l/\lVert\mathbf{z}\rVert^3$, which is $(I - \mathbf{u}\mathbf{u}^\top)/\lVert\mathbf{z}\rVert$; applied to $\mathbf{z} = \lVert\mathbf{z}\rVert\mathbf{u}$ it gives $\mathbf{u} - \mathbf{u}(\mathbf{u}^\top\mathbf{u}) = 0$.</p>
+        <p><b>4.</b> Scores are at most $1/\tau$ for the positive and at least $-1/\tau$ for negatives, so $\mathcal{L}\ge\log(1 + (N - 1)e^{-2/\tau})$. This can't be attained for $N\ge3$ (if every $\mathbf{v}_j$ were opposite to $\mathbf{u}_i = \mathbf{v}_i$, the $\mathbf{v}_j$ would all be equal); with many pairs in a modest dimension, the negatives sit near similarity 0, giving $\mathcal{L}\approx\log(1 + (N-1)e^{-1/\tau})$. Below 0.01 then needs $(N-1)e^{-1/\tau} &lt; 0.01$, so $\tau &lt; 1/\log(100(N-1)) = 1/15.0 = 0.067$, close to CLIP's initial 0.07.</p>
+        <p><b>5.</b> Each of the other 255 captions matches with probability $1/24$, so the expected count is $1 + 255/24 = 11.6$. If the model spreads probability equally over the $K$ correct captions, the loss is $\log K$; the minimum expected loss is $\mathbb{E}[\log K]\approx\log 11.6 = 2.45$ (a little less, by Jensen). The code reaches 2.99, so it is about 0.5 nats from the floor. A multi-positive version: $-\log\big(\sum_{j\in\text{pos}(i)}e^{s_{ij}}/\sum_je^{s_{ij}}\big)$, as in supervised contrastive learning (Khosla et al., 2020); or remove duplicates from each batch.</p>
+        <p><b>6.</b> The CNN detects a shape with the same filter wherever it is, and global max pooling makes the result position-independent, so it needs to learn each shape once instead of at 16 positions. Expect shape accuracy near 100% well within the training budget. The catch is that max pooling discards the quadrant, which the caption also names: add a second pathway, such as the pooled maximum per quadrant, so the encoder keeps both.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Dosovitskiy et al., "An image is worth 16x16 words: transformers for image recognition at scale"</b> (ICLR 2021). The Vision Transformer.</li>
+      <li><b>Radford et al., "Learning transferable visual models from natural language supervision"</b> (ICML 2021). CLIP; section 3.1 on zero-shot transfer and prompt engineering.</li>
+      <li><b>van den Oord, Li &amp; Vinyals, "Representation learning with contrastive predictive coding"</b> (2018). InfoNCE and the mutual-information bound.</li>
+      <li><b>Poole et al., "On variational bounds of mutual information"</b> (ICML 2019). The exact bounds, and why they can't exceed $\log N$.</li>
+      <li><b>Chen et al., "A simple framework for contrastive learning of visual representations"</b> (SimCLR, ICML 2020).</li>
+      <li><b>Touvron et al., "Training data-efficient image transformers and distillation through attention"</b> (DeiT, ICML 2021).</li>
+      <li><b>Zhai et al., "Sigmoid loss for language image pre-training"</b> (SigLIP, ICCV 2023).</li>
+    </ul>
+  </section>
+</article>

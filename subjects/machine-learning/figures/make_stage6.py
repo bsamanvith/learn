@@ -99,3 +99,20 @@ for k, t in enumerate(steps):
         p.dots(P[:, 0], P[:, 1], color="accent" if row else "data", r=1.1, opacity=0.5)
         p.text(p.box[0], row * 190 + 18, label, color="fg", size=11, px=True)
 p.save(OUT / "diffusion.svg", "Two rows of five scatter plots. Top: a spiral of points dissolving into Gaussian noise at steps 0, 10, 25, 50 and 100 of the forward process. Bottom: samples of the learned reverse process at the same steps, condensing from noise at step 100 back into the spiral at step 0")
+
+
+# ---------- 25: classifier-free guidance on three overlapping blobs ----------
+ns = run("25-score-guidance-latent-diffusion")
+Xall, yall = ns["data"](1500)
+p = Plot(900, 310)
+for k, w in enumerate([0.0, 1.0, 3.0]):
+    p.panel(k * 300, 0, 300, 310, (-3.5, 3.5), (-3.2, 3.2), margin=(14, 10, 30, 14))
+    p.rect(-3.5, -3.2, 7, 6.4, color="card", opacity=0, stroke="rule")
+    p.dots(Xall[:, 0], Xall[:, 1], color="muted", r=1.0, opacity=0.25)
+    S = ns["ancestral"](600, 0, w)
+    S = S[(np.abs(S[:, 0]) < 3.45) & (np.abs(S[:, 1]) < 3.15)]
+    p.dots(S[:, 0], S[:, 1], color="accent", r=1.5, opacity=0.6)
+    for cx, cy in ns["centres"]:
+        p.dots([cx], [cy], color="fg", r=3)
+    p.text(p.box[0], 20, f"class 0, guidance w = {w:.0f}", color="fg", size=12, px=True)
+p.save(OUT / "guidance.svg", "Three scatter plots of samples of class 0 in orange over grey data from three overlapping blobs. With guidance 0 the samples match the class-0 blob; with guidance 1 and 3 they move outward, away from the other two blobs, and tighten")

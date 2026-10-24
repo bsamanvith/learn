@@ -36,9 +36,9 @@ written; the rest are planned, in this order.
 
 | # | Lesson | The one idea | Math pulled in |
 |---|--------|--------------|----------------|
-| 09 | Decision trees | Greedily ask the question that most reduces impurity | Entropy, information gain, Gini impurity |
-| 10 | Bagging and random forests | Averaging many decorrelated trees cancels their variance | Variance of a correlated average, the bootstrap |
-| 11 | Gradient boosting | Each new tree fits the negative gradient of the loss: descent in function space | Functional gradients, second-order (XGBoost) splits |
+| 09 ✅ | Decision trees | Greedily ask the question that most reduces impurity | Entropy, information gain, Gini impurity |
+| 10 ✅ | Bagging and random forests | Averaging many decorrelated trees cancels their variance | Variance of a correlated average, the bootstrap |
+| 11 ✅ | Gradient boosting | Each new tree fits the negative gradient of the loss: descent in function space | Functional gradients, second-order (XGBoost) splits |
 
 ## Stage 4 · Neural networks
 
@@ -110,7 +110,7 @@ RLHF and the RL used to train reasoning models are in stage 7 (lessons 28 and 30
 
 Every lesson ends with short exercises and answers. On top of that:
 
-- **Problem sets**, one per stage (P2 … P9, plus one for the math toolkit): 15–25 problems each, a mix of
+- **Problem sets**, one per stage (P2 … P9, plus one for the math toolkit; P2 ✅ and P3 ✅ are written): 15–25 problems each, a mix of
   derivations, proofs, "compute this by hand" and short coding questions, graded easy → hard, with full
   worked solutions hidden behind a click. Together they form the problems book.
 - **Assignments** for the important topics: a real programming project with starter code
@@ -119,9 +119,9 @@ Every lesson ends with short exercises and answers. On top of that:
 
 | # | Assignment | Covers |
 |---|-----------|--------|
-| A1 | Linear and logistic regression from scratch, with regularisation and cross-validation | 01–05 |
+| A1 ✅ | Linear and logistic regression from scratch, with regularisation and cross-validation | 01–05 |
 | A2 | An optimiser zoo: SGD, momentum, Adam, schedules, on a real dataset | 06–08 |
-| A3 | Gradient-boosted trees from scratch | 09–11 |
+| A3 ✅ | Gradient-boosted trees from scratch | 09–11 |
 | A4 | A tiny autograd engine and an MLP trained on MNIST | 12–14 |
 | A5 | A CNN with a residual block, hand-written convolution and its backward pass | 15–16 |
 | A6 | A character-level GPT: attention, a transformer block, training and sampling | 19–20, 26 |

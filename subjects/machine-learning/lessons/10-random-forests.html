@@ -1,0 +1,176 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 10 · Stage 3: trees and boosting</div>
+  <h1>Bagging and random forests</h1>
+  <p class="lede">A deep decision tree has low bias and high variance. Averaging many of them keeps the low bias and cancels much of the variance, but only as far as the trees disagree with each other. This lesson computes exactly how much averaging helps, introduces the bootstrap as a way to get many different trees from one dataset, and shows why random forests deliberately cripple each tree to make the ensemble better.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/04-generalisation/">lesson 04</a>, <a href="/machine-learning/09-decision-trees/">lesson 09</a></span><span><b>Math pulled in:</b> the variance of a correlated average, the bootstrap, $(1 - 1/n)^n\to1/e$, majority votes and Hoeffding's inequality</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Suppose you could draw many independent training sets, fit a deep tree to each, and average their predictions. Each tree is unbiased-ish and very noisy; the average would be just as unbiased and far less noisy. Lesson 04's bias–variance decomposition says that is pure gain. We only have one training set, so we fake the others by resampling it, and we make the fakes as different from each other as we can.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: forest --></div>
+    </figure>
+    <p class="muted">Left: the variance of an average of $B$ equally noisy predictors with pairwise correlation $\rho$, relative to one predictor. It falls like $1/B$ only when $\rho = 0$; otherwise it levels off at $\rho$. Right: test accuracy of the code's ensembles as trees are added. One deep tree scores 0.71. Bagged trees level off at about 0.785; the random forest's trees are individually worse but less correlated (0.20 instead of 0.36), and the forest reaches 0.80. The dashed line is the best any classifier can do on this noisy problem.</p>
+  </section>
+
+  <section id="variance">
+    <h2>What averaging can and can't do</h2>
+    <p>Let $\hat f_1,\dots,\hat f_B$ be predictions at a point $\mathbf{x}$, each with the same mean $\mu$ and variance $\sigma^2$, and with pairwise correlation $\rho$, so $\operatorname{Cov}(\hat f_b, \hat f_{b'}) = \rho\sigma^2$ for $b\ne b'$. The average $\bar f = \frac1B\sum_b\hat f_b$ has mean $\mu$, so <b>bias is unchanged</b>, and variance (<a href="/machine-learning/M3-probability/">M3</a>)</p>
+    <div class="eq">$$\operatorname{Var}(\bar f) = \frac{1}{B^2}\Big(\sum_b\operatorname{Var}(\hat f_b) + \sum_{b\ne b'}\operatorname{Cov}(\hat f_b,\hat f_{b'})\Big) = \frac{1}{B^2}\big(B\sigma^2 + B(B-1)\rho\sigma^2\big).$$</div>
+    <div class="result">
+      <div class="label">Variance of a correlated average</div>
+      <div class="eq">$$\operatorname{Var}(\bar f) = \rho\,\sigma^2 + \frac{1 - \rho}{B}\,\sigma^2 .$$</div>
+    </div>
+    <p>The second term vanishes as you add models. The first doesn't: <b>correlation sets a floor</b> that no number of models can get below. Two levers remain, and random forests pull both: make $B$ large (cheap, since trees are independent and can be grown in parallel) and make $\rho$ small.</p>
+  </section>
+
+  <section id="bootstrap">
+    <h2>The bootstrap and bagging</h2>
+    <p>The <b>bootstrap</b> (Efron, 1979) imitates "draw a fresh training set from the population" by drawing $n$ points <i>with replacement</i> from the $n$ points you have. Each bootstrap sample has the same size as the original, but some points appear several times and others not at all. The chance that a given point is never drawn is</p>
+    <div class="eq">$$\Big(1 - \frac1n\Big)^n \;\xrightarrow{\,n\to\infty\,}\; e^{-1}\approx0.368,$$</div>
+    <p>since $\log(1 - 1/n)^n = n\log(1 - 1/n)\to-1$. So each bootstrap sample contains about 63.2% of the distinct points. <b>Bagging</b> (bootstrap aggregating, Breiman 1996) fits one model per bootstrap sample and averages them: the mean for regression, a vote (or the average predicted probability) for classification.</p>
+    <p>Bagging helps unstable, high-variance learners such as deep trees, where a different sample gives a substantially different fit. It does almost nothing for stable ones like linear regression, whose fits barely change between bootstrap samples: their $\rho$ is close to 1.</p>
+    <p><b>Out-of-bag error, for free.</b> Each point is left out of about 37% of the bootstrap samples. Predict it using only those trees and you get a prediction from models that never saw it. The <b>out-of-bag</b> (OOB) error, averaged over all points, is an honest estimate of test error, like cross-validation without any refitting. In the code, the OOB accuracies (0.768 and 0.786) are within 0.02 of the test accuracies.</p>
+  </section>
+
+  <section id="forests">
+    <h2>Random forests: decorrelate on purpose</h2>
+    <p>Bagged trees stay correlated: if one feature is a strong predictor, almost every tree splits on it at the root, and the trees end up looking alike. A <b>random forest</b> (Breiman, 2001) adds one rule: <b>at each split, consider only a random subset of $m$ of the $d$ features</b>. Strong features are now unavailable at many splits, so different trees grow different structures. Typical defaults are $m = \sqrt d$ for classification and $m = d/3$ for regression; $m = d$ is plain bagging.</p>
+    <p>Each tree gets slightly worse (higher $\sigma^2$, and sometimes higher bias), but $\rho$ drops, and by the formula above the floor $\rho\sigma^2$ is what matters for a large forest. The code shows the whole trade: one random-forest tree is less accurate than one bagged tree (0.699 against 0.712), the trees' correlation falls from 0.36 to 0.20, and with 100 trees the forest wins (0.800 against 0.785).</p>
+    <p>Random forests are hard to beat as a first model on tabular data. There is little to tune: more trees never hurt (only cost), $m$ and the minimum leaf size are the main knobs, and the OOB error tells you how you're doing.</p>
+  </section>
+
+  <section id="vote">
+    <h2>Why votes of weak classifiers can be strong</h2>
+    <p>For classification there is a sharper version of the same story. Suppose $B$ classifiers each predict correctly with probability $q &gt; \tfrac12$, independently. The majority vote is wrong only if at most half are right, and by <b>Hoeffding's inequality</b> for an average of independent $\{0,1\}$ variables,</p>
+    <div class="eq">$$P(\text{majority wrong})\le\exp\big(-2B\,(q - \tfrac12)^2\big)\;\xrightarrow{\,B\to\infty\,}\;0 .$$</div>
+    <p>With $q = 0.6$ and $B = 500$ the bound is $e^{-10}\approx4.5\times10^{-5}$. This is the Condorcet jury theorem. Real trees are not independent, and their errors are concentrated on the same hard points, which is why the forest's accuracy levels off well below 1. Independence is the ideal that randomisation pushes towards.</p>
+  </section>
+
+  <section id="importance">
+    <h2>Which features matter?</h2>
+    <p>Forests are less readable than a single tree, but two importance measures are standard:</p>
+    <ul>
+      <li><b>Mean decrease in impurity</b>: add up the impurity decrease (lesson 09) of every split on feature $j$, over all trees, weighted by the number of points reaching the split. It is free, but it is biased toward features with many distinct values, which offer more candidate thresholds to overfit with.</li>
+      <li><b>Permutation importance</b>: shuffle feature $j$'s column in held-out (or OOB) data, which breaks its link to the label, and measure how much accuracy drops. It is slower but more trustworthy. When two features are strongly correlated, shuffling one leaves the other to carry the information, so both can look unimportant.</li>
+    </ul>
+    <p>Neither measures causal effect. Exercise 6 asks you to compute permutation importance for the code's forest; it should single out features 0–3, the ones the label depends on.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+d = 10
+
+def make(n):                                       # the label depends on 4 of the 10 features
+    X = rng.uniform(-1, 1, (n, d))
+    score = X[:, 0] ** 2 + X[:, 1] ** 2 + X[:, 2] * X[:, 3] - 0.6
+    p = 1 / (1 + np.exp(-8 * score))               # labels are noisy: P(y = 1 | x) = p
+    return X, (rng.random(n) &lt; p).astype(int), p
+
+def gini(counts):
+    p = counts / np.maximum(counts.sum(-1, keepdims=True), 1)
+    return 1 - (p ** 2).sum(-1)
+
+def grow(X, y, max_features, rng):
+    """A fully grown classification tree; each split considers a random subset of features."""
+    counts = np.bincount(y, minlength=2)
+    if counts.min() == 0:
+        return int(np.argmax(counts))
+    n = len(y); best = (None, None, gini(counts[None])[0] - 1e-12)
+    for j in rng.choice(d, max_features, replace=False):
+        o = np.argsort(X[:, j]); xs, ys = X[o, j], y[o]
+        left = np.cumsum(np.eye(2)[ys], 0)[:-1]; right = counts - left; nl = np.arange(1, n)
+        imp = (nl * gini(left) + (n - nl) * gini(right)) / n
+        imp[xs[1:] == xs[:-1]] = np.inf
+        i = np.argmin(imp)
+        if imp[i] &lt; best[2]:
+            best = (j, (xs[i] + xs[i + 1]) / 2, imp[i])
+    j, t, _ = best
+    if j is None:
+        return int(np.argmax(counts))
+    m = X[:, j] &lt;= t
+    return (j, t, grow(X[m], y[m], max_features, rng), grow(X[~m], y[~m], max_features, rng))
+
+def predict(tree, x):
+    while not isinstance(tree, int):
+        j, t, l, r = tree
+        tree = l if x[j] &lt;= t else r
+    return tree
+
+def forest(X, y, B, max_features, seed=0):
+    r = np.random.default_rng(seed); n = len(y)
+    trees, oob = [], []
+    for _ in range(B):
+        idx = r.integers(0, n, n)                  # bootstrap sample: n draws with replacement
+        trees.append(grow(X[idx], y[idx], max_features, r))
+        oob.append(np.setdiff1d(np.arange(n), idx))   # points this tree never saw
+    return trees, oob
+
+def votes(trees, X):
+    return np.array([[predict(t, x) for x in X] for t in trees])   # (B, n) array of 0/1 votes
+
+Xtr, ytr, _ = make(500); Xte, yte, pte = make(4000)
+print(f"fraction of points left out of a bootstrap sample: {np.mean([len(np.setdiff1d(np.arange(500), rng.integers(0, 500, 500))) / 500 for _ in range(200)]):.3f}   (1/e = {np.exp(-1):.3f})")
+
+print(f"best possible test accuracy (knowing p): {np.mean(np.maximum(pte, 1 - pte)):.3f}")
+single = grow(Xtr, ytr, d, np.random.default_rng(1))
+print(f"one deep tree               test acc {np.mean([predict(single, x) for x in Xte] == yte):.3f}")
+for name, m in [("bagging (all 10 features)", d), ("random forest (3 features)", 3)]:
+    trees, oob = forest(Xtr, ytr, 100, m)
+    V = votes(trees, Xte)
+    acc = [np.mean((V[:B].mean(0) &gt; 0.5) == yte) for B in (1, 10, 100)]
+    Vtr = votes(trees, Xtr); oob_mask = np.zeros_like(Vtr, bool)
+    for b, o in enumerate(oob):
+        oob_mask[b, o] = True
+    oob_pred = (np.where(oob_mask, Vtr, 0).sum(0) / np.maximum(oob_mask.sum(0), 1)) &gt; 0.5
+    corr = np.corrcoef(V[:, :])[np.triu_indices(100, 1)].mean()
+    print(f"{name:27s} test acc with 1/10/100 trees: {acc[0]:.3f} {acc[1]:.3f} {acc[2]:.3f}"
+          f"   OOB acc {np.mean(oob_pred == ytr):.3f}   mean correlation between trees {corr:.2f}")
+
+# fraction of points left out of a bootstrap sample: 0.367   (1/e = 0.368)
+# best possible test accuracy (knowing p): 0.883
+# one deep tree               test acc 0.710
+# bagging (all 10 features)   test acc with 1/10/100 trees: 0.712 0.771 0.785   OOB acc 0.768   mean correlation between trees 0.36
+# random forest (3 features)  test acc with 1/10/100 trees: 0.699 0.757 0.800   OOB acc 0.786   mean correlation between trees 0.20</code></pre>
+    <p class="muted">The bootstrap leaves out 36.7% of points, matching $1/e$. A single deep tree reaches 0.71 against a ceiling of 0.883. Averaging 100 bagged trees adds 7.5 points of accuracy; restricting each split to 3 random features makes each tree worse and the ensemble better, because it lowers the correlation between trees. The OOB estimates track test accuracy without a separate validation set.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Using $\operatorname{Var}(\bar f) = \rho\sigma^2 + (1-\rho)\sigma^2/B$: with $\rho = 0.3$, how many models get you within 10% of the floor? What is the variance reduction from one model to infinitely many?</li>
+      <li>What is the probability that a specific point appears <i>at least twice</i> in a bootstrap sample of size $n$, as $n\to\infty$?</li>
+      <li>Why does bagging a linear regression model barely change it? Argue from $\rho$.</li>
+      <li>In a random forest with $d = 100$ features of which one is very strong, what fraction of splits can use that feature when $m = 10$? When $m = 1$?</li>
+      <li>Show that for squared-error regression, averaging cannot make the expected test error worse than the average of the individual models' errors. (Hint: Jensen, or expand $\frac1B\sum_b(y - \hat f_b)^2$ around $\bar f$.)</li>
+      <li>Code: compute permutation importance for the random forest in the code, using the test set. Which features matter?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Need $(1-\rho)/B\le0.1\rho$, so $B\ge0.7/0.03\approx23.3$, about 24 models. From $\sigma^2$ to $0.3\sigma^2$: a 70% reduction, and no more.</p>
+        <p><b>2.</b> The count of a given point is $\operatorname{Binomial}(n, 1/n)\to\operatorname{Poisson}(1)$. $P(\ge2) = 1 - e^{-1} - e^{-1} = 1 - 2/e\approx0.264$.</p>
+        <p><b>3.</b> Least squares is a smooth function of the data, and bootstrap samples share about 63% of their points, so the fitted coefficients barely change between samples: the fits are almost perfectly correlated ($\rho\approx1$) and averaging removes almost no variance. (Bagging a linear model also can't create nonlinearity: the average of linear functions is linear.)</p>
+        <p><b>4.</b> A split can use it only if it is among the $m$ sampled features: probability $m/d = 0.1$ for $m = 10$ and $0.01$ for $m = 1$. With $m = 1$ the split feature is chosen at random, and only the threshold is optimised (close to "totally random trees").</p>
+        <p><b>5.</b> $\frac1B\sum_b(y - \hat f_b)^2 = (y - \bar f)^2 + \frac1B\sum_b(\hat f_b - \bar f)^2\ge(y - \bar f)^2$, since the cross term $\frac2B\sum_b(y - \bar f)(\bar f - \hat f_b)$ is zero. The ensemble's error is the average individual error minus the "diversity" of the models, so disagreement between models is exactly what you gain.</p>
+        <p><b>6.</b> For each $j$: copy <code>Xte</code>, shuffle column $j$, re-predict with the forest's majority vote, and record the drop in accuracy. On the first 1,500 test points, shuffling feature 0 or 1 (the circle) costs about 15 points of accuracy, feature 2 or 3 (the product) about 6–7 points, and features 4–9 less than one point either way, sometimes slightly negative by chance.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Breiman, "Bagging predictors"</b> (Machine Learning, 1996) and <b>"Random forests"</b> (Machine Learning, 2001).</li>
+      <li><b>Hastie, Tibshirani, Friedman, <i>The Elements of Statistical Learning</i></b>, chapters 8.7 (bagging) and 15 (random forests, including the $\rho\sigma^2$ analysis).</li>
+      <li><b>Efron &amp; Tibshirani, <i>An Introduction to the Bootstrap</i></b> (1993).</li>
+      <li><b>Geurts, Ernst, Wehenkel, "Extremely randomized trees"</b> (Machine Learning, 2006). Randomise the thresholds too.</li>
+      <li><b>Strobl et al., "Bias in random forest variable importance measures"</b> (BMC Bioinformatics, 2007).</li>
+    </ul>
+  </section>
+</article>

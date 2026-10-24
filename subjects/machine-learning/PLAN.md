@@ -52,10 +52,10 @@ written; the rest are planned, in this order.
 
 | # | Lesson | The one idea | Math pulled in |
 |---|--------|--------------|----------------|
-| 15 | Convolutional networks | Share one small filter across every position: translation equivariance and far fewer weights | Discrete convolution, output-size arithmetic, receptive fields |
-| 16 | Modern CNNs and residual networks | Depth works once each block learns a residual: LeNet → AlexNet → VGG → ResNet | Gradient flow through identity paths, 1×1 convolutions |
-| 17 | Recurrent networks | One cell applied through time; gradients through time vanish or explode, and gates fix that | Backprop through time, products of Jacobians, LSTM/GRU gates |
-| 18 | Word embeddings | Meaning as geometry: words that share contexts get nearby vectors | Skip-gram objective, negative sampling, PMI |
+| 15 ✅ | Convolutional networks | Share one small filter across every position: translation equivariance and far fewer weights | Discrete convolution, output-size arithmetic, receptive fields |
+| 16 ✅ | Modern CNNs and residual networks | Depth works once each block learns a residual: LeNet → AlexNet → VGG → ResNet | Gradient flow through identity paths, 1×1 convolutions |
+| 17 ✅ | Recurrent networks | One cell applied through time; gradients through time vanish or explode, and gates fix that | Backprop through time, products of Jacobians, LSTM/GRU gates |
+| 18 ✅ | Word embeddings | Meaning as geometry: words that share contexts get nearby vectors | Skip-gram objective, negative sampling, PMI |
 | 19 | Attention | Each output is a weighted average of values, with weights from query–key similarity | Softmax as soft lookup, scaled dot products and why √d |
 | 20 | The Transformer | Self-attention + MLP + residuals + layer norm, stacked; positions added explicitly | Multi-head attention, masking, positional encodings, parameter counts |
 | 21 | Vision transformers and contrastive learning | Images as patch sequences; CLIP learns by matching images to captions | InfoNCE loss, temperature, mutual information (light) |
@@ -110,7 +110,7 @@ RLHF and the RL used to train reasoning models are in stage 7 (lessons 28 and 30
 
 Every lesson ends with short exercises and answers. On top of that:
 
-- **Problem sets**, one per stage (P2 … P9, plus one for the math toolkit; P2 ✅ and P3 ✅ are written): 15–25 problems each, a mix of
+- **Problem sets**, one per stage (P2 … P9, plus one for the math toolkit; P2 ✅, P3 ✅ and P4 ✅ are written): 15–25 problems each, a mix of
   derivations, proofs, "compute this by hand" and short coding questions, graded easy → hard, with full
   worked solutions hidden behind a click. Together they form the problems book.
 - **Assignments** for the important topics: a real programming project with starter code
@@ -122,7 +122,7 @@ Every lesson ends with short exercises and answers. On top of that:
 | A1 ✅ | Linear and logistic regression from scratch, with regularisation and cross-validation | 01–05 |
 | A2 | An optimiser zoo: SGD, momentum, Adam, schedules, on a real dataset | 06–08 |
 | A3 ✅ | Gradient-boosted trees from scratch | 09–11 |
-| A4 | A tiny autograd engine and an MLP trained on MNIST | 12–14 |
+| A4 ✅ | A tiny autograd engine and an MLP trained on MNIST | 12–14 |
 | A5 | A CNN with a residual block, hand-written convolution and its backward pass | 15–16 |
 | A6 | A character-level GPT: attention, a transformer block, training and sampling | 19–20, 26 |
 | A7 | A VAE and a DDPM diffusion model on 2D data and MNIST | 22–25 |

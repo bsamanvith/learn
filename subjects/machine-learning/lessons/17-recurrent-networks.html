@@ -1,0 +1,198 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 17 · Stage 5: deep architectures</div>
+  <h1>Recurrent networks</h1>
+  <p class="lede">Text, speech and time series arrive as sequences of any length. A recurrent network reads them one step at a time, carrying a hidden state that summarises everything so far, and it uses the same weights at every step. Unrolled through time it is a very deep network with shared weights, and it inherits deep networks' problem in an extreme form: gradients that vanish or explode over long spans. This lesson derives backpropagation through time, shows exactly why gradients vanish, and builds the LSTM, whose additive memory cell fixes it.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/13-backpropagation/">lesson 13</a>, <a href="/machine-learning/14-training-deep-networks/">lesson 14</a>, <a href="/machine-learning/16-modern-cnns/">lesson 16</a></span><span><b>Math pulled in:</b> recurrences, unrolled computational graphs, products of Jacobians, singular values and operator norms, gating</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Feed the elements $\mathbf{x}_1, \dots, \mathbf{x}_T$ of a sequence in one at a time. Keep a state $\mathbf{h}_t\in\mathbb{R}^H$, and update it with the same function at every step:</p>
+    <div class="eq">$$\mathbf{h}_t = \tanh\big(W\mathbf{h}_{t-1} + U\mathbf{x}_t + \mathbf{b}\big), \qquad \mathbf{h}_0 = \mathbf{0} .$$</div>
+    <p>The state is the network's memory: $\mathbf{h}_t$ depends on the whole prefix $\mathbf{x}_1,\dots,\mathbf{x}_t$, through a fixed number of parameters $H^2 + HD + H$ however long the sequence. Outputs are read from the states, depending on the task: one output from $\mathbf{h}_T$ (classify a sentence), an output at every step (tag each word, predict the next character), or a second recurrent network that generates an output sequence from $\mathbf{h}_T$ (translation, "sequence to sequence"). This is the Elman network (1990); the same idea with weight sharing in time that convolutions use in space.</p>
+    <p><b>Unrolling.</b> Writing out the recurrence for $T$ steps gives an ordinary feed-forward graph with $T$ layers that all share $W$, $U$ and $\mathbf{b}$. Everything from lesson 13 applies to it.</p>
+  </section>
+
+  <section id="bptt">
+    <h2>Backpropagation through time</h2>
+    <p>Let $\mathbf{z}_t = W\mathbf{h}_{t-1} + U\mathbf{x}_t + \mathbf{b}$ and let the loss $L$ depend on the states (through outputs at some or all steps). Running the chain rule backwards through the unrolled graph, the gradient reaching $\mathbf{h}_t$ has two sources: the output at step $t$ and the next state $\mathbf{h}_{t+1}$:</p>
+    <div class="eq">$$\bar{\mathbf{h}}_t = \frac{\partial L_t}{\partial\mathbf{h}_t} + W^\top\bar{\mathbf{z}}_{t+1}, \qquad \bar{\mathbf{z}}_t = \bar{\mathbf{h}}_t\odot(1 - \mathbf{h}_t^2) .$$</div>
+    <p>Since $W$ is used at every step, its gradient is the sum of the contributions from each step (lesson 13's sum over uses):</p>
+    <div class="eq">$$\bar W = \sum_{t=1}^T\bar{\mathbf{z}}_t\mathbf{h}_{t-1}^\top, \qquad \bar U = \sum_t\bar{\mathbf{z}}_t\mathbf{x}_t^\top, \qquad \bar{\mathbf{b}} = \sum_t\bar{\mathbf{z}}_t .$$</div>
+    <p>This is <b>backpropagation through time</b> (BPTT). It needs all $T$ states in memory. For long streams, <b>truncated BPTT</b> runs the forward pass continuously but backpropagates only through the last $k$ steps: cheaper, but the network can then learn dependencies only up to about $k$ steps long.</p>
+  </section>
+
+  <section id="vanishing">
+    <h2>Why gradients vanish or explode</h2>
+    <p>How much does the loss at step $T$ care about the state at step $t$? By the chain rule through the intermediate states,</p>
+    <div class="eq">$$\frac{\partial\mathbf{h}_T}{\partial\mathbf{h}_t} = \prod_{s=t+1}^{T}D_sW, \qquad D_s = \operatorname{diag}(1 - \mathbf{h}_s^2) .$$</div>
+    <p>The operator norm of a product is at most the product of norms (M1), and the entries of $D_s$ lie in $(0, 1]$, so</p>
+    <div class="result">
+      <div class="label">The vanishing-gradient bound (Bengio et al., 1994; Pascanu et al., 2013)</div>
+      <div class="eq">$$\left\lVert\frac{\partial\mathbf{h}_T}{\partial\mathbf{h}_t}\right\rVert\le\big(\sigma_{\max}(W)\big)^{T-t} .$$</div>
+      <p>If the largest singular value of $W$ is below 1, the influence of step $t$ on step $T$ decays exponentially in $T - t$. If it is above 1, the product <i>can</i> grow exponentially (it must, along some direction, when the tanh is not saturated and the spectral radius exceeds 1).</p>
+    </div>
+    <p>The code measures this on an untrained network with $W = a\times$(an orthogonal matrix), so every singular value of $W$ equals $a$. With $a = 0.5$ the Jacobian norm after 50 steps is $10^{-19}$; even with $a = 1$ it is $5\times10^{-6}$, because the tanh derivative is below 1 whenever the state is nonzero; with $a = 2$ it grows to $4\times10^3$. Neither extreme is usable. When gradients vanish, the parameters get almost no signal about long-range dependencies, so the network learns only short ones. When they explode, a single step can wreck the weights; <b>gradient clipping</b> (lesson 14) fixes that symptom, which is why every RNN is trained with it. Vanishing needs a change of architecture.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: rnn-gradients --></div>
+    </figure>
+    <p class="muted">Left: the norm of $\partial\mathbf{h}_t/\partial\mathbf{h}_0$ for an untrained tanh RNN with $W$ equal to 0.5, 1 and 2 times an orthogonal matrix, on a log scale. Right: test accuracy on the code's task (output the first of $T$ noisy bits) after the same training. The plain RNN falls to chance at $T = 50$; the LSTM still gets about 90% right.</p>
+  </section>
+
+  <section id="lstm">
+    <h2>The LSTM: an additive memory</h2>
+    <p>The <b>long short-term memory</b> (Hochreiter &amp; Schmidhuber, 1997, with the forget gate of Gers et al., 2000) adds a second state, the <b>cell</b> $\mathbf{c}_t$, which is updated by addition rather than by passing through a squashing matrix product. Three gates, each a sigmoid of $[\mathbf{h}_{t-1}, \mathbf{x}_t]$ with values in $(0, 1)$, decide what to forget, what to write and what to show:</p>
+    <div class="eq">$$\begin{aligned}\mathbf{f}_t &amp;= \sigma(W_f[\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_f) &amp;&amp;\text{forget gate}\\ \mathbf{i}_t &amp;= \sigma(W_i[\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_i) &amp;&amp;\text{input gate}\\ \mathbf{o}_t &amp;= \sigma(W_o[\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_o) &amp;&amp;\text{output gate}\\ \mathbf{g}_t &amp;= \tanh(W_g[\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_g) &amp;&amp;\text{candidate}\\ \mathbf{c}_t &amp;= \mathbf{f}_t\odot\mathbf{c}_{t-1} + \mathbf{i}_t\odot\mathbf{g}_t, \qquad \mathbf{h}_t = \mathbf{o}_t\odot\tanh(\mathbf{c}_t) .\end{aligned}$$</div>
+    <p>Look at the cell's own path: $\partial\mathbf{c}_t/\partial\mathbf{c}_{t-1}$ along it is $\operatorname{diag}(\mathbf{f}_t)$, with no weight matrix and no tanh derivative. If the forget gate is near 1, the gradient flows back through many steps almost unchanged, a "constant error carousel". The network can learn to hold the gate open to keep information and close it to erase. It is the same trick as the residual connection of lesson 16, $\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + F(\mathbf{x}_\ell)$, applied in time instead of depth, with a learned, input-dependent gate on the identity path. Initialising the forget-gate bias to 1, so that the cell remembers by default, is a simple trick that helps a lot (Jozefowicz et al., 2015); the code does it.</p>
+    <p>The <b>GRU</b> (Cho et al., 2014) merges cell and state and uses two gates: $\mathbf{h}_t = (1 - \mathbf{u}_t)\odot\mathbf{h}_{t-1} + \mathbf{u}_t\odot\tilde{\mathbf{h}}_t$, with an update gate $\mathbf{u}_t$ and a candidate $\tilde{\mathbf{h}}_t$ computed with a reset gate. It has three weight blocks instead of four and usually performs similarly.</p>
+    <div class="detour">
+      <div class="label">Math detour · gates are soft switches</div>
+      <p>A gate multiplies a signal elementwise by a number in $(0, 1)$ computed from the data. Because the sigmoid is smooth, "how open" a gate is can be learned by gradient descent, unlike a hard if-statement. Gating, multiplying one learned signal by another, reappears everywhere: in attention weights (lesson 19), in the GLU and SwiGLU layers of modern transformers, and in mixture-of-experts routing (lesson 29).</p>
+    </div>
+  </section>
+
+  <section id="limits">
+    <h2>What recurrence can't fix</h2>
+    <p>LSTMs made machine translation, speech recognition and handwriting recognition work in the 2010s. Two limits remain. Computation is <b>sequential</b>: step $t$ needs step $t-1$, so a sequence of length $T$ takes $T$ dependent steps and can't use a GPU's parallelism across time. And a sequence-to-sequence model squeezes the whole input into one <b>fixed-size</b> vector $\mathbf{h}_T$ before decoding. Attention (lesson 19) removed the bottleneck by letting the decoder look back at every input state, and the Transformer (lesson 20) then removed the recurrence altogether.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 measures $\lVert\partial\mathbf{h}_t/\partial\mathbf{h}_0\rVert$ in an untrained RNN by multiplying the Jacobians step by step. Part 2 trains a tanh RNN and an LSTM, both with 32 hidden units, BPTT, gradient clipping and Adam, on a pure memory task: read $T$ noisy $\pm1$ bits and output the first one. Everything after the first bit is a distraction to be ignored. Both backward passes were checked against finite differences to $10^{-9}$.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+sig = lambda z: 1 / (1 + np.exp(-z))
+
+# The task: read a sequence of T random bits (as +-1 inputs, plus noise) and output the FIRST bit.
+def make(n, T):
+    bits = rng.integers(0, 2, (n, T))
+    return (2 * bits - 1)[:, :, None] + 0.2 * rng.standard_normal((n, T, 1)), bits[:, 0]
+
+class RNN:
+    """h_t = tanh(W h_{t-1} + U x_t + b); the prediction reads h_T."""
+    def __init__(self, H, r):
+        self.P = {"W": np.linalg.qr(r.standard_normal((H, H)))[0], "U": r.standard_normal((H, 1)), "b": np.zeros(H),
+                  "v": r.standard_normal(H) / np.sqrt(H), "c": np.zeros(1)}
+    def loss_grads(self, X, y):
+        P, (N, T, _) = self.P, X.shape
+        hs = [np.zeros((N, len(P["b"])))]
+        for t in range(T):
+            hs.append(np.tanh(hs[-1] @ P["W"].T + X[:, t] @ P["U"].T + P["b"]))
+        F = hs[-1] @ P["v"] + P["c"][0]
+        d = (sig(F) - y) / N
+        G = {k: np.zeros_like(v) for k, v in P.items()}
+        G["v"], G["c"] = hs[-1].T @ d, np.array([d.sum()])
+        dh = np.outer(d, P["v"])
+        for t in reversed(range(T)):                     # backpropagation through time
+            dz = dh * (1 - hs[t + 1] ** 2)
+            G["W"] += dz.T @ hs[t]; G["U"] += dz.T @ X[:, t]; G["b"] += dz.sum(0)
+            dh = dz @ P["W"]
+        return np.mean(np.logaddexp(0, F) - y * F), G, F
+
+class LSTM:
+    """Gates i, f, o and candidate g from [h_{t-1}, x_t]; c_t = f*c_{t-1} + i*g; h_t = o*tanh(c_t)."""
+    def __init__(self, H, r):
+        self.H = H
+        self.P = {"W": r.standard_normal((4 * H, H + 1)) / np.sqrt(H + 1), "b": np.zeros(4 * H),
+                  "v": r.standard_normal(H) / np.sqrt(H), "c": np.zeros(1)}
+        self.P["b"][H:2 * H] = 1.0                       # forget-gate bias 1: remember by default
+    def loss_grads(self, X, y):
+        P, H, (N, T, _) = self.P, self.H, X.shape
+        h, c, cache = np.zeros((N, H)), np.zeros((N, H)), []
+        for t in range(T):
+            z = np.c_[h, X[:, t]] @ P["W"].T + P["b"]
+            i, f, o, g = sig(z[:, :H]), sig(z[:, H:2 * H]), sig(z[:, 2 * H:3 * H]), np.tanh(z[:, 3 * H:])
+            c_prev, h_prev = c, h
+            c = f * c_prev + i * g; h = o * np.tanh(c)
+            cache.append((h_prev, c_prev, i, f, o, g, c))
+        F = h @ P["v"] + P["c"][0]
+        d = (sig(F) - y) / N
+        G = {k: np.zeros_like(v) for k, v in P.items()}
+        G["v"], G["c"] = h.T @ d, np.array([d.sum()])
+        dh, dc = np.outer(d, P["v"]), np.zeros((N, H))
+        for t in reversed(range(T)):
+            h_prev, c_prev, i, f, o, g, c = cache[t]
+            tc = np.tanh(c)
+            dc = dc + dh * o * (1 - tc ** 2)
+            dz = np.c_[dc * g * i * (1 - i), dc * c_prev * f * (1 - f), dh * tc * o * (1 - o), dc * i * (1 - g ** 2)]
+            G["W"] += dz.T @ np.c_[h_prev, X[:, t]]; G["b"] += dz.sum(0)
+            dh = dz @ P["W"][:, :H]
+            dc = dc * f                                  # the cell path: multiplied only by the forget gate
+        return np.mean(np.logaddexp(0, F) - y * F), G, F
+
+def train(model, T, steps=600, lr=0.01, seed=0):
+    m = {k: 0 for k in model.P}; v = {k: 0 for k in model.P}
+    for t in range(1, steps + 1):
+        X, y = make(64, T)
+        _, G, _ = model.loss_grads(X, y)
+        norm = np.sqrt(sum((g ** 2).sum() for g in G.values()))
+        for k, g in G.items():
+            g = g * min(1, 1 / norm)                     # clip the global gradient norm at 1
+            m[k] = 0.9 * m[k] + 0.1 * g; v[k] = 0.999 * v[k] + 0.001 * g * g
+            model.P[k] -= lr * (m[k] / (1 - 0.9 ** t)) / (np.sqrt(v[k] / (1 - 0.999 ** t)) + 1e-8)
+    X, y = make(2000, T)
+    return np.mean((model.loss_grads(X, y)[2] &gt; 0) == y)
+
+# 1. How much does h_T depend on h_0 in an untrained tanh RNN? Norm of the Jacobian dh_T/dh_0.
+for scale in [0.5, 1.0, 2.0]:
+    r = np.random.default_rng(1); W = scale * np.linalg.qr(r.standard_normal((32, 32)))[0]
+    h, J = r.standard_normal(32) * 0.1, np.eye(32)
+    norms = {}
+    for t in range(1, 51):
+        h = np.tanh(W @ h + r.standard_normal(32) * 0.5)
+        J = (1 - h ** 2)[:, None] * W @ J
+        if t in (1, 10, 50):
+            norms[t] = np.linalg.norm(J, 2)
+    print(f"W = {scale} x orthogonal: ||dh_t/dh_0|| at t = 1, 10, 50: " + "  ".join(f"{norms[t]:.1e}" for t in (1, 10, 50)))
+
+# 2. Remember the first bit across T steps
+for T in [5, 20, 50]:
+    a_rnn = train(RNN(32, np.random.default_rng(2)), T)
+    a_lstm = train(LSTM(32, np.random.default_rng(2)), T)
+    print(f"T = {T:2d}: test accuracy  RNN {a_rnn:.3f}   LSTM {a_lstm:.3f}")
+
+# W = 0.5 x orthogonal: ||dh_t/dh_0|| at t = 1, 10, 50: 5.0e-01  3.1e-04  2.5e-19
+# W = 1.0 x orthogonal: ||dh_t/dh_0|| at t = 1, 10, 50: 1.0e+00  1.9e-01  4.6e-06
+# W = 2.0 x orthogonal: ||dh_t/dh_0|| at t = 1, 10, 50: 2.0e+00  2.5e+01  3.6e+03
+# T =  5: test accuracy  RNN 1.000   LSTM 1.000
+# T = 20: test accuracy  RNN 0.983   LSTM 0.999
+# T = 50: test accuracy  RNN 0.504   LSTM 0.896</code></pre>
+    <p class="muted">At $T = 5$ both networks are perfect, and at $T = 20$ the RNN still manages 98%. At $T = 50$ it is at chance: the gradient connecting the output to the first input is about $10^{-6}$ of its size at one step, so nothing tells the weights to preserve that bit. The LSTM, with the same training budget, reaches 90%; its cell can carry the bit with a forget gate near 1. More training steps raise its accuracy further.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>How many parameters does an LSTM layer with input size $D$ and hidden size $H$ have? Compare with a vanilla RNN and a GRU for $D = H = 512$.</li>
+      <li>Show that a vanilla RNN with ReLU instead of tanh and $W = 1.1I$ has states that grow exponentially for a constant positive input. What happens to the gradients?</li>
+      <li>Training on sequences of length 1,000 with batch 32 and $H = 512$ in 32-bit floats: how much memory do the stored hidden states take for full BPTT? What does truncation to 100 steps change?</li>
+      <li>Ignoring the dependence of the gates on $\mathbf{h}_{t-1}$, show that $\partial\mathbf{c}_T/\partial\mathbf{c}_t = \operatorname{diag}\big(\prod_{s=t+1}^T\mathbf{f}_s\big)$. If every forget gate is 0.98, how much of the gradient survives 50 steps? 200 steps?</li>
+      <li>Write the GRU update with $\mathbf{u}_t\in(0, 1)$ as $\mathbf{h}_t = \mathbf{h}_{t-1} + \mathbf{u}_t\odot(\tilde{\mathbf{h}}_t - \mathbf{h}_{t-1})$. In what sense is it a residual update? What value of $\mathbf{u}_t$ copies the state unchanged?</li>
+      <li>A character-level language model reads text one character at a time and predicts the next. During training the true previous character is fed in at each step ("teacher forcing"); at generation time the model's own sample is fed in. Why might this mismatch cause problems?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Four blocks, each $H\times(H + D)$ weights plus $H$ biases: $4(H(H + D) + H)$. For $D = H = 512$: LSTM $4\cdot(524{,}288 + 512) = 2{,}099{,}200$; GRU three blocks, $1{,}574{,}400$; vanilla RNN one block, $524{,}800$.</p>
+        <p><b>2.</b> With $\mathbf{x}$ constant and $U\mathbf{x} + \mathbf{b} = \mathbf{a} &gt; 0$, the states stay positive, so $\mathbf{h}_t = 1.1\mathbf{h}_{t-1} + \mathbf{a}$, which grows like $1.1^t$. The Jacobian is $W = 1.1I$ on active units, so gradients also grow like $1.1^{T-t}$. That is why plain RNNs use the bounded tanh.</p>
+        <p><b>3.</b> $1000\cdot32\cdot512\cdot4$ bytes $= 65.5$ MB per stored tensor; an LSTM stores several per step (gates, cell, state), so a few hundred MB. Truncation to 100 steps cuts that tenfold, and the gradient then ignores dependencies longer than 100 steps.</p>
+        <p><b>4.</b> With the gates treated as constants, $\mathbf{c}_s = \mathbf{f}_s\odot\mathbf{c}_{s-1} + (\text{terms without }\mathbf{c}_{s-1})$, so each step's Jacobian is $\operatorname{diag}(\mathbf{f}_s)$ and they multiply. $0.98^{50} = 0.36$ and $0.98^{200} = 0.018$: decay is still exponential, but with a rate the network controls and can set very close to 1, rather than a rate fixed by $\sigma_{\max}(W)$ and the tanh slopes.</p>
+        <p><b>5.</b> The new state is the old one plus a gated correction, like $\mathbf{x} + F(\mathbf{x})$ with the step size per unit set by $\mathbf{u}_t$. With $\mathbf{u}_t = \mathbf{0}$ the state is copied exactly, and its Jacobian along that path is the identity.</p>
+        <p><b>6.</b> During training the model never sees its own mistakes as input. At generation time an early mistake produces a context unlike anything in training, which can cause more mistakes, and errors compound ("exposure bias"). Remedies include scheduled sampling (gradually feeding in model samples during training) and, in large language models, simply very large and diverse training data.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Hochreiter &amp; Schmidhuber, "Long short-term memory"</b> (Neural Computation, 1997), and <b>Gers, Schmidhuber &amp; Cummins, "Learning to forget"</b> (2000).</li>
+      <li><b>Bengio, Simard &amp; Frasconi, "Learning long-term dependencies with gradient descent is difficult"</b> (1994), and <b>Pascanu, Mikolov &amp; Bengio, "On the difficulty of training recurrent neural networks"</b> (ICML 2013).</li>
+      <li><b>Christopher Olah, "Understanding LSTM networks"</b> (blog post, 2015). The clearest diagrams of the gates.</li>
+      <li><b>Andrej Karpathy, "The unreasonable effectiveness of recurrent neural networks"</b> (blog post, 2015). Character-level models generating text and code.</li>
+      <li><b>Cho et al., "Learning phrase representations using RNN encoder–decoder for statistical machine translation"</b> (2014), and <b>Sutskever, Vinyals &amp; Le, "Sequence to sequence learning with neural networks"</b> (NeurIPS 2014).</li>
+    </ul>
+  </section>
+</article>

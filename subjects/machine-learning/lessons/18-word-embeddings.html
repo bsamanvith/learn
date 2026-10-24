@@ -1,0 +1,193 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 18 · Stage 5: deep architectures</div>
+  <h1>Word embeddings</h1>
+  <p class="lede">A network can't do arithmetic on the word "queen". It needs a vector. Word embeddings assign each word a point in a space of a few hundred dimensions, learned so that words used in similar contexts land close together. The result has surprising structure: the offset from "man" to "woman" is roughly the offset from "king" to "queen". This lesson builds embeddings from co-occurrence counts and from word2vec's skip-gram objective, proves that the two are secretly the same thing, and explains where the analogy structure comes from.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/06-softmax-regression/">lesson 06</a>, <a href="/machine-learning/M1-linear-algebra/">M1 linear algebra</a>, <a href="/machine-learning/M4-information-theory/">M4 information theory</a></span><span><b>Math pulled in:</b> one-hot vectors, co-occurrence matrices, pointwise mutual information, low-rank factorisation, negative sampling as logistic regression</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>The obvious encoding of a word from a vocabulary of $V$ words is a <b>one-hot</b> vector $\mathbf{e}_w\in\{0, 1\}^V$, with a single 1. It says nothing about meaning: every pair of words is at the same distance, so "cat" is as far from "dog" as from "tax". An <b>embedding</b> replaces it by a dense vector $\mathbf{v}_w\in\mathbb{R}^d$ with $d$ around 100–1000, the $w$-th row of a matrix $E\in\mathbb{R}^{V\times d}$. Looking it up is a linear layer applied to the one-hot vector, $\mathbf{v}_w = E^\top\mathbf{e}_w$, so embeddings are learned by gradient descent like any other weights.</p>
+    <p>What should make two embeddings close? The <b>distributional hypothesis</b> (Harris, 1954; Firth, 1957: "you shall know a word by the company it keeps"): words that occur in similar contexts have similar meanings. "Coffee" and "tea" both appear near "cup", "drink" and "hot". So we learn embeddings from co-occurrence statistics: which words appear within a few positions of which.</p>
+  </section>
+
+  <section id="counts">
+    <h2>Counting: PMI and the SVD</h2>
+    <p>Slide a window over a corpus and count $\#(w, c)$, the number of times context word $c$ appears within the window around word $w$. Raw counts are dominated by frequent words ("the" co-occurs with everything), so compare each count with what independence would predict. The <b>pointwise mutual information</b> is</p>
+    <div class="eq">$$\operatorname{PMI}(w, c) = \log\frac{P(w, c)}{P(w)P(c)} = \log\frac{\#(w, c)\cdot|D|}{\#(w)\,\#(c)},$$</div>
+    <p>where $|D|$ is the number of (word, context) pairs. It is positive when $w$ and $c$ co-occur more than chance, negative when less, and its average over pairs is the mutual information of M4. The $V\times V$ PMI matrix (with negative or undefined entries clipped to 0, "positive PMI") is a good representation already, but it is huge and noisy. Its truncated SVD (M1), $M\approx U_d\Sigma_dV_d^\top$, keeps the $d$ strongest directions; the rows of $U_d\Sigma_d^{1/2}$ are word embeddings. This is latent semantic analysis, the classical method.</p>
+  </section>
+
+  <section id="word2vec">
+    <h2>Predicting: word2vec's skip-gram</h2>
+    <p>Mikolov et al. (2013) turned the problem into prediction. Give every word two vectors: $\mathbf{w}$ when it is the centre word and $\mathbf{c}$ when it is a context word. The <b>skip-gram</b> model predicts each context word from the centre word with a softmax (lesson 06):</p>
+    <div class="eq">$$P(c\mid w) = \frac{\exp(\mathbf{c}^\top\mathbf{w})}{\sum_{c'=1}^{V}\exp(\mathbf{c}'^\top\mathbf{w})} .$$</div>
+    <p>The denominator sums over the whole vocabulary, which costs $O(Vd)$ per training pair: far too slow for $V = 10^6$. <b>Negative sampling</b> replaces the $V$-way classification by a binary one: is this (word, context) pair real, or a fake made by pairing $w$ with a random word? For each real pair, draw $k$ "negative" words $c_1,\dots,c_k$ from a noise distribution $P_n$ and maximise</p>
+    <div class="eq">$$\ell(w, c) = \log\sigma(\mathbf{c}^\top\mathbf{w}) + \sum_{j=1}^k\log\sigma(-\mathbf{c}_j^\top\mathbf{w}) .$$</div>
+    <p>This is lesson 03's logistic regression, with score $\mathbf{c}^\top\mathbf{w}$, label 1 for the real pair and 0 for the fakes, so the gradients are "label minus prediction" again: $\partial\ell/\partial\mathbf{w} = (1 - \sigma(\mathbf{c}^\top\mathbf{w}))\mathbf{c} - \sum_j\sigma(\mathbf{c}_j^\top\mathbf{w})\mathbf{c}_j$. Each step costs $O(kd)$ instead of $O(Vd)$. Mikolov et al. found $P_n(c)\propto\#(c)^{3/4}$ works best: it flattens the unigram distribution, so rare words are drawn as negatives more often than their frequency alone would give.</p>
+  </section>
+
+  <section id="pmi">
+    <h2>Skip-gram is factorising PMI</h2>
+    <p>Prediction and counting look like different philosophies. Levy and Goldberg (2014) showed they meet.</p>
+    <div class="result">
+      <div class="label">Skip-gram with negative sampling factorises shifted PMI</div>
+      <p>If the dimension is large enough for every score $x_{wc} = \mathbf{c}^\top\mathbf{w}$ to be set independently, the optimum of the negative-sampling objective, with $P_n$ the unigram distribution, is</p>
+      <div class="eq">$$\mathbf{c}^\top\mathbf{w} = \operatorname{PMI}(w, c) - \log k .$$</div>
+    </div>
+    <p><b>Proof.</b> Sum the objective over the corpus. The pair $(w, c)$ occurs $\#(w, c)$ times as a real pair. As a negative, $c$ is drawn with probability $\#(c)/|D|$ each time $w$ is a centre word, and $w$ is a centre word $\#(w)$ times with $k$ draws each, so in expectation $(w, c)$ appears $k\,\#(w)\#(c)/|D|$ times as a fake. The terms involving $x = x_{wc}$ are</p>
+    <div class="eq">$$\#(w, c)\log\sigma(x) + k\frac{\#(w)\#(c)}{|D|}\log\sigma(-x) .$$</div>
+    <p>Using $\frac{d}{dx}\log\sigma(x) = 1 - \sigma(x) = \sigma(-x)$ and $\frac{d}{dx}\log\sigma(-x) = -\sigma(x)$, the derivative is zero when $\#(w, c)\,\sigma(-x) = k\frac{\#(w)\#(c)}{|D|}\sigma(x)$, i.e. $e^x = \frac{\#(w, c)|D|}{k\,\#(w)\#(c)}$, so $x = \operatorname{PMI}(w, c) - \log k$. $\square$</p>
+    <p>So word2vec implicitly builds the same matrix that LSA factorises, shifted by $\log k$, and its $d$-dimensional vectors are a low-rank factorisation of it. The differences in practice come from the weighting (frequent pairs get more gradient), from the noise distribution, and from the SGD optimisation, not from a different principle. The code checks the theorem: on frequent pairs, $\mathbf{c}^\top\mathbf{w}$ is centred on $\operatorname{PMI} - \log k$ (mean difference $-0.01$), with a correlation of 0.6; the scatter comes from SGD noise and from only having $d = 16$ dimensions.</p>
+  </section>
+
+  <section id="analogies">
+    <h2>Where analogies come from</h2>
+    <p>Embeddings famously solve analogies by vector arithmetic: the word closest (by cosine similarity) to $\mathbf{v}_{\text{king}} - \mathbf{v}_{\text{man}} + \mathbf{v}_{\text{woman}}$ is "queen". Why would linear structure appear? Suppose, as in the code's toy language, the contexts of a word depend on a few independent attributes (gender, status, age), each affecting different context words. Then $P(c\mid w)$ factorises over attributes, and the PMI of $w$ with a context word $c$ is a sum of one term per attribute value of $w$. A matrix whose rows are sums of attribute vectors has embeddings of the same form, $\mathbf{w}\approx\mathbf{a}_{\text{gender}} + \mathbf{a}_{\text{status}} + \mathbf{a}_{\text{age}}$, and then</p>
+    <div class="eq">$$\mathbf{w}_{\text{king}} - \mathbf{w}_{\text{man}} = \mathbf{a}_{\text{royal}} - \mathbf{a}_{\text{common}} = \mathbf{w}_{\text{queen}} - \mathbf{w}_{\text{woman}} .$$</div>
+    <p>Real language is far messier, but Arora et al. (2016) and Allen &amp; Hospedales (2019) make versions of this argument precise: analogies hold to the extent that the relevant PMI differences are shared across word pairs.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: embeddings --></div>
+    </figure>
+    <p class="muted">From the code. Left: an oblique view of the eight person words along three directions, each the difference of group averages: royal minus common (mostly horizontal), female minus male (mostly vertical) and child minus adult (diagonal). The "royal" offsets (man → king, woman → queen, and so on) are nearly parallel, and so are the gender offsets, which is what makes the analogies work. The eight vectors live almost entirely in a 3-dimensional subspace of the 16: three principal components explain 99.7% of their variance, one per hidden attribute. Right: every frequent (word, context) pair's score $\mathbf{c}^\top\mathbf{w}$ against $\operatorname{PMI}(w, c) - \log k$; the dashed line is the theorem's prediction. The PMI values fall in a few bands because the toy language has only a few kinds of (word, context) relationship.</p>
+  </section>
+
+  <section id="limits">
+    <h2>Limits, and what came next</h2>
+    <ul>
+      <li><b>One vector per word.</b> "Bank" gets one point, averaged over riverbanks and money banks. Contextual embeddings, where a word's vector depends on the sentence around it, solved this; they are the hidden states of transformers (lessons 20 and 26).</li>
+      <li><b>Bias.</b> Embeddings learn whatever regularities the corpus has, including social stereotypes: Bolukbasi et al. (2016) found "man : programmer :: woman : homemaker" in embeddings trained on news text. The same mechanism that gives analogies gives these.</li>
+      <li><b>Subwords.</b> A word never seen in training gets no vector. fastText represents a word as the sum of its character $n$-gram vectors; modern language models split rare words into subword tokens (lesson 26).</li>
+    </ul>
+    <p>The embedding layer itself survives unchanged as the first layer of every language model: a $V\times d$ lookup table trained with everything else. Its gradient is sparse, nonzero only for the rows of tokens in the batch, which the code exploits with <code>np.add.at</code>.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>A toy language in which each of eight person words has three hidden attributes, and the words around it are drawn from attribute-specific lists ("palace", "crown" for royal; "she", "her" for female; "young", "school" for children), plus filler. The model never sees the attributes. Then skip-gram with negative sampling, trained by SGD on 680,000 (word, context) pairs, followed by the PMI check and analogy tests.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# A toy language with hidden structure: each person word has a gender, a status and an age,
+# and the words around it depend on those attributes, never on the word itself.
+people = {"king": "m royal adult", "queen": "f royal adult", "prince": "m royal child", "princess": "f royal child",
+          "man": "m common adult", "woman": "f common adult", "boy": "m common child", "girl": "f common child"}
+context = {"m": ["he", "his", "him"], "f": ["she", "her", "hers"],
+           "royal": ["palace", "crown", "throne", "rules"], "common": ["village", "farm", "market", "works"],
+           "adult": ["old", "tall", "married"], "child": ["young", "small", "school"]}
+filler = ["the", "a", "and", "then", "very", "today"]
+
+def sentence():
+    w = rng.choice(list(people))
+    attrs = people[w].split()
+    words = [rng.choice(context[a]) for a in attrs for _ in range(2)] + list(rng.choice(filler, 3))
+    rng.shuffle(words)
+    words.insert(rng.integers(0, len(words) + 1), w)
+    return words
+
+corpus = [sentence() for _ in range(20000)]
+vocab = sorted({w for s in corpus for w in s}); idx = {w: i for i, w in enumerate(vocab)}; V = len(vocab)
+
+# (centre, context) pairs within a window of 2
+pairs = np.array([(idx[s[i]], idx[s[j]]) for s in corpus for i in range(len(s))
+                  for j in range(max(0, i - 2), min(len(s), i + 3)) if j != i])
+counts = np.bincount(pairs[:, 1], minlength=V).astype(float)
+noise = counts ** 0.75; noise /= noise.sum()                   # negatives drawn from unigram^0.75
+print(f"{len(corpus)} sentences, {V} words, {len(pairs)} (word, context) pairs")
+
+# Skip-gram with negative sampling: maximise log s(w.c) + sum_k log s(-w.c_k)
+d, k, lr = 16, 5, 0.02
+Wv = rng.standard_normal((V, d)) * 0.1; Cv = np.zeros((V, d))
+sig = lambda z: 1 / (1 + np.exp(-z))
+for epoch in range(3):
+    total = 0.0
+    for batch in np.array_split(rng.permutation(len(pairs)), len(pairs) // 512):
+        w, c = pairs[batch, 0], pairs[batch, 1]
+        neg = rng.choice(V, (len(batch), k), p=noise)
+        ew, ec, en = Wv[w], Cv[c], Cv[neg]                        # (B, d), (B, d), (B, k, d)
+        sp, sn = sig(np.sum(ew * ec, 1)), sig(np.einsum("bd,bkd-&gt;bk", ew, en))
+        total += -np.sum(np.log(sp)) - np.sum(np.log(1 - sn))
+        gp, gn = (sp - 1)[:, None], sn[:, :, None]                # gradients of the loss w.r.t. the scores
+        dw = gp * ec + np.sum(gn * en, 1)
+        np.add.at(Cv, c, -lr * gp * ew); np.add.at(Cv, neg, -lr * gn * ew[:, None, :]); np.add.at(Wv, w, -lr * dw)
+    print(f"epoch {epoch + 1}: mean loss per pair {total / len(pairs):.3f}")
+
+# 1. What does w.c converge to? Levy and Goldberg: PMI(w, c) - log k.
+joint = np.zeros((V, V)); np.add.at(joint, (pairs[:, 0], pairs[:, 1]), 1)
+pw, pc = joint.sum(1) / joint.sum(), joint.sum(0) / joint.sum()
+seen = joint &gt; 20                                              # pairs seen often enough to estimate PMI
+pmi = np.log(joint[seen] / joint.sum() / np.outer(pw, pc)[seen])
+dots = (Wv @ Cv.T)[seen]
+print(f"correlation of w.c with PMI - log k over {seen.sum()} frequent pairs: {np.corrcoef(dots, pmi - np.log(k))[0, 1]:.3f}"
+      f"   mean difference {np.mean(dots - (pmi - np.log(k))):+.2f}")
+
+# 2. Nearest neighbours and analogies by cosine similarity
+E = Wv / np.linalg.norm(Wv, axis=1, keepdims=True)
+def nearest(v, exclude=(), n=3):
+    sims = E @ (v / np.linalg.norm(v))
+    return [vocab[i] for i in np.argsort(-sims) if vocab[i] not in exclude][:n]
+for w in ["king", "girl", "palace"]:
+    print(f"nearest to {w:7s}: {', '.join(nearest(E[idx[w]], exclude=[w]))}")
+tests = [("man", "king", "woman", "queen"), ("boy", "man", "girl", "woman"), ("prince", "king", "princess", "queen"),
+         ("man", "boy", "queen", "princess"), ("woman", "queen", "man", "king"), ("boy", "prince", "girl", "princess")]
+right = 0
+for a, b, c, want in tests:                                    # a is to b as c is to ?
+    got = nearest(E[idx[b]] - E[idx[a]] + E[idx[c]], exclude=[a, b, c], n=1)[0]
+    right += got == want
+    print(f"{a} : {b} :: {c} : {got:9s} {'ok' if got == want else '(wanted ' + want + ')'}")
+print(f"{right} of {len(tests)} analogies right")
+
+# 20000 sentences, 34 words, 680000 (word, context) pairs
+# epoch 1: mean loss per pair 2.601
+# epoch 2: mean loss per pair 2.585
+# epoch 3: mean loss per pair 2.585
+# correlation of w.c with PMI - log k over 864 frequent pairs: 0.597   mean difference -0.01
+# nearest to king   : prince, queen, man
+# nearest to girl   : boy, princess, woman
+# nearest to palace : rules, crown, throne
+# man : king :: woman : queen     ok
+# boy : man :: girl : woman     ok
+# prince : king :: princess : queen     ok
+# man : boy :: queen : princess  ok
+# woman : queen :: man : king      ok
+# boy : prince :: girl : princess  ok
+# 6 of 6 analogies right</code></pre>
+    <p class="muted">The loss settles within the first epoch. The nearest neighbours of "king" are the words sharing two of its three attributes, and "palace" sits with the other royal context words. All six analogies come out right, including ones that change two attributes in a consistent way, such as man : boy :: queen : princess. The word vectors have discovered the three attributes, as directions, from co-occurrence alone.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>A full-softmax skip-gram model has $V = 100{,}000$ and $d = 300$. How many multiply-adds does the softmax normalisation cost per training pair, and how many does negative sampling with $k = 5$ cost?</li>
+      <li>Show that $\frac{d}{dx}\log\sigma(x) = \sigma(-x)$, and derive $\partial\ell/\partial\mathbf{c}$ and $\partial\ell/\partial\mathbf{c}_j$ for the negative-sampling objective.</li>
+      <li>In the PMI theorem, what happens to the optimal score of a pair that never co-occurs? What does this say about why PPMI clips negative values, and why low-rank factorisation helps?</li>
+      <li>The noise distribution is $P_n(c)\propto\#(c)^{3/4}$. For two words with counts 1,000 and 1, compare their probability of being drawn under $\#(c)^1$ and under $\#(c)^{3/4}$.</li>
+      <li>Cosine similarity ignores vector length. Why might the length of a word vector correlate with the word's frequency, and why is it sensible to ignore it for similarity?</li>
+      <li>An embedding layer is a linear layer applied to a one-hot vector. Write the gradient of the loss with respect to $E$ for a batch of tokens, and explain why only a few rows change at each step.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Full softmax: $V\cdot d = 3\times10^7$ multiply-adds for the scores (and as many for the gradient). Negative sampling: $(k + 1)d = 1{,}800$. A factor of about 17,000.</p>
+        <p><b>2.</b> $\log\sigma(x) = -\log(1 + e^{-x})$, derivative $e^{-x}/(1 + e^{-x}) = \sigma(-x)$. Then $\partial\ell/\partial\mathbf{c} = \sigma(-\mathbf{c}^\top\mathbf{w})\mathbf{w} = (1 - \sigma(\mathbf{c}^\top\mathbf{w}))\mathbf{w}$ and $\partial\ell/\partial\mathbf{c}_j = -\sigma(\mathbf{c}_j^\top\mathbf{w})\mathbf{w}$.</p>
+        <p><b>3.</b> With $\#(w, c) = 0$ the objective only pushes $x$ down, so the optimal score is $-\infty$, matching $\operatorname{PMI} = \log0$. Such entries are unreliable (never seen is not impossible), which is why PPMI sets them to 0. A low-rank factorisation can't represent arbitrary $-\infty$ entries; it is forced to share structure between words, which smooths the unseen pairs toward sensible values.</p>
+        <p><b>4.</b> With power 1 their probabilities are in the ratio $1000:1$; with $3/4$, $1000^{0.75} = 178$, so $178:1$. Rare words are drawn about 5.6 times more often relative to the frequent one.</p>
+        <p><b>5.</b> Frequent words get many gradient updates in many directions; rare words few. In practice length tends to grow with how consistently a word appears in specific contexts, which is partly a frequency effect. Similarity of meaning is about the direction (which contexts), not how strongly; cosine compares only directions.</p>
+        <p><b>6.</b> With $\mathbf{v}_t = E^\top\mathbf{e}_t$, $\partial L/\partial E = \sum_t\mathbf{e}_t\,\bar{\mathbf{v}}_t^\top$: the gradient of row $w$ is the sum of $\bar{\mathbf{v}}_t$ over the positions where token $w$ occurs, and every other row gets zero. Frameworks store it sparsely.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Mikolov et al., "Efficient estimation of word representations in vector space"</b> and <b>"Distributed representations of words and phrases and their compositionality"</b> (2013). word2vec and negative sampling.</li>
+      <li><b>Levy &amp; Goldberg, "Neural word embedding as implicit matrix factorization"</b> (NeurIPS 2014). The theorem above.</li>
+      <li><b>Pennington, Socher &amp; Manning, "GloVe: global vectors for word representation"</b> (EMNLP 2014). A least-squares fit to log co-occurrence counts.</li>
+      <li><b>Jurafsky &amp; Martin, <i>Speech and Language Processing</i></b> (3rd ed. draft), chapter 6: vector semantics and embeddings.</li>
+      <li><b>Bolukbasi et al., "Man is to computer programmer as woman is to homemaker?"</b> (NeurIPS 2016), and <b>Allen &amp; Hospedales, "Analogies explained"</b> (ICML 2019).</li>
+    </ul>
+  </section>
+</article>

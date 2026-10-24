@@ -1,0 +1,202 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 15 · Stage 5: deep architectures</div>
+  <h1>Convolutional networks</h1>
+  <p class="lede">An MLP treats an image as a list of unrelated numbers: it doesn't know that neighbouring pixels belong together, or that a cat is still a cat one pixel to the left. A convolutional layer builds both facts in. It slides one small filter over every position, so it has very few weights, and its output shifts when its input shifts. This lesson defines convolution precisely, proves the equivariance, works through the size arithmetic, derives the backward pass, and shows a 226-parameter network beat a 16,578-parameter MLP on patterns at positions it has never seen.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/12-neurons-and-mlps/">lesson 12</a>, <a href="/machine-learning/13-backpropagation/">lesson 13</a>, <a href="/machine-learning/14-training-deep-networks/">lesson 14</a></span><span><b>Math pulled in:</b> discrete convolution and cross-correlation, Toeplitz matrices, shift operators and equivariance, output-size arithmetic, receptive fields, im2col</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Images have two properties that a fully connected layer ignores. <b>Locality</b>: what a pixel means depends mostly on nearby pixels, so a useful feature (an edge, a corner, a blob) looks at a small patch. <b>Translation symmetry</b>: an edge is an edge wherever it appears, so the detector for it should be the same everywhere. A convolutional layer uses both. Each output unit looks at a small $k\times k$ window of the input, and every position uses the <i>same</i> weights, the <b>filter</b> or <b>kernel</b>. Sliding one filter over the image produces a <b>feature map</b>: a picture of where that feature occurs.</p>
+    <p>The savings are enormous. A fully connected layer from a $224\times224\times3$ image to a $224\times224\times64$ output would have $(224\cdot224)^2\cdot3\cdot64\approx4.8\times10^{11}$ weights. A $3\times3$ convolution with the same input and output sizes has $3\cdot3\cdot3\cdot64 + 64 = 1{,}792$. And because the weights are shared, what is learned at one position is automatically applied at every other.</p>
+  </section>
+
+  <section id="convolution">
+    <h2>Convolution, precisely</h2>
+    <p>For a single-channel image $X$ and a $k\times k$ kernel $K$, the layer computes</p>
+    <div class="eq">$$Y_{ij} = b + \sum_{u=0}^{k-1}\sum_{v=0}^{k-1}K_{uv}\,X_{i+u,\,j+v} .$$</div>
+    <p>Mathematicians call this <b>cross-correlation</b>; true convolution flips the kernel, $\sum K_{uv}X_{i-u,\,j-v}$. Since the kernel is learned, the flip makes no difference, and every deep-learning library computes the formula above while calling it convolution. With $C$ input channels (3 for colour, or the feature maps of the previous layer) and $F$ filters, each filter spans all input channels:</p>
+    <div class="eq">$$Y_{f,i,j} = b_f + \sum_{c=1}^{C}\sum_{u,v}K_{f,c,u,v}\,X_{c,\,i+u,\,j+v}, \qquad \text{parameters: } F\,C\,k^2 + F .$$</div>
+    <p>Three knobs control the geometry. <b>Padding</b> $p$ adds a border of zeros. <b>Stride</b> $s$ moves the window $s$ pixels at a time. <b>Dilation</b> $d$ spreads the kernel's taps $d$ pixels apart, so it covers $d(k - 1) + 1$ pixels. Counting the window positions gives</p>
+    <div class="result">
+      <div class="label">Output size</div>
+      <div class="eq">$$H_{\text{out}} = \left\lfloor\frac{H + 2p - d(k - 1) - 1}{s}\right\rfloor + 1 .$$</div>
+      <p>With $d = 1$, $s = 1$ and $p = (k-1)/2$ for odd $k$, the output has the input's size ("same" padding). With $s = 2$ it is halved.</p>
+    </div>
+    <p>A convolution is still a linear map, so it is a fully connected layer with a special weight matrix. In one dimension, a 3-tap filter on 5 inputs without padding is</p>
+    <div class="eq">$$\begin{pmatrix}y_1\\y_2\\y_3\end{pmatrix} = \begin{pmatrix}K_0 &amp; K_1 &amp; K_2 &amp; 0 &amp; 0\\ 0 &amp; K_0 &amp; K_1 &amp; K_2 &amp; 0\\ 0 &amp; 0 &amp; K_0 &amp; K_1 &amp; K_2\end{pmatrix}\begin{pmatrix}x_1\\\vdots\\x_5\end{pmatrix} .$$</div>
+    <p>The matrix is sparse (each row touches $k$ inputs) and constant along its diagonals (a <b>Toeplitz</b> matrix): the two properties are locality and weight sharing, written as constraints on $W$.</p>
+  </section>
+
+  <section id="equivariance">
+    <h2>Equivariance and invariance</h2>
+    <p>Let $T_{\mathbf{a}}$ shift an image by $\mathbf{a} = (a_1, a_2)$: $(T_{\mathbf{a}}X)_{ij} = X_{i-a_1,\,j-a_2}$. A map $\Phi$ is <b>equivariant</b> to shifts if $\Phi(T_{\mathbf{a}}X) = T_{\mathbf{a}}\Phi(X)$ (shifting the input shifts the output), and <b>invariant</b> if $\Phi(T_{\mathbf{a}}X) = \Phi(X)$.</p>
+    <div class="result">
+      <div class="label">Convolution commutes with shifts</div>
+      <p>For an infinite (or circularly padded) image, $\operatorname{conv}_K(T_{\mathbf{a}}X) = T_{\mathbf{a}}\operatorname{conv}_K(X)$.</p>
+    </div>
+    <p><b>Proof.</b> $\operatorname{conv}_K(T_{\mathbf{a}}X)_{ij} = b + \sum_{u,v}K_{uv}X_{i+u-a_1,\,j+v-a_2} = \operatorname{conv}_K(X)_{i-a_1,\,j-a_2} = \big(T_{\mathbf{a}}\operatorname{conv}_K(X)\big)_{ij}$. $\square$ Elementwise nonlinearities commute with shifts too, so a whole stack of convolutions and ReLUs is equivariant. (With finite images, positions near the border break the symmetry slightly, and so do strides: a stride-2 layer is equivariant only to even shifts.)</p>
+    <p><b>Pooling turns equivariance into invariance.</b> A max pool over a $2\times2$ window keeps the strongest response in each window, so it doesn't change when the feature moves within the window: local invariance. A <b>global</b> max or average pool over the whole feature map is invariant to any shift: it reports <i>whether</i> the feature occurs, not where. A classifier wants exactly that, which is why most CNNs end with global average pooling and a linear layer.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: cnn-equivariance --></div>
+    </figure>
+    <p class="muted">From the code below. Left: a test image with the "+" pattern at a position seen in training, and the same image shifted 9 pixels to the right, where no training image had the pattern. Middle: the feature map of one learned filter on each; the bright response moves with the pattern, which is equivariance. Global max pooling then gives the same number for both, which is invariance. Right: the eight learned $5\times5$ filters. A few show bars or diagonals from the two patterns, but most look noisy: 300 training steps are enough to separate the two classes, not to produce clean detectors.</p>
+  </section>
+
+  <section id="receptive">
+    <h2>Receptive fields and depth</h2>
+    <p>The <b>receptive field</b> of a unit is the set of input pixels that can affect it. After one $k\times k$ convolution it is $k\times k$. Each further layer with kernel $k_\ell$ and stride $s_\ell$ widens it by $(k_\ell - 1)$ times the product of the earlier strides:</p>
+    <div class="eq">$$r_L = 1 + \sum_{\ell=1}^{L}(k_\ell - 1)\prod_{i=1}^{\ell-1}s_i .$$</div>
+    <p>So depth, and above all striding or pooling, is how a network with small kernels comes to see the whole image. Two stacked $3\times3$ layers see $5\times5$, and three see $7\times7$. That is the VGG argument for small kernels: three $3\times3$ layers with $C$ channels cost $27C^2$ weights against $49C^2$ for one $7\times7$, and they add two more nonlinearities. In practice the <i>effective</i> receptive field, where the influence is actually large, is smaller than $r_L$ and roughly Gaussian (Luo et al., 2016).</p>
+    <p>A typical CNN alternates convolutions with downsampling: spatial size halves while channels double ($64\to128\to256\to512$), so early layers see small, fine-grained patterns and late layers see large regions with many abstract features. Zeiler and Fergus (2014) visualised what this hierarchy learns: edges and colour blobs in the first layer, textures in the second, object parts and then whole objects deeper in.</p>
+  </section>
+
+  <section id="backward">
+    <h2>Backpropagation through a convolution</h2>
+    <p>Since convolution is linear, its backward pass follows from lesson 13's rule for a matrix product, $\bar X = W^\top\bar Y$ and $\bar W = \bar Y X^\top$, applied to the Toeplitz matrix. Written out with indices, each weight $K_{f,c,u,v}$ is used at every output position $(i, j)$, so its gradient sums over them:</p>
+    <div class="eq">$$\bar K_{f,c,u,v} = \sum_{n,i,j}\bar Y_{n,f,i,j}\,X_{n,c,\,i+u,\,j+v}, \qquad \bar b_f = \sum_{n,i,j}\bar Y_{n,f,i,j}, \qquad \bar X_{n,c,p,q} = \sum_{f,u,v}\bar Y_{n,f,\,p-u,\,q-v}\,K_{f,c,u,v} .$$</div>
+    <p>The kernel gradient is a cross-correlation of the input with the output gradient. The input gradient is a true convolution (kernel flipped) of the output gradient with zero padding, which is why the backward of a convolution is called a <b>transposed convolution</b>; the same operation, used forwards, upsamples in generative models and segmentation networks.</p>
+    <p><b>im2col.</b> The fast way to compute all of this is to rearrange the input so the convolution becomes one matrix product. Copy every $C\times k\times k$ patch into a row of a matrix with $N\cdot H'\cdot W'$ rows; then $Y = \text{cols}\cdot K_{\text{flat}}^\top$, an ordinary product that runs at full speed on any hardware. The backward pass is then two more matrix products and a "col2im" that adds each patch's gradient back to the pixels it came from. The code does exactly this. The cost of one layer is $H'W'\cdot F\cdot Ck^2$ multiply-adds per image, which dominates in CNNs, while the parameters are few.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>A convolution layer (forward via im2col, backward via the formulas above) with a finite-difference check. Then the experiment: 16×16 noisy images contain either a "+" or an "×" pattern of 5×5 pixels. Training images have the pattern only in the left part (left edge in columns 0–5). We test on new images with the pattern in the same region, and on images with it in columns 6–11, where no training image ever had it. An MLP and a small CNN (8 filters, ReLU, global max pool, linear) are trained the same way.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+def im2col(X, k):
+    """X: (N, C, H, W) -&gt; (N, H-k+1, W-k+1, C*k*k): every k-by-k patch as a row."""
+    N, C, H, W = X.shape
+    s = X.strides
+    P = np.lib.stride_tricks.as_strided(X, (N, H - k + 1, W - k + 1, C, k, k), (s[0], s[2], s[3], s[1], s[2], s[3]))
+    return P.reshape(N, H - k + 1, W - k + 1, C * k * k)
+
+def conv_forward(X, K, b):
+    """'Valid' convolution (really cross-correlation, as in every library). K: (F, C, k, k)."""
+    F, C, k, _ = K.shape
+    cols = im2col(X, k)                                    # (N, H', W', C k k)
+    return (cols @ K.reshape(F, -1).T + b).transpose(0, 3, 1, 2), cols   # (N, F, H', W')
+
+def conv_backward(dY, X, K, cols):
+    """Gradients for the kernel, the bias and the input."""
+    F, C, k, _ = K.shape
+    dYr = dY.transpose(0, 2, 3, 1)                         # (N, H', W', F)
+    dK = (dYr.reshape(-1, F).T @ cols.reshape(-1, C * k * k)).reshape(K.shape)
+    db = dYr.sum((0, 1, 2))
+    dcols = (dYr @ K.reshape(F, -1)).reshape(*dYr.shape[:3], C, k, k)
+    dX = np.zeros_like(X)
+    for i in range(k):                                     # scatter each patch's gradient back
+        for j in range(k):
+            dX[:, :, i:i + dcols.shape[1], j:j + dcols.shape[2]] += dcols[:, :, :, :, i, j].transpose(0, 3, 1, 2)
+    return dK, db, dX
+
+# gradient check on a small random problem
+X = rng.standard_normal((2, 3, 6, 6)); K = rng.standard_normal((4, 3, 3, 3)); b = rng.standard_normal(4)
+Y, cols = conv_forward(X, K, b); R = rng.standard_normal(Y.shape)
+dK, db, dX = conv_backward(R, X, K, cols)
+num = np.zeros_like(X)
+for idx in np.ndindex(X.shape):
+    for s in (1, -1):
+        X[idx] += s * 1e-6; num[idx] += s * np.sum(conv_forward(X, K, b)[0] * R) / 2e-6; X[idx] -= s * 1e-6
+print(f"gradient check, input of a conv layer: max relative error {np.max(np.abs(num - dX)) / np.max(np.abs(num)):.1e}")
+
+# data: a 5x5 "+" or "x" at a random place in a 16x16 noisy image
+plus = np.zeros((5, 5)); plus[2, :] = plus[:, 2] = 1
+cross = np.eye(5) + np.eye(5)[::-1]; cross[2, 2] = 1
+def make(n, cols_from, cols_to):
+    """Patterns placed with their left edge in columns [cols_from, cols_to)."""
+    Xs = 0.3 * rng.standard_normal((n, 1, 16, 16)); y = rng.integers(0, 2, n)
+    for i in range(n):
+        r, c = rng.integers(0, 12), rng.integers(cols_from, cols_to)
+        Xs[i, 0, r:r + 5, c:c + 5] += plus if y[i] else cross
+    return Xs, y
+Xtr, ytr = make(2000, 0, 6)                                # training: patterns only in the left part
+Xin, yin = make(1000, 0, 6)                                # test, same positions
+Xout, yout = make(1000, 6, 12)                             # test, positions never seen in training
+
+def adam(params, grads, state, t, lr=0.01):
+    for i, (p, g) in enumerate(zip(params, grads)):
+        m, v = state.get(i, (0, 0))
+        m, v = 0.9 * m + 0.1 * g, 0.999 * v + 0.001 * g * g
+        state[i] = (m, v)
+        p -= lr * (m / (1 - 0.9 ** t)) / (np.sqrt(v / (1 - 0.999 ** t)) + 1e-8)
+
+def xent(F, y):                                            # mean cross-entropy and its gradient
+    Z = F - F.max(1, keepdims=True); P = np.exp(Z) / np.exp(Z).sum(1, keepdims=True)
+    loss = -np.log(P[np.arange(len(y)), y]).mean(); P[np.arange(len(y)), y] -= 1
+    return loss, P / len(y)
+
+# model A: an MLP on the 256 pixels
+W1 = rng.standard_normal((256, 64)) * np.sqrt(2 / 256); b1 = np.zeros(64)
+W2 = rng.standard_normal((64, 2)) * np.sqrt(2 / 64); b2 = np.zeros(2)
+mlp = lambda X: (np.maximum(X.reshape(len(X), -1) @ W1 + b1, 0) @ W2 + b2)
+state = {}
+for t in range(1, 301):
+    i = rng.integers(0, 2000, 100); A = Xtr[i].reshape(100, -1); Hh = np.maximum(A @ W1 + b1, 0)
+    _, d = xent(Hh @ W2 + b2, ytr[i]); dH = (d @ W2.T) * (Hh &gt; 0)
+    adam([W1, b1, W2, b2], [A.T @ dH, dH.sum(0), Hh.T @ d, d.sum(0)], state, t)
+acc = lambda f, X, y: np.mean(f(X).argmax(1) == y)
+print(f"MLP  {W1.size + b1.size + W2.size + b2.size:6d} parameters   test acc, seen positions {acc(mlp, Xin, yin):.3f}   unseen positions {acc(mlp, Xout, yout):.3f}")
+
+# model B: 8 conv filters of 5x5, ReLU, global max pool, then a linear layer
+K = rng.standard_normal((8, 1, 5, 5)) * np.sqrt(2 / 25); bk = np.zeros(8)
+V = rng.standard_normal((8, 2)) * np.sqrt(2 / 8); bv = np.zeros(2)
+def cnn(X, cache=False):
+    Z, cols = conv_forward(X, K, bk); A = np.maximum(Z, 0)
+    flat = A.reshape(len(X), 8, -1); idx = flat.argmax(2); pooled = flat.max(2)   # (N, 8)
+    out = pooled @ V + bv
+    return (out, (Z, cols, A, idx, pooled)) if cache else out
+state = {}
+for t in range(1, 301):
+    i = rng.integers(0, 2000, 100)
+    out, (Z, cols, A, idx, pooled) = cnn(Xtr[i], cache=True)
+    _, d = xent(out, ytr[i]); dpooled = d @ V.T
+    dA = np.zeros((100, 8, A.shape[2] * A.shape[3])); np.put_along_axis(dA, idx[:, :, None], dpooled[:, :, None], 2)
+    dZ = dA.reshape(A.shape) * (Z &gt; 0)
+    dK, dbk, _ = conv_backward(dZ, Xtr[i], K, cols)
+    adam([K, bk, V, bv], [dK, dbk, pooled.T @ d, d.sum(0)], state, t)
+print(f"CNN  {K.size + bk.size + V.size + bv.size:6d} parameters   test acc, seen positions {acc(cnn, Xin, yin):.3f}   unseen positions {acc(cnn, Xout, yout):.3f}")
+
+# gradient check, input of a conv layer: max relative error 7.1e-10
+# MLP   16578 parameters   test acc, seen positions 0.916   unseen positions 0.510
+# CNN     226 parameters   test acc, seen positions 1.000   unseen positions 1.000</code></pre>
+    <p class="muted">The MLP learns the training positions reasonably well (91.6%) but is at chance (51%) on positions it hasn't seen: its weights for the right part of the image were never trained. The CNN, with 73 times fewer parameters, is perfect on both, because it computes the same features everywhere and the max pool doesn't care where they occur. Building the right symmetry into the architecture replaced data the MLP would need: to learn the same thing, it would have to see every pattern at every position.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>A $32\times32$ input goes through a $5\times5$ convolution (stride 1, no padding), a $2\times2$ max pool (stride 2), a $3\times3$ convolution with padding 1 and stride 2, and another $2\times2$ max pool. What is the spatial size after each step?</li>
+      <li>A layer maps 64 channels to 128 with $3\times3$ kernels on a $56\times56$ input with "same" padding. How many parameters does it have, and how many multiply-adds per image?</li>
+      <li>Compute the receptive field of the last unit in: conv $3\times3$, conv $3\times3$, max pool $2\times2$ stride 2, conv $3\times3$, conv $3\times3$.</li>
+      <li>A $1\times1$ convolution has $k = 1$. What does it compute at each pixel? Why is it useful (for example in a layer that maps 256 channels to 64)?</li>
+      <li>Show that max pooling over a $2\times2$ window is not exactly invariant to a one-pixel shift, by giving a $4\times4$ input whose pooled output changes when shifted. Is global max pooling exactly invariant to shifts that keep the pattern inside the image?</li>
+      <li>Derive the input gradient formula $\bar X_{p} = \sum_u\bar Y_{p-u}K_u$ for a 1-D convolution $Y_i = \sum_uK_uX_{i+u}$, by asking which outputs each input $X_p$ contributes to.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $32 - 5 + 1 = 28$; pool: 14; $\lfloor(14 + 2 - 3)/2\rfloor + 1 = 7$; pool: $\lfloor(7 - 2)/2\rfloor + 1 = 3$.</p>
+        <p><b>2.</b> $128\cdot64\cdot9 + 128 = 73{,}856$ parameters. Multiply-adds: $56\cdot56\cdot128\cdot64\cdot9 = 231{,}211{,}008$, about 0.23 billion. The weights are few but each is used $56^2 = 3{,}136$ times per image.</p>
+        <p><b>3.</b> Strides 1, 1, 2, 1, 1 and kernels 3, 3, 2, 3, 3: $r = 1 + 2 + 2 + 1\cdot1 + 2\cdot2 + 2\cdot2 = 14$, i.e. $14\times14$.</p>
+        <p><b>4.</b> At each pixel it applies the same linear map (a $64\times256$ matrix) to the vector of channel values: a fully connected layer across channels, shared over positions. It mixes channels and changes their number cheaply, so it is used to shrink the channel count before an expensive $3\times3$ convolution (the "bottleneck" in ResNets and Inception).</p>
+        <p><b>5.</b> A single 1 at position $(1, 1)$ (0-indexed) of a $4\times4$ zero image gives the pooled output $[[1, 0], [0, 0]]$; shifted one pixel right, it sits at $(1, 2)$ and the output becomes $[[0, 1], [0, 0]]$. Global max pooling gives 1 in both cases, and is exactly invariant as long as the pattern stays fully inside the image and away from the padding.</p>
+        <p><b>6.</b> $X_p$ appears in $Y_i$ exactly when $i + u = p$ for some tap $u$, i.e. in $Y_{p-u}$ with weight $K_u$. So $\bar X_p = \sum_u\bar Y_{p-u}K_u$, counting only the $p - u$ that are valid output positions. In the sum the kernel index runs opposite to the output index: a convolution with the flipped kernel.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>LeCun et al., "Gradient-based learning applied to document recognition"</b> (Proc. IEEE, 1998). LeNet-5 and the case for convolutions.</li>
+      <li><b>Goodfellow, Bengio &amp; Courville, <i>Deep Learning</i></b>, chapter 9: convolution, equivariance and pooling.</li>
+      <li><b>Dumoulin &amp; Visin, "A guide to convolution arithmetic for deep learning"</b> (2016). Every padding, stride and transposed-convolution case, with pictures.</li>
+      <li><b>Zeiler &amp; Fergus, "Visualizing and understanding convolutional networks"</b> (ECCV 2014).</li>
+      <li><b>Stanford CS231n</b> course notes on convolutional networks.</li>
+    </ul>
+  </section>
+</article>

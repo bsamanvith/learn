@@ -66,7 +66,7 @@ written; the rest are planned, in this order.
 |---|--------|--------------|----------------|
 | 22 ✅ | Autoencoders and VAEs | Learn a latent space you can sample from by maximising a lower bound on likelihood | Latent-variable models, the ELBO, reparameterisation, Gaussian KL |
 | 23 ✅ | Generative adversarial networks | A generator and a discriminator play a minimax game | Minimax objective, optimal discriminator, Jensen–Shannon divergence |
-| 24 | Diffusion models | Destroy data with noise step by step, learn to undo one step at a time | Gaussian Markov chains, forward marginals, the noise-prediction loss (DDPM) |
+| 24 ✅ | Diffusion models | Destroy data with noise step by step, learn to undo one step at a time | Gaussian Markov chains, forward marginals, the noise-prediction loss (DDPM) |
 | 25 | Score matching, guidance and latent diffusion | Diffusion learns the score ∇log p; guidance steers it; working in a latent space makes it cheap | Score functions, Langevin dynamics, SDE/ODE view, classifier-free guidance, flow matching |
 
 ## Stage 7 · Large language models

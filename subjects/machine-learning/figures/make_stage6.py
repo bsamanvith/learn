@@ -80,3 +80,22 @@ for k, t in enumerate(sorted(snaps)):
         p.items.append(f'<circle cx="{p.X(cx):.1f}" cy="{p.Y(cy):.1f}" r="{p.X(0.15) - p.X(0):.1f}" style="fill:none;stroke:{c("fg")};stroke-width:1.2"/>')
     p.text(p.box[0], 22, f"step {t:,}", color="fg", size=12, px=True)
 p.save(OUT / "gan.svg", "Four scatter plots of 1,000 generator samples at steps 0, 500, 2,000 and 8,000, with eight rings marking the data modes on a circle; the samples move from a wide scatter, through rays aimed at the modes, onto the eight modes joined by thin bridges")
+
+
+# ---------- 24: forward diffusion of the spiral, and the learned reverse process ----------
+ns = run("24-diffusion-models")
+r = np.random.default_rng(4)
+x0 = ns["data"](1000)
+abar, kept, S = ns["abar"], ns["kept"], ns["S"]
+p = Plot(900, 380)
+steps = [0, 10, 25, 50, 100]
+for k, t in enumerate(steps):
+    xt = x0 if t == 0 else np.sqrt(abar[t - 1]) * x0 + np.sqrt(1 - abar[t - 1]) * r.standard_normal(x0.shape)
+    rev = S if t == 0 else kept[t]
+    for row, (P, label) in enumerate([(xt, f"forward, t = {t}"), (rev[:1000], f"reverse, t = {t}")]):
+        p.panel(k * 180, row * 190, 180, 190, (-3, 3), (-3, 3), margin=(8, 4, 26, 8))
+        p.rect(-3, -3, 6, 6, color="card", opacity=0, stroke="rule")
+        P = P[(np.abs(P) < 2.95).all(1)]
+        p.dots(P[:, 0], P[:, 1], color="accent" if row else "data", r=1.1, opacity=0.5)
+        p.text(p.box[0], row * 190 + 18, label, color="fg", size=11, px=True)
+p.save(OUT / "diffusion.svg", "Two rows of five scatter plots. Top: a spiral of points dissolving into Gaussian noise at steps 0, 10, 25, 50 and 100 of the forward process. Bottom: samples of the learned reverse process at the same steps, condensing from noise at step 100 back into the spiral at step 0")

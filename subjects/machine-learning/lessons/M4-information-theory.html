@@ -1,0 +1,185 @@
+<header class="lesson-head">
+  <div class="eyebrow">Math toolkit M4 · read when a lesson sends you</div>
+  <h1>Information theory: entropy, cross-entropy and KL</h1>
+  <p class="lede">Cross-entropy is the loss of almost every classifier and language model, KL divergence appears in VAEs, RLHF and distillation, and mutual information drives decision trees and contrastive learning. All of them come from one question Shannon asked in 1948: how many bits does it take to describe the outcome of a random event? This page builds the answer and proves the inequalities the lessons rely on.</p>
+  <div class="meta"><span><b>Used by:</b> <a href="/machine-learning/06-softmax-regression/">06</a>, 09, 21, 22, 23, 26, 28</span><span><b>Assumes:</b> <a href="/machine-learning/M3-probability/">M3</a> (expectation), logarithms</span></div>
+</header>
+
+<article class="lesson">
+  <section id="surprise">
+    <h2>Surprise and entropy</h2>
+    <p>How surprising is an outcome of probability $p$? We want a measure $s(p)$ that is 0 for a certain event, grows as $p$ shrinks, and <i>adds</i> for independent events: the surprise of two independent outcomes should be $s(pq) = s(p) + s(q)$. The only continuous functions with that property are $s(p) = -\log p$, up to the choice of base. With base 2 the unit is the <b>bit</b>; with the natural log it is the <b>nat</b> ($1\text{ nat} = 1/\ln 2 \approx 1.44$ bits). ML code uses nats; this page uses bits when counting codes.</p>
+    <p>The <b>entropy</b> of a distribution is its average surprise:</p>
+    <div class="result">
+      <div class="label">Entropy</div>
+      <div class="eq">$$H(p) = \mathbb{E}_{x\sim p}\big[-\log p(x)\big] = -\sum_x p(x)\log p(x), \qquad 0\log0 = 0 .$$</div>
+    </div>
+    <p>A fair coin has 1 bit, a fair die $\log_26 \approx 2.585$ bits, and a coin that lands heads 90% of the time only 0.469 bits: it is mostly predictable. Entropy is $\ge 0$, zero only for a certain outcome, and at most $\log K$ for $K$ outcomes, with equality only for the uniform distribution (exercise 2). For a continuous density the same formula with an integral gives the <b>differential entropy</b>; among all densities with variance $\sigma^2$, the Gaussian has the largest, $\tfrac12\log(2\pi e\sigma^2)$.</p>
+  </section>
+
+  <section id="coding">
+    <h2>Entropy is the length of the best code</h2>
+    <p>Why call this "information"? Suppose you must send a stream of symbols drawn from $p$ using binary codewords, so that the receiver can decode without separators. That requires a <b>prefix code</b>: no codeword is the start of another. Codeword lengths $\ell_1,\dots,\ell_K$ are achievable by a prefix code exactly when they satisfy the <b>Kraft inequality</b>,</p>
+    <div class="eq">$$\sum_x 2^{-\ell_x} \le 1 .$$</div>
+    <p>(Picture a binary tree: a codeword of length $\ell$ uses up a fraction $2^{-\ell}$ of the leaves below the root, and prefix-freeness means the subtrees don't overlap.) Now define $q(x) = 2^{-\ell_x}/Z$ with $Z = \sum_x2^{-\ell_x} \le 1$. The average length is</p>
+    <div class="eq">$$\sum_xp(x)\ell_x = \sum_xp(x)\Big(-\log_2q(x) - \log_2Z\Big) = H(p) + \operatorname{KL}(p\Vert q) - \log_2Z \;\ge\; H(p),$$</div>
+    <p>because KL is non-negative (next section) and $\log_2Z\le0$. Conversely, the lengths $\ell_x = \lceil-\log_2p(x)\rceil$ satisfy Kraft and have average length below $H(p) + 1$.</p>
+    <div class="result">
+      <div class="label">Shannon's source coding theorem (one symbol at a time)</div>
+      <div class="eq">$$H(p) \;\le\; \min_{\text{prefix codes}}\ \mathbb{E}[\text{length}] \;&lt;\; H(p) + 1 .$$</div>
+    </div>
+    <p>Coding blocks of $n$ symbols at once spreads the "+1" over $n$ symbols, so the best achievable rate is exactly $H(p)$ bits per symbol. <b>Huffman coding</b> (merge the two least likely symbols, repeat) finds the optimal prefix code; in the code below it averages 2.42 bits on a source with entropy 2.356. Entropy is the incompressible core of a source. A language model with a lower cross-entropy is literally a better compressor of text (lesson 26).</p>
+  </section>
+
+  <section id="kl">
+    <h2>Cross-entropy and KL divergence</h2>
+    <p>If the data come from $p$ but you designed your code for $q$ (lengths $-\log q(x)$), the average length is the <b>cross-entropy</b>, and the extra bits you pay are the <b>Kullback–Leibler divergence</b>:</p>
+    <div class="eq">$$H(p, q) = -\sum_xp(x)\log q(x), \qquad \operatorname{KL}(p\Vert q) = \sum_xp(x)\log\frac{p(x)}{q(x)} = H(p, q) - H(p).$$</div>
+    <div class="result">
+      <div class="label">Gibbs' inequality</div>
+      <div class="eq">$$\operatorname{KL}(p\Vert q) \ge 0, \quad\text{with equality if and only if } p = q .$$</div>
+    </div>
+    <p><b>Proof.</b> $\log$ is strictly concave, so by Jensen's inequality, summing over $x$ with $p(x) &gt; 0$:</p>
+    <div class="eq">$$-\operatorname{KL}(p\Vert q) = \sum_xp(x)\log\frac{q(x)}{p(x)} \le \log\sum_xp(x)\frac{q(x)}{p(x)} = \log\sum_{x:\,p(x)&gt;0}q(x) \le \log 1 = 0,$$</div>
+    <p>with equality only if $q(x)/p(x)$ is constant, which forces $q = p$. $\square$</p>
+    <p>Three properties to remember:</p>
+    <ul>
+      <li><b>Minimising cross-entropy = maximum likelihood = minimising KL.</b> Training a model $q_\theta$ on samples from $p$ by minimising the average $-\log q_\theta(x_i)$ estimates $H(p, q_\theta) = H(p) + \operatorname{KL}(p\Vert q_\theta)$. $H(p)$ doesn't depend on $\theta$, so MLE is minimising $\operatorname{KL}(p_{\text{data}}\Vert q_\theta)$. The loss can never go below $H(p)$, the entropy of the data itself.</li>
+      <li><b>KL is not a distance.</b> It isn't symmetric (in the code, $\operatorname{KL}(P\Vert Q) = 0.737$ bits but $\operatorname{KL}(Q\Vert P) = 0.531$) and doesn't satisfy the triangle inequality. It is infinite if $q(x) = 0$ somewhere $p(x) &gt; 0$.</li>
+      <li><b>The direction matters.</b> See the next section.</li>
+    </ul>
+  </section>
+
+  <section id="direction">
+    <h2>Forward and reverse KL</h2>
+    <p>Fit a simple distribution $q$ (say one Gaussian) to a complicated $p$ (two bumps). The two directions of KL give very different answers.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: m4-info --></div>
+    </figure>
+    <p class="muted">Left: the entropy of a coin, $H(p) = -p\log_2p - (1-p)\log_2(1-p)$. Right: the best single Gaussian under each direction of KL, found by grid search in the code below.</p>
+    <ul>
+      <li><b>Forward KL, $\operatorname{KL}(p\Vert q)$</b>, averages $\log(p/q)$ over $p$. Wherever $p$ has mass and $q$ is tiny, the penalty is huge, so $q$ must <i>cover</i> all of $p$. For a Gaussian $q$ the optimum matches the mean and variance of $p$ exactly (exercise 5), here mean 0 and standard deviation 2.62, which puts most of its mass in the gap where $p$ has almost none. This is the direction MLE uses, which is why maximum-likelihood models tend to be "blurry" and spread out.</li>
+      <li><b>Reverse KL, $\operatorname{KL}(q\Vert p)$</b>, averages over $q$. Putting $q$'s mass where $p$ is tiny is costly, while ignoring part of $p$ is free. So $q$ <i>seeks one mode</i> and fits it tightly: mean $-2.5$, standard deviation 0.82. Variational inference uses this direction (lesson 22), and so does the KL penalty in RLHF (lesson 28).</li>
+    </ul>
+  </section>
+
+  <section id="mutual">
+    <h2>Joint entropy, conditional entropy and mutual information</h2>
+    <p>For two variables, $H(X, Y)$ is the entropy of the joint distribution and the <b>conditional entropy</b> $H(Y\mid X) = \sum_xp(x)H(Y\mid X = x)$ is the uncertainty left in $Y$ once $X$ is known. Taking $-\log$ of the product rule $p(x,y) = p(x)p(y\mid x)$ and averaging gives the <b>chain rule</b>:</p>
+    <div class="eq">$$H(X, Y) = H(X) + H(Y\mid X).$$</div>
+    <p>The <b>mutual information</b> is how much knowing one variable reduces uncertainty about the other:</p>
+    <div class="result">
+      <div class="label">Mutual information</div>
+      <div class="eq">$$I(X;Y) = H(Y) - H(Y\mid X) = H(X) + H(Y) - H(X,Y) = \operatorname{KL}\big(p(x,y)\,\Vert\,p(x)\,p(y)\big) \ge 0 .$$</div>
+    </div>
+    <p>The KL form shows that it is symmetric, non-negative (by Gibbs), and zero exactly when $X$ and $Y$ are independent. Non-negativity also means $H(Y\mid X)\le H(Y)$: on average, conditioning never increases uncertainty. In the code's weather-and-umbrella table, seeing the umbrella removes 0.361 of the 0.971 bits of uncertainty about the weather.</p>
+    <p>Where it appears: the <b>information gain</b> a decision tree maximises at each split is the mutual information between the split and the label (lesson 09); contrastive losses like InfoNCE maximise a lower bound on the mutual information between two views of the data (lesson 21); and the <b>data processing inequality</b>, $I(X;Z)\le I(X;Y)$ when $Z$ is computed from $Y$ alone, says no amount of processing can create information about $X$ that wasn't in $Y$.</p>
+  </section>
+
+  <section id="perplexity">
+    <h2>Perplexity</h2>
+    <p>Language models report <b>perplexity</b>, the exponential of the average cross-entropy per token:</p>
+    <div class="eq">$$\operatorname{PPL} = \exp\Big(-\frac1N\sum_{t=1}^N\log q(x_t\mid x_{&lt;t})\Big).$$</div>
+    <p>A model that is uniform over $K$ choices has perplexity exactly $K$, so perplexity reads as "the effective number of equally likely next tokens the model is choosing between". Lowering the loss from 3.0 to 2.9 nats is a perplexity drop from 20.1 to 18.2. Lesson 26 uses this.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import heapq
+import numpy as np
+
+def H(p):                                          # entropy in bits; 0 log 0 = 0
+    p = np.asarray(p, float); p = p[p &gt; 0]
+    return -np.sum(p * np.log2(p))
+
+def KL(p, q):                                      # KL(p || q) in bits
+    p, q = np.asarray(p, float), np.asarray(q, float); m = p &gt; 0
+    return np.sum(p[m] * np.log2(p[m] / q[m]))
+
+print("fair coin", H([0.5, 0.5]), "| biased coin 0.9", round(H([0.9, 0.1]), 3), "| fair die", round(H(np.ones(6) / 6), 3))
+
+# Huffman coding: repeatedly merge the two least likely symbols
+def huffman_lengths(p):
+    heap = [(pi, [i]) for i, pi in enumerate(p)]; heapq.heapify(heap)
+    length = np.zeros(len(p), int)
+    while len(heap) &gt; 1:
+        p1, s1 = heapq.heappop(heap); p2, s2 = heapq.heappop(heap)
+        for i in s1 + s2:
+            length[i] += 1                         # every symbol in a merged group gets one more bit
+        heapq.heappush(heap, (p1 + p2, s1 + s2))
+    return length
+
+p = np.array([0.4, 0.2, 0.15, 0.1, 0.08, 0.05, 0.02])
+L = huffman_lengths(p)
+print("code lengths", L, "| Kraft sum", np.sum(2.0 ** -L))
+print(f"entropy {H(p):.4f} bits &lt;= average Huffman length {p @ L:.4f} &lt; entropy + 1")
+
+# KL is not symmetric
+P, Q = [0.5, 0.5], [0.9, 0.1]
+print(f"KL(P||Q) = {KL(P, Q):.4f}   KL(Q||P) = {KL(Q, P):.4f}")
+print(f"cross-entropy H(P,Q) = {-np.sum(np.array(P) * np.log2(Q)):.4f} = H(P) + KL(P||Q) = {H(P) + KL(P, Q):.4f}")
+
+# Mutual information from a joint table
+joint = np.array([[0.30, 0.10],                    # rows: weather (sun, rain); columns: umbrella (no, yes)
+                  [0.05, 0.55]])
+px, py = joint.sum(1), joint.sum(0)
+I = H(px) + H(py) - H(joint.ravel())
+print(f"H(X) {H(px):.4f}  H(Y) {H(py):.4f}  H(X,Y) {H(joint.ravel()):.4f}  I(X;Y) {I:.4f}"
+      f"  = KL(joint || product) {KL(joint.ravel(), np.outer(px, py).ravel()):.4f}")
+
+# Forward vs reverse KL: fit one Gaussian to a two-bump mixture on a grid
+x = np.linspace(-8, 8, 4001); dx = x[1] - x[0]
+gauss = lambda m, s: np.exp(-(x - m) ** 2 / (2 * s * s)) / np.sqrt(2 * np.pi * s * s)
+target = 0.5 * gauss(-2.5, 0.8) + 0.5 * gauss(2.5, 0.8)
+kl = lambda a, b: np.sum(a * np.log((a + 1e-300) / (b + 1e-300))) * dx      # in nats
+grid = [(m, s) for m in np.linspace(-4, 4, 161) for s in np.linspace(0.3, 4, 186)]
+fwd = min(grid, key=lambda ms: kl(target, gauss(*ms)))
+rev = min(grid, key=lambda ms: kl(gauss(*ms), target))
+print(f"forward KL(p||q) fit: mean {fwd[0]:+.2f}, sd {fwd[1]:.2f}   (mixture mean 0, sd {np.sqrt(np.sum(target * x**2) * dx):.2f})")
+print(f"reverse KL(q||p) fit: mean {rev[0]:+.2f}, sd {rev[1]:.2f}   (one bump: mean ±2.5, sd 0.8)")
+
+# fair coin 1.0 | biased coin 0.9 0.469 | fair die 2.585
+# code lengths [1 3 3 3 4 5 5] | Kraft sum 1.0
+# entropy 2.3564 bits &lt;= average Huffman length 2.4200 &lt; entropy + 1
+# KL(P||Q) = 0.7370   KL(Q||P) = 0.5310
+# cross-entropy H(P,Q) = 1.7370 = H(P) + KL(P||Q) = 1.7370
+# H(X) 0.9710  H(Y) 0.9341  H(X,Y) 1.5438  I(X;Y) 0.3613  = KL(joint || product) 0.3613
+# forward KL(p||q) fit: mean +0.00, sd 2.62   (mixture mean 0, sd 2.62)
+# reverse KL(q||p) fit: mean -2.50, sd 0.82   (one bump: mean ±2.5, sd 0.8)</code></pre>
+    <p class="muted">The Huffman code's lengths satisfy Kraft with equality and average 2.42 bits, between $H$ and $H + 1$. Cross-entropy decomposes exactly as entropy plus KL, and mutual information computed two ways agrees. The forward-KL fit recovers the mixture's own mean and standard deviation (moment matching); the reverse-KL fit sits on one bump.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Compute the entropy in bits of the distribution $(\tfrac12, \tfrac14, \tfrac18, \tfrac18)$ and find a prefix code whose average length equals it exactly.</li>
+      <li>Prove $H(p)\le\log K$ for any distribution on $K$ outcomes, using Gibbs' inequality with $q$ uniform.</li>
+      <li>Show that $\operatorname{KL}\big(\mathcal{N}(\mu_1,\sigma_1^2)\,\Vert\,\mathcal{N}(\mu_2,\sigma_2^2)\big) = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1-\mu_2)^2}{2\sigma_2^2} - \frac12$ (in nats). This is the KL term of a VAE (lesson 22).</li>
+      <li>A classifier's average cross-entropy on a balanced 10-class test set is 0.5 nats. What is the lowest it could possibly be, and what would that require?</li>
+      <li>Show that the Gaussian $q = \mathcal{N}(\mu,\sigma^2)$ minimising $\operatorname{KL}(p\Vert q)$ has $\mu = \mathbb{E}_p[x]$ and $\sigma^2 = \operatorname{Var}_p(x)$.</li>
+      <li>Prove the chain rule $H(X,Y) = H(X) + H(Y\mid X)$ from the product rule.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\tfrac12\cdot1 + \tfrac14\cdot2 + \tfrac18\cdot3 + \tfrac18\cdot3 = 1.75$ bits. The code $0, 10, 110, 111$ has exactly those lengths, so it averages 1.75 bits. When every probability is a power of 2, Shannon's bound is met exactly.</p>
+        <p><b>2.</b> With $u(x) = 1/K$: $0\le\operatorname{KL}(p\Vert u) = \sum_xp(x)\log(Kp(x)) = \log K - H(p)$.</p>
+        <p><b>3.</b> $\operatorname{KL} = \mathbb{E}_{p_1}[\log p_1 - \log p_2]$. With $\log p_i(x) = -\log\sigma_i - \tfrac12\log2\pi - (x-\mu_i)^2/(2\sigma_i^2)$: $\mathbb{E}_{p_1}[(x-\mu_1)^2] = \sigma_1^2$ and $\mathbb{E}_{p_1}[(x-\mu_2)^2] = \sigma_1^2 + (\mu_1-\mu_2)^2$. Collect terms.</p>
+        <p><b>4.</b> The floor is the average entropy of the true label given the image, $\mathbb{E}_{\mathbf{x}}H(Y\mid\mathbf{x})$. If every image's label is unambiguous, it is 0, and reaching it needs probability 1 on the correct class everywhere. It is not $\log 10$; that is the loss of a model that knows nothing.</p>
+        <p><b>5.</b> $\operatorname{KL}(p\Vert q) = \text{const} + \log\sigma + \mathbb{E}_p[(x-\mu)^2]/(2\sigma^2)$. The $\mu$-derivative vanishes at $\mu = \mathbb{E}_p[x]$; then $\mathbb{E}_p[(x-\mu)^2] = \operatorname{Var}_p$, and the $\sigma$-derivative $1/\sigma - \operatorname{Var}_p/\sigma^3 = 0$ gives $\sigma^2 = \operatorname{Var}_p$.</p>
+        <p><b>6.</b> $-\log p(x,y) = -\log p(x) - \log p(y\mid x)$. Take $\mathbb{E}_{p(x,y)}$: the left side is $H(X,Y)$, the first term on the right is $H(X)$, and the second is $\sum_xp(x)\sum_yp(y\mid x)(-\log p(y\mid x)) = H(Y\mid X)$.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Cover &amp; Thomas, <i>Elements of Information Theory</i></b>, chapters 2 and 5. Entropy, KL, mutual information, the Kraft inequality and Huffman codes.</li>
+      <li><b>MacKay, <i>Information Theory, Inference, and Learning Algorithms</i></b> (free online), chapters 1–6. Information theory and ML in one book, with superb exercises.</li>
+      <li><b>Shannon, "A mathematical theory of communication"</b> (Bell System Technical Journal, 1948). Still readable.</li>
+      <li><b>Murphy, <i>Probabilistic Machine Learning: An Introduction</i></b>, chapter 6.</li>
+      <li><b>Bishop, <i>Pattern Recognition and Machine Learning</i></b>, sections 1.6 and 10.1.2 (forward vs reverse KL, with the same two-bump picture).</li>
+    </ul>
+  </section>
+</article>

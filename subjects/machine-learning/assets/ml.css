@@ -92,3 +92,9 @@
 .ml .refs li { color: var(--muted); }
 .ml .refs li b { color: var(--ink); font-weight: 600; }
 
+
+/* problem sets: one problem per list item, each with its own solution */
+.ml .problems ol { display: grid; gap: 22px; padding-left: 1.6em; }
+.ml .problems ol > li > p:first-child .tag { margin-right: 6px; }
+.ml .problems ol > li > details { margin-top: 10px; }
+.ml .problems ol > li::marker { font-family: var(--f-mono); color: var(--accent); font-weight: 600; }

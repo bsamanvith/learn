@@ -79,7 +79,7 @@ class Plot:
         self.items.append(f'<line x1="{_f(self.X(x1))}" y1="{_f(self.Y(y1))}" x2="{_f(self.X(x2))}" y2="{_f(self.Y(y2))}" style="stroke:{c(color)};stroke-width:{width};opacity:{opacity}{d}"/>')
         return self
 
-    def arrow(self, x1, y1, x2, y2, color="fg", width=1.5, head=7, pixels=False):
+    def arrow(self, x1, y1, x2, y2, color="fg", width=1.5, head=9, pixels=False):
         import math
         if not pixels:
             x1, y1, x2, y2 = self.X(x1), self.Y(y1), self.X(x2), self.Y(y2)

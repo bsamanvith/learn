@@ -1,0 +1,52 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A1 · after lessons 01–05</div>
+  <h1>Linear models from scratch</h1>
+  <p class="lede">Implement least squares, gradient descent, logistic regression, ridge, the lasso and cross-validation in plain NumPy, then use them to answer a few questions about real behaviour. An autograder checks every function and tells you what is wrong. Expect three to five hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/01-linear-regression/">01</a>, <a href="/machine-learning/02-gradient-descent/">02</a>, <a href="/machine-learning/03-logistic-regression/">03</a>, <a href="/machine-learning/04-generalisation/">04</a>, <a href="/machine-learning/05-regularisation/">05</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A1-linear-models">assignments/A1-linear-models</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy, nothing else. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A1-linear-models
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like</code></pre>
+    <p>The checker prints <code>PASS</code>, <code>FAIL</code> with a reason and a hint, or <code>todo</code> for each function. It doesn't compare your numbers with a hidden answer key. It checks properties the correct answer must have: the normal equations, the KKT conditions of the lasso, the gradient being zero at the logistic-regression solution, invariance to shifting $y$. So a pass means your function really is correct, and a failure message tells you which property you broke.</p>
+    <div class="note">
+      <div class="label">Rules</div>
+      <p>Use NumPy only (no scikit-learn). Don't form $(X^\top X)^{-1}$ explicitly; use <code>np.linalg.solve</code> or <code>lstsq</code>. Read the docstring of each function before starting it: they pin down conventions such as the $\tfrac1{2n}$ in the losses.</p>
+    </div>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>functions</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · least squares</td><td><code>fit_least_squares</code></td><td>the normal equations, handling the intercept by centring</td></tr>
+        <tr><td>2 · gradient descent</td><td><code>gd_least_squares</code>, <code>max_stable_lr</code></td><td>exact iterates; the $2/\lambda_{\max}$ stability threshold, checked by running just below and just above it</td></tr>
+        <tr><td>3 · logistic regression</td><td><code>sigmoid</code>, <code>fit_logistic</code></td><td>no overflow at $z = \pm1000$; zero gradient at the solution, with and without an $\ell_2$ penalty</td></tr>
+        <tr><td>4 · regularisation</td><td><code>fit_ridge</code>, <code>ridge_df</code>, <code>soft_threshold</code>, <code>fit_lasso</code></td><td>ridge stationarity and intercept invariance; the SVD formula for degrees of freedom; the lasso's KKT conditions and $\lambda_{\max}$</td></tr>
+        <tr><td>5 · model selection</td><td><code>kfold_indices</code>, <code>cv_mse</code>, <code>choose_lambda</code></td><td>folds that partition the data; an exact $K$-fold CV computation</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all twelve checks pass, use your own functions to answer these. Write a short paragraph and include a plot or a table for each. They are the part that makes the ideas stick.</p>
+    <ol>
+      <li><b>The stability edge.</b> Generate $X$ with two features of very different scales (standard deviations 1 and 10). Run <code>gd_least_squares</code> at 0.5, 0.9, 0.99 and 1.01 times <code>max_stable_lr</code> and plot the loss curves on a log scale. Then standardise the features and repeat. How many steps does each version need to get within $10^{-6}$ of the optimum? Relate the answer to the condition number (lesson 02).</li>
+      <li><b>Bias and variance by simulation.</b> Reproduce lesson 04's right-hand figure for <i>ridge</i> instead of polynomial degree: fix a degree-12 polynomial and vary $\lambda$ over a log grid. Plot bias², variance and their sum against $\log\lambda$, and mark the $\lambda$ chosen by <code>choose_lambda</code> on one sample. Is it near the minimum of the true curve?</li>
+      <li><b>Degrees of freedom.</b> For the same problem, plot training MSE against <code>ridge_df</code>. Overlay $\sigma^2(1 - \mathrm{df}/n)$. Problem 2 of <a href="/machine-learning/P2-problems-stage-2/">problem set P2</a> says when they should agree; do they?</li>
+      <li><b>Lasso paths.</b> On data with 20 features of which 3 matter, compute the lasso path over 50 values of $\lambda$ from $\lambda_{\max}$ down to $\lambda_{\max}/1000$, warm-starting each fit from the previous one. In what order do features enter? Make two of the irrelevant features highly correlated with a relevant one and repeat. What changes?</li>
+      <li><b>Separable data.</b> Make a linearly separable 2D dataset and run <code>fit_logistic</code> with $\lambda = 0$ for 100, 1,000 and 10,000 steps. Report $\lVert\mathbf{w}\rVert$ and the direction $\mathbf{w}/\lVert\mathbf{w}\rVert$ each time. Explain what you see using lesson 03, then add $\lambda = 0.01$ and explain again.</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Twelve checker passes are worth 60%. Each experiment is worth 8%: full marks if the plot is right <i>and</i> the explanation cites the formula that predicts it. Experiments 1 and 3 have exact theoretical answers, so check your numbers against the theory. When you are done, compare your <code>fit_lasso</code> with <code>sklearn.linear_model.Lasso(alpha=lam)</code> on the same data; they minimise the same objective and should agree to several decimals.</p>
+  </section>
+</article>

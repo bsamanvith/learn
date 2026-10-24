@@ -1,0 +1,225 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 08 · Stage 2: making models honest</div>
+  <h1>Evaluating classifiers</h1>
+  <p class="lede">A classifier that never predicts the rare class can score 91% accuracy and be worthless. This lesson builds the tools for measuring a classifier properly: the confusion matrix and the rates derived from it, Bayes' rule and base rates, ROC and precision–recall curves and what their areas mean, choosing a threshold from the costs of mistakes, and calibration, which asks whether a predicted 0.9 really means 90%.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/03-logistic-regression/">lesson 03</a>, <a href="/machine-learning/04-generalisation/">lesson 04</a></span><span><b>Math pulled in:</b> conditional probability, Bayes' rule, base rates, proper scoring rules, the binomial standard error</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>The code below trains logistic regression on a problem where 8.5% of examples are positive (think: fraudulent transactions, or a disease in a screened population). On 20,000 test examples:</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>classifier</th><th>accuracy</th><th>precision</th><th>recall</th></tr></thead>
+      <tbody>
+        <tr><td>always say "negative"</td><td>0.915</td><td>—</td><td>0.000</td></tr>
+        <tr><td>logistic regression, $\hat p &gt; 0.5$</td><td>0.885</td><td>0.343</td><td>0.391</td></tr>
+        <tr><td>logistic regression, $\hat p &gt; 0.1$</td><td>0.821</td><td>0.257</td><td>0.593</td></tr>
+      </tbody>
+    </table></div>
+    <p>By accuracy the useless constant wins. The model actually finds 39% or 59% of the positives, depending on the threshold, and that is invisible in accuracy. We need measures that look at the two kinds of mistake separately, and a way to compare classifiers without committing to one threshold.</p>
+  </section>
+
+  <section id="confusion">
+    <h2>The confusion matrix</h2>
+    <p>Most classifiers output a score $s(\mathbf{x})$, such as a logit or a probability, and predict positive when it exceeds a threshold $\tau$. On a test set, each prediction lands in one of four cells:</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th></th><th>actually positive</th><th>actually negative</th></tr></thead>
+      <tbody>
+        <tr><td><b>predicted positive</b></td><td>true positive (TP)</td><td>false positive (FP)</td></tr>
+        <tr><td><b>predicted negative</b></td><td>false negative (FN)</td><td>true negative (TN)</td></tr>
+      </tbody>
+    </table></div>
+    <p>Every standard metric is a ratio of these counts. Read each as an estimate of a conditional probability, with $Y$ the true label and $\hat Y$ the prediction:</p>
+    <div class="eq">$$\begin{aligned}
+      \text{recall (true positive rate, sensitivity)} &amp;= \frac{TP}{TP + FN} \approx P(\hat Y = 1 \mid Y = 1),\\
+      \text{false positive rate} &amp;= \frac{FP}{FP + TN} \approx P(\hat Y = 1 \mid Y = 0) = 1 - \text{specificity},\\
+      \text{precision} &amp;= \frac{TP}{TP + FP} \approx P(Y = 1 \mid \hat Y = 1).
+    \end{aligned}$$</div>
+    <p>Recall and the false positive rate condition on the <i>truth</i>: of the actual positives, how many did we catch; of the actual negatives, how many did we wrongly flag. Precision conditions on the <i>prediction</i>: of the alarms we raised, how many were real. The <b>F1 score</b> is the harmonic mean of precision and recall, $F_1 = 2PR/(P + R)$, which is low if either one is low.</p>
+  </section>
+
+  <section id="base-rates">
+    <h2>Base rates and Bayes' rule</h2>
+    <p>Recall and the false positive rate are properties of the classifier alone. Precision also depends on how common positives are. Let $\pi = P(Y = 1)$ be the <b>base rate</b> (prevalence). By Bayes' rule,</p>
+    <div class="eq">$$P(Y = 1\mid\hat Y = 1) = \frac{P(\hat Y = 1\mid Y = 1)\,P(Y=1)}{P(\hat Y = 1\mid Y=1)P(Y=1) + P(\hat Y = 1\mid Y=0)P(Y=0)}.$$</div>
+    <div class="result">
+      <div class="label">Precision from the classifier's rates and the base rate</div>
+      <div class="eq">$$\text{precision} = \frac{\text{TPR}\cdot\pi}{\text{TPR}\cdot\pi + \text{FPR}\cdot(1 - \pi)} .$$</div>
+    </div>
+    <p>A medical test with 99% sensitivity and 95% specificity sounds excellent. Screen a population where 1% have the disease: precision $= 0.99\times0.01 / (0.99\times0.01 + 0.05\times0.99) = 0.167$. Five out of six positive results are false alarms, because the 5% false-positive rate is applied to 99 times as many people. This is the <b>base-rate fallacy</b>, and it is why a classifier tuned on balanced data can disappoint in deployment, where positives are rare. The <a href="/machine-learning/M3-probability/">math toolkit, M3</a>, has more on conditioning.</p>
+  </section>
+
+  <section id="roc">
+    <h2>ROC curves and AUC</h2>
+    <p>Sweeping the threshold $\tau$ from $+\infty$ down to $-\infty$ moves the classifier from "never positive" (TPR = FPR = 0) to "always positive" (TPR = FPR = 1). The <b>receiver operating characteristic</b> (ROC) curve plots $\big(\text{FPR}(\tau), \text{TPR}(\tau)\big)$ along the way.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: eval-curves --></div>
+    </figure>
+    <p class="muted">Left: test scores of the 18,310 negatives and 1,690 positives, with the two thresholds from the table (dashed). Middle: the ROC curve; each threshold is one point on it. Right: the precision–recall curve for the same scores, with the base rate as the random baseline.</p>
+    <p>A random scorer gives the diagonal. A perfect one goes straight up to $(0, 1)$. The <b>area under the curve</b> (AUC) summarises the whole curve, and it has an exact probabilistic meaning.</p>
+    <p>Let $S_+$ be the score of a random positive and $S_-$ the score of a random negative, drawn independently, with densities $f_+$ and $f_-$. At threshold $\tau$, $\text{TPR}(\tau) = P(S_+ &gt; \tau)$ and $\text{FPR}(\tau) = P(S_- &gt; \tau)$. As $\tau$ decreases, FPR increases by $f_-(\tau)\,d\tau$, so</p>
+    <div class="eq">$$\text{AUC} = \int_0^1\text{TPR}\;d\,\text{FPR} = \int_{-\infty}^{\infty} P(S_+ &gt; \tau)\,f_-(\tau)\,d\tau = P(S_+ &gt; S_-).$$</div>
+    <div class="result">
+      <div class="label">What AUC measures</div>
+      <p>AUC is the probability that the classifier scores a randomly chosen positive above a randomly chosen negative. 0.5 is chance, 1 is a perfect ranking.</p>
+    </div>
+    <p>This also gives a way to compute it without drawing the curve: rank all test scores from 1 to $n$, add up the ranks of the $n_1$ positives, and subtract the smallest possible total $n_1(n_1+1)/2$. What remains counts the (positive, negative) pairs in the right order, so dividing by $n_1 n_0$ gives the AUC. (This is the Mann–Whitney $U$ statistic.) Two consequences of the definition: AUC depends only on the <i>ranking</i>, so any increasing transformation of the score leaves it unchanged; and it doesn't depend on the base rate, because it only compares positives with negatives.</p>
+  </section>
+
+  <section id="pr">
+    <h2>Precision–recall curves</h2>
+    <p>That base-rate independence is a weakness when positives are rare. A false positive rate of 0.07 looks small on the ROC plot, but here it means 1,264 false alarms against 661 true detections. The <b>precision–recall curve</b> plots precision against recall as $\tau$ sweeps, so it shows that cost directly. A random scorer has precision equal to the base rate at every recall (0.085 here), not 0.5.</p>
+    <p>Its area is usually computed as <b>average precision</b> (AP): walk down the ranked list and average the precision at the position of each positive,</p>
+    <div class="eq">$$\text{AP} = \frac{1}{n_1}\sum_{k:\,y_{(k)} = 1}\text{precision@}k ,$$</div>
+    <p>where $y_{(k)}$ is the label of the $k$-th highest score. Our model has AUC 0.817, which sounds good, and AP 0.331, which says how hard the task really is. Use ROC to compare models across settings with different base rates; use PR when the positives are rare and false alarms are what you pay for. Object detection and information retrieval report mean AP for this reason.</p>
+  </section>
+
+  <section id="threshold">
+    <h2>Choosing a threshold from costs</h2>
+    <p>Curves compare scorers; deploying one means picking $\tau$. Decision theory says how. Suppose a false positive costs $c_{\text{FP}}$, a false negative costs $c_{\text{FN}}$, and correct answers cost nothing. If the model's probability $\hat p = P(Y = 1\mid\mathbf{x})$ is accurate, the expected costs of the two actions are</p>
+    <div class="eq">$$\mathbb{E}[\text{cost}\mid\text{say positive}] = c_{\text{FP}}\,(1 - \hat p), \qquad \mathbb{E}[\text{cost}\mid\text{say negative}] = c_{\text{FN}}\,\hat p .$$</div>
+    <p>Say positive when the first is smaller:</p>
+    <div class="result">
+      <div class="label">Bayes-optimal threshold</div>
+      <div class="eq">$$\text{predict positive} \iff \hat p &gt; \frac{c_{\text{FP}}}{c_{\text{FP}} + c_{\text{FN}}} .$$</div>
+    </div>
+    <p>Equal costs give the familiar 0.5. If missing a fraud costs nine times as much as checking a legitimate transaction, the threshold is $1/(1+9) = 0.1$. The derivation has one requirement that is easy to miss: $\hat p$ must be a <i>true</i> probability. If the model says 0.9 when the truth is 0.5, the rule picks the wrong action. That property has a name.</p>
+  </section>
+
+  <section id="calibration">
+    <h2>Calibration</h2>
+    <p>A classifier is <b>calibrated</b> if, among all inputs where it predicts $\hat p$, the fraction of positives is $\hat p$:</p>
+    <div class="eq">$$P(Y = 1 \mid \hat p(\mathbf{X}) = p) = p \quad\text{for all } p.$$</div>
+    <p>Check it with a <b>reliability diagram</b>: group test predictions into bins by $\hat p$, and plot each bin's observed fraction of positives against its average $\hat p$. A calibrated model sits on the diagonal. The <b>expected calibration error</b> (ECE) is the average gap, weighted by how many predictions fall in each bin.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: eval-calibration --></div>
+    </figure>
+    <p class="muted">Left: the raw model is overconfident. Among test examples it gives $\hat p &gt; 0.9$, only 47% are positive. Right: after Platt scaling, fitted on a separate validation set, the bars sit on the diagonal and ECE drops from 0.082 to 0.004.</p>
+    <p>Why is our model overconfident? It has 41 parameters fitted to 400 examples with only 33 positives, so it overfits (lesson 04). Its weight vector has norm 5.0 where the true one has 2.3, and larger weights mean more extreme logits. Regularisation (lesson 05) reduces this. Modern deep networks are often badly overconfident for the same reason (Guo et al., 2017).</p>
+    <p><b>Fixing it after training.</b> <b>Platt scaling</b> fits a one-dimensional logistic regression on held-out data, using the model's score as the only feature: $\hat p = \sigma(a\,s + b)$. Here it finds $a = 0.28$ (shrink the logits) and $b = -1.20$. Because $a &gt; 0$ the transformation is increasing, so the ranking, and hence the AUC, is untouched; only the probabilities change. For multiclass softmax models, <b>temperature scaling</b> is the same idea with a single parameter: divide all logits by $T$ (lesson 06).</p>
+    <p><b>Proper scoring rules.</b> Cross-entropy (log-loss) and the Brier score $(\hat p - y)^2$ both reward calibration. If the true probability at $\mathbf{x}$ is $q$, the expected Brier score of predicting $\hat p$ is</p>
+    <div class="eq">$$\mathbb{E}\big[(\hat p - Y)^2\big] = q(\hat p - 1)^2 + (1-q)\hat p^2 = (\hat p - q)^2 + q(1 - q),$$</div>
+    <p>minimised exactly at $\hat p = q$; lesson 06 showed the same for cross-entropy via Gibbs' inequality. A scoring rule with this property is called <b>proper</b>: you can't improve your expected score by reporting anything but your true belief. Accuracy is not proper, which is another reason to train on log-loss and report several metrics.</p>
+  </section>
+
+  <section id="uncertainty">
+    <h2>How sure are you of the number?</h2>
+    <p>A test-set metric is itself an estimate. Accuracy on $n$ independent test examples is an average of $n$ Bernoulli variables, so its standard error is</p>
+    <div class="eq">$$\operatorname{se}(\widehat{\text{acc}}) = \sqrt{\frac{a(1-a)}{n}} .$$</div>
+    <p>On 1,000 test examples at 90% accuracy, that is about 0.0095, so a 95% interval is roughly $\pm 1.9$ points. Two models at 90.5% and 91.2% on that test set are not distinguishable. When comparing two models on the same test set, use a paired test (McNemar's test, or a bootstrap over test examples), because their errors are correlated. Precision and recall have larger standard errors than accuracy, because they are computed from fewer examples (only the predicted positives, or only the actual positives).</p>
+    <p><b>More than two classes.</b> Per-class precision and recall are computed one-vs-rest. <b>Macro</b> averaging gives each class equal weight (good for spotting rare classes that fail); <b>micro</b> averaging pools all the counts (dominated by common classes). For large label sets like ImageNet, <b>top-$k$ accuracy</b> counts a prediction as correct if the true label is among the $k$ highest-scoring classes.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+d = 40
+w_true = np.zeros(d); w_true[:5] = [1.5, -1.0, 1.0, 0.8, -0.6]  # only 5 of 40 features matter
+
+def make(n):
+    X = rng.standard_normal((n, d))
+    p = 1 / (1 + np.exp(-(X @ w_true - 4.0)))      # intercept -4: positives are rare
+    return X, (rng.random(n) &lt; p).astype(int)
+
+Xtr, ytr = make(400)                               # small training set: the model will overfit
+Xva, yva = make(2000)                              # validation: for the threshold and temperature
+Xte, yte = make(20000)                             # test: report numbers here, once
+print(f"positive rate: train {ytr.mean():.3f}, test {yte.mean():.3f}")
+
+def fit_logreg(X, y, steps=5000, lr=0.5):          # plain gradient descent on the log-loss
+    Xb = np.c_[np.ones(len(X)), X]; w = np.zeros(Xb.shape[1])
+    for _ in range(steps):
+        w -= lr * Xb.T @ (1 / (1 + np.exp(-Xb @ w)) - y) / len(y)
+    return w
+
+w = fit_logreg(Xtr, ytr)
+logit = lambda X: np.c_[np.ones(len(X)), X] @ w
+s_va, s_te = logit(Xva), logit(Xte)               # scores = logits
+
+def confusion(y, pred):
+    tp = np.sum((pred == 1) &amp; (y == 1)); fp = np.sum((pred == 1) &amp; (y == 0))
+    fn = np.sum((pred == 0) &amp; (y == 1)); tn = np.sum((pred == 0) &amp; (y == 0))
+    return tp, fp, fn, tn
+
+def report(y, pred, name):
+    tp, fp, fn, tn = confusion(y, pred)
+    prec = tp / max(tp + fp, 1); rec = tp / (tp + fn)
+    print(f"{name:26s} acc {(tp + tn) / len(y):.3f}  precision {prec:.3f}  recall {rec:.3f}  F1 {2 * prec * rec / max(prec + rec, 1e-12):.3f}")
+
+report(yte, np.zeros_like(yte), "always 'negative'")
+report(yte, (s_te &gt; 0).astype(int), "threshold p &gt; 0.5")
+report(yte, (s_te &gt; np.log(0.1 / 0.9)).astype(int), "threshold p &gt; 0.1")
+
+def auc(y, s):                                     # P(score of a random positive &gt; random negative)
+    r = np.argsort(np.argsort(s)) + 1              # ranks 1..n (no ties with continuous scores)
+    n1, n0 = y.sum(), len(y) - y.sum()
+    return (r[y == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0)
+
+def average_precision(y, s):                       # area under the precision-recall curve
+    o = np.argsort(-s); yy = y[o]
+    tp = np.cumsum(yy); prec = tp / np.arange(1, len(y) + 1)
+    return np.sum(prec * yy) / yy.sum()
+
+print(f"ROC AUC {auc(yte, s_te):.3f}   average precision {average_precision(yte, s_te):.3f}   (a random scorer gets 0.5 and {yte.mean():.3f})")
+
+def ece(y, p, bins=10):                            # expected calibration error
+    b = np.minimum((p * bins).astype(int), bins - 1)
+    return sum(np.mean(b == k) * abs(y[b == k].mean() - p[b == k].mean()) for k in range(bins) if np.any(b == k))
+
+sig = lambda z: 1 / (1 + np.exp(-z))
+nll = lambda y, z: np.mean(np.logaddexp(0, z) - y * z)
+b, a = fit_logreg(s_va[:, None], yva, steps=20000, lr=0.1)   # Platt scaling: logistic regression on the score
+print(f"Platt scaling on validation: p = sigmoid({a:.2f} * score {b:+.2f})")
+print(f"test log-loss {nll(yte, s_te):.3f} -&gt; {nll(yte, a * s_te + b):.3f}")
+print(f"test ECE      {ece(yte, sig(s_te)):.3f} -&gt; {ece(yte, sig(a * s_te + b)):.3f}")
+print(f"ROC AUC after scaling: {auc(yte, a * s_te + b):.3f} (unchanged: same ranking)")
+
+# positive rate: train 0.083, test 0.085
+# always 'negative'          acc 0.915  precision 0.000  recall 0.000  F1 0.000
+# threshold p &gt; 0.5          acc 0.885  precision 0.343  recall 0.391  F1 0.366
+# threshold p &gt; 0.1          acc 0.821  precision 0.257  recall 0.593  F1 0.359
+# ROC AUC 0.817   average precision 0.331   (a random scorer gets 0.5 and 0.085)
+# Platt scaling on validation: p = sigmoid(0.28 * score -1.20)
+# test log-loss 0.379 -&gt; 0.233
+# test ECE      0.082 -&gt; 0.004
+# ROC AUC after scaling: 0.817 (unchanged: same ranking)</code></pre>
+    <p class="muted">The constant classifier has the best accuracy and an F1 of zero. Lowering the threshold to 0.1 trades precision for recall at almost the same F1. The AUC of 0.817 and the AP of 0.331 describe the same scores from two angles. Platt scaling cuts the test log-loss from 0.379 to 0.233 and leaves the AUC unchanged, because it only relabels the scores, never reorders them.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>A classifier has TPR 0.9 and FPR 0.1. Compute its precision when the base rate is 50%, 10% and 0.1%.</li>
+      <li>Show that a classifier that predicts positive at random with probability $q$, independently of $\mathbf{x}$, has TPR = FPR = $q$, so it lies on the ROC diagonal. What is its precision?</li>
+      <li>Prove that AUC is unchanged if every score $s$ is replaced by $g(s)$ for a strictly increasing $g$. Is average precision unchanged too?</li>
+      <li>A spam filter: letting spam through costs 1, sending a real email to the spam folder costs 20. What threshold on a calibrated $\hat p$ should it use?</li>
+      <li>Show that log-loss is a proper scoring rule: for a true probability $q$, the expected loss $-q\log\hat p - (1-q)\log(1-\hat p)$ is minimised at $\hat p = q$.</li>
+      <li>Your model scores 87.0% on 500 test examples; a colleague's scores 85.0%. Roughly how large is the standard error of each number? Can you claim yours is better?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $0.9\pi/(0.9\pi + 0.1(1-\pi))$: at $\pi = 0.5$, $0.9$; at $0.1$, $0.09/0.18 = 0.5$; at $0.001$, $0.0009/0.1008 \approx 0.009$. The same classifier goes from excellent to useless as positives get rarer.</p>
+        <p><b>2.</b> Its prediction is independent of $Y$, so $P(\hat Y = 1\mid Y = 1) = P(\hat Y = 1\mid Y = 0) = q$. Precision $= P(Y = 1\mid\hat Y = 1) = P(Y = 1) = \pi$, the base rate, which is the PR curve's baseline.</p>
+        <p><b>3.</b> $g(S_+) &gt; g(S_-) \iff S_+ &gt; S_-$, so $P(S_+ &gt; S_-)$ is unchanged. AP depends only on the order of the ranked list too, so it is also unchanged. Neither metric can see calibration; that is why you need log-loss, Brier score or a reliability diagram as well.</p>
+        <p><b>4.</b> Here "positive" means "spam folder". A false positive costs 20, a false negative 1: threshold $20/(20+1) \approx 0.95$. Only move an email if you're 95% sure it's spam.</p>
+        <p><b>5.</b> Differentiate: $-q/\hat p + (1-q)/(1-\hat p) = 0 \Rightarrow (1-q)\hat p = q(1-\hat p) \Rightarrow \hat p = q$. The second derivative $q/\hat p^2 + (1-q)/(1-\hat p)^2 &gt; 0$, so it is a minimum.</p>
+        <p><b>6.</b> $\sqrt{0.87\times0.13/500} \approx 0.015$ and $\sqrt{0.85\times0.15/500}\approx0.016$. The difference of 2 points is about one standard error, nowhere near significant even before accounting for the correlation between the two models' errors. Use a paired test, or get more test data.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Fawcett, "An introduction to ROC analysis"</b> (Pattern Recognition Letters, 2006). Everything about ROC curves, including the AUC = probability result.</li>
+      <li><b>Davis &amp; Goadrich, "The relationship between precision-recall and ROC curves"</b> (ICML 2006). Saito &amp; Rehmsmeier (PLOS ONE, 2015) on why PR is more informative for imbalanced data.</li>
+      <li><b>Murphy, <i>Probabilistic Machine Learning: An Introduction</i></b>, section 5.1. Bayesian decision theory, ROC and PR curves.</li>
+      <li><b>Guo, Pleiss, Sun, Weinberger, "On calibration of modern neural networks"</b> (ICML 2017). Reliability diagrams, ECE and temperature scaling. <b>Platt, "Probabilistic outputs for support vector machines"</b> (1999).</li>
+      <li><b>Gneiting &amp; Raftery, "Strictly proper scoring rules, prediction, and estimation"</b> (JASA, 2007).</li>
+    </ul>
+  </section>
+</article>

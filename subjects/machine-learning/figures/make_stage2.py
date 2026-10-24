@@ -256,3 +256,176 @@ for i, T in enumerate([0.5, 1.0, 3.0]):
 p.text(p.box[0], 16, "logits z = (2, 1, 0.2, −1) at three temperatures", color="fg", size=12, px=True)
 p.save(OUT / "softmax.svg", "Left: decision regions of a 3-class softmax classifier are convex polygons separated by straight lines. Right: the same four logits through softmax at temperatures 0.5, 1 and 3, sharpening or flattening the distribution")
 print("W6", np.round(W6, 2), "b6", np.round(b6, 2))
+
+
+# ---------- 07: SGD noise floor and schedules (same problem as the lesson's code) ----------
+rng7 = np.random.default_rng(0)
+n7, d7, s7 = 2000, 20, 0.5
+X7 = rng7.standard_normal((n7, d7)) * np.linspace(0.2, 3.0, d7)
+y7 = X7 @ rng7.standard_normal(d7) + s7 * rng7.standard_normal(n7)
+wb7 = np.linalg.lstsq(X7, y7, rcond=None)[0]
+L7 = lambda w: 0.5 * np.mean((X7 @ w - y7) ** 2)
+h7 = np.linalg.eigvalsh(X7.T @ X7 / n7)
+EP, B7 = 30, 32
+T7 = EP * (n7 // B7)
+
+
+def curve7(kind, lr, seed):
+    r = np.random.default_rng(seed)
+    w, m, v, t, out = np.zeros(d7), 0, 0, 0, []
+    for ep in range(EP):
+        for idx in np.array_split(r.permutation(n7), n7 // B7):
+            g = X7[idx].T @ (X7[idx] @ w - y7[idx]) / len(idx)
+            t += 1
+            if kind == "sgd":
+                w = w - lr * g
+            elif kind == "cos":
+                w = w - lr * 0.5 * (1 + np.cos(np.pi * t / T7)) * g
+            else:
+                m = 0.9 * m + 0.1 * g; v = 0.999 * v + 0.001 * g * g
+                w = w - lr * (m / (1 - 0.9**t)) / (np.sqrt(v / (1 - 0.999**t)) + 1e-8)
+        out.append(L7(w) - L7(wb7))
+    return np.array(out)
+
+
+SEEDS = range(1, 9)
+runs = [("sgd", 0.1, "SGD η = 0.1", "accent"), ("sgd", 0.01, "SGD η = 0.01", "data"),
+        ("cos", 0.1, "SGD, cosine decay from 0.1", "fg"), ("adam", 0.003, "Adam η = 0.003", "c")]
+sup = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+p = Plot(900, 330)
+p.panel(0, 0, 520, 330, (1, EP), (-6, 2), margin=(40, 14, 34, 46))
+p.axes(xlabel="epoch", ylabel="excess loss L(w) − L(w*)  (log scale, mean of 8 runs)", xticks=[1, 10, 20, 30],
+       yticks=[-6, -4, -2, 0, 2], fmt=lambda v: ("10" + str(int(v)).translate(sup)) if v == int(v) and v <= 2 and v >= -6 and v % 2 == 0 else f"{v:g}")
+ep = np.arange(1, EP + 1)
+for kind, lr, lab, col in runs:
+    cc = np.mean([curve7(kind, lr, s) for s in SEEDS], 0)
+    p.line(ep, np.log10(cc), color=col, width=2.2)
+    print("07 curve", lab, np.round(np.log10(cc[[0, 9, 29]]), 2))
+for lr, col in [(0.1, "accent"), (0.01, "data")]:
+    fl = lr * s7**2 / (2 * B7) * np.sum(h7 / (2 - lr * h7))
+    p.seg(1, np.log10(fl), EP, np.log10(fl), color=col, dash="4 4", width=1.2)
+    print("floor", lr, fl)
+p.text(p.box[0], 16, "constant steps stall at a noise floor; decaying steps don't", color="fg", size=12, px=True)
+yl = 226
+for kind, lr, lab, col in runs:
+    p.raw(f'<line x1="56" y1="{yl - 4}" x2="74" y2="{yl - 4}" style="stroke:{c(col)};stroke-width:2.2"/>')
+    p.text(80, yl, lab, size=11, px=True, color="fg"); yl += 15
+p.text(80, yl, "dashed: predicted floor", size=11, px=True)
+
+# right: trajectories on an ill-conditioned quadratic
+A = np.diag([1.0, 25.0])
+th = np.deg2rad(30); Rm = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
+A = Rm @ A @ Rm.T
+q = lambda w: 0.5 * w @ A @ w
+Lm, Vm = np.linalg.eigh(A)
+vs = Vm[:, 0] * np.sign(-Vm[0, 0]); vt = Vm[:, 1] * np.sign(Vm[1, 1])
+w0 = 4.0 * vs + 0.35 * vt                          # mostly along the shallow direction
+print("w0", w0)
+
+
+def traj(kind, steps=60):
+    w, v, m, s, out = w0.copy(), np.zeros(2), np.zeros(2), np.zeros(2), [w0.copy()]
+    lmin, lmax = 1.0, 25.0
+    for t in range(1, steps + 1):
+        g = A @ w
+        if kind == "gd":
+            w = w - 2 / (lmin + lmax) * g
+        elif kind == "mom":
+            eta = 4 / (np.sqrt(lmin) + np.sqrt(lmax)) ** 2
+            beta = ((np.sqrt(25) - 1) / (np.sqrt(25) + 1)) ** 2
+            v = beta * v + g; w = w - eta * v
+        else:
+            m = 0.9 * m + 0.1 * g; s = 0.999 * s + 0.001 * g * g
+            w = w - 0.3 * (m / (1 - 0.9**t)) / (np.sqrt(s / (1 - 0.999**t)) + 1e-8)
+        out.append(w.copy())
+    return np.array(out)
+
+
+p.panel(540, 0, 360, 330, (-4.6, 1.4), (-2.6, 1.6), margin=(40, 8, 12, 8))
+for lev in [0.05, 0.4, 1.5, 4, 9, 16]:
+    r = np.sqrt(2 * lev / Lm)
+    e = (np.stack([r[0] * np.cos(ang), r[1] * np.sin(ang)], 1) @ Vm.T)
+    p.line(e[::20, 0], e[::20, 1], color="muted", width=0.9, opacity=0.45)
+for kind, col, lab in [("gd", "data", "gradient descent"), ("mom", "accent", "momentum"), ("adam", "c", "Adam")]:
+    tr = traj(kind)
+    p.line(tr[:30, 0], tr[:30, 1], color=col, width=1.8)
+    p.dots(tr[:30, 0], tr[:30, 1], color=col, r=2.2)
+    k = next((i for i, w in enumerate(tr) if q(w) < 1e-3 * q(w0)), None)
+    print("07 traj", kind, "steps to 1e-3:", k)
+p.dots([0], [0], color="fg", r=3.5)
+p.text(p.box[0], 16, "first 30 steps on a quadratic with κ = 25", color="fg", size=12, px=True)
+yl = 62
+for col, lab in [("data", "gradient descent"), ("accent", "heavy-ball momentum"), ("c", "Adam")]:
+    p.raw(f'<line x1="736" y1="{yl - 4}" x2="754" y2="{yl - 4}" style="stroke:{c(col)};stroke-width:2.2"/>')
+    p.text(760, yl, lab, size=11, px=True, color="fg"); yl += 16
+p.save(OUT / "sgd.svg", "Left: SGD with a constant step stalls at a noise floor proportional to the step size, while a cosine-decayed step keeps improving. Right: on an ill-conditioned quadratic, gradient descent zigzags, momentum cuts across, and Adam rescales each coordinate")
+
+
+# ---------- 08: evaluating a classifier (runs the lesson's own code) ----------
+import runpy  # noqa: E402
+import contextlib, io  # noqa: E402
+with contextlib.redirect_stdout(io.StringIO()):
+    ns = runpy.run_path(str(OUT.parent / "code" / "08-evaluating-classifiers.py"))
+yte, s_te, a8, b8 = ns["yte"], ns["s_te"], ns["a"], ns["b"]
+o = np.argsort(-s_te); ys = yte[o]
+tp = np.cumsum(ys); fp = np.cumsum(1 - ys)
+tpr, fpr = tp / ys.sum(), fp / (1 - ys).sum()
+prec = tp / np.arange(1, len(ys) + 1)
+thr = [(0.0, "p̂ > 0.5", "accent"), (np.log(0.1 / 0.9), "p̂ > 0.1", "c")]
+p = Plot(900, 300)
+# panel 1: score histograms
+p.panel(0, 0, 320, 300, (-20, 8), (0, 1000), margin=(40, 10, 34, 44))
+bins = np.linspace(-20, 8, 57)
+hn, _ = np.histogram(s_te[yte == 0], bins); hp, _ = np.histogram(s_te[yte == 1], bins)
+mid = np.repeat(bins, 2)[1:-1]
+p.line(mid, np.repeat(hn, 2), color="data", width=1.6)
+p.line(mid, np.repeat(hp, 2), color="accent", width=1.8)
+p.axes(xlabel="score (logit)", ylabel="test examples per bin", xticks=[-16, -8, 0, 8], yticks=[0, 250, 500, 750, 1000])
+for s0, lab, col in thr:
+    p.seg(s0, 0, s0, 1000, color=col, dash="4 3", width=1.4)
+p.text(-19.5, 880, "negatives", color="data", size=11); p.text(1.0, 260, "positives", color="accent", size=11)
+p.text(p.box[0], 16, "scores of the two classes", color="fg", size=12, px=True)
+# panel 2: ROC
+p.panel(320, 0, 290, 300, (0, 1), (0, 1), margin=(40, 10, 34, 40))
+p.axes(xlabel="false positive rate", ylabel="true positive rate (recall)", xticks=[0, 0.5, 1], yticks=[0, 0.5, 1])
+p.seg(0, 0, 1, 1, color="muted", dash="4 4")
+p.area(np.r_[0, fpr[::20], 1], np.r_[0, tpr[::20], 1], np.zeros(len(fpr[::20]) + 2), color="accent", opacity=0.08)
+p.line(np.r_[0, fpr[::20], 1], np.r_[0, tpr[::20], 1], color="accent", width=2)
+for s0, lab, col in thr:
+    k = np.sum(s_te > s0) - 1
+    p.dots([fpr[k]], [tpr[k]], color=col, r=4.5); p.text(fpr[k] + 0.03, tpr[k] - 0.05, lab, color=col, size=11)
+p.text(0.55, 0.25, f"AUC = {ns['auc'](yte, s_te):.3f}", color="fg", size=12)
+p.text(0.62, 0.55, "random", color="muted", size=10.5)
+p.text(p.box[0], 16, "ROC curve", color="fg", size=12, px=True)
+# panel 3: precision-recall
+p.panel(610, 0, 290, 300, (0, 1), (0, 1), margin=(40, 10, 34, 40))
+p.axes(xlabel="recall", ylabel="precision", xticks=[0, 0.5, 1], yticks=[0, 0.5, 1])
+p.seg(0, yte.mean(), 1, yte.mean(), color="muted", dash="4 4")
+st = slice(30, None, 10)
+p.line(tpr[st], prec[st], color="accent", width=2)
+for s0, lab, col in thr:
+    k = np.sum(s_te > s0) - 1
+    p.dots([tpr[k]], [prec[k]], color=col, r=4.5); p.text(tpr[k] + 0.03, prec[k] + 0.04, lab, color=col, size=11)
+p.text(0.5, yte.mean() + 0.03, f"random = base rate {yte.mean():.3f}", color="muted", size=10.5, anchor="middle")
+p.text(0.55, 0.8, f"AP = {ns['average_precision'](yte, s_te):.3f}", color="fg", size=12)
+p.text(p.box[0], 16, "precision–recall curve", color="fg", size=12, px=True)
+p.save(OUT / "eval-curves.svg", "Score histograms for rare positives and common negatives, the ROC curve with its area, and the precision-recall curve, with two thresholds marked on each")
+
+# reliability diagram
+sig8 = lambda z: 1 / (1 + np.exp(-z))
+p = Plot(900, 320)
+for i, (pp, lab) in enumerate([(sig8(s_te), "raw model: overconfident"), (sig8(a8 * s_te + b8), "after Platt scaling")]):
+    p.panel(i * 450, 0, 450, 320, (0, 1), (0, 1), margin=(40, 20, 34, 44))
+    p.axes(xlabel="predicted probability p̂", ylabel="observed fraction positive", xticks=[0, 0.5, 1], yticks=[0, 0.5, 1])
+    p.seg(0, 0, 1, 1, color="muted", dash="4 4")
+    nb = 10
+    bk = np.minimum((pp * nb).astype(int), nb - 1)
+    for k in range(nb):
+        m = bk == k
+        if m.sum() < 20:
+            continue
+        p.rect(k / nb + 0.01, 0, 1 / nb - 0.02, yte[m].mean(), color="accent" if i == 0 else "data", opacity=0.55)
+        p.dots([pp[m].mean()], [yte[m].mean()], color="fg", r=2.6)
+    p.text(0.03, 0.92, f"ECE = {ns['ece'](yte, pp):.3f}", color="fg", size=12)
+    p.text(p.box[0], 16, lab, color="fg", size=12, px=True)
+p.save(OUT / "eval-calibration.svg", "Reliability diagrams: the raw model's bars fall well below the diagonal at high predicted probability, and after Platt scaling they sit on the diagonal")

@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { liveSubjects, chaptersOf, meta, widgetsOf, pagesOf, partTitle, partLabel, SUBJECTS, chapterUrl, u } from "../../subjects";
+import { liveSubjects, chaptersOf, meta, widgetsOf, pagesOf, partTitle, partLabel, partName, SUBJECTS, chapterUrl, u } from "../../subjects";
 
 export async function getStaticPaths() {
   return (await liveSubjects()).map((s) => ({ params: { subject: s.slug } }));
@@ -41,7 +41,7 @@ const first = chapters[0];
         {written.map((p) => (
           <section class="part">
             <div class="part-label">
-              <div class="n">{label} {p}</div>
+              <div class="n">{partName(subject, p)}</div>
               <h2>{partTitle(subject, p)}</h2>
               <p>{m?.parts[String(p)]?.blurb}</p>
             </div>
@@ -65,7 +65,7 @@ const first = chapters[0];
         {upcoming.length > 0 && (
           <section class="part upcoming">
             <div class="part-label"><div class="n">Coming next</div><h2>{label}s {upcoming[0]}–{upcoming.at(-1)}</h2></div>
-            <ul class="upcoming-list">{upcoming.map((p) => <li><b>{label} {p} · {partTitle(subject, p)}</b>{m?.parts[String(p)]?.blurb && <span>{m.parts[String(p)].blurb}</span>}</li>)}</ul>
+            <ul class="upcoming-list">{upcoming.map((p) => <li><b>{partName(subject, p)} · {partTitle(subject, p)}</b>{m?.parts[String(p)]?.blurb && <span>{m.parts[String(p)].blurb}</span>}</li>)}</ul>
           </section>
         )}
       </div>

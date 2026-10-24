@@ -8,7 +8,7 @@ import path from "node:path";
 import { getCollection } from "astro:content";
 import index from "../../subjects/index.json";
 
-type Part = { title: string; blurb: string };
+type Part = { title: string; blurb: string; label?: string };
 export type SubjectMeta = { title: string; tagline: string; intro?: string; partLabel?: string; parts: Record<string, Part> };
 export type Widget = { file: string; title: string; chapter: string; idea: string; status: string; notes: string };
 type LessonInfo = { file: string; chapter: string; part: number; title: string; added?: string; prerequisites?: string[]; leads_to?: string[]; blurb?: string };
@@ -56,6 +56,8 @@ export const meta = (slug: string): SubjectMeta | undefined => forSubject(metas,
 export const widgetsOf = (slug: string): Widget[] => forSubject(registries, slug)?.widgets ?? [];
 export const pagesOf = (slug: string): PageInfo[] => forSubject(lessonLists, slug)?.pages ?? [];
 export const partLabel = (slug: string) => meta(slug)?.partLabel ?? "Part";
+// "Stage 3", or a part's own label such as "Toolkit".
+export const partName = (slug: string, part: number) => meta(slug)?.parts[String(part)]?.label ?? `${partLabel(slug)} ${part}`;
 export const partTitle = (slug: string, part: number) => meta(slug)?.parts[String(part)]?.title ?? `${partLabel(slug)} ${part}`;
 export const subjectTitle = (slug: string) => meta(slug)?.title ?? SUBJECTS.find((s) => s.slug === slug)?.title ?? slug;
 
@@ -69,7 +71,8 @@ const chapterKey = (c: string) => {
   const m = c.match(/^([A-Za-z]*)(.*)$/)!;
   return { prefix: m[1], nums: m[2].split(".").map(Number) };
 };
-export const byChapter = (a: { chapter: string }, b: { chapter: string }) => {
+export const byChapter = (a: { chapter: string; part?: number }, b: { chapter: string; part?: number }) => {
+  if (a.part !== undefined && b.part !== undefined && a.part !== b.part) return a.part - b.part;
   const ka = chapterKey(a.chapter), kb = chapterKey(b.chapter);
   if (ka.prefix !== kb.prefix) return ka.prefix === "" ? -1 : kb.prefix === "" ? 1 : ka.prefix.localeCompare(kb.prefix);
   for (let i = 0; i < Math.max(ka.nums.length, kb.nums.length); i++) {

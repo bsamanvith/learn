@@ -4,7 +4,7 @@ import Chapter from "../../../layouts/Chapter.astro";
 import Base from "../../../layouts/Base.astro";
 import HandWritten from "../../../components/HandWritten.astro";
 import {
-  entries, chaptersOf, SUBJECTS, pagesOf, partTitle, partLabel, subjectTitle, chapterUrl, u,
+  entries, chaptersOf, SUBJECTS, pagesOf, partTitle, partName, subjectTitle, chapterUrl, u,
   lessonBody, lessonHeadings, pageBody, type Entry,
 } from "../../../subjects";
 
@@ -59,7 +59,7 @@ const link = (siblings: Entry[], ch: string) => {
   <Chapter title={`${props.entry.chapter} ${props.entry.title}`} id={props.entry.id} headings={headings} crumb={props.kind === "html" ? `Lesson ${props.entry.chapter}` : props.entry.chapter} ml={props.kind === "html"}>
     {props.kind === "md" && (
       <>
-        <p class="kicker"><a href={u(`/${subject}/`)}>{partLabel(subject)} {props.entry.part} · {partTitle(subject, props.entry.part)}</a></p>
+        <p class="kicker"><a href={u(`/${subject}/`)}>{partName(subject, props.entry.part)} · {partTitle(subject, props.entry.part)}</a></p>
         <nav class="tabs" aria-label="Chapter views">
           <a href={chapterUrl(props.entry.id)} aria-current="page">Read</a>
           {hasExercises && <a href={u(`/${props.entry.id}/exercises/`)}>Exercises</a>}
@@ -84,7 +84,7 @@ const link = (siblings: Entry[], ch: string) => {
         ? <a class="next" href={u(`/${props.entry.id}/exercises/`)}><small>Practice</small>Exercises {props.entry.chapter} →</a>
         : props.next
           ? <a class="next" href={chapterUrl(props.next.id)}><small>Next</small>{props.next.chapter} {props.next.title} →</a>
-          : <a class="next" href={u(`/${subject}/`)}><small>Up next</small>{partLabel(subject)} {props.entry.part + 1} · {partTitle(subject, props.entry.part + 1)} →</a>}
+          : <a class="next" href={u(`/${subject}/`)}><small>Up next</small>{partName(subject, props.entry.part + 1)} · {partTitle(subject, props.entry.part + 1)} →</a>}
       {props.prev && <a href={chapterUrl(props.prev.id)} style="grid-row:1;grid-column:1"><small>Previous</small>← {props.prev.chapter} {props.prev.title}</a>}
     </nav>
     {props.kind === "html" && <HandWritten subject={subject} />}

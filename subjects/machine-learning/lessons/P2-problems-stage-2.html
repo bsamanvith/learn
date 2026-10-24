@@ -1,0 +1,163 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P2 · Stage 2: making models honest</div>
+  <h1>Problem set: stage 2</h1>
+  <p class="lede">Twenty problems on lessons 04–08, from quick computations to proofs. Try each one on paper before opening its solution. Problems marked <span class="tag">code</span> want a short program; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/04-generalisation/">04</a>, <a href="/machine-learning/05-regularisation/">05</a>, <a href="/machine-learning/06-softmax-regression/">06</a>, <a href="/machine-learning/07-stochastic-optimisation/">07</a>, <a href="/machine-learning/08-evaluating-classifiers/">08</a></span><span><b>Difficulty:</b> <span class="tag">warm-up</span> <span class="tag">core</span> <span class="tag">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="generalisation">
+    <h2>Generalisation</h2>
+    <ol>
+      <li>
+        <p><span class="tag">warm-up</span> You fit least squares with $p = 10$ parameters to $n = 50$ points, and the model contains the true function. The noise variance is $\sigma^2 = 1$. What training and test MSE do you expect? How many points would you need to bring the gap below 0.05?</p>
+        <details><summary>Solution</summary><div>
+          <p>Train $\sigma^2(1 - p/n) = 0.8$, test $\sigma^2(1 + p/n) = 1.2$, gap $2\sigma^2p/n = 0.4$. For a gap below 0.05 you need $2p/n &lt; 0.05$, so $n &gt; 400$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> A <b>linear smoother</b> predicts $\hat{\mathbf{y}} = S\mathbf{y}$ for a fixed matrix $S$ (least squares, ridge and $k$-NN are all linear smoothers). With $\mathbf{y} = \mathbf{f} + \boldsymbol\varepsilon$, $\operatorname{Cov}(\boldsymbol\varepsilon) = \sigma^2I$, and fresh labels $\mathbf{y}' = \mathbf{f} + \boldsymbol\varepsilon'$ at the same inputs, prove that</p>
+        <div class="eq">$$\mathbb{E}\lVert\mathbf{y}' - \hat{\mathbf{y}}\rVert^2 - \mathbb{E}\lVert\mathbf{y} - \hat{\mathbf{y}}\rVert^2 = 2\sigma^2\operatorname{tr}(S).$$</div>
+        <p>This is why $\operatorname{tr}(S)$ is called the effective number of parameters.</p>
+        <details><summary>Solution</summary><div>
+          <p>Training residual: $\mathbf{y} - S\mathbf{y} = (I - S)\mathbf{f} + (I - S)\boldsymbol\varepsilon$, so $\mathbb{E}\lVert\cdot\rVert^2 = \lVert(I-S)\mathbf{f}\rVert^2 + \sigma^2\operatorname{tr}\big((I-S)^\top(I-S)\big) = \lVert(I-S)\mathbf{f}\rVert^2 + \sigma^2\big(n - 2\operatorname{tr}S + \operatorname{tr}(S^\top S)\big)$.</p>
+          <p>Test residual: $\mathbf{y}' - S\mathbf{y} = (I - S)\mathbf{f} + \boldsymbol\varepsilon' - S\boldsymbol\varepsilon$; the three pieces are uncorrelated, so $\mathbb{E}\lVert\cdot\rVert^2 = \lVert(I-S)\mathbf{f}\rVert^2 + n\sigma^2 + \sigma^2\operatorname{tr}(S^\top S)$.</p>
+          <p>Subtract: $2\sigma^2\operatorname{tr}(S)$. For least squares $S = H$ and $\operatorname{tr}H = p$, recovering lesson 04.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> $k$-nearest-neighbour regression with fixed inputs predicts at $\mathbf{x}$ the average label of its $k$ nearest training inputs $\mathbf{x}_{(1)},\dots,\mathbf{x}_{(k)}$. Write its bias and variance at $\mathbf{x}$. What is $\operatorname{tr}(S)$ for this smoother, and what does problem 2 then say about the train–test gap?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\hat f(\mathbf{x}) = \frac1k\sum_jy_{(j)}$, so bias $= f(\mathbf{x}) - \frac1k\sum_jf(\mathbf{x}_{(j)})$ (grows with $k$ as neighbours get further away) and variance $= \sigma^2/k$. At a training point $\mathbf{x}_i$, the point itself is its own nearest neighbour, so $S_{ii} = 1/k$ and $\operatorname{tr}S = n/k$. The gap in mean squared error is $2\sigma^2/k$: 1-NN has the biggest gap ($2\sigma^2$, since its training error is 0).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> You compare $m$ models whose true test errors are all exactly 0.20, using a validation set on which each error estimate is independently $\mathcal{N}(0.20, 0.01^2)$. You pick the model with the lowest validation error. Roughly what validation error do you report for $m = 1, 10, 100$? (The expected maximum of $m$ standard normals is about 0, 1.54 and 2.51.)</p>
+        <details><summary>Solution</summary><div>
+          <p>$0.20 - 0.01\times\{0, 1.54, 2.51\} = 0.200, 0.185, 0.175$. All models are equally good, yet the reported number improves as you search harder. This optimism grows like $\sqrt{2\log m}$, which is why the final number must come from an untouched test set.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> Show that the LOOCV shortcut $\frac1n\sum_i\big((y_i - \hat y_i)/(1 - S_{ii})\big)^2$ is exact for ridge regression, with $S = X(X^\top X + \lambda I)^{-1}X^\top$. Which property of ridge does the proof need?</p>
+        <details><summary>Solution</summary><div>
+          <p>Lesson 04's proof (exercise 5) used one property: if you add to the training set a point $(\mathbf{x}_i, \hat y_i^{(-i)})$ whose label equals the leave-one-out prediction, the fit doesn't change. That holds for any method that minimises $\sum_j(y_j - \mathbf{w}^\top\mathbf{x}_j)^2 + \text{penalty}(\mathbf{w})$: the leave-one-out minimiser $\mathbf{w}^{(-i)}$ makes the added term zero, and no other $\mathbf{w}$ can do better on the sum, since it can't beat $\mathbf{w}^{(-i)}$ on the remaining terms plus penalty, and the added term is $\ge 0$. So $\hat y_i^{(-i)} = \sum_{j\ne i}S_{ij}y_j + S_{ii}\hat y_i^{(-i)}$, and the rest of the algebra is identical, because ridge predictions are linear in $\mathbf{y}$.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="regularisation">
+    <h2>Regularisation</h2>
+    <ol start="6">
+      <li>
+        <p><span class="tag">warm-up</span> $X$ has singular values $10, 1, 0.1$. Compute the ridge shrinkage factors $d_j^2/(d_j^2 + \lambda)$ and the effective degrees of freedom for $\lambda = 1$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$100/101 = 0.990$, $1/2 = 0.5$, $0.01/1.01 = 0.0099$. df $= 1.50$. The strong direction is kept, the middle one halved, the weak one essentially removed.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Prove the "push-through" identity $(X^\top X + \lambda I_p)^{-1}X^\top = X^\top(XX^\top + \lambda I_n)^{-1}$, and use it to write ridge as $\hat{\mathbf{w}} = X^\top\boldsymbol\alpha$ with $\boldsymbol\alpha = (XX^\top + \lambda I)^{-1}\mathbf{y}$. When is this form cheaper to compute? What does it say about where $\hat{\mathbf{w}}$ lives?</p>
+        <details><summary>Solution</summary><div>
+          <p>$X^\top(XX^\top + \lambda I) = (X^\top X + \lambda I)X^\top$; multiply on the left by $(X^\top X + \lambda I)^{-1}$ and on the right by $(XX^\top + \lambda I)^{-1}$. The second form inverts an $n\times n$ matrix instead of $p\times p$, so it is cheaper when $p &gt; n$. And $\hat{\mathbf{w}} = \sum_i\alpha_i\mathbf{x}_i$ is a combination of the training inputs. Predictions $\mathbf{x}^\top\hat{\mathbf{w}} = \sum_i\alpha_i\,\mathbf{x}^\top\mathbf{x}_i$ need only inner products, which is the door to kernel methods.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Solve $\min_w\tfrac12(w - z)^2 + \lambda\,\mathbb{1}[w\ne0]$ (an $\ell_0$ penalty: a fixed price for any nonzero weight). Compare the result with the lasso's soft threshold.</p>
+        <details><summary>Solution</summary><div>
+          <p>Either $w = 0$ (cost $z^2/2$) or $w \ne 0$, in which case the best is $w = z$ (cost $\lambda$). Choose $w = z$ when $z^2/2 &gt; \lambda$: <b>hard thresholding</b> at $|z| = \sqrt{2\lambda}$. Survivors are not shrunk at all (no bias), but the solution jumps discontinuously in $z$, and in many dimensions the $\ell_0$ problem is combinatorial (best-subset selection). The lasso's soft threshold is continuous and convex, at the price of shrinking survivors by $\lambda$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> With $X^\top X = I$ and $\mathbf{y} = X\boldsymbol\beta + \boldsymbol\varepsilon$, $\operatorname{Cov}(\boldsymbol\varepsilon) = \sigma^2I$, find the total MSE $\mathbb{E}\lVert\hat{\mathbf{w}}_\lambda - \boldsymbol\beta\rVert^2$ of ridge as a function of $\lambda$, and the $\lambda$ that minimises it.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\hat{\mathbf{w}}_\lambda = (\boldsymbol\beta + X^\top\boldsymbol\varepsilon)/(1+\lambda)$ and $X^\top\boldsymbol\varepsilon$ has covariance $\sigma^2I$. Bias² $= \frac{\lambda^2}{(1+\lambda)^2}\lVert\boldsymbol\beta\rVert^2$, variance $= \frac{p\sigma^2}{(1+\lambda)^2}$. Differentiating $\frac{\lambda^2B + p\sigma^2}{(1+\lambda)^2}$ (with $B = \lVert\boldsymbol\beta\rVert^2$) gives zero at $\lambda^* = p\sigma^2/\lVert\boldsymbol\beta\rVert^2$: total noise over total signal.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> Gradient descent on $\tfrac12\lVert\mathbf{y} - X\mathbf{w}\rVert^2$ from $\mathbf{w}_0 = \mathbf{0}$ with step $\eta$. Show that after $t$ steps the component of $\mathbf{w}_t$ along the right singular vector $\mathbf{v}_j$ is $\big(1 - (1 - \eta d_j^2)^t\big)\,\mathbf{u}_j^\top\mathbf{y}/d_j$. By comparing with ridge's factor $d_j^2/(d_j^2 + \lambda)$ for small and large $d_j$, argue that stopping at step $t$ behaves like $\lambda\approx1/(\eta t)$.</p>
+        <details><summary>Solution</summary><div>
+          <p>With $c_j = \mathbf{v}_j^\top\mathbf{w}$ the update is $c_j\leftarrow c_j - \eta(d_j^2c_j - d_j\mathbf{u}_j^\top\mathbf{y})$, a linear recurrence with fixed point $c_j^* = \mathbf{u}_j^\top\mathbf{y}/d_j$ and error factor $(1 - \eta d_j^2)$ per step; from $c_j = 0$, $c_j^{(t)} = (1 - (1-\eta d_j^2)^t)c_j^*$.</p>
+          <p>If $\eta d_j^2t\gg1$, the factor is $\approx1$, like ridge when $d_j^2\gg\lambda$. If $\eta d_j^2t\ll1$, it is $\approx t\eta d_j^2$, and ridge's is $\approx d_j^2/\lambda$ when $d_j^2\ll\lambda$. These agree when $\lambda = 1/(\eta t)$. The crossover in both cases is at $d_j^2\approx1/(\eta t)$.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="softmax">
+    <h2>Softmax and cross-entropy</h2>
+    <ol start="11">
+      <li>
+        <p><span class="tag">warm-up</span> Logits $(2, 0, -1)$. Compute the softmax probabilities and the cross-entropy if the true class is the second one. Then compute the gradient with respect to the logits.</p>
+        <details><summary>Solution</summary><div>
+          <p>$e^2 = 7.389$, $e^0 = 1$, $e^{-1} = 0.368$; sum $8.757$. $\mathbf{p} = (0.844, 0.114, 0.042)$. Loss $-\log0.114 = 2.17$. Gradient $\mathbf{p} - \mathbf{y} = (0.844, -0.886, 0.042)$: raise logit 2, lower logits 1 and 3.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Label smoothing with $\epsilon$ and $K$ classes uses the target $\mathbf{t} = (1-\epsilon)\mathbf{y} + \frac\epsilon K\mathbf{1}$. Show that the loss $H(\mathbf{t}, \operatorname{softmax}(\mathbf{z}))$ is minimised when $\operatorname{softmax}(\mathbf{z}) = \mathbf{t}$, and find the resulting gap between the correct logit and every other logit. Evaluate for $K = 10$, $\epsilon = 0.1$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$H(\mathbf{t},\mathbf{p}) = H(\mathbf{t}) + \operatorname{KL}(\mathbf{t}\Vert\mathbf{p})$, minimised at $\mathbf{p} = \mathbf{t}$ by Gibbs' inequality. Then $z_c - z_k = \log(t_c/t_k) = \log\frac{1 - \epsilon + \epsilon/K}{\epsilon/K}$. For $K = 10$, $\epsilon = 0.1$: $\log(0.91/0.01) = \log91\approx4.51$. Without smoothing the gap would grow without bound.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> For a batch, $Z = XW^\top$ ($n\times K$), $P = \operatorname{softmax}(Z)$ row-wise, and $L = -\frac1n\sum_{ik}Y_{ik}\log P_{ik}$. Show $\nabla_WL = \frac1n(P - Y)^\top X$ by writing $dL$ in terms of $dZ$ and $dZ$ in terms of $dW$. Check the shapes.</p>
+        <details><summary>Solution</summary><div>
+          <p>Per example, $\partial L/\partial\mathbf{z}_i = (\mathbf{p}_i - \mathbf{y}_i)/n$, so $dL = \operatorname{tr}\big(G^\top dZ\big)$ with $G = (P - Y)/n$. Since $dZ = X\,dW^\top$: $dL = \operatorname{tr}(G^\top X\,dW^\top) = \operatorname{tr}(dW\,X^\top G) = \operatorname{tr}\big((G^\top X)^\top dW\big)$, so $\nabla_WL = G^\top X$, a $(K\times n)(n\times d) = K\times d$ matrix, the shape of $W$. The <a href="/machine-learning/M2-matrix-calculus/">matrix calculus</a> page develops this "differential and trace" technique.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="optimisation">
+    <h2>Stochastic optimisation</h2>
+    <ol start="14">
+      <li>
+        <p><span class="tag">core</span> A minibatch of $B$ distinct indices is sampled uniformly without replacement from $n$. Show that the covariance of the minibatch gradient is $\frac{n - B}{n - 1}\cdot\frac{\Sigma}{B}$. (Hint: compute $\operatorname{Cov}$ of the indicators $\mathbb{1}[i\in\mathcal{B}]$.)</p>
+        <details><summary>Solution</summary><div>
+          <p>Write $\mathbf{g}_{\mathcal{B}} - \bar{\mathbf{g}} = \frac1B\sum_iI_i\mathbf{d}_i$ with $I_i = \mathbb{1}[i\in\mathcal{B}]$ and $\mathbf{d}_i = \mathbf{g}_i - \bar{\mathbf{g}}$ (so $\sum_i\mathbf{d}_i = \mathbf{0}$). $\mathbb{E}[I_i] = B/n$, $\mathbb{E}[I_iI_j] = \frac{B(B-1)}{n(n-1)}$ for $i\ne j$. Then $\mathbb{E}\big[\sum_{ij}I_iI_j\mathbf{d}_i\mathbf{d}_j^\top\big] = \frac Bn\sum_i\mathbf{d}_i\mathbf{d}_i^\top + \frac{B(B-1)}{n(n-1)}\sum_{i\ne j}\mathbf{d}_i\mathbf{d}_j^\top$. Since $\sum_{i\ne j}\mathbf{d}_i\mathbf{d}_j^\top = -\sum_i\mathbf{d}_i\mathbf{d}_i^\top = -n\Sigma$, this is $B\Sigma\big(1 - \frac{B-1}{n-1}\big) = B\Sigma\frac{n-B}{n-1}$. Divide by $B^2$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">warm-up</span> One-dimensional quadratic with curvature $h = 2$, per-example gradient-noise variance $s = 4$, batch $B = 8$, step $\eta = 0.1$. Compute the stationary variance of the iterate and the excess loss. What happens to both if you halve $\eta$?</p>
+        <details><summary>Solution</summary><div>
+          <p>$V = \eta s/\big(Bh(2 - \eta h)\big) = 0.4/(8\cdot2\cdot1.8) = 0.0139$; excess $\tfrac12hV = 0.0139$. With $\eta = 0.05$: $V = 0.2/(16\cdot1.9) = 0.00658$, a bit less than half (the $2 - \eta h$ factor changes too).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Show that without bias correction, Adam's very first step (with $\beta_1 = 0.9$, $\beta_2 = 0.999$) has size about $3.16\,\eta$ in every coordinate, and with correction exactly $\eta$ (ignoring $\epsilon$).</p>
+        <details><summary>Solution</summary><div>
+          <p>$\mathbf{m}_1 = 0.1\,\mathbf{g}$, $\mathbf{v}_1 = 0.001\,\mathbf{g}^2$, so $m_1/\sqrt{v_1} = 0.1/\sqrt{0.001}\,\operatorname{sign}(g) = 3.16\operatorname{sign}(g)$. With correction $\hat m_1 = g$, $\hat v_1 = g^2$ and the ratio is $\operatorname{sign}(g)$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> For heavy-ball momentum on a quadratic direction with curvature $h$, show the iteration is stable (both roots of $r^2 - (1+\beta-\eta h)r + \beta = 0$ inside the unit circle) exactly when $0 &lt; \eta h &lt; 2(1+\beta)$. For $\beta = 0.9$, compare the largest stable step with plain gradient descent's.</p>
+        <details><summary>Solution</summary><div>
+          <p>Complex roots have $|r| = \sqrt\beta &lt; 1$: stable. Real roots: the quadratic $q(r)$ has $q(0) = \beta &gt; 0$ and product of roots $\beta &lt; 1$; both lie in $(-1, 1)$ iff $q(1) &gt; 0$ and $q(-1) &gt; 0$. $q(1) = \eta h &gt; 0$ and $q(-1) = 2 + 2\beta - \eta h &gt; 0$. Hence $0 &lt; \eta h &lt; 2(1 + \beta)$. With $\beta = 0.9$, $\eta &lt; 3.8/h_{\max}$ versus $2/h_{\max}$ for plain descent.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="evaluation">
+    <h2>Evaluation</h2>
+    <ol start="18">
+      <li>
+        <p><span class="tag">warm-up</span> Positives score $0.9, 0.6, 0.6$; negatives score $0.6, 0.3$. Compute the AUC, counting ties as half.</p>
+        <details><summary>Solution</summary><div>
+          <p>Six (positive, negative) pairs: $0.9$ beats both; each $0.6$ ties $0.6$ and beats $0.3$. Wins 4, ties 2: AUC $= (4 + 2\times\tfrac12)/6 = 5/6\approx0.833$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> A classifier validated on balanced data ($\pi = 0.5$) has precision 0.9 and recall 0.8. What precision should you expect in deployment where $\pi = 0.01$?</p>
+        <details><summary>Solution</summary><div>
+          <p>From $0.8\cdot0.5/(0.8\cdot0.5 + \text{FPR}\cdot0.5) = 0.9$: FPR $= 0.8/9 = 0.0889$. At $\pi = 0.01$: $0.008/(0.008 + 0.0889\times0.99) = 0.083$. Precision collapses from 90% to 8%.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">code</span> Using <a href="/machine-learning/08-evaluating-classifiers/">lesson 08's code</a>, add an $\ell_2$ penalty $\lambda\lVert\mathbf{w}\rVert^2/2$ (not on the intercept) to the training of the logistic regression. Pick $\lambda$ by validation log-loss over $\{0, 0.001, 0.01, 0.1, 1\}$. How do the test AUC, log-loss and ECE of the chosen model compare with the unregularised one, before any Platt scaling?</p>
+        <details><summary>Solution</summary><div>
+          <p>The gradient gains a term $\lambda\mathbf{w}$ (excluding the bias). Validation log-loss is 0.384, 0.327, 0.248, 0.247 and 0.286 for the five values, so it picks $\lambda = 0.1$, with $0.01$ a near tie. On the test set, log-loss falls from 0.379 to 0.242 and ECE from 0.082 to 0.030, but the AUC barely moves (0.817 to 0.818). Regularisation fixes most of the overconfidence at its source, without a separate calibration step. It does not improve the ranking here, because the unregularised model already ordered the examples about as well as 400 training points allow. Expect small differences in the third decimal if your implementation differs.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

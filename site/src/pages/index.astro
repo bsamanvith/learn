@@ -1,0 +1,115 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../layouts/Base.astro";
+import { SUBJECTS, entries, widgetsOf, pagesOf, meta, recentlyAdded, subjectTitle, chapterUrl, byChapter, u } from "../subjects";
+
+const all = await entries();
+const exercises = await getCollection("exercises");
+const subjects = SUBJECTS.map((s) => {
+  const chapters = all.filter((e) => e.subject === s.slug).sort(byChapter);
+  const problems = exercises.filter((e) => e.id.startsWith(`${s.slug}/`))
+    .reduce((n, e) => n + (e.body?.match(/^### \d/gm)?.length ?? 0), 0);
+  return {
+    ...s, tagline: meta(s.slug)?.tagline ?? s.tagline, live: chapters.length > 0, chapters, problems,
+    animations: widgetsOf(s.slug).length + pagesOf(s.slug).length,
+  };
+});
+const live = subjects.filter((s) => s.live);
+const planned = subjects.filter((s) => !s.live);
+const recent = await recentlyAdded(8);
+const fmt = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const start = live[0]?.chapters[0];
+const play = live.flatMap((s) => [
+  ...pagesOf(s.slug).map((p) => ({ subject: s.slug, href: u(`/${s.slug}/${p.file}/`), title: p.title, idea: p.idea ?? "" })),
+  ...widgetsOf(s.slug).map((w) => ({ subject: s.slug, href: u(`/subjects/${s.slug}/widgets/${w.file}`), title: w.title, idea: w.idea })),
+]);
+---
+<Base title="learn">
+  <main class="home library">
+    <section class="hero">
+      <p class="kicker">A personal library</p>
+      <h1>Learning things <em>properly.</em></h1>
+      <p>Machine learning first, with probability, statistics and calculus pulled in when a lesson needs them. Every derivation written out, every idea with a figure you can move.</p>
+    </section>
+
+    <a class="continue" href={start ? chapterUrl(start.id) : u("/")} data-continue>
+      <span class="continue-text">
+        <span class="kicker" data-continue-kicker>Start here</span>
+        <span class="t" data-continue-title>{start ? `${start.chapter} · ${start.title}` : "Pick a subject"}</span>
+        <span class="where" data-continue-where>{start ? `${subjectTitle(start.subject)} · the first lesson` : ""}</span>
+      </span>
+      <span class="btn primary" data-continue-btn>Start reading</span>
+    </a>
+
+    <section class="subjects">
+      <h2 class="section-label">Subjects</h2>
+      <div class="subject-grid">
+        {live.map((s) => (
+          <a class="subject-card live" href={u(`/${s.slug}/`)} data-subject={s.slug} data-ids={JSON.stringify(s.chapters.map((c) => c.id))}>
+            <span class="mode">{s.mode}</span>
+            <span class="t">{s.title}</span>
+            <span class="tag">{s.tagline}</span>
+            <span class="bar" aria-hidden="true"><span></span></span>
+            <span class="stats">
+              <span><b>{s.chapters.length}</b> {s.chapters.length === 1 ? "chapter" : "chapters"}</span>
+              {s.problems > 0 && <span><b>{s.problems}</b> exercises</span>}
+              {s.animations > 0 && <span><b>{s.animations}</b> animations</span>}
+              <span data-read></span>
+            </span>
+          </a>
+        ))}
+        {planned.map((s) => (
+          <div class="subject-card planned">
+            <span class="mode">Coming later</span>
+            <span class="t">{s.title}</span>
+            <span class="tag">{s.tagline}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="recent">
+      <h2 class="section-label">Recently added</h2>
+      <ol class="recent-list">
+        {recent.map((r) => (
+          <li><a href={r.href}><time datetime={r.date}>{fmt(r.date)}</time><span class="subj">{subjectTitle(r.subject)}</span><span class="what">{r.label}</span></a></li>
+        ))}
+      </ol>
+    </section>
+
+    {play.length > 0 && (
+      <section class="play">
+        <h2 class="section-label">Playground</h2>
+        <div class="play-grid">
+          {play.slice(0, 6).map((p) => (
+            <a class="play-card" href={p.href}><span class="subj">{subjectTitle(p.subject)}</span><b>{p.title}</b><span>{p.idea}</span></a>
+          ))}
+        </div>
+        <p class="more"><a href={u("/animations/")}>All {play.length} animations, with notes for review →</a></p>
+      </section>
+    )}
+  </main>
+</Base>
+
+<script>
+  // "Continue where you left off", and per-subject progress, from this browser's reading history.
+  let store: { last?: { href: string; title?: string; subject?: string; section?: string }; read?: Record<string, string> } = {};
+  try { store = JSON.parse(localStorage.getItem("learn-progress") || "{}"); } catch {}
+  const last = store.last;
+  const card = document.querySelector<HTMLAnchorElement>("[data-continue]");
+  if (card && last?.href) {
+    card.href = last.href;
+    card.querySelector("[data-continue-kicker]")!.textContent = "Continue where you left off";
+    card.querySelector("[data-continue-title]")!.textContent = last.title ?? "";
+    card.querySelector("[data-continue-where]")!.textContent = [last.subject, last.section].filter(Boolean).join(" · ");
+    card.querySelector("[data-continue-btn]")!.textContent = "Resume reading";
+  }
+  const read = store.read ?? {};
+  for (const s of document.querySelectorAll<HTMLElement>(".subject-card[data-ids]")) {
+    const ids: string[] = JSON.parse(s.dataset.ids!);
+    const done = ids.filter((id) => read[id] === "read").length;
+    const seen = ids.filter((id) => read[id]).length;
+    s.querySelector<HTMLElement>(".bar span")!.style.width = `${(100 * done) / Math.max(ids.length, 1)}%`;
+    if (seen) s.querySelector("[data-read]")!.textContent = `${done} read`;
+  }
+</script>

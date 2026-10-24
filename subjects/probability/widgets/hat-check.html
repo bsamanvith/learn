@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hat Check</title>
+<link rel="stylesheet" href="../../../tools/widgets/base.css">
+<style>
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
+  h4 { margin: 8px 0 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<!-- Chapter 1.5. Question: "If n hats are returned at random, how likely is it nobody gets their own — and why doesn't n matter?" -->
+<h3>The hat-check problem</h3>
+<p class="question"><i>n</i> people check their hats. The attendant hands them back in a uniformly random order.
+What's the chance that <b>nobody</b> gets their own hat (a <i>derangement</i>)?</p>
+
+<div class="controls">
+  <label>people n <input id="n" type="range" min="1" max="15" step="1" value="8"> <b id="n-value"></b></label>
+  <button id="shuffle">Hand back the hats</button>
+  <button id="sim">Simulate 20,000 nights</button>
+</div>
+
+<svg id="people" viewBox="0 0 680 170" role="img" aria-label="People connected to the hats they received"></svg>
+<div class="stats" id="stats"></div>
+
+<div class="two">
+  <div><h4>P(nobody gets their own hat) vs n</h4>
+    <svg id="conv" viewBox="0 0 340 220" role="img" aria-label="Probability of a derangement versus n"></svg></div>
+  <div><h4>How many people get their own hat? (simulated vs Poisson(1))</h4>
+    <svg id="hist" viewBox="0 0 340 220" role="img" aria-label="Histogram of number of matches"></svg></div>
+</div>
+<p class="caption">Inclusion–exclusion gives P(no match) = 1 − 1/1! + 1/2! − 1/3! + ··· ± 1/n!, the start of the series for
+e<sup>−1</sup> ≈ 0.3679. The terms shrink factorially fast, so by n = 6 the answer is already 1/e to three decimals.
+The number of matches is close to Poisson with mean 1 (a preview of Part 3) — and its expectation is exactly 1 for every n.</p>
+
+<script src="../../../tools/widgets/lib.js"></script>
+<script>
+  const state = { n: 8, perm: null, sim: null, seed: 9 };
+  const fact = (k) => { let f = 1; for (let i = 2; i <= k; i++) f *= i; return f; };
+  const pNone = (n) => { let s = 0; for (let k = 0; k <= n; k++) s += (k % 2 ? -1 : 1) / fact(k); return s; };
+
+  function newPerm() { state.perm = Learn.shuffle([...Array(state.n).keys()], Learn.rng(state.seed++)); }
+
+  function draw(s) {
+    const c = Learn.palette();
+    if (!s.perm || s.perm.length !== s.n) newPerm();
+    const svg = document.getElementById("people"); svg.innerHTML = "";
+    const gap = 640 / s.n, X = (i) => 20 + gap * (i + 0.5);
+    let matches = 0;
+    s.perm.forEach((h, i) => {
+      const m = h === i; matches += m;
+      Learn.el("line", { x1: X(i), y1: 42, x2: X(h), y2: 128, stroke: m ? c.good : c.muted, "stroke-width": m ? 3 : 1.5, opacity: m ? 1 : 0.6 }, svg);
+    });
+    for (let i = 0; i < s.n; i++) {
+      Learn.el("circle", { cx: X(i), cy: 28, r: 13, fill: c.a }, svg);
+      Learn.el("text", { x: X(i), y: 33, "text-anchor": "middle", fill: "#fff", "font-size": 12, text: i + 1 }, svg);
+      Learn.el("path", { d: `M${X(i) - 14},150 h28 l-5,-12 h-18 z`, fill: s.perm[i] === i ? c.good : c.b }, svg);
+      Learn.el("rect", { x: X(i) - 8, y: 128, width: 16, height: 12, rx: 3, fill: s.perm.indexOf(i) === i ? c.good : c.b }, svg);
+      Learn.el("text", { x: X(i), y: 166, "text-anchor": "middle", fill: c.muted, "font-size": 11, text: `hat ${i + 1}` }, svg);
+    }
+
+    document.getElementById("stats").innerHTML = `
+      <div class="stat"><div class="label">matches tonight</div><div class="value ${matches ? "good" : ""}">${matches}</div></div>
+      <div class="stat"><div class="label">exact P(no match)</div><div class="value a">${pNone(s.n).toFixed(4)}</div></div>
+      <div class="stat"><div class="label">1/e</div><div class="value">${Math.exp(-1).toFixed(4)}</div></div>
+      <div class="stat"><div class="label">simulated P(no match)</div><div class="value">${s.sim ? s.sim.none.toFixed(4) : "—"}</div></div>`;
+
+    // Convergence plot
+    const cv = document.getElementById("conv"); cv.innerHTML = "";
+    let g = Learn.el("g", {}, cv);
+    let ax = Learn.axes(g, { x: [1, 15], y: [0, 1], W: 340, H: 220, xTicks: [1, 5, 10, 15], yTicks: [0, 0.368, 1], fmtY: (t) => t.toFixed(t === 0.368 ? 3 : 1), xLabel: "n" });
+    Learn.el("line", { x1: ax.sx(1), x2: ax.sx(15), y1: ax.sy(Math.exp(-1)), y2: ax.sy(Math.exp(-1)), stroke: c.b, "stroke-dasharray": "5 4" }, g);
+    Learn.el("polyline", { points: Array.from({ length: 15 }, (_, k) => `${ax.sx(k + 1)},${ax.sy(pNone(k + 1))}`).join(" "), fill: "none", stroke: c.a, "stroke-width": 1.5 }, g);
+    for (let k = 1; k <= 15; k++) Learn.el("circle", { cx: ax.sx(k), cy: ax.sy(pNone(k)), r: k === s.n ? 5 : 3, fill: c.a }, g);
+
+    // Histogram of matches
+    const hv = document.getElementById("hist"); hv.innerHTML = "";
+    g = Learn.el("g", {}, hv);
+    const K = 6;
+    ax = Learn.axes(g, { x: [-0.5, K + 0.5], y: [0, 0.5], W: 340, H: 220, xTicks: [0, 1, 2, 3, 4, 5, 6], yTicks: [0, 0.25, 0.5], xLabel: "number of matches" });
+    const bw = (ax.sx(1) - ax.sx(0)) * 0.7;
+    if (s.sim) for (let k = 0; k <= K; k++) {
+      const v = s.sim.counts[k] || 0;
+      Learn.el("rect", { x: ax.sx(k) - bw / 2, y: ax.sy(v), width: bw, height: ax.sy(0) - ax.sy(v), fill: c.a, opacity: 0.6 }, g);
+    }
+    for (let k = 0; k <= K; k++) Learn.el("circle", { cx: ax.sx(k), cy: ax.sy(Math.exp(-1) / fact(k)), r: 4, fill: c.b }, g);
+    if (!s.sim) Learn.el("text", { x: 190, y: 90, "text-anchor": "middle", fill: c.muted, "font-size": 12, text: "press Simulate (dots = Poisson(1))" }, g);
+  }
+
+  document.getElementById("shuffle").onclick = () => { newPerm(); draw(state); };
+  document.getElementById("sim").onclick = () => {
+    const r = Learn.rng(state.seed++), T = 20000, counts = {}; let none = 0;
+    const p = [...Array(state.n).keys()];
+    for (let t = 0; t < T; t++) {
+      Learn.shuffle(p, r); let m = 0;
+      for (let i = 0; i < state.n; i++) if (p[i] === i) m++;
+      counts[m] = (counts[m] || 0) + 1 / T; if (!m) none++;
+    }
+    state.sim = { none: none / T, counts }; draw(state);
+  };
+  Learn.slider("n", state, "n", (s) => { s.sim = null; draw(s); });
+  Learn.onThemeChange(() => draw(state));
+</script>
+</body>
+</html>

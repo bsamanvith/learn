@@ -1,0 +1,57 @@
+---
+import { getCollection } from "astro:content";
+import Base from "./Base.astro";
+import BookNav from "../components/BookNav.astro";
+import PageToc from "../components/PageToc.astro";
+
+import { subjectOf, subjectTitle, u } from "../subjects";
+
+interface Props { title: string; id: string; headings: { depth: number; slug: string; text: string }[]; crumb?: string; ml?: boolean; }
+const { title, id, headings, crumb, ml = false } = Astro.props;
+const subject = subjectOf(id);
+const exerciseIds = new Set((await getCollection("exercises")).map((e) => e.id));
+const hasExercises = (x: string) => exerciseIds.has(x);
+---
+<Base title={title} subject={{ slug: subject, title: subjectTitle(subject) }} crumb={crumb}>
+  <Fragment slot="head">
+    {ml && <link rel="stylesheet" href={u(`/subjects/${subject}/assets/ml.css`)} />}
+  </Fragment>
+  <div class="reader">
+    <BookNav subject={subject} current={id} hasExercises={hasExercises} />
+    <main class:list={[ml ? "ml ml-main" : "prose"]} data-entry={id} data-title={title} data-subject={subjectTitle(subject)}>
+      <details class="mobile-nav"><summary>Chapters</summary><BookNav subject={subject} current={id} hasExercises={hasExercises} /></details>
+      <slot />
+    </main>
+    <PageToc headings={headings} />
+  </div>
+</Base>
+
+<script>
+  // Remember where the reader is, for "Continue where you left off" on the home page and the
+  // read / in-progress marks on subject pages. Everything stays in this browser.
+  const main = document.querySelector<HTMLElement>("main[data-entry]");
+  if (main) {
+    const id = main.dataset.entry!;
+    const KEY = "learn-progress";
+    let store: { last?: object; read?: Record<string, "started" | "read"> } = {};
+    try { store = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch {}
+    store.read ??= {};
+    if (!store.read[id]) store.read[id] = "started";
+    const save = (section?: string) => {
+      store.last = { id, href: location.pathname, title: main.dataset.title, subject: main.dataset.subject, section, at: Date.now() };
+      try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {}
+    };
+    save();
+    const sections = [...main.querySelectorAll<HTMLElement>("h2[id], section[id] > h2")];
+    let t: number | undefined;
+    addEventListener("scroll", () => {
+      clearTimeout(t);
+      t = window.setTimeout(() => {
+        const above = sections.filter((h) => h.getBoundingClientRect().top < innerHeight * 0.4);
+        const h = above.at(-1);
+        if (scrollY + innerHeight >= document.body.scrollHeight - 400) store.read![id] = "read";
+        save(h?.textContent?.trim() || undefined);
+      }, 300);
+    }, { passive: true });
+  }
+</script>

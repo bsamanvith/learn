@@ -1,0 +1,36 @@
+---
+import { chaptersOf, partTitle, partLabel, subjectTitle, pagesOf, u, chapterUrl } from "../subjects";
+
+interface Props { subject: string; current?: string; hasExercises?: (id: string) => boolean; }
+const { subject, current, hasExercises = () => false } = Astro.props;
+const chapters = await chaptersOf(subject);
+const parts = [...new Set(chapters.map((c) => c.part))];
+const pages = pagesOf(subject);
+const path = Astro.url.pathname;
+---
+<nav class="book-nav" aria-label="Chapters">
+  <a class="book-title" href={u(`/${subject}/`)}>{subjectTitle(subject)}</a>
+  {parts.map((p) => (
+    <>
+      <h4>{partLabel(subject)} {p} · {partTitle(subject, p)}</h4>
+      <ol>
+        {chapters.filter((c) => c.part === p).map((c) => (
+          <li>
+            <a href={chapterUrl(c.id)} aria-current={path === chapterUrl(c.id) ? "page" : undefined} data-entry={c.id}>
+              <span class="num">{c.chapter}</span><span>{c.title}</span>
+            </a>
+            {current === c.id && hasExercises(c.id) && (
+              <a class="sub" href={u(`/${c.id}/exercises/`)}
+                 aria-current={path.endsWith("/exercises/") ? "page" : undefined}>Exercises</a>
+            )}
+          </li>
+        ))}
+      </ol>
+    </>
+  ))}
+  <h4>Play</h4>
+  <ol>
+    {pages.map((p) => <li><a href={u(`/${subject}/${p.file}/`)} aria-current={path === u(`/${subject}/${p.file}/`) ? "page" : undefined}><span class="num">▶︎</span><span>{p.title}</span></a></li>)}
+    <li><a href={u(`/animations/#${subject}`)}><span class="num">▶︎</span><span>All {subjectTitle(subject).toLowerCase()} animations</span></a></li>
+  </ol>
+</nav>

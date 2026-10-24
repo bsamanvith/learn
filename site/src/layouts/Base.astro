@@ -1,0 +1,107 @@
+---
+import "@fontsource-variable/newsreader/opsz.css";
+import "@fontsource-variable/newsreader/opsz-italic.css";
+import "@fontsource-variable/public-sans";
+import "@fontsource-variable/jetbrains-mono";
+import "katex/dist/katex.min.css";
+import "../styles/global.css";
+import { u } from "../subjects";
+
+interface Props { title: string; description?: string; subject?: { slug: string; title: string }; crumb?: string; }
+const { title, subject, crumb, description = "Science from first questions to deep understanding: fun to read, detailed to understand." } = Astro.props;
+const path = Astro.url.pathname;
+const active = (p: string) => (path === u(p)) ? "active" : undefined;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23c2410c'/><path d='M7 23 L25 9' stroke='white' stroke-width='3' stroke-linecap='round'/><circle cx='11' cy='13' r='2.4' fill='white'/><circle cx='21' cy='21' r='2.4' fill='white'/></svg>" />
+  <link rel="stylesheet" href={u("/tools/widgets/tokens.css")} />
+  <slot name="head" />
+  <script is:inline>
+    // Apply the saved theme before first paint (no flash). "system" = no data-theme attribute.
+    try {
+      const t = localStorage.getItem("learn-theme");
+      if (t && t !== "system") document.documentElement.dataset.theme = t;
+    } catch {}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a class="brand" href={u("/")}>learn</a>
+      {subject && <><span class="crumb-sep" aria-hidden="true">›</span><a class="crumb" href={u(`/${subject.slug}/`)}>{subject.title}</a></>}
+      {crumb && <><span class="crumb-sep crumb-extra" aria-hidden="true">›</span><span class="crumb crumb-extra" aria-current="page">{crumb}</span></>}
+    </nav>
+    <nav class="site-nav">
+      <a href={u("/")} class={active("/")}>Subjects</a>
+      <a href={u("/animations/")} class={active("/animations/")}>Playground</a>
+      <a class="gh" href="https://github.com/bsamanvith/learn">GitHub</a>
+    </nav>
+    <div class="theme-switch" role="radiogroup" aria-label="Colour theme">
+      <button data-set-theme="light" title="Light" aria-label="Light theme">☀︎</button>
+      <button data-set-theme="beige" title="Paper" aria-label="Paper (beige) theme">❦</button>
+      <button data-set-theme="dark" title="Dark" aria-label="Dark theme">☾</button>
+      <button data-set-theme="system" title="Follow system" aria-label="Follow system theme">◐</button>
+    </div>
+  </header>
+
+  <slot />
+
+  <footer class="site-footer">
+    <p>Written to be read slowly, played with, and argued over. Plain HTML, CSS and canvas, built by Astro. <a href="https://github.com/bsamanvith/learn">Source on GitHub</a>.</p>
+  </footer>
+
+  <script>
+    const root = document.documentElement;
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    const effective = () => root.dataset.theme || (media.matches ? "dark" : "light");
+
+    function syncButtons() {
+      let saved = "system";
+      try { saved = localStorage.getItem("learn-theme") || "system"; } catch {}
+      for (const b of document.querySelectorAll<HTMLButtonElement>("[data-set-theme]")) {
+        b.setAttribute("aria-checked", String(b.dataset.setTheme === saved));
+        b.setAttribute("role", "radio");
+      }
+    }
+
+    // Embedded widgets are same-origin iframes: push the theme straight into their documents.
+    function syncFrames() {
+      for (const f of document.querySelectorAll<HTMLIFrameElement>("iframe[data-src]")) {
+        const doc = f.contentDocument;
+        if (doc?.documentElement) doc.documentElement.dataset.theme = effective();
+      }
+    }
+
+    function setTheme(t: string) {
+      if (t === "system") delete root.dataset.theme; else root.dataset.theme = t;
+      try { localStorage.setItem("learn-theme", t); } catch {}
+      syncButtons(); syncFrames();
+    }
+
+    document.querySelectorAll<HTMLButtonElement>("[data-set-theme]").forEach((b) =>
+      b.addEventListener("click", () => setTheme(b.dataset.setTheme!)));
+    media.addEventListener("change", syncFrames);
+    syncButtons();
+
+    // Load widgets with the current theme, then keep each iframe as tall as its content.
+    for (const f of document.querySelectorAll<HTMLIFrameElement>("iframe[data-src]")) {
+      f.addEventListener("load", () => {
+        const doc = f.contentDocument;
+        if (!doc?.body) return;
+        doc.documentElement.dataset.theme = effective();
+        const fit = () => { f.style.height = Math.ceil(doc.body.getBoundingClientRect().height) + 8 + "px"; };
+        new ResizeObserver(fit).observe(doc.body);
+        fit();
+      });
+      const sep = f.dataset.src!.includes("?") ? "&" : "?";
+      f.src = `${f.dataset.src}${sep}embed=1&theme=${effective()}`;
+    }
+  </script>
+</body>
+</html>

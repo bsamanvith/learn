@@ -1,0 +1,15 @@
+{
+  "_about": "Hand-written HTML lessons and pages for this subject. Each lesson is lessons/<file>.html (the header and article only; the site adds navigation, contents and the pager). Pages in pages/<file>.html get the site header and nothing else. Links inside them are written from the site root, like /machine-learning/02-gradient-descent/.",
+  "lessons": [
+    { "file": "01-linear-regression", "chapter": "01", "part": 1, "title": "Linear regression", "added": "2026-10-22",
+      "prerequisites": [], "blurb": "Squared error, the normal equations, least squares as projection, and the Gaussian maximum-likelihood view." },
+    { "file": "02-gradient-descent", "chapter": "02", "part": 1, "title": "Gradient descent and the delta rule", "added": "2026-10-22",
+      "prerequisites": ["01"], "blurb": "Gradients, steepest descent, the delta rule, and why the learning rate must stay below 2 over the largest curvature." },
+    { "file": "03-logistic-regression", "chapter": "03", "part": 1, "title": "Logistic regression and log-loss", "added": "2026-10-22",
+      "prerequisites": ["01", "02"], "blurb": "Sigmoid and log-odds, Bernoulli likelihood, cross-entropy, its gradient and Hessian, and separable data." }
+  ],
+  "pages": [
+    { "file": "watch-it-learn", "title": "Watch it learn", "added": "2026-10-21",
+      "idea": "A line fitting itself, four learning rates in the same bowl, and logistic regression bending into an S-curve." }
+  ]
+}

@@ -1,33 +1,59 @@
 # learn
 
-Personal learning repo for science: probability, machine learning, physics (relativity), astronomy and more.
+Personal learning repo for science: machine learning, probability, statistics, physics,
+astronomy and more. It's written to be **fun to read, deep enough to trust, and impossible to
+finish without doing something.**
 
-Each subject and topic gets visually intuitive material: concept books, textbooks and exercise books.
+Every topic puts intuition and rigour side by side, and comes with full derivations, exercises
+with solutions, simulations that check the maths, and figures you can play with.
 
-**Status:** machine learning stage 1 written. Start at [`books/machine-learning`](books/machine-learning/README.md).
+**Website:** https://bsamanvith.github.io/learn/
 
-## Planned structure
+**Status:**
+- Machine learning: Stage 1 written (linear regression, gradient descent, logistic regression).
+- Probability: Parts 0–1 drafted (8 chapters, exercises, widgets, sims).
+
+## Layout
 
 ```
-books/<subject>/<topic>/
-  concept/     # visual, intuition-first concept book
-  text/        # textbook-style write-up
-  exercises/   # exercise book
-  code/        # from-scratch implementations, where useful
+site/                  the website (Astro): one book per subject, a library home page, the Playground
+subjects/index.json    every subject, in display order (slug, title, tagline)
+subjects/<subject>/
+  meta.json            book title, intro, part (or stage) titles and blurbs
+  PLAN.md              syllabus
+  text/                markdown chapters: hook → intuition → definitions → proofs → pitfalls
+  exercises/           markdown problems + full solutions
+  lessons/ + lessons.json   hand-written HTML lessons (machine learning uses these)
+  pages/               hand-written HTML pages inside the site layout
+  widgets/             standalone interactive HTML
+  sims/                Python simulations
+  assets/              figures, scripts and styles the subject needs
+principles/            how we teach: philosophy, page anatomy, exercises, visuals, style guide
+tools/                 shared widget template, theme tokens + JS helpers, figure style
 ```
 
-## Website
+A subject can be written as markdown (`text/`), as hand-crafted HTML (`lessons/`), or both. The
+site turns either into the same book, with navigation, contents, prev/next, "Recently added" and
+"Continue where you left off". Hand-written HTML is published as written. Write its links from
+the site root (`/machine-learning/02-gradient-descent/`) and the site adds the `/learn` prefix.
 
-The animated site is in [`docs/`](docs) and is served by GitHub Pages at
-**https://bsamanvith.github.io/learn/**. It is plain HTML, CSS and Canvas with no build step: edit a
-file, push to `main`, and Pages republishes it.
+## Run it locally
 
-One-time setup: repo **Settings → Pages → Build and deployment →
-Deploy from a branch → `main` / `/docs`**.
+```
+pnpm -C site install
+pnpm -C site dev        # http://localhost:4321/learn/
+```
 
-To preview locally: `python3 -m http.server -d docs` and open http://localhost:8000.
+`pnpm -C site build` writes the static site to `site/dist/`.
 
-## Books
+## Publishing
 
-- [Machine learning](books/machine-learning/README.md): model-first roadmap from linear regression to neural nets, trees and RL
-- [Math on demand](books/math/README.md): calculus, probability, statistics and linear algebra, each pulled in by the ML lesson that needs it
+`.github/workflows/pages.yml` builds the site on every push to `main` and publishes it to
+GitHub Pages. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+The old `ml/*.html` addresses redirect to their new pages.
+
+## Start here
+
+1. [principles/philosophy.md](principles/philosophy.md)
+2. [subjects/machine-learning/PLAN.md](subjects/machine-learning/PLAN.md) and
+   [subjects/probability/PLAN.md](subjects/probability/PLAN.md)

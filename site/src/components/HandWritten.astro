@@ -1,0 +1,16 @@
+---
+// Scripts for hand-written HTML lessons and pages: the canvas scene engine and math typesetting.
+import { u } from "../subjects";
+interface Props { subject: string; }
+const { subject } = Astro.props;
+---
+<script is:inline src={u(`/subjects/${subject}/assets/learn.js`)} defer></script>
+<script>
+  import renderMathInElement from "katex/contrib/auto-render";
+  // Hand-written lessons carry raw TeX between $...$ and $$...$$; typeset it in place.
+  for (const el of document.querySelectorAll<HTMLElement>("main.ml")) renderMathInElement(el, {
+    delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }],
+    ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+    throwOnError: false,
+  });
+</script>

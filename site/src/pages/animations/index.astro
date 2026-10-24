@@ -1,0 +1,158 @@
+---
+import Base from "../../layouts/Base.astro";
+import { liveSubjects, widgetsOf, pagesOf, meta, entries, chapterUrl, u } from "../../subjects";
+
+const text = await entries();
+const groups = (await liveSubjects()).map((s) => ({
+  slug: s.slug,
+  title: meta(s.slug)?.title ?? s.title,
+  widgets: widgetsOf(s.slug).map((w) => {
+    const c = text.find((x) => x.subject === s.slug && x.chapter === w.chapter);
+    return { ...w, key: `${s.slug}/${w.file}`, name: `${s.slug}-${w.file.replace(/\.html$/, "")}`, chapterTitle: c?.title, chapterId: c?.id };
+  }),
+  pages: pagesOf(s.slug),
+})).filter((g) => g.widgets.length + g.pages.length > 0);
+const registries = Object.fromEntries(groups.map((g) => [g.slug, widgetsOf(g.slug)]));
+---
+<Base title="Playground" description="Every interactive animation in the book, in one place, ready to play with and curate.">
+  <main class="gallery">
+    <header class="gallery-head">
+      <p class="kicker">Playground</p>
+      <h1>Animations and labs</h1>
+      <p>Every interactive across all subjects, full size. Play with each one, then give it a verdict and a note.
+      Your notes stay in this browser; copy them out and hand them back when you want changes made.</p>
+    </header>
+
+    <div class="gallery-tools" role="toolbar" aria-label="Filter and export">
+      <button data-filter="all" aria-pressed="true">All <span data-count="all"></span></button>
+      <button data-filter="new" aria-pressed="false">To review <span data-count="new"></span></button>
+      <button data-filter="keep" aria-pressed="false">Keep <span data-count="keep"></span></button>
+      <button data-filter="revise" aria-pressed="false">Revise <span data-count="revise"></span></button>
+      <button data-filter="drop" aria-pressed="false">Drop <span data-count="drop"></span></button>
+      <span class="spacer"></span>
+      <button id="copy-md">Copy review as Markdown</button>
+    </div>
+
+    {groups.map((g) => (
+      <section class="gallery-group" id={g.slug}>
+        <h2 class="gallery-subject">{g.title} <small>{g.widgets.length + g.pages.length} animations · <button class="linklike" data-download={g.slug}>download index.json</button></small></h2>
+        {g.pages.length > 0 && (
+          <div class="play-grid gallery-pages">
+            {g.pages.map((p) => <a class="play-card" href={u(`/${g.slug}/${p.file}/`)}><span class="subj">Full page</span><b>{p.title}</b><span>{p.idea}</span></a>)}
+          </div>
+        )}
+      {g.widgets.map((w) => (
+      <section class="exhibit" id={w.name} data-file={w.key} data-subject={g.slug} data-default-status={w.status} data-default-notes={w.notes}>
+        <figure class="widget" data-widget={w.name}>
+          <a class="widget-open" href={u(`/subjects/${g.slug}/widgets/${w.file}`)} target="_blank" rel="noopener">Open full size ↗</a>
+          <div class="widget-frame"><iframe data-src={u(`/subjects/${g.slug}/widgets/${w.file}`)} title={w.title} loading="lazy"></iframe></div>
+        </figure>
+        <aside class="curate">
+          <span class="num">{g.title} · Chapter {w.chapter}</span>
+          <h2>{w.title}</h2>
+          <p>{w.idea}</p>
+          <div class="links">
+            {w.chapterId && <a href={chapterUrl(w.chapterId)}>Read {w.chapter} {w.chapterTitle}</a>}
+            <a href={`#${w.name}`}>Link here</a>
+          </div>
+          <label>Verdict</label>
+          <div class="verdicts">
+            <button data-v="keep" aria-pressed="false">Keep</button>
+            <button data-v="revise" aria-pressed="false">Revise</button>
+            <button data-v="drop" aria-pressed="false">Drop</button>
+          </div>
+          <label for={`notes-${w.name}`}>Notes</label>
+          <textarea id={`notes-${w.name}`} placeholder="What works? What's confusing? What should it show instead?"></textarea>
+          <div class="saved" aria-live="polite"></div>
+        </aside>
+      </section>
+    ))}
+      </section>
+    ))}
+    <script type="application/json" id="registries" set:html={JSON.stringify(registries)} />
+    <script type="application/json" id="base" set:html={JSON.stringify(u("/"))} />
+    <div class="toast" role="status"></div>
+  </main>
+
+  <script>
+    const registries: Record<string, { file: string; chapter: string; title: string }[]> =
+      JSON.parse(document.getElementById("registries")!.textContent || "{}");
+    const KEY = "learn-curation";
+    type Entry = { status: string; notes: string };
+    let store: Record<string, Entry> = {};
+    try { store = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch {}
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {} };
+
+    const exhibits = [...document.querySelectorAll<HTMLElement>(".exhibit")];
+    const get = (ex: HTMLElement): Entry => store[ex.dataset.file!] ?? { status: ex.dataset.defaultStatus || "new", notes: ex.dataset.defaultNotes || "" };
+    let filter = "all";
+
+    function refresh() {
+      const counts: Record<string, number> = { all: exhibits.length, new: 0, keep: 0, revise: 0, drop: 0 };
+      for (const ex of exhibits) {
+        const { status } = get(ex);
+        counts[status] = (counts[status] || 0) + 1;
+        ex.hidden = filter !== "all" && status !== filter;
+        ex.querySelectorAll<HTMLButtonElement>("[data-v]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === status)));
+      }
+      document.querySelectorAll<HTMLElement>("[data-count]").forEach((s) => (s.textContent = `(${counts[s.dataset.count!] ?? 0})`));
+    }
+
+    for (const ex of exhibits) {
+      const ta = ex.querySelector("textarea")!;
+      const note = ex.querySelector(".saved")!;
+      ta.value = get(ex).notes;
+      let t: number | undefined;
+      ta.addEventListener("input", () => {
+        store[ex.dataset.file!] = { ...get(ex), notes: ta.value };
+        clearTimeout(t); t = window.setTimeout(() => { save(); note.textContent = "Saved in this browser"; }, 400);
+      });
+      ex.querySelectorAll<HTMLButtonElement>("[data-v]").forEach((b) => b.addEventListener("click", () => {
+        const cur = get(ex);
+        store[ex.dataset.file!] = { ...cur, status: cur.status === b.dataset.v ? "new" : b.dataset.v! };
+        save(); refresh();
+      }));
+    }
+
+    document.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((b) => b.addEventListener("click", () => {
+      filter = b.dataset.filter!;
+      document.querySelectorAll("[data-filter]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      refresh();
+    }));
+
+    const toast = (msg: string) => {
+      const el = document.querySelector(".toast")!;
+      el.textContent = msg; el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1800);
+    };
+
+    document.getElementById("copy-md")!.addEventListener("click", async () => {
+      const lines = [`## Animation review (${new Date().toISOString().slice(0, 10)})`, ""];
+      for (const [subject, widgets] of Object.entries(registries)) for (const w of widgets) {
+        const ex = exhibits.find((e) => e.dataset.file === `${subject}/${w.file}`)!;
+        const { status, notes } = get(ex);
+        if (status === "new" && !notes.trim()) continue;
+        lines.push(`- **${subject}/widgets/${w.file}** (${w.chapter}, ${w.title}): **${status}**${notes.trim() ? ` — ${notes.trim().replace(/\n+/g, " ")}` : ""}`);
+      }
+      if (lines.length === 2) lines.push("_No verdicts or notes yet._");
+      try { await navigator.clipboard.writeText(lines.join("\n")); toast("Review copied — paste it to Claude"); }
+      catch { prompt("Copy your review:", lines.join("\n")); }
+    });
+
+    document.querySelectorAll<HTMLButtonElement>("[data-download]").forEach((b) => b.addEventListener("click", async () => {
+      const subject = b.dataset.download!;
+      const base: string = JSON.parse(document.getElementById("base")!.textContent || "\"/\"");
+      const original = await (await fetch(`${base}subjects/${subject}/widgets/index.json`)).json();
+      const out = { ...original, widgets: original.widgets.map((w: { file: string }) => {
+        const ex = exhibits.find((e) => e.dataset.file === `${subject}/${w.file}`)!;
+        return { ...w, ...get(ex) };
+      }) };
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2) + "\n"], { type: "application/json" }));
+      a.download = "index.json"; a.click();
+      toast(`Save it over subjects/${subject}/widgets/index.json`);
+    }));
+
+    refresh();
+  </script>
+</Base>

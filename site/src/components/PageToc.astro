@@ -1,0 +1,26 @@
+---
+import type { MarkdownHeading } from "astro";
+interface Props { headings: MarkdownHeading[]; label?: string; }
+const { headings, label = "On this page" } = Astro.props;
+// Section titles may carry an eyebrow ("Hook: ...") that the remark plugin moved; show the clean text.
+// On exercise pages, list the problems (### 1.3.5 ...) by number and title, plus the Solutions section.
+const items = headings.filter((h) => h.depth === 2 || (h.depth === 3 && /^p-\d/.test(h.slug)))
+  .map((h) => ({ ...h, text: h.depth === 3 ? h.text.replace(/^(\d+\.\d+\.\d+)\s*\S+\s*/, "$1 ") : h.text }));
+---
+{items.length > 0 && (
+  <aside class="page-toc" aria-label={label}>
+    <h4>{label}</h4>
+    <ol>{items.map((h) => <li><a href={`#${h.slug}`} data-toc={h.slug}>{h.text}</a></li>)}</ol>
+  </aside>
+)}
+<script>
+  // Highlight the section being read.
+  const links = new Map([...document.querySelectorAll<HTMLAnchorElement>("[data-toc]")].map((a) => [a.dataset.toc, a]));
+  const obs = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) {
+      links.forEach((a) => a.classList.remove("current"));
+      links.get(e.target.id)?.classList.add("current");
+    }
+  }, { rootMargin: "-80px 0px -70% 0px" });
+  links.forEach((_, id) => { const h = document.getElementById(id!); if (h) obs.observe(h); });
+</script>

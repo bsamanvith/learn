@@ -123,7 +123,7 @@ Every lesson ends with short exercises and answers. On top of that:
 | A2 | An optimiser zoo: SGD, momentum, Adam, schedules, on a real dataset | 06–08 |
 | A3 ✅ | Gradient-boosted trees from scratch | 09–11 |
 | A4 ✅ | A tiny autograd engine and an MLP trained on MNIST | 12–14 |
-| A5 | A CNN with a residual block, hand-written convolution and its backward pass | 15–16 |
+| A5 ✅ | A CNN with a residual block, hand-written convolution and its backward pass | 15–16 |
 | A6 | A character-level GPT: attention, a transformer block, training and sampling | 19–20, 26 |
 | A7 | A VAE and a DDPM diffusion model on 2D data and MNIST | 22–25 |
 | A8 | DPO on a toy preference dataset; LoRA fine-tuning | 28–29 |

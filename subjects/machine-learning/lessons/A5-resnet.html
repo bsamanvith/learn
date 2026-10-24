@@ -1,0 +1,61 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A5 · after lessons 15–16</div>
+  <h1>A residual network in NumPy</h1>
+  <p class="lede">Build a small ResNet from its parts: convolution by unfolding windows into a matrix (im2col) and its adjoint for the backward pass, max pooling, batch normalisation with running statistics, residual blocks with projection shortcuts, and data augmentation by random shifts. Then train it on MNIST to better than 99% test accuracy, and run experiments that test the lessons' claims: that residual connections make depth trainable, that batch norm behaves differently in training and evaluation, and that convolutions make a network robust to translation where an MLP is not. An autograder checks every part. Expect eight to ten hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/14-training-deep-networks/">14</a>, <a href="/machine-learning/15-convolutional-networks/">15</a>, <a href="/machine-learning/16-modern-cnns/">16</a>, <a href="/machine-learning/A4-autograd-mlp/">A4</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A5-resnet">assignments/A5-resnet</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A5-resnet
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like</code></pre>
+    <p>The checker compares your forward passes with loops written straight from the definitions, and every backward pass with central finite differences, on small arrays of awkward shapes, strides and paddings. It checks that <code>col2im</code> is exactly the adjoint of <code>im2col</code>, that your convolution is translation equivariant, and that batch norm's running statistics and evaluation mode follow the usual conventions. The last check trains a small ResNet end to end to recognise shapes anywhere in an image. It takes about ten seconds in total. Floating-point warnings are errors.</p>
+    <div class="note">
+      <div class="label">The design</div>
+      <p>Unlike A4, there is no automatic differentiation here: every layer has a <code>forward(x)</code> that caches what it needs, and a <code>backward(g)</code> that receives the gradient of the loss with respect to its output, stores the gradients of its parameters in <code>layer.grads</code>, and returns the gradient with respect to its input. <code>Linear</code> and <code>ReLU</code> are written for you as examples, and so are the <code>Sequential</code> container, the <code>resnet</code> constructor and the MNIST loader. This is how deep-learning libraries were written before autograd, and it is how the fused kernels inside today's libraries still work.</p>
+    </div>
+  </section>
+
+  <section id="im2col">
+    <h2>Convolution as a matrix product</h2>
+    <p>A convolution with $F$ filters of shape $C\times k\times k$ computes, at each output position, the dot product of each filter with one $C\times k\times k$ window of the input. Lay every window out as a row of a matrix: for a batch of $N$ inputs and an output of size $O_H\times O_W$, the matrix <code>cols</code> has $NO_HO_W$ rows and $Ck^2$ columns. Then the whole convolution is one matrix product with the filters laid out as rows of a $F\times Ck^2$ matrix:</p>
+    <div class="eq">$$\text{out} = \text{cols}\cdot W_\text{mat}^\top + \mathbf{b}, \qquad (NO_HO_W\times Ck^2)\cdot(Ck^2\times F).$$</div>
+    <p>Matrix products are what numerical libraries do fastest, which makes this the standard way to implement convolution on CPUs (and, with variations, on GPUs). It costs memory: each input pixel is copied into up to $k^2$ rows. The backward pass follows from lesson 13's rule for a matrix product. With $G$ the output gradient laid out as $NO_HO_W\times F$ rows, $\bar W_\text{mat} = G^\top\text{cols}$ and $\overline{\text{cols}} = GW_\text{mat}$. Each entry of <code>cols</code> is a copy of some input pixel, so the gradient of a pixel is the sum of the gradients of all its copies. Scattering them back and adding is <code>col2im</code>, which is the adjoint (the transpose) of the linear map <code>im2col</code>:</p>
+    <div class="eq">$$\langle\operatorname{im2col}(x), Y\rangle = \langle x, \operatorname{col2im}(Y)\rangle \quad\text{for all } x, Y .$$</div>
+    <p>The checker tests exactly this identity. (It is the general principle: the backward pass of any linear map is its transpose, which is also why the backward pass of a convolution is a convolution, as in problem set P5, problem 3.)</p>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · convolution and pooling</td><td><code>im2col</code>, <code>col2im</code>, <code>Conv2d.forward</code> and <code>.backward</code>, <code>MaxPool2d</code>, <code>GlobalAvgPool</code></td><td>window contents for several kernel sizes, strides and paddings; the adjoint identity; the forward pass against a direct loop; all gradients; translation equivariance; ties in max pooling</td></tr>
+        <tr><td>2 · normalisation and loss</td><td><code>BatchNorm2d.forward</code> and <code>.backward</code>, <code>cross_entropy</code></td><td>per-channel statistics, the gradient in both modes, the running averages (with the unbiased variance), that evaluation mode treats examples independently; a stable loss at logits of 1,000</td></tr>
+        <tr><td>3 · the residual block</td><td><code>ResidualBlock.forward</code> and <code>.backward</code></td><td>that the block starts as $\operatorname{relu}(\text{shortcut}(x))$ because the last batch norm's $\gamma$ starts at 0 (lesson 16); every parameter's gradient, with an identity shortcut and with a strided projection shortcut</td></tr>
+        <tr><td>4 · training</td><td><code>SGD.step</code>, <code>augment</code></td><td>momentum, and weight decay applied to weights only, over three steps; random shifts that are really shifts, a different one per image; a network that learns</td></tr>
+      </tbody>
+    </table></div>
+    <p>The network <code>resnet()</code> is a $3\times3$ convolution with 16 channels, batch norm, ReLU and $2\times2$ max pooling (28 to 14 pixels), then three residual blocks with 16, 32 and 64 channels, the second and third with stride 2 (14 to 7 to 4), then global average pooling and a linear layer: 77,754 parameters, an eighth as many as A4's 670,000-parameter MLP.</p>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all fifteen checks pass, write a training script that uses your library. Hold out the last 10,000 training images for validation and make every choice on them; touch the test set once, at the end. Write a short paragraph and include a plot or a table for each experiment.</p>
+    <ol>
+      <li><b>The baseline.</b> Train <code>resnet()</code> for 3 epochs with batch size 128, SGD with momentum 0.9, weight decay $5\times10^{-4}$, a learning rate of 0.2 with cosine decay to 0, and random shifts of up to 2 pixels. Plot the training loss and the validation accuracy. Our solution reaches 99.2% validation and 99.24% test accuracy, at about three and a half minutes per epoch on one CPU core. Then repeat with learning rates 0.1 and 0.02 (our solution: 98.9% and 96.6% test). Why is a network with batch norm this sensitive to a small learning rate? Look at the training loss in the first 200 steps, and at what the blocks compute at initialisation.</li>
+      <li><b>Translation.</b> Shift every test image by $s = 0, 1, \dots, 6$ pixels to the right (filling with zeros), and plot test accuracy against $s$ for your ResNet and for A4's MLP (or any MLP you train). Repeat for your ResNet trained without augmentation. Explain each curve with lesson 15: which part of the network is equivariant, which part makes it invariant, and why is the invariance only approximate?</li>
+      <li><b>Depth, with and without shortcuts.</b> Add an option to <code>ResidualBlock</code> that drops the shortcut (a "plain" block). Build networks with 1, 3 and 6 blocks per stage, plain and residual, and train each for one epoch. Plot final training loss against depth. Which gets worse with depth? Relate it to lesson 16's degradation experiment and to P5, problem 6. Then set bn2's initial $\gamma$ to 1 instead of 0 in the deepest residual network: does it matter?</li>
+      <li><b>Batch norm's two modes.</b> Evaluate your trained network on the test set in training mode (batch statistics) with batch sizes 500, 32, 4 and 1, and in evaluation mode. Explain the numbers. Then train for one epoch at a constant learning rate of 0.05 and evaluate in evaluation mode, and again after recomputing the running statistics exactly from 10,000 training images: we saw 84.5% before and 95.0% after. Why are the running averages wrong, and why does this go away with a decaying learning rate? Then train a network with no batch norm at all: remove the layers, and to keep each residual branch small at the start, multiply it by a learned scalar that starts at 0 (the idea of ReZero and Fixup). Compare how large a learning rate each version tolerates before training diverges.</li>
+      <li><b>Look inside.</b> Show the 16 stem filters as $3\times3$ images, and the 16 feature maps they produce for one test digit. Compute the receptive field of a unit in the last block (count the stem, the pooling, and each convolution with its stride). Is it larger than the image? Find the 20 test images your network gets wrong: are they the same kind of mistake as in A4?</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Fifteen checker passes are worth 50%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism. If PyTorch is installed, build the same network with <code>torch.nn</code> (<code>Conv2d</code>, <code>BatchNorm2d</code> with <code>momentum=0.1</code>, the same initialisation) and check that, given the same weights and inputs, its outputs and gradients match yours to about $10^{-10}$ in double precision. Then compare the speed and work out where your implementation spends its time: in the matrix products, or in the copying done by <code>im2col</code> and <code>col2im</code>?</p>
+  </section>
+</article>

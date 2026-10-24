@@ -44,9 +44,9 @@ written; the rest are planned, in this order.
 
 | # | Lesson | The one idea | Math pulled in |
 |---|--------|--------------|----------------|
-| 12 | Neurons and the multilayer perceptron | Logistic regression is one neuron; stacking them with a nonlinearity bends space | Function composition, why linear∘linear is linear, universal approximation |
-| 13 | Backpropagation | The chain rule run backwards computes every gradient for the cost of about two forward passes | Jacobians, computational graphs, reverse-mode autodiff |
-| 14 | Training deep networks | Keep signals and gradients at the right scale: initialisation, activations, normalisation, dropout | Variance propagation, Xavier and He init, batch and layer norm |
+| 12 ✅ | Neurons and the multilayer perceptron | Logistic regression is one neuron; stacking them with a nonlinearity bends space | Function composition, why linear∘linear is linear, universal approximation |
+| 13 ✅ | Backpropagation | The chain rule run backwards computes every gradient for the cost of about two forward passes | Jacobians, computational graphs, reverse-mode autodiff |
+| 14 ✅ | Training deep networks | Keep signals and gradients at the right scale: initialisation, activations, normalisation, dropout | Variance propagation, Xavier and He init, batch and layer norm |
 
 ## Stage 5 · Deep architectures
 

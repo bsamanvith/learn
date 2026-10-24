@@ -1,0 +1,197 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 14 · Stage 4: neural networks</div>
+  <h1>Training deep networks</h1>
+  <p class="lede">Backpropagation gives exact gradients, but in a deep network they can be useless: so small that the early layers never move, or so large that training blows up. Whether a 20-layer network trains at all depends on the scale of its initial weights. This lesson derives the initialisation that keeps signals and gradients at a constant scale, explains normalisation layers, dropout and weight decay, and ends with a practical recipe for getting a network to train.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/07-stochastic-optimisation/">lesson 07</a>, <a href="/machine-learning/12-neurons-and-mlps/">lesson 12</a>, <a href="/machine-learning/13-backpropagation/">lesson 13</a></span><span><b>Math pulled in:</b> variance of sums of independent variables, propagation of variance through layers, Xavier and He initialisation, standardisation, scale invariance, dropout as noise injection</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>A deep network is a long product. The forward pass multiplies the input by $L$ weight matrices (with nonlinearities between), and the backward pass multiplies the error by their transposes. If each layer scales its input by a factor $a$ on average, the output scales like $a^L$. With $L = 50$, $a = 0.9$ shrinks signals by a factor of 200 and $a = 1.1$ grows them by 117. Only $a\approx1$ works, and nothing about gradient descent guarantees it. So deep networks need deliberate control of scale: at initialisation (choose the weight variance), during training (normalisation layers), and around the edges (residual connections in lesson 16, gradient clipping).</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: signal-propagation --></div>
+    </figure>
+    <p class="muted">Both panels come from the code below. Left: the spread of pre-activations through 50 ReLU layers of width 256 for three initialisations. Small weights ($\sigma = 0.01$) make the signal vanish within a few layers. Xavier initialisation, designed for tanh, loses a factor of 2 in variance per ReLU layer. He initialisation holds it constant. Right: a 20-layer network trained with SGD and momentum. With the first two initialisations the gradients reaching the early layers are $10^{-27}$ and $10^{-5}$ of the right size, and the loss never moves. He initialisation trains, and so does Xavier when every layer re-standardises its pre-activations (layer normalisation).</p>
+  </section>
+
+  <section id="init">
+    <h2>Initialisation: keep the variance constant</h2>
+    <p>Consider one layer, $z_j = \sum_{k=1}^{n}W_{jk}h_k$, with $n$ the fan-in. At initialisation, take the weights independent with mean 0 and variance $\sigma_w^2$, independent of the inputs $h_k$. Each term $W_{jk}h_k$ has mean 0 and variance $\sigma_w^2\,\mathbb{E}[h_k^2]$, and the terms are uncorrelated, so their variances add (M3):</p>
+    <div class="eq">$$\operatorname{Var}(z_j) = n\,\sigma_w^2\,\mathbb{E}[h^2] .$$</div>
+    <p>Now $h = \phi(z')$ for the previous layer's pre-activation $z'$. For ReLU, if $z'$ is symmetric about 0, half of its mass is zeroed and the other half kept, so $\mathbb{E}[\operatorname{ReLU}(z')^2] = \tfrac12\mathbb{E}[z'^2] = \tfrac12\operatorname{Var}(z')$. Therefore</p>
+    <div class="eq">$$\operatorname{Var}(z) = \tfrac12\,n\,\sigma_w^2\,\operatorname{Var}(z'), \qquad\text{so after } L \text{ layers}\qquad \operatorname{Var}(z^{(L)}) = \Big(\tfrac12n\sigma_w^2\Big)^{L-1}\operatorname{Var}(z^{(1)}) .$$</div>
+    <p>The factor in brackets must be 1. For tanh, which is close to the identity near 0, $\mathbb{E}[h^2]\approx\operatorname{Var}(z')$ and the factor is $n\sigma_w^2$. The backward pass gives the same kind of recursion with the fan-out in place of the fan-in, because the error is multiplied by $W^\top$: $\operatorname{Var}(\delta') = n_{\text{out}}\,\sigma_w^2\,\mathbb{E}[\phi'(z')^2]\operatorname{Var}(\delta)$, and for ReLU $\mathbb{E}[\phi'^2] = \tfrac12$.</p>
+    <div class="result">
+      <div class="label">Initialisation rules</div>
+      <div class="eq">$$\text{He (ReLU):}\;\; \sigma_w^2 = \frac{2}{n_{\text{in}}} \qquad\qquad \text{Xavier/Glorot (tanh, linear):}\;\; \sigma_w^2 = \frac{1}{n_{\text{in}}}\;\;\text{or}\;\;\frac{2}{n_{\text{in}} + n_{\text{out}}}$$</div>
+      <p>Glorot and Bengio (2010) used the average of fan-in and fan-out as a compromise between the forward and backward conditions; He et al. (2015) added the factor 2 for ReLU. Biases start at 0.</p>
+    </div>
+    <p>The code's numbers match the formula. With Xavier on ReLU, the variance halves per layer, so the standard deviation after 49 more layers should fall by $2^{-24.5}\approx4\times10^{-8}$; the code measures $1.2\times10^{-7}$ relative to the first layer. With He it stays near 1.4 (the variance is 2, because the inputs have variance 1 and $n\sigma_w^2 = 2$ at the first layer, where the inputs are not ReLU outputs). The slow drift up to 3.9 by layer 50 is a finite-width effect: the factor $\tfrac12n\sigma_w^2$ is exactly 1 only on average, and its random fluctuations multiply.</p>
+    <div class="detour">
+      <div class="label">Math detour · why "independent and zero mean" makes variances add</div>
+      <p>$\operatorname{Var}(\sum_kX_k) = \sum_k\operatorname{Var}(X_k) + \sum_{k\ne l}\operatorname{Cov}(X_k, X_l)$. For $X_k = W_kh_k$ with the $W_k$ independent of everything and of mean 0, $\operatorname{Cov}(W_kh_k, W_lh_l) = \mathbb{E}[W_k]\mathbb{E}[W_l]\mathbb{E}[h_kh_l] = 0$, even though the $h_k$ are correlated with each other. And $\operatorname{Var}(W_kh_k) = \mathbb{E}[W_k^2]\mathbb{E}[h_k^2] - 0 = \sigma_w^2\mathbb{E}[h_k^2]$. Note $\mathbb{E}[h^2]$, not $\operatorname{Var}(h)$: ReLU outputs have a nonzero mean, and it counts.</p>
+    </div>
+  </section>
+
+  <section id="gradients">
+    <h2>Vanishing and exploding gradients</h2>
+    <p>The gradient reaching layer $\ell$ is the loss gradient multiplied by the Jacobians of all later layers (lesson 13): $\bar{\mathbf{h}}_\ell^\top = \bar{\mathbf{h}}_L^\top J_LJ_{L-1}\cdots J_{\ell+1}$. Each Jacobian is $\operatorname{diag}(\phi'(\mathbf{z}))W$. If their typical gain is below 1, early layers get exponentially small gradients and learn nothing (vanishing); above 1, the updates explode. Sigmoid networks vanish almost automatically, since $\sigma'\le\tfrac14$. The right initialisation makes the gain 1 at the start, but training changes the weights, and in recurrent networks (lesson 17) the same matrix is multiplied in at every time step, which makes the problem far worse.</p>
+    <p>Three further defences are standard. <b>Normalisation layers</b> (next section) re-standardise activations at every layer, throughout training. <b>Residual connections</b>, $\mathbf{h}_{\ell+1} = \mathbf{h}_\ell + f(\mathbf{h}_\ell)$, make each Jacobian $I + \partial f/\partial\mathbf{h}$, so the product contains a path of identities and gradients reach every layer (lesson 16). <b>Gradient clipping</b> rescales the whole gradient when its norm exceeds a threshold $c$, $\mathbf{g}\leftarrow\mathbf{g}\cdot\min(1, c/\lVert\mathbf{g}\rVert)$: it keeps the direction and caps the step, which protects against rare explosions without affecting normal steps.</p>
+  </section>
+
+  <section id="normalisation">
+    <h2>Normalisation layers</h2>
+    <p>Instead of hoping the scale stays right, enforce it. <b>Batch normalisation</b> (Ioffe &amp; Szegedy, 2015) standardises each unit over the examples in a mini-batch $B$, then lets the network choose a new scale and shift:</p>
+    <div class="eq">$$\hat z_i = \frac{z_i - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}, \qquad y_i = \gamma\hat z_i + \beta, \qquad \mu_B = \frac1{|B|}\sum_{i\in B}z_i,\;\; \sigma_B^2 = \frac1{|B|}\sum_{i\in B}(z_i - \mu_B)^2 .$$</div>
+    <p>At test time there is no batch, so it uses running averages of $\mu_B$ and $\sigma_B^2$ collected during training. <b>Layer normalisation</b> (Ba et al., 2016) standardises each example over its units instead, so it behaves the same in training and at test time and works with any batch size; it is the norm in transformers. <b>RMSNorm</b> drops the mean subtraction and divides by the root mean square, which is cheaper and works as well in large language models. The code uses layer normalisation without $\gamma$ and $\beta$.</p>
+    <p>Why does it help so much? Two reasons are well established:</p>
+    <ul>
+      <li><b>Scale is reset at every layer.</b> Whatever the weights do, each layer's output has a controlled scale, so the product of gains can't drift exponentially. That is why Xavier plus normalisation trains in the figure, though Xavier alone does not.</li>
+      <li><b>Scale invariance.</b> Normalisation makes the output unchanged when a layer's incoming weights are multiplied by any $a &gt; 0$: $\operatorname{norm}(aW\mathbf{h}) = \operatorname{norm}(W\mathbf{h})$. For such a function the gradient is orthogonal to $W$ and shrinks like $1/a$ (exercise 3). Weights that grow get smaller effective steps, which stabilises training and lets it use larger learning rates. It also means weight decay on these layers controls the effective learning rate rather than the function.</li>
+    </ul>
+    <p>The original motivation, reducing "internal covariate shift", has not held up well; Santurkar et al. (2018) argue the main effect is a smoother loss landscape. Whatever the explanation, normalisation is part of nearly every deep architecture.</p>
+  </section>
+
+  <section id="regularisation">
+    <h2>Regularisation for networks</h2>
+    <p>A network with millions of parameters can memorise its training set; lesson 12's two-layer network did. The defences combine lesson 05's ideas with some new ones:</p>
+    <ul>
+      <li><b>Dropout</b> (Srivastava et al., 2014). During training, zero each hidden activation independently with probability $p$, and scale the survivors by $1/(1 - p)$ so the expected activation is unchanged: $\tilde h = hm/(1-p)$ with $m\sim\text{Bernoulli}(1-p)$, so $\mathbb{E}[\tilde h] = h$. At test time, use all units unscaled. A unit can't rely on any particular other unit being present, which discourages fragile co-adaptations. Dropout trains an exponentially large family of sub-networks that share weights, and the test-time network approximates their average. For linear regression it is exactly a data-dependent ridge penalty (exercise 4).</li>
+      <li><b>Weight decay.</b> Lesson 05's $\ell_2$ penalty, implemented as shrinking every weight by a factor $(1 - \eta\lambda)$ each step. With Adam, adding $\lambda\mathbf{w}$ to the gradient is <i>not</i> the same thing, because Adam rescales gradients per coordinate; AdamW applies the decay separately from the adaptive step (Loshchilov &amp; Hutter, 2019) and is the usual choice.</li>
+      <li><b>Data augmentation.</b> Train on transformed copies (crops, flips, colour changes for images) that shouldn't change the label. This builds invariances into the model and is often the most effective regulariser of all.</li>
+      <li><b>Early stopping and label smoothing.</b> Stop when validation loss stops improving (lesson 04). Replace one-hot targets by $1 - \varepsilon$ on the true class and $\varepsilon/(K - 1)$ on the others, which keeps logits from growing without bound, as they would on separable data (lesson 03).</li>
+    </ul>
+  </section>
+
+  <section id="recipe">
+    <h2>A recipe for getting a network to train</h2>
+    <p>Most failures are mundane. A good order of work, adapted from Karpathy's "A recipe for training neural networks" (2019):</p>
+    <ol>
+      <li><b>Check the loss at initialisation.</b> With $K$ balanced classes and small output logits it should be $\log K$ (0.693 for two classes, 2.303 for ten). If not, the output layer or the loss is wrong.</li>
+      <li><b>Overfit one small batch.</b> A correct network and training loop drive the loss on, say, 32 examples to near zero. If not, there's a bug: a wrong gradient, a forgotten <code>zero_grad</code>, labels shuffled separately from inputs.</li>
+      <li><b>Find the learning rate.</b> The most important hyperparameter. Increase it geometrically over a few hundred steps and note where the loss starts to blow up; train at about a tenth of that. Use a short linear <b>warm-up</b> (the first few hundred or thousand steps), because Adam's second-moment estimates are poor at first and early gradients are large, then <b>decay</b> it (cosine or step schedules).</li>
+      <li><b>Then regularise.</b> Get the training loss low first; then add augmentation, dropout and weight decay, watching validation loss.</li>
+      <li><b>Monitor more than the loss.</b> Gradient norms per layer, the fraction of ReLUs that are never active ("dead" units, often caused by a learning rate that is too high), activation statistics, and the ratio of update size to weight size (around $10^{-3}$ per step is healthy).</li>
+    </ol>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 pushes random data through 50 ReLU layers and measures the spread of the pre-activations. Part 2 trains a 20-layer network on lesson 12's spirals with four set-ups. The backward pass through layer normalisation follows from the chain rule applied to $\hat z = (z - \mu)/\sigma$, remembering that $\mu$ and $\sigma$ depend on every $z$ in the example (exercise 5).</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+def spirals(n, noise=0.08):                       # lesson 12's data
+    t = np.sqrt(rng.uniform(0, 1, n)) * 3 * np.pi
+    y = rng.integers(0, 2, n); r = t / (3 * np.pi)
+    return np.c_[r * np.cos(t + np.pi * y), r * np.sin(t + np.pi * y)] + noise * rng.standard_normal((n, 2)), y
+
+def init(sizes, scale, seed):
+    """scale(fan_in) gives the standard deviation of the weights."""
+    r = np.random.default_rng(seed)
+    return [(r.standard_normal((m, k)) * scale(k), np.zeros(m)) for k, m in zip(sizes[:-1], sizes[1:])]
+
+def forward(params, X, norm=False):
+    a, cache = X, []
+    for i, (W, b) in enumerate(params):
+        z = a @ W.T + b
+        if norm and i &lt; len(params) - 1:          # layer norm without a learned gain: per-example standardisation
+            mu, sd = z.mean(1, keepdims=True), np.sqrt(z.var(1, keepdims=True) + 1e-5)
+            zn = (z - mu) / sd
+        else:
+            zn, sd = z, None
+        cache.append((a, zn, sd))
+        a = np.maximum(zn, 0) if i &lt; len(params) - 1 else zn
+    return a[:, 0], cache
+
+def grads(params, X, y, norm=False):
+    F, cache = forward(params, X, norm)
+    loss = np.mean(np.logaddexp(0, F) - y * F)
+    d = ((1 / (1 + np.exp(-F))) - y)[:, None] / len(y)
+    out = [None] * len(params)
+    for i in reversed(range(len(params))):
+        a, zn, sd = cache[i]
+        if sd is not None:                        # backward through the standardisation
+            d = (d - d.mean(1, keepdims=True) - zn * (d * zn).mean(1, keepdims=True)) / sd
+        out[i] = (d.T @ a, d.sum(0))
+        d = (d @ params[i][0]) * (cache[i - 1][1] &gt; 0) if i &gt; 0 else None
+    return loss, out
+
+schemes = {"N(0, 0.01²)": lambda k: 0.01, "Xavier 1/fan_in": lambda k: np.sqrt(1 / k), "He 2/fan_in": lambda k: np.sqrt(2 / k)}
+
+# 1. Signal propagation through 50 ReLU layers of width 256 at initialisation
+X = rng.standard_normal((1000, 256))
+for name, scale in schemes.items():
+    params = init([256] * 51 + [1], scale, seed=1)
+    _, cache = forward(params, X)
+    stds = [np.std(c[1]) for c in cache[:-1]]
+    print(f"{name:16s} pre-activation std at layers 1, 10, 50: {stds[0]:.2e} {stds[9]:.2e} {stds[49]:.2e}")
+
+# 2. Train a 20-hidden-layer, width-64 network on the spirals with SGD + momentum
+Xtr, ytr = spirals(400); Xte, yte = spirals(4000)
+def train(scale, norm=False, steps=1000, lr=0.003, seed=0):
+    params = init([2] + [64] * 20 + [1], scale, seed)
+    vel = [(np.zeros_like(W), np.zeros_like(b)) for W, b in params]
+    hist = []
+    for t in range(steps):
+        loss, g = grads(params, Xtr, ytr, norm)
+        if t == 0:
+            g1 = np.linalg.norm(g[0][0])          # size of the first layer's gradient at initialisation
+        hist.append(loss)
+        for i, ((W, b), (gW, gb)) in enumerate(zip(params, g)):
+            vel[i] = (0.9 * vel[i][0] - lr * gW, 0.9 * vel[i][1] - lr * gb)
+            params[i] = (W + vel[i][0], b + vel[i][1])
+    return hist, np.mean((forward(params, Xte, norm)[0] &gt; 0) == yte), g1
+
+for name, scale, norm in [("N(0, 0.01²)", schemes["N(0, 0.01²)"], False), ("Xavier", schemes["Xavier 1/fan_in"], False),
+                          ("He", schemes["He 2/fan_in"], False), ("Xavier + norm", schemes["Xavier 1/fan_in"], True)]:
+    hist, acc, g1 = train(scale, norm)
+    print(f"{name:14s} |grad W1| at init {g1:.1e}   train loss at 0/250/1000 steps:"
+          f" {hist[0]:.3f} {hist[249]:.3f} {hist[-1]:.3f}   test acc {acc:.3f}")
+
+# N(0, 0.01²)      pre-activation std at layers 1, 10, 50: 1.59e-01 4.83e-10 1.86e-47
+# Xavier 1/fan_in  pre-activation std at layers 1, 10, 50: 9.96e-01 4.39e-02 1.16e-07
+# He 2/fan_in      pre-activation std at layers 1, 10, 50: 1.41e+00 1.41e+00 3.88e+00
+# N(0, 0.01²)    |grad W1| at init 2.4e-27   train loss at 0/250/1000 steps: 0.693 0.690 0.690   test acc 0.496
+# Xavier         |grad W1| at init 2.0e-05   train loss at 0/250/1000 steps: 0.693 0.690 0.689   test acc 0.496
+# He             |grad W1| at init 2.6e-02   train loss at 0/250/1000 steps: 0.727 0.147 0.000   test acc 0.947
+# Xavier + norm  |grad W1| at init 2.0e-02   train loss at 0/250/1000 steps: 0.759 0.434 0.002   test acc 0.955</code></pre>
+    <p class="muted">The training loss of a 20-layer network on two balanced classes starts at $\log2 = 0.693$ if the output is near zero, as it is with the first two initialisations, and stays there: the first layer's gradient is $10^{-27}$ or $2\times10^{-5}$ in size, so nothing moves except the output bias. He initialisation trains to zero loss and 94.7% test accuracy; Xavier with layer normalisation reaches 95.5%. Same architecture, same optimiser, same data: only the scale of the numbers at step 0 differs.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show that if $z$ has a distribution symmetric about 0, then $\mathbb{E}[\operatorname{ReLU}(z)^2] = \tfrac12\mathbb{E}[z^2]$. Compute $\mathbb{E}[\operatorname{ReLU}(z)]$ for $z\sim\mathcal{N}(0, 1)$.</li>
+      <li>For a layer with fan-in 512 and fan-out 128, what are the He and the Glorot ($2/(n_{\text{in}} + n_{\text{out}})$) weight standard deviations? Which condition, forward or backward, does each satisfy exactly?</li>
+      <li>Let $L(\mathbf{w})$ be scale invariant: $L(a\mathbf{w}) = L(\mathbf{w})$ for all $a &gt; 0$. Show that $\nabla L(\mathbf{w})\perp\mathbf{w}$ and $\nabla L(a\mathbf{w}) = \nabla L(\mathbf{w})/a$. Deduce that plain gradient descent never decreases $\lVert\mathbf{w}\rVert$.</li>
+      <li>For a linear model with inputs $x_j$, dropout gives the prediction $\sum_jw_jx_jm_j/(1-p)$ with independent $m_j\sim\text{Bernoulli}(1-p)$. Show that the expected squared error over the masks is $(y - \mathbf{w}^\top\mathbf{x})^2 + \frac{p}{1-p}\sum_jw_j^2x_j^2$. What kind of penalty is this?</li>
+      <li>Layer normalisation without gain: $\hat z_i = (z_i - \mu)/s$ with $\mu = \frac1n\sum_jz_j$, $s = \sqrt{\frac1n\sum_j(z_j - \mu)^2 + \epsilon}$. Given $\bar{\hat z}$, show that $\bar z = \frac1s\big(\bar{\hat z} - \operatorname{mean}(\bar{\hat z}) - \hat z\cdot\operatorname{mean}(\bar{\hat z}\odot\hat z)\big)$, which is the line in the code.</li>
+      <li>With batch normalisation, why can't you evaluate a trained network on one test example at a time using the batch statistics of that "batch"? What does the network output for a batch of one?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\mathbb{E}[\operatorname{ReLU}(z)^2] = \mathbb{E}[z^2\,[z &gt; 0]]$, and by symmetry $\mathbb{E}[z^2[z &gt; 0]] = \mathbb{E}[z^2[z &lt; 0]]$, the two summing to $\mathbb{E}[z^2]$. For a standard normal, $\mathbb{E}[\operatorname{ReLU}(z)] = \int_0^\infty z\varphi(z)\,dz = \varphi(0) = 1/\sqrt{2\pi}\approx0.399$: ReLU outputs are not zero mean.</p>
+        <p><b>2.</b> He: $\sqrt{2/512} = 0.0625$, exact for the forward pass. Glorot: $\sqrt{2/640} = 0.0559$, exact for neither (the forward condition for tanh wants $\sqrt{1/512} = 0.0442$, the backward $\sqrt{1/128} = 0.0884$); it splits the difference.</p>
+        <p><b>3.</b> Differentiate $L(a\mathbf{w}) = L(\mathbf{w})$ with respect to $a$ at $a = 1$: $\nabla L(\mathbf{w})^\top\mathbf{w} = 0$. Differentiate with respect to $\mathbf{w}$: $a\nabla L(a\mathbf{w}) = \nabla L(\mathbf{w})$. A gradient step adds a vector orthogonal to $\mathbf{w}$, so $\lVert\mathbf{w} - \eta\mathbf{g}\rVert^2 = \lVert\mathbf{w}\rVert^2 + \eta^2\lVert\mathbf{g}\rVert^2\ge\lVert\mathbf{w}\rVert^2$. The weights grow, and their effective step size falls; weight decay counteracts this.</p>
+        <p><b>4.</b> Let $u_j = w_jx_jm_j/(1-p)$: $\mathbb{E}u_j = w_jx_j$ and $\operatorname{Var}u_j = w_j^2x_j^2\cdot\frac{p(1-p)}{(1-p)^2} = \frac{p}{1-p}w_j^2x_j^2$. Then $\mathbb{E}(y - \sum_ju_j)^2 = (y - \mathbf{w}^\top\mathbf{x})^2 + \sum_j\operatorname{Var}u_j$. Summed over the data, the penalty is $\frac{p}{1-p}\sum_jw_j^2\sum_ix_{ij}^2$: ridge, with each weight penalised in proportion to its feature's scale.</p>
+        <p><b>5.</b> $\partial\hat z_i/\partial z_j = \frac1s\big(\delta_{ij} - \frac1n - \frac1n\hat z_i\hat z_j\big)$, using $\partial\mu/\partial z_j = \frac1n$ and $\partial s/\partial z_j = \hat z_j/n$ (the $\epsilon$ is absorbed into $s$). Then $\bar z_j = \sum_i\bar{\hat z}_i\,\partial\hat z_i/\partial z_j = \frac1s\big(\bar{\hat z}_j - \frac1n\sum_i\bar{\hat z}_i - \hat z_j\frac1n\sum_i\bar{\hat z}_i\hat z_i\big)$.</p>
+        <p><b>6.</b> With one example, $z_i = \mu_B$ for every unit, so every standardised value is 0 and the output is just $\beta$, whatever the input. Predictions would also depend on which other examples share the batch. So at test time batch norm uses fixed running averages of the training statistics, which makes it a fixed affine map.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Glorot &amp; Bengio, "Understanding the difficulty of training deep feedforward neural networks"</b> (AISTATS 2010), and <b>He, Zhang, Ren &amp; Sun, "Delving deep into rectifiers"</b> (ICCV 2015). The two initialisation derivations.</li>
+      <li><b>Ioffe &amp; Szegedy, "Batch normalization"</b> (ICML 2015); <b>Ba, Kiros &amp; Hinton, "Layer normalization"</b> (2016); <b>Santurkar et al., "How does batch normalization help optimization?"</b> (NeurIPS 2018).</li>
+      <li><b>Srivastava, Hinton, Krizhevsky, Sutskever &amp; Salakhutdinov, "Dropout"</b> (JMLR 2014).</li>
+      <li><b>Loshchilov &amp; Hutter, "Decoupled weight decay regularization"</b> (ICLR 2019). AdamW.</li>
+      <li><b>Andrej Karpathy, "A recipe for training neural networks"</b> (blog post, 2019), and <b>Goodfellow, Bengio &amp; Courville, <i>Deep Learning</i></b>, chapters 7 and 8.</li>
+    </ul>
+  </section>
+</article>

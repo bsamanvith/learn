@@ -1,0 +1,197 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 12 · Stage 4: neural networks</div>
+  <h1>Neurons and the multilayer perceptron</h1>
+  <p class="lede">Logistic regression is a single artificial neuron: a weighted sum followed by a squashing function. It can only draw a straight boundary. Put a layer of neurons in front of it, each computing its own feature of the input, and the model can bend its boundary into any shape. This lesson builds the multilayer perceptron, shows exactly what a hidden layer does to the input space, proves that one hidden layer can approximate any continuous function, and explains why depth still matters.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/03-logistic-regression/">lesson 03</a>, <a href="/machine-learning/06-softmax-regression/">lesson 06</a>, <a href="/machine-learning/07-stochastic-optimisation/">lesson 07</a></span><span><b>Math pulled in:</b> function composition, affine maps, piecewise-linear functions, uniform continuity, a constructive universal approximation theorem</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Lesson 03's model computes $p = \sigma(\mathbf{w}^\top\mathbf{x} + b)$: a weighted sum of the inputs, then a nonlinear function. Call that a <b>neuron</b>. The weighted sum $z = \mathbf{w}^\top\mathbf{x} + b$ is its <b>pre-activation</b> and $\phi(z)$ its <b>activation</b>. Its decision boundary is the hyperplane $z = 0$, so it fails on any problem whose classes aren't separated by a straight line.</p>
+    <p>The fix is to let the model compute its own features. A <b>hidden layer</b> of $m$ neurons, each with its own weights, maps $\mathbf{x}\in\mathbb{R}^d$ to $\mathbf{h}\in\mathbb{R}^m$, and an output neuron reads $\mathbf{h}$:</p>
+    <div class="eq">$$\mathbf{h} = \phi(W_1\mathbf{x} + \mathbf{b}_1), \qquad F = \mathbf{w}_2^\top\mathbf{h} + b_2, \qquad p = \sigma(F),$$</div>
+    <p>with $W_1\in\mathbb{R}^{m\times d}$ and $\phi$ applied to each entry. Stacking more layers, $\mathbf{h}^{(\ell)} = \phi\big(W_\ell\mathbf{h}^{(\ell-1)} + \mathbf{b}_\ell\big)$, gives a <b>multilayer perceptron</b> (MLP), also called a fully connected or feed-forward network. The last layer has no $\phi$: it outputs logits, which go into lesson 03's sigmoid or lesson 06's softmax, and the network is trained on the same cross-entropy loss. Everything is learned together: the output layer is logistic regression on features that the hidden layers learn.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: mlp-spirals --></div>
+    </figure>
+    <p class="muted">Two interleaved spirals, 400 training points, and the decision regions of three models trained by the code below. Logistic regression (left) can only cut the plane with a line: 65% test accuracy. With 8 ReLU hidden units (middle) the boundary is a polygon with a few corners: 81%. With 64 hidden units (right) it follows the spiral arms: 95%.</p>
+  </section>
+
+  <section id="nonlinearity">
+    <h2>Why the nonlinearity is essential</h2>
+    <p>Without $\phi$, a two-layer network computes $\mathbf{w}_2^\top(W_1\mathbf{x} + \mathbf{b}_1) + b_2 = (W_1^\top\mathbf{w}_2)^\top\mathbf{x} + (\mathbf{w}_2^\top\mathbf{b}_1 + b_2)$. That is one affine function of $\mathbf{x}$. A composition of affine maps is affine, so any number of linear layers collapses to a single one: depth buys nothing. The activation $\phi$ is what makes a layer add expressive power. The common choices:</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>activation</th><th>$\phi(z)$</th><th>$\phi'(z)$</th><th>notes</th></tr></thead>
+      <tbody>
+        <tr><td>sigmoid</td><td>$1/(1 + e^{-z})$</td><td>$\phi(1 - \phi)$, at most $\tfrac14$</td><td>saturates at both ends; the historical choice</td></tr>
+        <tr><td>tanh</td><td>$\tanh z = 2\sigma(2z) - 1$</td><td>$1 - \phi^2$, at most 1</td><td>zero-centred, still saturates</td></tr>
+        <tr><td>ReLU</td><td>$\max(0, z)$</td><td>$[z &gt; 0]$</td><td>cheap; gradient exactly 1 when active; the default since about 2011</td></tr>
+        <tr><td>GELU</td><td>$z\,\Phi(z)$</td><td>$\Phi(z) + z\varphi(z)$</td><td>a smooth ReLU, used in transformers ($\Phi$, $\varphi$ are the standard normal CDF and density)</td></tr>
+      </tbody>
+    </table></div>
+    <p>The derivative column matters for training. Lesson 13 shows that gradients flowing back through $L$ layers are multiplied by $L$ factors of $\phi'$. With sigmoids each factor is at most $\tfrac14$, so gradients shrink geometrically with depth; ReLU's factor of exactly 1 on active units is a main reason deep networks became trainable. Lesson 14 returns to this.</p>
+  </section>
+
+  <section id="geometry">
+    <h2>What a hidden layer does</h2>
+    <p><b>XOR, the classic counterexample.</b> The four points $(0,0)\mapsto0$, $(1,1)\mapsto0$, $(0,1)\mapsto1$, $(1,0)\mapsto1$ can't be separated by a line (Minsky and Papert used this in 1969 to argue the limits of single-layer perceptrons). Two ReLU units fix it:</p>
+    <div class="eq">$$h_1 = \operatorname{ReLU}(x_1 + x_2), \qquad h_2 = \operatorname{ReLU}(x_1 + x_2 - 1), \qquad F = h_1 - 2h_2 .$$</div>
+    <p>The four inputs give $(h_1, h_2) = (0, 0), (2, 1), (1, 0), (1, 0)$ and $F = 0, 0, 1, 1$. In the hidden space the two classes are separable by a line (for example $F = \tfrac12$). That is the general picture: <b>the hidden layers transform the input until the classes are linearly separable, and the output layer draws the line.</b></p>
+    <p><b>ReLU networks are piecewise linear.</b> Each ReLU unit is linear on either side of the hyperplane where its pre-activation is zero. A network made of ReLUs and affine maps is therefore continuous and piecewise linear: input space is cut into convex regions, and on each region the network is one affine function. In one dimension, a single hidden layer of $m$ ReLUs, $F(x) = b + \sum_kc_k\operatorname{ReLU}(a_kx + b_k)$, has at most $m$ kinks, so at most $m + 1$ linear pieces.</p>
+    <p><b>Depth multiplies pieces.</b> The tent map $t(x) = 2\operatorname{ReLU}(x) - 4\operatorname{ReLU}(x - \tfrac12)$ rises from 0 to 1 on $[0, \tfrac12]$ and falls back to 0 on $[\tfrac12, 1]$. It is a layer with two ReLUs. Composing it with itself, $t\circ t$ goes up and down twice, and $t^{\circ L} = t\circ\cdots\circ t$ is a sawtooth with $2^{L-1}$ teeth and $2^L$ linear pieces. A network with $L$ layers of 2 units, so $2L$ units in total, computes it. A one-hidden-layer network needs at least $2^L - 1$ units to produce $2^L$ pieces. Depth can be exponentially more efficient than width (Telgarsky, 2016; Montúfar et al., 2014 count the regions of deep networks in higher dimensions).</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: relu-pieces --></div>
+    </figure>
+    <p class="muted">Left: the universal approximation construction below. A one-hidden-layer network with 8 ReLUs, whose kinks (dots) sit at evenly spaced knots, interpolates a smooth function (dashed) with straight segments. Right: the tent map composed with itself 1, 2 and 3 times. Each composition doubles the number of linear pieces, using only two more units.</p>
+  </section>
+
+  <section id="universal">
+    <h2>Universal approximation</h2>
+    <p>How much can one hidden layer do? Everything, in the following sense.</p>
+    <div class="result">
+      <div class="label">Universal approximation (one dimension, ReLU)</div>
+      <p>Let $f$ be continuous on $[a, b]$. For every $\varepsilon &gt; 0$ there is a network with one hidden layer of ReLUs such that $|F(x) - f(x)| \le \varepsilon$ for all $x\in[a, b]$.</p>
+    </div>
+    <p><b>Proof.</b> A continuous function on a closed interval is uniformly continuous: there is a $\delta &gt; 0$ such that $|x - x'|\le\delta$ implies $|f(x) - f(x')|\le\varepsilon$. Pick knots $a = x_0 &lt; x_1 &lt; \dots &lt; x_m = b$ with spacing at most $\delta$, and let $F$ be the piecewise-linear interpolant: it equals $f$ at every knot and is a straight line between neighbouring knots. On $[x_{k-1}, x_k]$, $F(x)$ is a weighted average of $f(x_{k-1})$ and $f(x_k)$, both within $\varepsilon$ of $f(x)$, so $|F(x) - f(x)|\le\varepsilon$.</p>
+    <p>It remains to write $F$ as a network. Let $s_k = \big(f(x_k) - f(x_{k-1})\big)/(x_k - x_{k-1})$ be the slope on the $k$-th segment, and $s_0 = 0$. Then</p>
+    <div class="eq">$$F(x) = f(x_0) + \sum_{k=1}^{m}(s_k - s_{k-1})\operatorname{ReLU}(x - x_{k-1}) .$$</div>
+    <p>To check it, note that on $[x_{j-1}, x_j]$ the units with $k\le j$ are active and the slope of the sum is $\sum_{k\le j}(s_k - s_{k-1}) = s_j$, which telescopes; and $F(x_0) = f(x_0)$. A continuous piecewise-linear function is fixed by its value at one point and its slopes, so this is the interpolant. It is a hidden layer of $m$ ReLUs with input weights 1 and biases $-x_{k-1}$, and an output layer with weights $s_k - s_{k-1}$ and bias $f(x_0)$. $\square$</p>
+    <p>The same holds in $d$ dimensions and for any non-polynomial activation (Cybenko, 1989, for sigmoids; Hornik, 1991; Leshno et al., 1993). The theorem is reassuring but weak in three ways, each of which shapes the rest of this stage:</p>
+    <ul>
+      <li><b>Size.</b> The grid argument needs about $(1/\delta)^d$ units in $d$ dimensions: exponential in the dimension. Networks that work in practice exploit structure (smoothness, compositionality, symmetry) that the theorem doesn't use.</li>
+      <li><b>Learning.</b> It says the weights exist, not that gradient descent finds them, nor how much data is needed to pin them down. Those are questions about optimisation (lessons 13–14) and generalisation (lesson 04).</li>
+      <li><b>Depth.</b> The sawtooth shows that some functions need exponentially many units in one hidden layer but few in a deep network. In practice depth, not width, is what lets networks learn hierarchies of features (edges, parts, objects in stage 5).</li>
+    </ul>
+  </section>
+
+  <section id="training">
+    <h2>Training: same loss, harder landscape</h2>
+    <p>Train an MLP exactly as lesson 06 trained softmax regression: minimise the average cross-entropy over the training set by stochastic gradient descent or Adam (lesson 07). The only new ingredient is the gradient. For one hidden layer, with $\mathbf{z} = W_1\mathbf{x} + \mathbf{b}_1$, $\mathbf{h} = \phi(\mathbf{z})$, $F = \mathbf{w}_2^\top\mathbf{h} + b_2$ and log-loss $\ell$, the chain rule gives</p>
+    <div class="eq">$$\frac{\partial\ell}{\partial F} = p - y =: \delta_2, \qquad \frac{\partial\ell}{\partial\mathbf{w}_2} = \delta_2\,\mathbf{h}, \qquad \frac{\partial\ell}{\partial\mathbf{z}} = \delta_2\,\mathbf{w}_2\odot\phi'(\mathbf{z}) =: \boldsymbol\delta_1, \qquad \frac{\partial\ell}{\partial W_1} = \boldsymbol\delta_1\mathbf{x}^\top .$$</div>
+    <p>The output error $\delta_2$ is lesson 03's "prediction minus target". It is sent back through the output weights, gated by $\phi'$ of each hidden unit (for ReLU, zero for inactive units), and becomes each hidden unit's error $\boldsymbol\delta_1$; each weight's gradient is "error at its output times activity at its input". Lesson 13 turns this into an algorithm for any graph of operations.</p>
+    <p>Two things change compared with logistic regression:</p>
+    <ul>
+      <li><b>The loss is no longer convex.</b> Permuting the hidden units (and their weights) leaves the function unchanged, so every minimum comes with at least $m!$ copies, and the average of two copies is usually not a minimum. Gradient descent finds a local minimum or a saddle region, and which one depends on the initialisation and the noise. In practice, for large networks, most local minima it reaches are about equally good.</li>
+      <li><b>Initialisation matters.</b> If all hidden units start with identical weights, they receive identical gradients and stay identical forever: the network acts as if it had one unit. Weights must start random to break this symmetry, and at a scale that keeps signals from exploding or vanishing as they pass through the layers (the code uses $\mathcal{N}(0, 2/\text{fan-in})$, derived in lesson 14).</li>
+    </ul>
+    <div class="detour">
+      <div class="label">Math detour · counting parameters</div>
+      <p>A fully connected layer from $k$ to $m$ units has an $m\times k$ weight matrix and $m$ biases: $m(k + 1)$ parameters. The network $2\to64\to64\to1$ in the code has $64\cdot3 + 64\cdot65 + 1\cdot65 = 192 + 4160 + 65 = 4417$. Fully connected layers on images get expensive fast: one layer from a $224\times224\times3$ image to 1,000 units has 150 million weights. Convolution (lesson 15) is the fix.</p>
+    </div>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>An MLP with ReLU hidden layers, backpropagation for any number of layers, a finite-difference gradient check, and full-batch Adam. It trains five architectures on the spirals, from logistic regression ($2\to1$) to two hidden layers of 64.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+def spirals(n, noise=0.08):
+    """Two interleaved spirals in the plane, labels 0 and 1."""
+    t = np.sqrt(rng.uniform(0, 1, n)) * 3 * np.pi       # angle; sqrt spreads points evenly along the arm
+    y = rng.integers(0, 2, n)
+    r = t / (3 * np.pi)
+    X = np.c_[r * np.cos(t + np.pi * y), r * np.sin(t + np.pi * y)] + noise * rng.standard_normal((n, 2))
+    return X, y
+
+def init(sizes, rng):
+    """He-style initialisation: weights ~ N(0, 2 / fan_in), biases 0 (lesson 14 explains why)."""
+    return [(rng.standard_normal((m, k)) * np.sqrt(2 / k), np.zeros(m)) for k, m in zip(sizes[:-1], sizes[1:])]
+
+def forward(params, X):
+    """ReLU hidden layers, one output logit. Returns the logit and the cache backprop needs."""
+    a, cache = X, []
+    for i, (W, b) in enumerate(params):
+        z = a @ W.T + b
+        cache.append((a, z))
+        a = np.maximum(z, 0) if i &lt; len(params) - 1 else z
+    return a[:, 0], cache
+
+def loss_and_grads(params, X, y):
+    """Mean log-loss and its gradient with respect to every W and b (lesson 13 derives this)."""
+    F, cache = forward(params, X)
+    loss = np.mean(np.logaddexp(0, F) - y * F)
+    delta = ((1 / (1 + np.exp(-F))) - y)[:, None] / len(y)     # dLoss/dz at the output
+    grads = [None] * len(params)
+    for i in reversed(range(len(params))):
+        a, z = cache[i]
+        grads[i] = (delta.T @ a, delta.sum(0))
+        if i &gt; 0:
+            delta = (delta @ params[i][0]) * (cache[i - 1][1] &gt; 0)   # back through W, then through ReLU
+    return loss, grads
+
+def train(sizes, X, y, steps=4000, lr=0.01, seed=0):
+    """Full-batch Adam (lesson 07)."""
+    params = init(sizes, np.random.default_rng(seed))
+    m = [(np.zeros_like(W), np.zeros_like(b)) for W, b in params]; v = [(np.zeros_like(W), np.zeros_like(b)) for W, b in params]
+    for t in range(1, steps + 1):
+        _, grads = loss_and_grads(params, X, y)
+        for i, ((W, b), (gW, gb)) in enumerate(zip(params, grads)):
+            m[i] = (0.9 * m[i][0] + 0.1 * gW, 0.9 * m[i][1] + 0.1 * gb)
+            v[i] = (0.999 * v[i][0] + 0.001 * gW**2, 0.999 * v[i][1] + 0.001 * gb**2)
+            c1, c2 = 1 - 0.9**t, 1 - 0.999**t
+            params[i] = (W - lr * m[i][0] / c1 / (np.sqrt(v[i][0] / c2) + 1e-8), b - lr * m[i][1] / c1 / (np.sqrt(v[i][1] / c2) + 1e-8))
+    return params
+
+Xtr, ytr = spirals(400); Xte, yte = spirals(4000)
+acc = lambda p, X, y: np.mean((forward(p, X)[0] &gt; 0) == y)
+
+# gradient check: compare backprop with central differences on a small network
+p = init([2, 5, 1], np.random.default_rng(1))
+_, g = loss_and_grads(p, Xtr[:20], ytr[:20])
+W = p[0][0]; num = np.zeros_like(W)
+for idx in np.ndindex(W.shape):
+    for s in (+1, -1):
+        W[idx] += s * 1e-6; num[idx] += s * loss_and_grads(p, Xtr[:20], ytr[:20])[0] / 2e-6; W[idx] -= s * 1e-6
+print(f"gradient check, first layer: max relative error {np.max(np.abs(num - g[0][0])) / np.max(np.abs(num)):.1e}")
+
+for sizes in [[2, 1], [2, 2, 1], [2, 8, 1], [2, 64, 1], [2, 64, 64, 1]]:
+    params = train(sizes, Xtr, ytr)
+    n_par = sum(W.size + b.size for W, b in params)
+    print(f"layers {str(sizes):16s} {n_par:5d} parameters   train acc {acc(params, Xtr, ytr):.3f}   test acc {acc(params, Xte, yte):.3f}")
+
+# gradient check, first layer: max relative error 1.6e-09
+# layers [2, 1]               3 parameters   train acc 0.693   test acc 0.646
+# layers [2, 2, 1]            9 parameters   train acc 0.693   test acc 0.646
+# layers [2, 8, 1]           33 parameters   train acc 0.858   test acc 0.810
+# layers [2, 64, 1]         257 parameters   train acc 0.995   test acc 0.948
+# layers [2, 64, 64, 1]    4417 parameters   train acc 1.000   test acc 0.948</code></pre>
+    <p class="muted">The gradient check agrees with backprop to nine digits, which is the test to run whenever you write a gradient by hand. Two hidden units are no better than logistic regression here: two ReLUs can bend the boundary only where it crosses their two lines, which is nowhere near enough for a spiral, and training settled on a nearly linear boundary. Eight units capture the inner turns; 64 units reach 95% test accuracy. The second hidden layer of 64 fits the training set perfectly but doesn't improve the test accuracy: with 400 points, more capacity mostly buys memorisation.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Count the parameters of the network $784\to256\to128\to10$ (an MNIST classifier). Which layer holds most of them?</li>
+      <li>Show that $\tanh(z) = 2\sigma(2z) - 1$. Deduce that a one-hidden-layer network with tanh units can be rewritten exactly as one with sigmoid units (with different weights).</li>
+      <li>Write the function $|x|$ on $\mathbb{R}$ as a network with two ReLUs. Then write $\max(x_1, x_2)$ with ReLUs, using $\max(a, b) = \tfrac{a + b}{2} + \tfrac{|a - b|}{2}$.</li>
+      <li>Apply the universal approximation construction to $f(x) = x^2$ on $[0, 1]$ with knots $0, \tfrac12, 1$. Write the network and find its maximum error.</li>
+      <li>Show that the tent-map composition $t^{\circ L}$ has $2^L$ linear pieces on $[0, 1]$ (induction on $L$). How many does $t^{\circ 10}$ have, and how many units does the deep network use?</li>
+      <li>All weights and biases of a one-hidden-layer network start at the same value $c$. Show that after any number of gradient steps, all hidden units still compute the same function.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $256\cdot785 + 128\cdot257 + 10\cdot129 = 200{,}960 + 32{,}896 + 1{,}290 = 235{,}146$. The first layer has 85% of them.</p>
+        <p><b>2.</b> $2\sigma(2z) - 1 = \frac{2 - 1 - e^{-2z}}{1 + e^{-2z}} = \frac{1 - e^{-2z}}{1 + e^{-2z}} = \tanh z$. So a tanh unit $c\tanh(\mathbf{w}^\top\mathbf{x} + b) = 2c\,\sigma(2\mathbf{w}^\top\mathbf{x} + 2b) - c$: double the input weights and bias, double the output weight, and absorb $-c$ into the output bias.</p>
+        <p><b>3.</b> $|x| = \operatorname{ReLU}(x) + \operatorname{ReLU}(-x)$. So $\max(x_1, x_2) = \tfrac12\big[\operatorname{ReLU}(x_1 + x_2) - \operatorname{ReLU}(-x_1 - x_2) + \operatorname{ReLU}(x_1 - x_2) + \operatorname{ReLU}(x_2 - x_1)\big]$, using $a + b = \operatorname{ReLU}(a + b) - \operatorname{ReLU}(-(a + b))$. Four units.</p>
+        <p><b>4.</b> Slopes $s_1 = (0.25 - 0)/0.5 = 0.5$, $s_2 = (1 - 0.25)/0.5 = 1.5$. $F(x) = 0 + 0.5\operatorname{ReLU}(x) + 1\cdot\operatorname{ReLU}(x - \tfrac12)$. On $[0, \tfrac12]$ the error $\tfrac x2 - x^2$ is largest at $x = \tfrac14$: $\tfrac1{16}$; the same on the other half. In general the error for $x^2$ with spacing $\delta$ is $\delta^2/4$.</p>
+        <p><b>5.</b> $t$ maps each half of $[0, 1]$ linearly onto all of $[0, 1]$. If $t^{\circ L}$ has $2^L$ pieces on $[0, 1]$, then $t^{\circ(L+1)} = t^{\circ L}\circ t$ runs through all $2^L$ pieces once on $[0, \tfrac12]$ and once (backwards) on $[\tfrac12, 1]$: $2^{L+1}$ pieces. $t^{\circ10}$ has 1,024 pieces from 20 units; one hidden layer would need at least 1,023.</p>
+        <p><b>6.</b> By induction. If all hidden units have identical incoming weights and identical outgoing weights, they have the same $z$, $h$ and $\phi'(z)$ for every input, so the same $\delta_1$ and the same gradients for their incoming weights; their outgoing weights get gradient $\delta_2h$, also identical. After the update they are still identical. This is why initialisation must be random.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Goodfellow, Bengio, Courville, <i>Deep Learning</i></b> (2016), chapter 6. Feed-forward networks, XOR, activations and universal approximation.</li>
+      <li><b>Michael Nielsen, <i>Neural Networks and Deep Learning</i></b>, chapter 4: a visual proof that neural nets can compute any function.</li>
+      <li><b>Cybenko, "Approximation by superpositions of a sigmoidal function"</b> (1989), and <b>Hornik, "Approximation capabilities of multilayer feedforward networks"</b> (1991).</li>
+      <li><b>Telgarsky, "Benefits of depth in neural networks"</b> (COLT 2016). The sawtooth argument, in full.</li>
+      <li><b>Rumelhart, Hinton &amp; Williams, "Learning representations by back-propagating errors"</b> (Nature, 1986). The paper that made hidden layers trainable.</li>
+    </ul>
+  </section>
+</article>

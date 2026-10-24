@@ -1,0 +1,232 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 13 · Stage 4: neural networks</div>
+  <h1>Backpropagation</h1>
+  <p class="lede">A network with a hundred million parameters needs a hundred million partial derivatives at every training step. Backpropagation computes all of them for roughly the cost of two forward passes, by running the chain rule backwards through the computation. This lesson derives it from the multivariable chain rule, explains why going backwards is the right direction for a scalar loss, gives the backward rule for every layer you'll meet, and builds a working automatic-differentiation engine in about 60 lines.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/12-neurons-and-mlps/">lesson 12</a>, <a href="/machine-learning/M2-matrix-calculus/">M2 matrix calculus</a></span><span><b>Math pulled in:</b> the multivariable chain rule, Jacobians, vector–Jacobian products, computational graphs, topological order, forward- and reverse-mode differentiation</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Lesson 12 wrote the gradient of a one-hidden-layer network by hand: compute the output error $\delta = p - y$, send it back through the output weights, gate it by $\phi'$, and multiply by each layer's input. Doing that by hand for every new architecture would be hopeless. But every network, however complicated, is built from a few simple operations (matrix products, additions, elementwise nonlinearities, softmax), and the chain rule tells us how to combine the derivatives of the pieces. Backpropagation is the bookkeeping that does it automatically and efficiently:</p>
+    <ol>
+      <li><b>Forward pass.</b> Compute the loss, recording every intermediate value and which operation produced it. This record is a <b>computational graph</b>.</li>
+      <li><b>Backward pass.</b> Visit the graph from the loss back to the inputs. Each node receives $\partial L/\partial(\text{node})$ from the nodes that used it, and passes on its share to the nodes it was computed from, using only its own local derivative.</li>
+    </ol>
+    <p>Every operation needs to know only one thing: given the gradient with respect to its output, what is the gradient with respect to its inputs? Everything else is the graph.</p>
+  </section>
+
+  <section id="graph">
+    <h2>The chain rule on a graph</h2>
+    <p>Take $f(x, y) = (xy + e^x)\,x$. Break it into elementary steps: $a = xy$, $b = e^x$, $c = a + b$, $f = cx$. The figure shows the graph at $x = 2$, $y = -1$, with each node's value from the forward pass and its gradient $\partial f/\partial(\text{node})$ from the backward pass.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: backprop-graph --></div>
+    </figure>
+    <p class="muted">Backward, starting from $\partial f/\partial f = 1$: $f = cx$ gives $\partial f/\partial c = x = 2$. The sum $c = a + b$ passes that 2 unchanged to both $a$ and $b$. $b = e^x$ multiplies by $e^x$, sending $2e^2 = 14.778$ to $x$. $a = xy$ sends $2y = -2$ to $x$ and $2x = 4$ to $y$. And $f = cx$ also sends $c = 5.389$ straight to $x$. Because $x$ is used three times, its gradient is the sum of the three: 18.167.</p>
+    <p>That last point is the <b>multivariable chain rule</b>. If $L$ depends on $u$ only through intermediate variables $v_1,\dots,v_k$ that each depend on $u$, then</p>
+    <div class="result">
+      <div class="label">Chain rule on a graph</div>
+      <div class="eq">$$\frac{\partial L}{\partial u} = \sum_{v\,:\,u\to v}\frac{\partial L}{\partial v}\,\frac{\partial v}{\partial u},$$</div>
+      <p>summing over every node $v$ that takes $u$ as an input. Equivalently, $\partial L/\partial u$ is the sum, over every path from $u$ to $L$, of the product of the local derivatives along the path.</p>
+    </div>
+    <p>The sum over paths can have exponentially many terms, but the sum over children doesn't: if every child $v$ already knows $\partial L/\partial v$, then $u$ needs one multiply-add per child. So visit the nodes in <b>reverse topological order</b>, children before parents, and each node's gradient is ready when it is needed. Each edge of the graph is used once, so the backward pass does a constant amount of work per edge, the same order as the forward pass. In code, each node adds its contribution to its parent's gradient with <code>+=</code>, which is exactly the sum over children.</p>
+  </section>
+
+  <section id="modes">
+    <h2>Why backwards? Forward and reverse mode</h2>
+    <p>Write a network as a chain of maps $\mathbf{x}\to\mathbf{h}_1\to\cdots\to\mathbf{h}_{L-1}\to L$, where $\mathbf{x}\in\mathbb{R}^n$ is all the parameters and $L$ is a scalar. By the chain rule its gradient is a product of Jacobians (M2), $J_k = \partial\mathbf{h}_k/\partial\mathbf{h}_{k-1}$:</p>
+    <div class="eq">$$\nabla L^\top = \underbrace{\frac{\partial L}{\partial\mathbf{h}_{L-1}}}_{1\times m}\;J_{L-1}\;\cdots\;J_2\;\underbrace{J_1}_{m\times n} .$$</div>
+    <p>Matrix multiplication is associative, so we can evaluate this product in any order, but the costs differ enormously:</p>
+    <ul>
+      <li><b>Right to left (forward mode)</b>: $J_2J_1$ is an $m\times n$ matrix, and each further product is matrix–matrix. Equivalently, push one input direction at a time forward through the network: $n$ passes for $n$ parameters.</li>
+      <li><b>Left to right (reverse mode)</b>: start from the $1\times m$ row vector and multiply by one Jacobian at a time. Every intermediate result stays a row vector, a <b>vector–Jacobian product</b> (VJP) $\bar{\mathbf{h}}_{k-1}^\top = \bar{\mathbf{h}}_k^\top J_k$, where $\bar{\mathbf{h}} = \partial L/\partial\mathbf{h}$. One pass gives all $n$ derivatives.</li>
+    </ul>
+    <div class="result">
+      <div class="label">The cheap gradient principle</div>
+      <p>For a scalar function computed by a program, reverse mode gives the whole gradient at a cost that is a small constant multiple of the cost of evaluating the function (at most about 4–5 times, and typically about 2–3), however many inputs it has (Baur &amp; Strassen, 1983; Griewank &amp; Walther, 2008). For a map $\mathbb{R}^n\to\mathbb{R}^m$, forward mode costs about $n$ evaluations and reverse mode about $m$.</p>
+    </div>
+    <p>Training has $m = 1$ (the loss) and $n$ in the millions or billions, so reverse mode wins by a factor of $n$. The VJP form is also why no layer ever builds its Jacobian: a ReLU layer of width 4,096 has a $4096\times4096$ Jacobian that is diagonal, and its VJP is just an elementwise product.</p>
+  </section>
+
+  <section id="layers">
+    <h2>The backward rule for each layer</h2>
+    <p>Each operation implements a VJP: given $\bar Y = \partial L/\partial Y$, return the gradient for each input. With a batch, rows are examples. The rules below follow from writing each operation in index notation and applying the chain rule. For the affine layer $Y = XW^\top + \mathbf{1}\mathbf{b}^\top$, i.e. $Y_{ij} = \sum_kX_{ik}W_{jk} + b_j$:</p>
+    <div class="eq">$$\bar W_{jk} = \sum_i\bar Y_{ij}\frac{\partial Y_{ij}}{\partial W_{jk}} = \sum_i\bar Y_{ij}X_{ik}, \qquad \bar X_{ik} = \sum_j\bar Y_{ij}W_{jk}, \qquad \bar b_j = \sum_i\bar Y_{ij} .$$</div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>forward</th><th>backward (given $\bar Y$)</th><th>notes</th></tr></thead>
+      <tbody>
+        <tr><td>$Y = XW^\top + \mathbf{b}$</td><td>$\bar X = \bar YW$, $\bar W = \bar Y^\top X$, $\bar{\mathbf{b}} = \textstyle\sum_{\text{rows}}\bar Y$</td><td>check shapes: $\bar W$ must match $W$</td></tr>
+        <tr><td>$Y = \phi(Z)$, elementwise</td><td>$\bar Z = \bar Y\odot\phi'(Z)$</td><td>ReLU: zero the gradient where $Z \le 0$</td></tr>
+        <tr><td>$Y = A + B$</td><td>$\bar A = \bar Y$, $\bar B = \bar Y$</td><td>if $B$ was broadcast, sum $\bar Y$ over the broadcast axes</td></tr>
+        <tr><td>$Y = A\odot B$</td><td>$\bar A = \bar Y\odot B$, $\bar B = \bar Y\odot A$</td><td>gates, attention masks</td></tr>
+        <tr><td>$y = \textstyle\sum_iX_i$</td><td>$\bar X = \bar y\,\mathbf{1}$</td><td>sum and broadcast are each other's backward</td></tr>
+        <tr><td>$L = \frac1N\sum_i\big(-\log\operatorname{softmax}(Z_i)_{y_i}\big)$</td><td>$\bar Z = \frac1N(P - Y_{\text{onehot}})$</td><td>lesson 06's gradient; compute it fused, for stability</td></tr>
+      </tbody>
+    </table></div>
+    <p>Chaining these for an MLP gives lesson 12's formulas for any depth. With $Z_\ell = H_{\ell-1}W_\ell^\top + \mathbf{b}_\ell$ and $H_\ell = \phi(Z_\ell)$: set $\Delta_L = \frac1N(P - Y)$, then for $\ell = L, \dots, 1$,</p>
+    <div class="eq">$$\bar W_\ell = \Delta_\ell^\top H_{\ell-1}, \qquad \bar{\mathbf{b}}_\ell = \textstyle\sum_{\text{rows}}\Delta_\ell, \qquad \Delta_{\ell-1} = (\Delta_\ell W_\ell)\odot\phi'(Z_{\ell-1}) .$$</div>
+    <p>Each step costs two matrix products of the same size as the forward product $H_{\ell-1}W_\ell^\top$, which is where "backward costs about twice forward" comes from.</p>
+    <div class="detour">
+      <div class="label">Math detour · checking a gradient numerically</div>
+      <p>Taylor expansion gives $\frac{f(x + h) - f(x - h)}{2h} = f'(x) + \frac{h^2}{6}f'''(x) + O(h^4)$: the central difference has error $O(h^2)$, while the one-sided $\frac{f(x + h) - f(x)}{h}$ has error $O(h)$. Rounding adds an error of about $\epsilon_{\text{mach}}|f|/h$, so with double precision $h\approx10^{-5}$ to $10^{-6}$ balances the two and gives 9–10 correct digits. Compare with a <i>relative</i> error, and keep away from kinks: if a ReLU's input is within $h$ of zero, the finite difference straddles the kink and disagrees with either one-sided derivative.</p>
+    </div>
+  </section>
+
+  <section id="memory">
+    <h2>The price: memory</h2>
+    <p>The backward rule for $W_\ell$ needs $H_{\ell-1}$, and the rule for $\phi$ needs $Z_\ell$. So the forward pass must keep every layer's activations until the backward pass reaches it. Memory grows with depth × batch size × width, and for large models the stored activations, not the weights, are what fill the GPU.</p>
+    <p><b>Gradient checkpointing</b> trades compute for memory: store the activations only at every $k$-th layer, and during the backward pass recompute each segment from its checkpoint. Memory is about $L/k$ checkpoints plus $k$ layers of a segment, minimised at $k = \sqrt L$, for the cost of one extra forward pass (Chen et al., 2016). This is how very deep networks and long-context transformers fit in memory.</p>
+    <p>Two practical consequences of the algorithm show up in every framework. Gradients <i>accumulate</i> (the <code>+=</code>), so they must be reset to zero before each step, or they add up across steps; frameworks expose this as <code>zero_grad()</code>. And some values should be treated as constants, with no gradient flowing through them (a target network in lesson 37, the "stop-gradient" in many self-supervised losses); frameworks provide <code>detach()</code> for that.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>A scalar automatic-differentiation engine: every arithmetic operation creates a <code>Value</code> that remembers its parents and the local derivative with respect to each. <code>backward()</code> sorts the graph topologically and applies the chain rule in reverse. On top of it, an MLP, a finite-difference check, and training on XOR. (Andrej Karpathy's <i>micrograd</i> is the classic version of this exercise; <a href="/machine-learning/A4-autograd-mlp/">assignment A4</a> extends it to tensors.)</p>
+<pre><code>import math
+import random
+
+class Value:
+    """A scalar that remembers how it was computed, so it can send gradients back."""
+    def __init__(self, data, parents=(), local_grads=()):
+        self.data, self.grad = data, 0.0
+        self.parents, self.local_grads = parents, local_grads    # d(self)/d(parent) for each parent
+
+    def __add__(self, o):
+        o = o if isinstance(o, Value) else Value(o)
+        return Value(self.data + o.data, (self, o), (1.0, 1.0))
+
+    def __mul__(self, o):
+        o = o if isinstance(o, Value) else Value(o)
+        return Value(self.data * o.data, (self, o), (o.data, self.data))
+
+    def __pow__(self, k):                      # k is a plain number
+        return Value(self.data ** k, (self,), (k * self.data ** (k - 1),))
+
+    def exp(self):
+        e = math.exp(self.data)
+        return Value(e, (self,), (e,))
+
+    def log(self):
+        return Value(math.log(self.data), (self,), (1 / self.data,))
+
+    def relu(self):
+        return Value(max(self.data, 0.0), (self,), (float(self.data &gt; 0),))
+
+    __radd__ = __add__
+    __rmul__ = __mul__
+    def __neg__(self): return self * -1
+    def __sub__(self, o): return self + (-o)
+    def __truediv__(self, o): return self * o ** -1
+
+    def backward(self):
+        """Reverse-mode autodiff: visit nodes in reverse topological order and apply the chain rule."""
+        order, seen = [], set()
+        def visit(v):
+            if id(v) not in seen:
+                seen.add(id(v))
+                for p in v.parents:
+                    visit(p)
+                order.append(v)
+        visit(self)
+        self.grad = 1.0
+        for v in reversed(order):
+            for p, local in zip(v.parents, v.local_grads):
+                p.grad += local * v.grad           # += : a node used twice gets gradient from both uses
+
+# 1. A small expression, checked against the derivative worked out by hand
+x, y = Value(2.0), Value(-1.0)
+f = (x * y + x.exp()) * x                      # f = x^2 y + x e^x
+f.backward()
+print(f"f = {f.data:.4f}   df/dx = {x.grad:.4f} (by hand {2*2*-1 + math.exp(2)*(1+2):.4f})"
+      f"   df/dy = {y.grad:.4f} (by hand {2**2:.4f})")
+
+# 2. A neuron layer and a network built from Values
+class MLP:
+    def __init__(self, sizes, seed=0):
+        # small random biases: with zero biases, input (0, 0) sits exactly on every ReLU's kink,
+        # where the derivative is undefined and the finite-difference check below would fail
+        r = random.Random(seed)
+        self.layers = [[([Value(r.gauss(0, math.sqrt(2 / k))) for _ in range(k)], Value(r.gauss(0, 0.1))) for _ in range(m)]
+                       for k, m in zip(sizes[:-1], sizes[1:])]
+    def __call__(self, x):
+        for i, layer in enumerate(self.layers):
+            z = [sum((wi * xi for wi, xi in zip(w, x)), b) for w, b in layer]
+            x = [zi.relu() for zi in z] if i &lt; len(self.layers) - 1 else z
+        return x[0]
+    def params(self):
+        return [p for layer in self.layers for w, b in layer for p in w + [b]]
+
+def log_loss(F, y):                            # log(1 + e^F) - y F, written with Values
+    return (F.exp() + 1).log() - F * y
+
+# 3. Compare one backward pass with central finite differences
+net = MLP([2, 4, 1], seed=1)
+data = [((0.0, 0.0), 0), ((0.0, 1.0), 1), ((1.0, 0.0), 1), ((1.0, 1.0), 0)]    # XOR
+def total_loss():
+    return sum((log_loss(net([Value(a), Value(b)]), t) for (a, b), t in data), Value(0.0)) * 0.25
+L = total_loss(); L.backward()
+worst = 0.0
+for p in net.params():
+    old = p.data
+    p.data = old + 1e-6; up = total_loss().data
+    p.data = old - 1e-6; down = total_loss().data
+    p.data = old
+    worst = max(worst, abs((up - down) / 2e-6 - p.grad))
+print(f"{len(net.params())} parameters, max |backprop - finite difference| = {worst:.1e}")
+
+# 4. Train it on XOR with plain gradient descent
+for step in range(501):
+    for p in net.params():
+        p.grad = 0.0                           # gradients accumulate, so reset them every step
+    L = total_loss(); L.backward()
+    for p in net.params():
+        p.data -= 0.5 * p.grad
+    if step % 100 == 0:
+        probs = [1 / (1 + math.exp(-net([Value(a), Value(b)]).data)) for (a, b), _ in data]
+        print(f"step {step:3d}  loss {L.data:.4f}  P(y=1) on 00,01,10,11: " + " ".join(f"{q:.2f}" for q in probs))
+
+# f = 10.7781   df/dx = 18.1672 (by hand 18.1672)   df/dy = 4.0000 (by hand 4.0000)
+# 17 parameters, max |backprop - finite difference| = 8.6e-11
+# step   0  loss 0.6985  P(y=1) on 00,01,10,11: 0.48 0.54 0.50 0.54
+# step 100  loss 0.0754  P(y=1) on 00,01,10,11: 0.04 0.92 0.90 0.08
+# step 200  loss 0.0193  P(y=1) on 00,01,10,11: 0.01 0.98 0.97 0.02
+# step 300  loss 0.0097  P(y=1) on 00,01,10,11: 0.01 0.99 0.99 0.01
+# step 400  loss 0.0062  P(y=1) on 00,01,10,11: 0.00 0.99 0.99 0.01
+# step 500  loss 0.0044  P(y=1) on 00,01,10,11: 0.00 1.00 0.99 0.00</code></pre>
+    <p class="muted">The gradient of the small expression matches the hand computation, $\partial f/\partial x = 2xy + e^x(1 + x) = 18.1672$, the figure's sum of three paths. Backprop and central differences agree to $10^{-10}$ for all 17 parameters. The network then learns XOR, which no linear model can. The engine is slow, one Python object per scalar, but it is the same algorithm as PyTorch's; real frameworks apply it to whole tensors, so each node is a matrix product with the VJPs from the table.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Draw the graph of $\ell = \log(1 + e^{z}) - yz$ with $z = wx + b$, and backpropagate by hand to get $\partial\ell/\partial w$ and $\partial\ell/\partial b$. Check them against lesson 03.</li>
+      <li>Derive $\bar X = \bar YW$ and $\bar W = \bar Y^\top X$ for $Y = XW^\top$ from the index form, and check the shapes for $X\in\mathbb{R}^{N\times k}$ and $W\in\mathbb{R}^{m\times k}$.</li>
+      <li>In the engine above, what goes wrong if <code>backward</code> uses <code>p.grad = local * v.grad</code> instead of <code>+=</code>? Which gradient in the figure would come out wrong, and with what value?</li>
+      <li>$f:\mathbb{R}^n\to\mathbb{R}^m$ costs $C$ to evaluate. Roughly what does it cost to compute the full Jacobian with forward mode? With reverse mode? Which do you use for $n = 10^6$, $m = 1$, and which for $n = 1$, $m = 10^6$?</li>
+      <li>A network has $L = 100$ layers, each storing one unit of activation memory. With a checkpoint every $k$ layers, the peak memory is about $L/k + k$. Find the best $k$ and the memory saving. How much extra computation does it cost?</li>
+      <li>Show that for the sigmoid $\sigma'(z) = \sigma(z)(1 - \sigma(z))\le\tfrac14$. If a gradient passes back through 20 sigmoid layers with weights of size about 1, by how much can it shrink at most? (This is the vanishing gradient of lesson 14.)</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\partial\ell/\partial z = \sigma(z) - y$; then $z = wx + b$ gives $\partial\ell/\partial w = (\sigma(z) - y)x$ and $\partial\ell/\partial b = \sigma(z) - y$: lesson 03's gradient.</p>
+        <p><b>2.</b> $\bar W_{jk} = \sum_i\bar Y_{ij}X_{ik} = (\bar Y^\top X)_{jk}$, shape $m\times k$ like $W$. $\bar X_{ik} = \sum_j\bar Y_{ij}W_{jk} = (\bar YW)_{ik}$, shape $N\times k$ like $X$. A shape mismatch is the quickest sign of a wrong backward rule.</p>
+        <p><b>3.</b> Each new contribution overwrites the previous one, so a node used more than once keeps only the last contribution it receives. In the figure $x$ would get one of $5.389$, $14.778$ or $-2$ instead of their sum 18.167, depending on visiting order. Nodes used once are unaffected, which is why this bug can hide.</p>
+        <p><b>4.</b> Forward mode needs one pass per input direction, about $nC$; reverse mode one pass per output, about $mC$ (times a small constant). Reverse for $n = 10^6, m = 1$ (training); forward for $n = 1, m = 10^6$ (for example, the derivative of a whole trajectory with respect to one parameter).</p>
+        <p><b>5.</b> $L/k + k$ is minimised at $k = \sqrt{100} = 10$: memory 20 instead of 100, a factor of 5. Each segment is recomputed once during the backward pass, so the extra cost is about one forward pass, roughly a third more total compute.</p>
+        <p><b>6.</b> $\sigma(1 - \sigma)$ is a parabola in $\sigma\in(0, 1)$ with maximum $\tfrac14$ at $\sigma = \tfrac12$. Through 20 layers the product of the $\phi'$ factors is at most $4^{-20}\approx10^{-12}$: the early layers would get essentially no gradient. Larger weights can partly compensate, but then activations saturate, where $\sigma'$ is far below $\tfrac14$.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Rumelhart, Hinton &amp; Williams, "Learning representations by back-propagating errors"</b> (Nature, 1986). Backprop for neural networks; the idea itself goes back to Linnainmaa (1970) and Werbos (1974).</li>
+      <li><b>Baydin, Pearlmutter, Radul &amp; Siskind, "Automatic differentiation in machine learning: a survey"</b> (JMLR, 2018). Forward and reverse mode, carefully.</li>
+      <li><b>Griewank &amp; Walther, <i>Evaluating Derivatives</i></b> (SIAM, 2nd ed. 2008). The cheap gradient principle and checkpointing.</li>
+      <li><b>Andrej Karpathy, <i>micrograd</i></b> and the lecture "The spelled-out intro to neural networks and backpropagation". The engine above, built step by step.</li>
+      <li><b>Chen, Xu, Zhang &amp; Guestrin, "Training deep nets with sublinear memory cost"</b> (2016). Gradient checkpointing.</li>
+    </ul>
+  </section>
+</article>

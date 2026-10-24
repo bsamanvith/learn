@@ -63,3 +63,29 @@ p.line(ms, cpt, color="data")
 p.dots(ms, cpt, color="data", r=3.0)
 p.text(p.box[0], 18, "compression: how long the tokens are", color="fg", size=12, px=True)
 p.save(OUT / "lm-ngrams-bpe.svg", "Left: held-out bits per character of character n-gram models against n, falling from 3.99 at n = 1 to 0.26 at n = 8 and levelling off on a dashed line at the true model's 0.264. Right: average characters per BPE token against the number of merges, rising from 1 to about 4.6 at 150 merges, where most words are single tokens")
+
+
+# ---------- 28: reward over-optimisation along the KL-regularised path, and DPO's trajectory ----------
+ns = run("28-fine-tuning-and-alignment")
+betas = np.geomspace(20, 0.005, 60)
+path = [ns["tilt"](ns["r_hat"], b) for b in betas]
+kls = [ns["kl"](q) for q in path]
+p = Plot(900, 360)
+p.panel(0, 0, 900, 360, (0, 8), (-0.5, 3.3), margin=(40, 270, 44, 52))
+p.axes("KL(π ‖ π_ref), nats", "expected reward", xticks=[0, 1, 2, 3, 4, 5, 6, 7, 8], yticks=[0, 1, 2, 3])
+p.line([0, 8], [3, 3], color="muted", width=1.2, dash="4 4")
+p.text(7.9, 3.08, "best possible true reward", size=11, anchor="end")
+p.line(kls, [q @ ns["r_hat"] for q in path], color="data", dash="6 4")
+p.line(kls, [q @ ns["r_true"] for q in path], color="accent")
+tk, tr = zip(*ns["dpo_track"])
+p.line(tk, tr, color="fg", width=1.2, opacity=0.6)
+p.dots(tk, tr, color="fg", r=3.2)
+bx, by, bw, bh = p.box
+for i, (col, dash, lab) in enumerate([("data", "6 4", "reward model's score, RLHF path"),
+                                      ("accent", None, "true reward, RLHF path"),
+                                      ("fg", None, "true reward, DPO checkpoints")]):
+    y = by + 30 + 24 * i
+    p.items.append(f'<line x1="{bx + bw + 16}" y1="{y}" x2="{bx + bw + 40}" y2="{y}" style="stroke:{c(col)};stroke-width:2.2{";stroke-dasharray:" + dash if dash else ""}"/>')
+    p.text(bx + bw + 46, y + 4, lab, size=10.5, px=True)
+p.text(p.box[0], 22, "optimising a learned reward: the proxy keeps rising, the true reward peaks and falls", color="fg", size=12, px=True)
+p.save(OUT / "rlhf-overoptimisation.svg", "Expected reward against KL divergence from the reference model. Along the RLHF path the reward model's score (dashed) rises steadily to 2.4, while the true reward (solid orange) rises to a peak of 1.45 near 2.5 nats and then falls to below 0.3 at 7.6 nats. DPO's checkpoints (dark dots) reach a true reward of 2.9 at about 4.9 nats before falling back slightly")

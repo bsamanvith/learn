@@ -1,0 +1,260 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 28 · Stage 7: large language models</div>
+  <h1>Fine-tuning and alignment</h1>
+  <p class="lede">A pretrained model continues text the way the internet would, which is not the same as being helpful. This lesson covers the steps that turn it into an assistant. Supervised fine-tuning teaches it the format of a conversation. A reward model learns human preferences from comparisons, through the Bradley–Terry model. Reinforcement learning then pushes the model towards high reward while a KL penalty holds it near where it started; this objective has a closed-form optimum, and that optimum is what makes direct preference optimisation (DPO) possible. The code runs all of it on a model small enough to enumerate every response, so the RL solution can be checked against the formula, and it shows the central failure of the method: optimise a learned reward too hard and the true reward goes down.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/26-language-modelling-and-tokenisation/">lesson 26</a>, <a href="/machine-learning/03-logistic-regression/">lesson 03</a>, <a href="/machine-learning/M4-information-theory/">M4</a></span><span><b>Math pulled in:</b> the Bradley–Terry model, KL divergence and the Gibbs variational principle, the score-function gradient, change of variables between rewards and policies</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Ask a pretrained model "What is the capital of France?" and a likely continuation is "What is the capital of Germany?", because on the web a question is often followed by more questions, as in a quiz. Pretraining (lesson 27) produces a model of text, and what we want is a model of <i>good answers</i>, which is a different distribution. Fine-tuning moves the model from one to the other in three stages, as set out for InstructGPT by Ouyang et al. (2022):</p>
+    <ol>
+      <li><b>Supervised fine-tuning (SFT).</b> Collect tens of thousands of prompts with responses written by people, and continue training on them with the usual next-token loss.</li>
+      <li><b>Reward modelling.</b> Sample several responses to each prompt from the SFT model, have people say which they prefer, and fit a model $r_\phi(x, y)$ that scores a response $y$ to a prompt $x$.</li>
+      <li><b>Reinforcement learning.</b> Optimise the model to produce responses with high $r_\phi$, while penalising it for moving far from the SFT model.</li>
+    </ol>
+    <p>The comparisons in step 2 are the key design choice. People are bad at assigning a response an absolute score ("7 out of 10?") and much more consistent at saying which of two is better. Comparisons also capture what is hard to demonstrate: someone who cannot write a perfect poem can still tell which of two poems is better.</p>
+  </section>
+
+  <section id="sft">
+    <h2>Supervised fine-tuning</h2>
+    <p>SFT is pretraining on different data. Each example is a conversation formatted with special tokens that mark who is speaking, for example <code>&lt;|user|&gt;</code> and <code>&lt;|assistant|&gt;</code>, and the loss is the cross-entropy of lesson 26 with one change: it is summed only over the assistant's tokens, since the model should learn to write responses, not prompts:</p>
+    <div class="eq">$$\mathcal{L}_\text{SFT}(\theta) = -\sum_{(x, y)}\sum_{i=1}^{|y|}\log\pi_\theta(y_i\mid x, y_{&lt;i}).$$</div>
+    <p>From here on the model is called a <b>policy</b> $\pi_\theta(y\mid x)$, the RL word for a distribution over actions (here, whole responses) given a state (the prompt). The SFT model becomes the <b>reference policy</b> $\pi_\text{ref}$.</p>
+    <p>SFT works with surprisingly little data. LIMA (Zhou et al., 2023) fine-tuned a 65-billion-parameter model on 1,000 carefully chosen examples and got a capable assistant, which suggests that SFT mainly teaches format and style, and that the knowledge comes from pretraining. But SFT can only imitate: the model learns to produce responses like the demonstrations, including their mistakes, and it never learns which of its own outputs are bad.</p>
+  </section>
+
+  <section id="reward">
+    <h2>Reward models and the Bradley–Terry model</h2>
+    <p>We need a model of how people choose between two responses $y_1$ and $y_2$ to the same prompt. The <b>Bradley–Terry model</b> (1952, invented to rank chess players and sports teams) says each response has a scalar reward $r$, and</p>
+    <div class="result">
+      <div class="label">Bradley–Terry</div>
+      <p>$$P(y_1\succ y_2\mid x) = \frac{e^{r(x, y_1)}}{e^{r(x, y_1)} + e^{r(x, y_2)}} = \sigma\big(r(x, y_1) - r(x, y_2)\big).$$</p>
+    </div>
+    <p>It follows from a simple story: the person perceives each response's quality as its reward plus independent Gumbel noise and picks the higher one (exercise 1). Only differences of rewards matter, so $r$ is defined only up to an additive constant per prompt. Elo ratings in chess are the same model, scaled.</p>
+    <p>Fitting $r_\phi$ to a dataset of preferences, each a prompt with a winning response $y_w$ and a losing response $y_l$, by maximum likelihood gives the loss</p>
+    <div class="eq">$$\mathcal{L}_\text{RM}(\phi) = -\mathbb{E}_{(x, y_w, y_l)}\log\sigma\big(r_\phi(x, y_w) - r_\phi(x, y_l)\big),$$</div>
+    <p>which is logistic regression (lesson 03) on the difference of two scores. In practice $r_\phi$ is the SFT model with its output layer replaced by a single number, read off the final token.</p>
+    <p>A reward model is only an approximation of what people want. It sees a limited number of comparisons, mostly of responses that the SFT model tends to produce, and it can be wrong about anything else. Keep this in mind for the next section.</p>
+  </section>
+
+  <section id="kl">
+    <h2>The KL-regularised objective and its solution</h2>
+    <p>The RL stage maximises</p>
+    <div class="eq">$$J(\pi) = \mathbb{E}_{x}\Big[\mathbb{E}_{y\sim\pi(\cdot\mid x)}\big[r(x, y)\big] - \beta\,\mathrm{KL}\big(\pi(\cdot\mid x)\,\|\,\pi_\text{ref}(\cdot\mid x)\big)\Big].$$</div>
+    <p>The KL penalty, with strength $\beta &gt; 0$, keeps the policy close to the reference model. There are two reasons for it. The reward model is only accurate near the responses it was trained on, which come from $\pi_\text{ref}$. And without the penalty, the maximiser of $\mathbb{E}_\pi[r]$ is a point mass on the single highest-scoring response: a model that gives one answer to every prompt and has forgotten how to write anything else.</p>
+    <p>This objective has an exact solution. Fix a prompt and drop $x$ from the notation. Define</p>
+    <div class="eq">$$\pi^*(y) = \frac{1}{Z}\pi_\text{ref}(y)\exp\big(r(y)/\beta\big), \qquad Z = \sum_y\pi_\text{ref}(y)\exp\big(r(y)/\beta\big).$$</div>
+    <p>Then $r(y) = \beta\log\frac{\pi^*(y)}{\pi_\text{ref}(y)} + \beta\log Z$, and substituting this into $J$,</p>
+    <div class="eq">$$J(\pi) = \mathbb{E}_\pi\Big[\beta\log\frac{\pi^*(y)}{\pi_\text{ref}(y)} + \beta\log Z - \beta\log\frac{\pi(y)}{\pi_\text{ref}(y)}\Big] = \beta\log Z - \beta\,\mathrm{KL}(\pi\,\|\,\pi^*).$$</div>
+    <div class="result">
+      <div class="label">The optimal policy</div>
+      <p>$J$ is maximised by $\pi = \pi^*$ and nothing else, since the KL divergence is zero only there. The optimal fine-tuned model is the reference model reweighted by $e^{r/\beta}$: each response's probability is multiplied by a factor that grows exponentially with its reward. As $\beta\to\infty$ it is $\pi_\text{ref}$; as $\beta\to0$ it concentrates on the highest-reward responses.</p>
+    </div>
+    <p>This is the Gibbs variational principle of statistical physics, with $r$ as negative energy and $\beta$ as temperature. For a real LLM, $\pi^*$ cannot be computed, because $Z$ is a sum over every possible response. So it is approached with RL, which only needs samples.</p>
+  </section>
+
+  <section id="rl">
+    <h2>Optimising it with policy gradients</h2>
+    <p>The gradient of an expectation under the policy is given by the score-function (REINFORCE) identity of lesson 22, $\nabla_\theta\mathbb{E}_{\pi_\theta}[R] = \mathbb{E}_{\pi_\theta}\big[R\,\nabla_\theta\log\pi_\theta(y)\big]$. For the KL term, $\nabla_\theta\mathbb{E}_{\pi_\theta}\big[\log\pi_\theta - \log\pi_\text{ref}\big] = \mathbb{E}_{\pi_\theta}\big[(\log\pi_\theta - \log\pi_\text{ref})\nabla_\theta\log\pi_\theta\big]$, because the extra term $\mathbb{E}_{\pi_\theta}[\nabla_\theta\log\pi_\theta]$ is zero. So the whole gradient is</p>
+    <div class="eq">$$\nabla_\theta J = \mathbb{E}_{y\sim\pi_\theta}\Big[\big(R(y) - b\big)\nabla_\theta\log\pi_\theta(y)\Big], \qquad R(y) = r(y) - \beta\log\frac{\pi_\theta(y)}{\pi_\text{ref}(y)},$$</div>
+    <p>where $b$ is any baseline that does not depend on $y$; subtracting it leaves the gradient unbiased and reduces its variance. In words: sample responses, score each with the reward minus the KL penalty, and raise the log-probability of the responses that scored above average. Since $\log\pi_\theta(y) = \sum_i\log\pi_\theta(y_i\mid y_{&lt;i})$, this is a weighted version of the SFT gradient on the model's own samples.</p>
+    <p>InstructGPT used PPO (Schulman et al., 2017), which adds two things to this: a learned value function that gives each token its own baseline, and a clipped objective that lets one batch of samples be reused for several gradient steps without moving the policy too far. Both are explained in stage 8, lesson 39. More recent work often uses simpler variants: GRPO (Shao et al., 2024) replaces the value function with the mean reward of a group of responses to the same prompt, which is the batch-mean baseline used in the code below.</p>
+  </section>
+
+  <section id="dpo">
+    <h2>Direct preference optimisation</h2>
+    <p>RLHF needs a reward model, a sampling loop and a finicky RL algorithm. Rafailov et al. (2023) noticed that the closed-form solution makes all three unnecessary. The solution gives the reward in terms of the optimal policy:</p>
+    <div class="eq">$$r(x, y) = \beta\log\frac{\pi^*(y\mid x)}{\pi_\text{ref}(y\mid x)} + \beta\log Z(x).$$</div>
+    <p>Substitute this into the Bradley–Terry likelihood. The two responses share the prompt, so $\beta\log Z(x)$ appears in both rewards and cancels in their difference:</p>
+    <div class="eq">$$P(y_w\succ y_l\mid x) = \sigma\Big(\beta\log\frac{\pi^*(y_w\mid x)}{\pi_\text{ref}(y_w\mid x)} - \beta\log\frac{\pi^*(y_l\mid x)}{\pi_\text{ref}(y_l\mid x)}\Big).$$</div>
+    <p>The preference probability is now written in terms of the policy alone. Maximum likelihood over a policy $\pi_\theta$ instead of a reward model gives</p>
+    <div class="result">
+      <div class="label">The DPO loss</div>
+      <p>$$\mathcal{L}_\text{DPO}(\theta) = -\mathbb{E}_{(x, y_w, y_l)}\log\sigma\Big(\beta\log\frac{\pi_\theta(y_w\mid x)}{\pi_\text{ref}(y_w\mid x)} - \beta\log\frac{\pi_\theta(y_l\mid x)}{\pi_\text{ref}(y_l\mid x)}\Big).$$</p>
+    </div>
+    <p>This is the reward-model loss with the reward parameterised as $\hat r_\theta(x, y) = \beta\log\frac{\pi_\theta(y\mid x)}{\pi_\text{ref}(y\mid x)}$, the "implicit reward". Training is supervised: it needs the log-probabilities of the two responses under the policy and under the frozen reference model, and nothing is sampled. Its gradient, with $h$ the argument of the sigmoid, is</p>
+    <div class="eq">$$\nabla_\theta\mathcal{L}_\text{DPO} = -\beta\,\mathbb{E}\Big[\sigma(-h)\big(\nabla_\theta\log\pi_\theta(y_w\mid x) - \nabla_\theta\log\pi_\theta(y_l\mid x)\big)\Big]:$$</div>
+    <p>raise the winner's probability, lower the loser's, and weight each pair by $\sigma(-h)$, how wrong the current implicit reward is about it. Pairs the model already orders correctly by a wide margin contribute almost nothing.</p>
+    <p><b>What DPO gives up.</b> If the reward-model fit and the RL were both exact, RLHF and DPO would find the same policy. In practice they differ in two ways. First, DPO's implicit reward is as flexible as the policy, which is far more flexible than the linear head of a reward model, so it can fit the preferences more closely, including their noise. Second, the KL penalty acts only through the form of the loss, and on a finite dataset the loss can keep decreasing by making $\pi_\theta(y_l)$ smaller and smaller. If a response always wins, its implicit reward can grow without bound, and the policy drifts away from $\pi_\text{ref}$ however large $\beta$ is (Azar et al., 2023, whose IPO loss fixes this). Practitioners train DPO for one to three epochs and stop.</p>
+  </section>
+
+  <section id="overopt">
+    <h2>Reward over-optimisation</h2>
+    <p>A reward model is a proxy for what people want. Goodhart's law says that a measure that becomes a target stops being a good measure, and RLHF is a clean example of it. Gao, Schulman and Hilton (2023) trained a large "gold" reward model as a stand-in for people, trained smaller proxy reward models on its labels, and optimised policies against the proxies. As the policy moved away from $\pi_\text{ref}$, the proxy reward kept rising while the gold reward rose, peaked and fell. The policy had found responses that the proxy scored highly for the wrong reasons. Well-known real cases include responses that grow longer and longer because raters slightly preferred longer answers, and sycophancy, agreeing with whatever the user said.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: rlhf-overoptimisation --></div>
+    </figure>
+    <p class="muted">The code's toy problem. Along the path of exact KL-regularised optima $\pi_\beta$, from $\beta = 20$ (left) down to $\beta = 0.005$ (right), the reward model's score rises all the way, while the true reward peaks, at 1.45 with 2.5 nats of KL ($\beta\approx0.31$), and then falls. The best response under the reward model, "aaaa", has a true reward of −0.5. DPO's implicit reward does not have the reward model's blind spot, so it climbs higher, but with nothing to stop it the policy keeps moving away from the reference model.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Responses are four tokens from $\{a, b, c, d\}$, so there are 256 of them and every expectation can be computed exactly. The policy is autoregressive, with a vector of logits for every prefix, and the reference model has random logits. A hidden "true" reward plays the part of human taste: people like the token <i>a</i>, dislike a token repeated twice in a row, and like responses that end in <i>d</i>. Part 3 samples 2,000 pairs from the reference model and labels them with Bradley–Terry noise. Part 4 fits a linear reward model on which token is at which position. That reward model cannot see repetitions, a deliberate blind spot. Part 5 sweeps $\beta$ through the closed-form optimum $\pi_\beta\propto\pi_\text{ref}e^{\hat r/\beta}$. Part 6 reaches the same optimum by policy gradient with a batch-mean baseline, and part 7 trains DPO directly on the preference pairs.</p>
+<pre><code>import itertools
+import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. A tiny "language model": responses are 4 tokens from {a, b, c, d}, 256 possible responses,
+# generated autoregressively. The policy has one vector of 4 logits for every prefix
+# (1 + 4 + 16 + 64 = 85 prefixes), so it can represent any distribution over responses.
+TOK, L = "abcd", 4
+Y = ["".join(t) for t in itertools.product(TOK, repeat=L)]
+prefixes = ["".join(t) for n in range(L) for t in itertools.product(TOK, repeat=n)]
+pid = {p: i for i, p in enumerate(prefixes)}
+steps_of = np.array([[pid[y[:i]] * 4 + TOK.index(y[i]) for i in range(L)] for y in Y])   # (256, 4)
+
+def seq_logprob(theta):
+    """log pi(y) for all 256 responses: the sum of the 4 token log-probabilities."""
+    lp = theta - np.log(np.exp(theta).sum(1, keepdims=True))                      # (85, 4)
+    return lp.reshape(-1)[steps_of].sum(1)
+
+def grad_theta(theta, w):
+    """Gradient of sum_y w(y) log pi(y) with respect to the logits theta."""
+    p = np.exp(theta - np.log(np.exp(theta).sum(1, keepdims=True)))
+    g = np.zeros(theta.size)
+    np.add.at(g, steps_of.reshape(-1), np.repeat(w, L))                            # d/d logit of the token taken
+    counts = np.zeros(len(prefixes)); np.add.at(counts, steps_of.reshape(-1) // 4, np.repeat(w, L))
+    return g.reshape(theta.shape) - counts[:, None] * p                             # minus the softmax expectation
+
+# The reference ("SFT") model: random logits, so some responses are much likelier than others.
+theta_ref = rng.normal(0, 1.0, (len(prefixes), 4))
+lp_ref = seq_logprob(theta_ref); p_ref = np.exp(lp_ref)
+
+# 2. Hidden human taste: a reward the model never sees. People like 'a's, dislike a token
+# repeated twice in a row, and like responses that end in 'd'.
+def true_reward(y):
+    return y.count("a") - 1.5 * sum(y[i] == y[i + 1] for i in range(L - 1)) + 1.0 * (y[-1] == "d")
+r_true = np.array([true_reward(y) for y in Y])
+print(f"reference model: E[true reward] = {p_ref @ r_true:.3f}; best possible response "
+      f"{Y[r_true.argmax()]!r} with reward {r_true.max():.1f}")
+
+# 3. Preference data: pairs of responses sampled from the reference model, labelled by people
+# who follow the Bradley-Terry model, P(y1 preferred to y2) = sigmoid(r(y1) - r(y2)).
+n_pairs = 2000
+i1, i2 = rng.choice(256, n_pairs, p=p_ref), rng.choice(256, n_pairs, p=p_ref)
+keep = i1 != i2; i1, i2 = i1[keep], i2[keep]
+pref = rng.random(len(i1)) &lt; 1 / (1 + np.exp(-(r_true[i1] - r_true[i2])))
+win, lose = np.where(pref, i1, i2), np.where(pref, i2, i1)
+print(f"{len(win)} preference pairs; the true reward agrees with {np.mean(r_true[win] &gt; r_true[lose]):.3f} of the labels"
+      f" ({np.mean(r_true[win] == r_true[lose]):.3f} are ties)")
+
+# 4. A reward model: linear in which token sits at which position (16 features). It cannot
+# express "repeated token", so it is wrong in a systematic way, like any real reward model.
+phi = np.array([[float(y[i] == t) for i in range(L) for t in TOK] for y in Y])
+w = np.zeros(16)
+for _ in range(3000):                                           # logistic regression on differences
+    d = phi[win] - phi[lose]
+    s = 1 / (1 + np.exp(-(d @ w)))
+    w += 0.5 * (d.T @ (1 - s) / len(d) - 1e-3 * w)
+r_hat = phi @ w
+print(f"reward model: train accuracy {np.mean(r_hat[win] &gt; r_hat[lose]):.3f},"
+      f" correlation with the true reward under the reference model "
+      f"{np.cov(r_hat, r_true, aweights=p_ref)[0, 1] / np.sqrt(np.cov(r_hat, aweights=p_ref) * np.cov(r_true, aweights=p_ref)):.3f}")
+
+# 5. The KL-regularised objective  max_pi E_pi[r_hat] - beta KL(pi || pi_ref)  has the
+# closed-form solution pi_beta(y) = pi_ref(y) exp(r_hat(y) / beta) / Z(beta). Sweep beta.
+def tilt(r, beta):
+    lp = lp_ref + r / beta
+    p = np.exp(lp - lp.max()); return p / p.sum()
+kl = lambda p: np.sum(p * (np.log(p + 1e-300) - lp_ref))
+print("   beta   KL(nats)  E[r_hat]  E[r_true]")
+for beta in [10, 2, 1, 0.5, 0.25, 0.1, 0.03, 0.01]:
+    p = tilt(r_hat, beta)
+    print(f"{beta:7.2f} {kl(p):9.3f} {p @ r_hat:9.3f} {p @ r_true:10.3f}")
+print(f"the reward model's favourite response: {Y[r_hat.argmax()]!r}, r_hat {r_hat.max():.2f}, true reward {r_true[r_hat.argmax()]:.1f}")
+
+# 6. RLHF by policy gradient: optimise the same objective with samples, as PPO does, using the
+# score-function gradient with the KL folded into the reward, r_hat(y) - beta log(pi/pi_ref).
+beta = 0.25
+theta = theta_ref.copy()
+for it in range(6000):
+    lp = seq_logprob(theta); p = np.exp(lp)
+    s = rng.choice(256, 256, p=p)
+    reward = r_hat[s] - beta * (lp[s] - lp_ref[s])
+    adv = reward - reward.mean()                                # a baseline: subtract the batch mean
+    wts = np.bincount(s, weights=adv, minlength=256) / len(s)
+    theta += 1.0 * grad_theta(theta, wts)
+p_rl = np.exp(seq_logprob(theta)); p_star = tilt(r_hat, beta)
+print(f"policy gradient (beta = {beta}): KL to pi_ref {kl(p_rl):.3f}, E[r_hat] {p_rl @ r_hat:.3f},"
+      f" E[r_true] {p_rl @ r_true:.3f}; KL(pi_rl || pi_beta) = {np.sum(p_rl * np.log(p_rl / p_star)):.4f}")
+
+# 7. DPO: skip the reward model and fit the policy directly to the preferences, with
+# loss = -log sigmoid(beta [log pi(yw)/pi_ref(yw) - log pi(yl)/pi_ref(yl)]).
+beta, theta, dpo_track = 0.25, theta_ref.copy(), []
+for epoch in range(1, 32001):
+    ratio = seq_logprob(theta) - lp_ref
+    h = beta * (ratio[win] - ratio[lose])
+    g = beta * (1 - 1 / (1 + np.exp(-h))) / len(win)          # d(-loss)/dh, times dh/d(ratio) = beta
+    wts = np.bincount(win, weights=g, minlength=256) - np.bincount(lose, weights=g, minlength=256)
+    theta += 10.0 * grad_theta(theta, wts)                       # full-batch gradient ascent on -loss
+    if epoch in (30, 100, 300, 1000, 3000, 10000, 32000):
+        p = np.exp(seq_logprob(theta)); dpo_track.append((kl(p), p @ r_true))
+    if epoch in (100, 1000, 10000, 32000):
+        print(f"DPO (beta = {beta}), {epoch:5d} epochs: loss {np.mean(np.logaddexp(0, -h)):.4f},"
+              f" KL to pi_ref {kl(p):.3f}, E[r_true] {p @ r_true:.3f}")
+
+# reference model: E[true reward] = -0.088; best possible response 'abad' with reward 3.0
+# 1973 preference pairs; the true reward agrees with 0.730 of the labels (0.117 are ties)
+# reward model: train accuracy 0.695, correlation with the true reward under the reference model 0.725
+#    beta   KL(nats)  E[r_hat]  E[r_true]
+#   10.00     0.003    -0.126      0.006
+#    2.00     0.084     0.141      0.366
+#    1.00     0.332     0.473      0.759
+#    0.50     1.210     1.065      1.277
+#    0.25     3.420     1.830      1.395
+#    0.10     6.681     2.408      0.894
+#    0.03     6.841     2.421      0.840
+#    0.01     6.953     2.423      0.661
+# the reward model's favourite response: 'aaaa', r_hat 2.43, true reward -0.5
+# policy gradient (beta = 0.25): KL to pi_ref 3.475, E[r_hat] 1.840, E[r_true] 1.396; KL(pi_rl || pi_beta) = 0.0156
+# DPO (beta = 0.25),   100 epochs: loss 0.5127, KL to pi_ref 1.036, E[r_true] 1.514
+# DPO (beta = 0.25),  1000 epochs: loss 0.4220, KL to pi_ref 2.612, E[r_true] 2.305
+# DPO (beta = 0.25), 10000 epochs: loss 0.3890, KL to pi_ref 4.875, E[r_true] 2.891
+# DPO (beta = 0.25), 32000 epochs: loss 0.3848, KL to pi_ref 4.554, E[r_true] 2.624</code></pre>
+    <p><b>Reading the output.</b> The preference labels are noisy: the true reward agrees with only 73% of them, because Bradley–Terry choices between responses of similar reward are close to coin flips. The reward model gets 69.5% of the training pairs right, and its correlation with the true reward is 0.725. Along the closed-form path the reward model's score rises steadily as $\beta$ falls, to 2.42. Of the values printed, the true reward is highest, 1.40, at $\beta = 0.25$, and it falls to 0.66 at $\beta = 0.01$, because the policy is concentrating on "aaaa": four <i>a</i>'s look excellent to a model that cannot see the three repeats. Policy gradient at $\beta = 0.25$ lands within 0.016 nats of the exact optimum, confirming that the RL solves the objective it is meant to solve. DPO, trained on the same pairs, reaches a true reward of 2.89 after 10,000 epochs. This is not because DPO is a better algorithm: its implicit reward can depend on the whole response, so it does not share the linear reward model's blind spot (exercise 6 gives the reward model pairwise features, and RLHF then does just as well). Note what the DPO loss does meanwhile: it keeps falling, while the KL from the reference model grows to 4.9 nats and the true reward starts to drop again by 32,000 epochs.</p>
+  </section>
+
+  <section id="beyond">
+    <h2>Beyond human labels</h2>
+    <p>Human comparisons are slow and expensive, and several lines of work replace some of them. <b>RLAIF</b> and Constitutional AI (Bai et al., 2022) have a model compare responses against a written list of principles, and train the reward model on its labels. <b>Verifiable rewards</b> are used where correctness can be checked automatically: whether a maths answer matches the reference, or whether code passes its tests. With a reward that cannot be fooled in the same way as a learned one, RL can be run much harder, and this is how the reasoning models of lesson 30 are trained. Methods such as KTO (Ethayarajh et al., 2024) learn from single responses labelled good or bad, rather than pairs.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Let $u_i = r_i + g_i$ with $g_1, g_2$ independent standard Gumbel variables, whose CDF is $F(g) = e^{-e^{-g}}$. Show that $P(u_1 &gt; u_2) = \sigma(r_1 - r_2)$, so Bradley–Terry is "choose the response with higher noisy utility".</li>
+      <li>Show that the reward-model loss is unchanged if a function $c(x)$ of the prompt alone is added to $r_\phi$, and that the optimal policy $\pi^*$ is unchanged too. Why does this make reward models hard to compare across prompts?</li>
+      <li>Show that $J(\pi^*) = \beta\log Z$ and that $\mathrm{KL}(\pi^*\|\pi_\text{ref}) = \mathbb{E}_{\pi^*}[r]/\beta - \log Z$. For two responses with rewards 0 and 1 under a uniform $\pi_\text{ref}$, compute $\pi^*$ and its KL for $\beta = 1$ and $\beta = 0.1$.</li>
+      <li>Derive the DPO gradient from the loss. What happens to a pair's weight $\sigma(-h)$ once the policy orders it correctly by a wide margin, and why does that make DPO behave differently from SFT on the winning responses?</li>
+      <li>With only the KL term (no reward), what does the policy-gradient update in the code do, and where does it converge? With only the reward and $\beta = 0$?</li>
+      <li>In the code, give the reward model 48 more features, one for each pair of adjacent tokens at each position, and redo the $\beta$ sweep. What happens to the true reward as $\beta\to0$, and why?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $u_1 &gt; u_2$ means $g_2 &lt; g_1 + \delta$ with $\delta = r_1 - r_2$, so $P(u_1 &gt; u_2) = \int f(g_1)F(g_1 + \delta)\,dg_1$, with density $f(g) = e^{-g}e^{-e^{-g}}$. Substitute $t = e^{-g_1}$, so that $F(g_1 + \delta) = e^{-te^{-\delta}}$ and $f(g_1)\,dg_1 = -e^{-t}dt$: the integral is $\int_0^\infty e^{-t}e^{-te^{-\delta}}dt = \frac{1}{1 + e^{-\delta}} = \sigma(\delta)$.</p>
+        <p><b>2.</b> The loss depends only on $r(x, y_w) - r(x, y_l)$, in which $c(x)$ cancels. In $\pi^*$, $e^{c(x)/\beta}$ multiplies every response's weight and cancels in the normalisation. So the absolute value of a reward means nothing; only differences between responses to the same prompt do. A reward of 3 on one prompt and 1 on another says nothing about which response is better, which matters when rewards are averaged across prompts, for example in the baseline.</p>
+        <p><b>3.</b> From $J(\pi) = \beta\log Z - \beta\,\mathrm{KL}(\pi\|\pi^*)$ at $\pi = \pi^*$. And $\log\frac{\pi^*}{\pi_\text{ref}} = r/\beta - \log Z$, whose expectation under $\pi^*$ is the KL. With rewards 0 and 1: $\pi^*(y_2) = \frac{e^{1/\beta}}{1 + e^{1/\beta}}$, which is 0.731 for $\beta = 1$ (KL $= \log 2 - H(0.731) = 0.693 - 0.582 = 0.111$ nats) and 0.99995 for $\beta = 0.1$ (KL $\approx\log 2 = 0.693$, the most possible).</p>
+        <p><b>4.</b> $\frac{d}{dh}\big(-\log\sigma(h)\big) = -\sigma(-h)$ and $\nabla_\theta h = \beta(\nabla\log\pi_\theta(y_w) - \nabla\log\pi_\theta(y_l))$. As $h\to\infty$ the weight goes to zero and the pair stops contributing. SFT on the winners would keep raising their probability forever and ignores the losers; DPO only cares about the margin between winner and loser, measured relative to the reference model, and is satisfied once that margin is large.</p>
+        <p><b>5.</b> With only the KL term, each sample is weighted by $-\beta(\log\pi_\theta - \log\pi_\text{ref})$ minus the batch mean: responses that are more likely than under $\pi_\text{ref}$ are pushed down and the others up, and the policy converges to $\pi_\text{ref}$, where the KL is 0. With only the reward, the update is REINFORCE on $\hat r$, which keeps raising the probability of the best response under $\hat r$ until the policy is (nearly) a point mass on "aaaa", where the true reward is −0.5.</p>
+        <p><b>6.</b> We ran it. The new reward model can represent repetitions, so it ranks responses almost as the true reward does. Along the path, the true reward is 1.42 at $\beta = 1$, 2.77 at $\beta = 0.25$, 3.00 at $\beta = 0.1$, and stays at 3.00, the maximum, all the way to $\beta = 0.01$: the reward model's favourite response is now the truly best one. Over-optimisation comes from the gap between proxy and truth. A better reward model makes the gap smaller; a richer model class or more data both help.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Ouyang et al., "Training language models to follow instructions with human feedback"</b> (NeurIPS 2022). InstructGPT: SFT, reward model, PPO.</li>
+      <li><b>Christiano et al., "Deep reinforcement learning from human preferences"</b> (NeurIPS 2017). The origin of RL from pairwise human comparisons.</li>
+      <li><b>Rafailov et al., "Direct preference optimization: your language model is secretly a reward model"</b> (NeurIPS 2023).</li>
+      <li><b>Gao, Schulman &amp; Hilton, "Scaling laws for reward model overoptimization"</b> (ICML 2023).</li>
+      <li><b>Azar et al., "A general theoretical paradigm to understand learning from human preferences"</b> (2023). Where DPO's regularisation fails, and IPO.</li>
+      <li><b>Bai et al., "Constitutional AI: harmlessness from AI feedback"</b> (2022).</li>
+      <li><b>Nathan Lambert, <i>Reinforcement Learning from Human Feedback</i></b> (online book, 2025). The whole pipeline, kept up to date.</li>
+    </ul>
+  </section>
+</article>

@@ -161,3 +161,84 @@ p.dots(np.clip(pmi, -3, 1.5), np.clip(dots, -3.5, 1.5), color="accent", r=2.0, o
 p.text(1.4, -3.2, f"correlation {np.corrcoef(dots, pmi)[0, 1]:.2f}", color="fg", size=11, anchor="end")
 p.text(p.box[0], 16, "skip-gram scores against shifted PMI", color="fg", size=12, px=True)
 p.save(OUT / "embeddings.svg", "Left: the eight person words projected onto two principal components; the offsets that add 'royal' are nearly parallel, as are the offsets that change gender. Right: skip-gram scores c·w for frequent pairs plotted against PMI minus log k, scattered around the diagonal")
+
+
+# ---------- 19: attention entropy against d; trained attention weights ----------
+ns = run("19-attention")
+r = np.random.default_rng(3)
+ds = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+p = Plot(900, 320)
+p.panel(0, 0, 430, 320, (0, 10), (0, 3), margin=(36, 14, 34, 40))
+p.axes(xlabel="dimension d", ylabel="entropy of the weights (nats)", yticks=[0, 1, 2, 3])
+for i, dd in enumerate(ds):
+    if i % 2 == 0:
+        p.text(p.X(i), p.box[1] + p.box[3] + 15, str(dd), size=11, anchor="middle", px=True)
+        p.seg(i, 0, i, 3, color="rule", width=1)
+for scaled, col in [(False, "data"), (True, "accent")]:
+    ent = []
+    for dd in ds:
+        q, k = r.standard_normal((2000, dd)), r.standard_normal((2000, 16, dd))
+        sc = np.einsum("nd,ntd->nt", q, k) / (np.sqrt(dd) if scaled else 1)
+        a = ns["softmax"](sc); ent.append(-(a * np.log(a + 1e-30)).sum(1).mean())
+    p.line(np.arange(len(ds)), ent, color=col, width=2.2); p.dots(np.arange(len(ds)), ent, color=col, r=3)
+p.seg(0, np.log(16), 10, np.log(16), color="muted", dash="4 4")
+p.text(9.9, np.log(16) + 0.08, "uniform over 16 keys", color="muted", size=10.5, anchor="end")
+p.text(9.9, 2.15, "scaled by 1/√d", color="accent", size=11, anchor="end")
+p.text(9.9, 0.3, "unscaled", color="data", size=11, anchor="end")
+p.text(p.box[0], 16, "how sharp is attention at initialisation?", color="fg", size=12, px=True)
+Xe, Qe, ye = ns["make"](12)
+_, (_, _, _, ae, _) = ns["attend"](*ns["W"], Xe, Qe)
+right = np.argmax(np.einsum("npv,nv->np", Xe[:, :, :16], Qe), 1)
+x0, y0, cw, ch = 520, 42, 40, 21
+for i in range(12):
+    for j in range(8):
+        p.rect(x0 + j * cw, y0 + i * ch, cw - 2, ch - 2, color="accent", opacity=round(float(ae[i, j]) * 0.95, 2), px=True, rx=2)
+    p.items.append(f'<rect x="{x0 + right[i] * cw - 1}" y="{y0 + i * ch - 1}" width="{cw}" height="{ch}" rx="3" style="fill:none;stroke:{c("fg")};stroke-width:1.5"/>')
+    p.text(x0 - 8, y0 + i * ch + 14, f"{i + 1}", color="muted", size=10, anchor="end", px=True)
+for j in range(8):
+    p.text(x0 + j * cw + cw / 2 - 1, y0 + 12 * ch + 14, f"{j + 1}", color="muted", size=10, anchor="middle", px=True)
+p.text(x0 + 8 * cw, y0 + 12 * ch + 28, "pair", color="muted", size=10.5, anchor="end", px=True)
+p.text(x0, 22, "trained head: weight on each pair (ring = matching key)", color="fg", size=12, px=True)
+print("19 weight on right pair", np.round(ae[np.arange(12), right], 2))
+p.save(OUT / "attention.svg", "Left: without scaling, the entropy of attention weights over 16 random keys falls toward zero as the dimension grows; with scaling by one over root d it stays near the uniform value. Right: a trained attention head's weights on 12 examples, concentrated on the pair whose key matches the query")
+
+
+# ---------- 20: training loss; a first-layer head's attention on the reversal task ----------
+ns = run("20-transformer")
+model, L, SEP = ns["model"], ns["L"], ns["SEP"]
+losses = np.array(ns["losses"])
+p = Plot(900, 340)
+p.panel(0, 0, 430, 340, (0, 3000), (-10, 1), margin=(36, 14, 34, 50))
+p.axes(xlabel="step", ylabel="training loss (log scale)", yticks=[-9, -6, -3, 0], fmt=lambda v: f"1e{int(v)}" if v else "1")
+for s in [0, 1000, 2000, 3000]:
+    p.text(p.X(s), p.box[1] + p.box[3] + 15, str(s), size=11, anchor="middle", px=True)
+p.rect(0, -10, 200, 11, color="muted", opacity=0.12)
+p.text(230, -9.6, "warm-up", color="muted", size=10.5, anchor="start")
+sm = np.convolve(np.log10(losses + 1e-12), np.ones(20) / 20, mode="valid")
+p.line(np.arange(len(sm)) + 10, np.clip(sm, -10, 1), color="accent", width=2)
+p.text(p.box[0], 16, "next-token loss on the reversed half", color="fg", size=12, px=True)
+r = np.random.default_rng(7)
+a = r.integers(0, 10, (200, L))
+seq = np.concatenate([a, np.full((200, 1), SEP), a[:, ::-1]], 1)[:, :-1]
+model.forward(seq)
+A = model.blocks[0].attn.cache[3]                              # (B, heads, T, T)
+rows = np.arange(L, 2 * L)
+target = 2 * L - 1 - rows                                     # position of the digit to copy
+score = [A[:, h][:, rows, target].mean() for h in range(A.shape[1])]
+h = int(np.argmax(score))
+M = A[:, h].mean(0)[rows]                                     # 8 rows x 16 columns
+x0, y0, cw, ch = 500, 46, 23, 30
+labels = [f"d{i + 1}" for i in range(L)] + [">"] + [f"o{i + 1}" for i in range(L - 1)]
+for i in range(L):
+    for j in range(2 * L):
+        if j <= rows[i]:
+            p.rect(x0 + j * cw, y0 + i * ch, cw - 2, ch - 2, color="accent", opacity=round(float(M[i, j]) * 0.95, 2), px=True, rx=2)
+            p.items.append(f'<rect x="{x0 + j * cw}" y="{y0 + i * ch}" width="{cw - 2}" height="{ch - 2}" rx="2" style="fill:none;stroke:{c("rule")};stroke-width:0.6"/>')
+    p.text(x0 - 6, y0 + i * ch + 19, f"out {i + 1}", color="muted", size=10, anchor="end", px=True)
+for j in range(2 * L):
+    p.text(x0 + j * cw + cw / 2 - 1, y0 + L * ch + 14, labels[j], color="muted", size=9.5, anchor="middle", px=True)
+p.text(x0 + 4.5 * cw, y0 + L * ch + 32, "input digits", color="muted", size=10.5, anchor="middle", px=True)
+p.text(x0 + 12.5 * cw, y0 + L * ch + 32, "outputs so far", color="muted", size=10.5, anchor="middle", px=True)
+p.text(x0 - 40, 22, f"layer 1, head {h + 1}: where each output digit looks", color="fg", size=12, px=True)
+print("20 head scores", np.round(score, 2))
+p.save(OUT / "transformer.svg", "Left: the training loss of the numpy GPT falls from 2.7 to below one in a thousand within 300 steps, and to about one in a billion by step 3000. Right: one first-layer attention head, averaged over 200 test sequences; the output digit j attends to input digit 9 minus j, an anti-diagonal")

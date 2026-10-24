@@ -73,7 +73,7 @@ written; the rest are planned, in this order.
 
 | # | Lesson | The one idea | Math pulled in |
 |---|--------|--------------|----------------|
-| 26 | Language modelling and tokenisation | A language model is next-token prediction; perplexity measures it; BPE decides the tokens | Chain rule of probability, cross-entropy per token, perplexity |
+| 26 ✅ | Language modelling and tokenisation | A language model is next-token prediction; perplexity measures it; BPE decides the tokens | Chain rule of probability, cross-entropy per token, perplexity |
 | 27 | Pretraining and scaling laws | A decoder-only transformer trained on the web; loss falls as a power law in compute, data and parameters | Power laws, compute ≈ 6ND, Chinchilla-optimal allocation |
 | 28 | Fine-tuning and alignment | SFT teaches the format, RLHF and DPO teach preferences | Bradley–Terry model, KL-regularised RL, the DPO derivation |
 | 29 | Making LLMs efficient | KV cache, quantisation, LoRA, mixture of experts, FlashAttention | Low-rank updates, memory arithmetic, IO-aware attention |

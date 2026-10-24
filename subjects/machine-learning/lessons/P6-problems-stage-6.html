@@ -1,0 +1,152 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P6 · Stage 6: generative models</div>
+  <h1>Problem set: stage 6</h1>
+  <p class="lede">Twenty problems on lessons 22–25: the ELBO and its gap, reparameterisation, the GAN game and its divergences, the diffusion forward and reverse processes, scores, Tweedie's formula, guidance and flows. Try each one on paper before opening its solution. Problems marked <span class="tag">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/22-autoencoders-and-vaes/">22</a>, <a href="/machine-learning/23-gans/">23</a>, <a href="/machine-learning/24-diffusion-models/">24</a>, <a href="/machine-learning/25-score-guidance-latent-diffusion/">25</a></span><span><b>Difficulty:</b> <span class="tag">warm-up</span> <span class="tag">core</span> <span class="tag">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="vae">
+    <h2>Variational autoencoders</h2>
+    <ol>
+      <li>
+        <p><span class="tag">warm-up</span> An encoder outputs $\mu = 1$, $\sigma = 0.5$ for one latent dimension. What is its KL divergence from $\mathcal{N}(0, 1)$? Which values of $\mu$ and $\sigma$ make it zero?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\tfrac12(\mu^2 + \sigma^2 - 1 - \log\sigma^2) = \tfrac12(1 + 0.25 - 1 + 1.386) = 0.818$ nats. It is zero only at $\mu = 0$, $\sigma = 1$, where the encoder says nothing about the input.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> <b>A model where everything is computable.</b> Let $z\sim\mathcal{N}(0, 1)$ and $x\mid z\sim\mathcal{N}(z, 1)$. Find $p(x)$ and the exact posterior $p(z\mid x)$. For the encoder $q(z\mid x) = \mathcal{N}(x/2, v)$, compute the gap $\log p(x) - \mathcal{L}$ as a function of $v$, and find the best $v$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$x = z + \text{noise}$, so $p(x) = \mathcal{N}(0, 2)$. The posterior is Gaussian with precision $1 + 1 = 2$ and mean $x/2$: $p(z\mid x) = \mathcal{N}(x/2, 1/2)$. The gap is $\operatorname{KL}(q\,\|\,p(z\mid x))$; with equal means, the 1-D Gaussian KL is $\tfrac12\big(v/(1/2) - 1 - \log(v/(1/2))\big) = \tfrac12(2v - 1 - \log2v)$. It is zero at $v = \tfrac12$, the true posterior variance, and positive otherwise: at $v = 0.1$ it is 0.40 nats, at $v = 1$ it is 0.15 nats.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> A VAE's decoder becomes so powerful that $p_\theta(\mathbf{x}\mid\mathbf{z}) = p_\theta(\mathbf{x})$ for all $\mathbf{z}$. Show that the ELBO is then maximised by $q(\mathbf{z}\mid\mathbf{x}) = p(\mathbf{z})$, and that at that point the bound is tight. Why is this a problem even though the bound is tight?</p>
+        <details><summary>Solution</summary><div>
+          <p>The reconstruction term $\mathbb{E}_q\log p_\theta(\mathbf{x}\mid\mathbf{z}) = \log p_\theta(\mathbf{x})$ doesn't depend on $q$, so the ELBO is $\log p_\theta(\mathbf{x}) - \operatorname{KL}(q\,\|\,p(\mathbf{z}))$, maximised by $q = p(\mathbf{z})$, where it equals $\log p_\theta(\mathbf{x})$. The posterior really is the prior here, since $\mathbf{z}$ and $\mathbf{x}$ are independent. That is posterior collapse: the likelihood can be excellent, but the latent code carries no information about the data, so it is useless as a representation or as a handle for controlling generation.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> A VAE with a Gaussian decoder $\mathcal{N}(\mathbf{g}(\mathbf{z}), s^2I)$ in $D$ dimensions learns $s$ too. Show that for fixed reconstructions the optimal $s^2$ is the mean squared error per dimension, $\text{MSE}$, and that the reconstruction term then becomes $-\tfrac D2\log\text{MSE}$ plus a constant. What does this mean for the balance between reconstruction and KL as the reconstructions improve?</p>
+        <details><summary>Solution</summary><div>
+          <p>The expected log-likelihood is $-\frac{D\cdot\text{MSE}}{2s^2} - \frac D2\log(2\pi s^2)$. Setting the derivative in $s^2$ to zero: $\frac{D\cdot\text{MSE}}{2s^4} = \frac{D}{2s^2}$, so $s^2 = \text{MSE}$, and the term becomes $-\frac D2 - \frac D2\log(2\pi\,\text{MSE})$. The reconstruction term is logarithmic in the error, so each halving of the MSE is worth the same $\frac D2\log2$ nats however small the error already is: as reconstructions improve, the effective weight on reconstruction against the KL keeps growing. A fixed $s$ (or a fixed $\beta$) gives a squared error whose gains shrink instead.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> <b>Reparameterising other distributions.</b> Write a sample of the exponential distribution with rate $\lambda$ as a differentiable function of $\lambda$ and a uniform $u$. Then prove the Gumbel-max trick: if $g_1, \dots, g_K$ are independent with $g_k = -\log(-\log u_k)$, then $\arg\max_k(\log\pi_k + g_k)$ has distribution $\boldsymbol{\pi}$. Why does this not by itself give a reparameterisation gradient for a categorical latent, and what does the Gumbel-softmax do about it?</p>
+        <details><summary>Solution</summary><div>
+          <p>Exponential: $z = -\log(u)/\lambda$, since $P(z &gt; a) = P(u &lt; e^{-\lambda a}) = e^{-\lambda a}$. Gumbel-max: $g_k$ has CDF $F(g) = \exp(-e^{-g})$. The probability that index $k$ wins is $\int f(g - \log\pi_k)\prod_{j\ne k}F(g - \log\pi_j)\,dg$. With $F(g - \log\pi) = \exp(-\pi e^{-g})$ and $f(g - \log\pi_k) = \pi_ke^{-g}\exp(-\pi_ke^{-g})$, the integrand is $\pi_ke^{-g}\exp(-e^{-g}\sum_j\pi_j) = \pi_ke^{-g}\exp(-e^{-g})$; substituting $s = e^{-g}$ gives $\pi_k\int_0^\infty e^{-s}ds = \pi_k$. The argmax is piecewise constant in $\boldsymbol{\pi}$, so its gradient is zero almost everywhere. The Gumbel-softmax (Jang et al.; Maddison et al., 2017) replaces the argmax by $\operatorname{softmax}((\log\boldsymbol{\pi} + \mathbf{g})/\tau)$, a differentiable relaxation that approaches the one-hot sample as $\tau\to0$, at the cost of a biased gradient.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">code</span> In <a href="/machine-learning/22-autoencoders-and-vaes/">lesson 22's code</a>, weight the KL term by $\beta$ in the gradient (the "$\beta$-VAE") and train with $\beta = 0.25$ and $\beta = 4$. Report the final ELBO (with the KL unweighted), its two terms, and the two correlations between the latent code and the bar's angle and length. Explain.</p>
+        <details><summary>Solution</summary><div>
+          <p>At the end of training (ELBO = reconstruction − KL; the lesson's $\beta = 1$ run is $-43.62 = -39.99 - 3.63$): $\beta = 0.25$: $-44.07 = -38.65 - 5.42$; $\beta = 4$: $-45.60 = -43.77 - 1.83$. Correlations (angle, length): $\beta = 0.25$: 0.920, 0.882; $\beta = 1$: 0.987, 0.903; $\beta = 4$: 0.990, 0.899. With $\beta &lt; 1$ the code carries more information (5.4 nats) and reconstructions improve, but the encoder is free to spend it on details such as which pixels happened to turn on, the latent space is less tidy, and the importance-weighted estimates show a looser bound (0.65 nats from $K = 1$ to $K = 1000$, against 0.2). With $\beta = 4$ the posteriors are forced wide, the code carries only 1.8 nats, reconstructions blur, and the ELBO is 2 nats below the $K = 1000$ estimate; but the angle is encoded most cleanly. Only $\beta = 1$ maximises a true bound on the likelihood, and it gives the best ELBO; other values trade likelihood for properties of the code.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="gan">
+    <h2>Generative adversarial networks</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag">warm-up</span> Real data is $\mathcal{N}(0, 1)$ and the generator's distribution is $\mathcal{N}(1, 1)$. Write the optimal discriminator in closed form. What kind of classifier is it?</p>
+        <details><summary>Solution</summary><div>
+          <p>Its logit is $\log p_\text{data}(x) - \log p_g(x) = -\tfrac{x^2}2 + \tfrac{(x-1)^2}2 = \tfrac12 - x$, so $D^*(x) = \sigma(\tfrac12 - x)$: a logistic regression with a linear logit, deciding "real" below the midpoint $x = \tfrac12$. Two Gaussians with equal variances always give a linear logit (lesson 03).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Show that the Wasserstein-1 distance between $\mathcal{N}(0, 1)$ and $\mathcal{N}(\mu, 1)$ is $|\mu|$. (Give a transport plan that achieves $|\mu|$, and a 1-Lipschitz $f$ in the dual that achieves it too.) Compare with the JSD as $\mu$ grows.</p>
+        <details><summary>Solution</summary><div>
+          <p>Upper bound: transport each $x$ to $x + \mu$, which moves every unit of mass a distance $|\mu|$. Lower bound: with $f(x) = x\operatorname{sign}(\mu)$, which is 1-Lipschitz, $\mathbb{E}_{p_g}f - \mathbb{E}_{p_\text{data}}f = |\mu|$, and by duality $W\ge$ any such difference. So $W = |\mu|$, which keeps growing linearly with $\mu$. The JSD increases towards $\log2$ and flattens out: for far-apart distributions it barely changes, so its gradient vanishes, while the Wasserstein distance still says which way to move.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> The data is $K$ equally likely, well-separated modes, and a collapsed generator reproduces just one of them perfectly. Compute $\operatorname{KL}(p_\text{data}\,\|\,p_g)$, $\operatorname{KL}(p_g\,\|\,p_\text{data})$ and $\operatorname{JSD}$ (treat each mode as a point). Evaluate for $K = 8$. Which divergence punishes collapse most?</p>
+        <details><summary>Solution</summary><div>
+          <p>Forward KL: infinite, since the data has mass where the generator has none. Reverse KL: $\log\frac{1}{1/K} = \log K = 2.08$ for $K = 8$, finite, and the same as for any single-mode generator. JSD: the mixture $m$ has $\frac{1 + 1/K}{2}$ on the generated mode and $\frac{1}{2K}$ on each other mode. $\operatorname{KL}(p_g\,\|\,m) = \log\frac{2K}{K + 1} = 0.575$; $\operatorname{KL}(p_\text{data}\,\|\,m) = \frac1K\log\frac{2}{K + 1} + \frac{K - 1}K\log2 = -0.188 + 0.607 = 0.418$. So $\operatorname{JSD} = 0.497$ nats, against a maximum of $\log2 = 0.693$. Maximum likelihood, which minimises the forward KL, punishes a missing mode infinitely; the reverse KL and the JSD tolerate it, which is part of why GANs can collapse and likelihood-based models (VAEs, diffusion) tend to cover all modes.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="diffusion">
+    <h2>Diffusion</h2>
+    <ol start="10">
+      <li>
+        <p><span class="tag">warm-up</span> DDPM's schedule has $T = 1000$ and $\beta_t$ rising linearly from $10^{-4}$ to 0.02. Estimate $\bar\alpha_T$ using $\log(1 - \beta)\approx-\beta$. How much of the original signal survives?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\log\bar\alpha_T\approx-\sum_t\beta_t = -1000\cdot\frac{10^{-4} + 0.02}{2} = -10.05$, so $\bar\alpha_T\approx4.3\times10^{-5}$ and the signal coefficient $\sqrt{\bar\alpha_T}\approx0.0066$: well under 1% of the signal, buried in noise of standard deviation 1.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Define the signal-to-noise ratio $\operatorname{SNR}(t) = \bar\alpha_t/(1 - \bar\alpha_t)$. Show that predicting $\mathbf{x}_0$ and predicting $\boldsymbol{\epsilon}$ are equivalent, with $\lVert\mathbf{x}_0 - \hat{\mathbf{x}}_0\rVert^2 = \lVert\boldsymbol{\epsilon} - \hat{\boldsymbol{\epsilon}}\rVert^2/\operatorname{SNR}(t)$. What does this say about which noise levels each loss emphasises?</p>
+        <details><summary>Solution</summary><div>
+          <p>From $\mathbf{x}_t = \sqrt{\bar\alpha}\mathbf{x}_0 + \sqrt{1 - \bar\alpha}\boldsymbol{\epsilon}$, any estimate $\hat{\boldsymbol{\epsilon}}$ gives $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sqrt{1 - \bar\alpha}\hat{\boldsymbol{\epsilon}})/\sqrt{\bar\alpha}$, so $\mathbf{x}_0 - \hat{\mathbf{x}}_0 = -\sqrt{(1 - \bar\alpha)/\bar\alpha}\,(\boldsymbol{\epsilon} - \hat{\boldsymbol{\epsilon}})$, and squaring gives the identity. An $\mathbf{x}_0$ loss is an $\boldsymbol{\epsilon}$ loss weighted by $1/\operatorname{SNR}$, which is huge at high noise levels: it focuses on the noisiest steps. An $\boldsymbol{\epsilon}$ loss focuses relatively more on low noise. Many modern recipes pick the weighting explicitly (Kingma et al., 2021; Karras et al., 2022).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> <b>$v$-prediction.</b> Define $\mathbf{v} = \sqrt{\bar\alpha_t}\,\boldsymbol{\epsilon} - \sqrt{1 - \bar\alpha_t}\,\mathbf{x}_0$. Show that $\mathbf{x}_0 = \sqrt{\bar\alpha_t}\mathbf{x}_t - \sqrt{1 - \bar\alpha_t}\mathbf{v}$ and $\boldsymbol{\epsilon} = \sqrt{1 - \bar\alpha_t}\mathbf{x}_t + \sqrt{\bar\alpha_t}\mathbf{v}$. Why might predicting $\mathbf{v}$ be better behaved than predicting $\boldsymbol{\epsilon}$ when $\bar\alpha_t\approx0$?</p>
+        <details><summary>Solution</summary><div>
+          <p>Write $a = \sqrt{\bar\alpha}$, $b = \sqrt{1 - \bar\alpha}$, $a^2 + b^2 = 1$. Then $(\mathbf{x}_t, \mathbf{v}) = (a\mathbf{x}_0 + b\boldsymbol{\epsilon},\ a\boldsymbol{\epsilon} - b\mathbf{x}_0)$ is a rotation of $(\mathbf{x}_0, \boldsymbol{\epsilon})$, and the inverse rotation gives $\mathbf{x}_0 = a\mathbf{x}_t - b\mathbf{v}$, $\boldsymbol{\epsilon} = b\mathbf{x}_t + a\mathbf{v}$. When $\bar\alpha\approx0$, $\mathbf{x}_t\approx\boldsymbol{\epsilon}$, so an $\boldsymbol{\epsilon}$-predictor is nearly the identity and $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - b\hat{\boldsymbol{\epsilon}})/a$ divides a tiny error by a tiny $a$, amplifying it. With $\mathbf{v}$, $\hat{\mathbf{x}}_0 = a\mathbf{x}_t - b\hat{\mathbf{v}}$ involves no division, and $\mathbf{v}\approx-\mathbf{x}_0$ is a meaningful target. This matters for schedules that reach exactly zero signal, and for distillation (Salimans &amp; Ho, 2022).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> A pixel-space U-Net with self-attention at $64\times64$ resolution, against a latent-diffusion U-Net with attention at the $64\times64$ latent resolution of a $512\times512$ image. If the pixel model instead ran attention at full $512\times512$ resolution, how many times more entries would each attention matrix have? Why do pixel-space models only use attention at low resolutions?</p>
+        <details><summary>Solution</summary><div>
+          <p>$512^2 = 262{,}144$ tokens against $64^2 = 4{,}096$: 64 times as many tokens, so $64^2 = 4{,}096$ times as many entries ($6.9\times10^{10}$ per head, impossible to store). Attention is quadratic in the number of positions, so pixel-space models attend only at heavily downsampled resolutions ($32\times32$, $16\times16$) and rely on convolutions above them; latent diffusion makes the whole image small enough for attention.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">code</span> In <a href="/machine-learning/24-diffusion-models/">lesson 24's code</a>, sample with the reverse variance $\sigma_t^2 = \tilde\beta_t$ instead of $\beta_t$. Then, separately, retrain with only $T = 10$ steps ($\beta$ from $10^{-4}$ to 0.9). Report the two precision and recall distances for each, and explain.</p>
+        <details><summary>Solution</summary><div>
+          <p>Precision (median distance of samples to the data) and recall (median distance of data to the samples); lesson 24's run gave 0.0046 and 0.0128, fresh data gives 0.0032 and 0.0106. With $\sigma_t^2 = \tilde\beta_t$: 0.0032 and 0.0093, as good as fresh data. The smaller variance adds less noise at the last steps, where $\tilde\beta_t$ is much smaller than $\beta_t$, so the samples land more tightly on the thin spiral; for data that lies on a thin set, that is the right choice (lesson 24, exercise 6). With $T = 10$: 0.1306 and 0.0279. The samples are 40 times farther from the spiral, and the training loss settles higher (0.61). Each reverse step now has to remove a lot of noise, the true reverse conditional is far from Gaussian (a point between two arms could have come from either), and a Gaussian step centred on the posterior mean puts samples between the arms.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="score">
+    <h2>Scores, guidance and flows</h2>
+    <ol start="15">
+      <li>
+        <p><span class="tag">warm-up</span> Write the score of $\mathcal{N}(\boldsymbol{\mu}, \sigma^2I)$ and of a mixture $\sum_k\pi_k\mathcal{N}(\boldsymbol{\mu}_k, \sigma^2I)$. Interpret the mixture's score.</p>
+        <details><summary>Solution</summary><div>
+          <p>Gaussian: $-(\mathbf{x} - \boldsymbol{\mu})/\sigma^2$, pointing at the mean, stronger farther away. Mixture: $\sum_kr_k(\mathbf{x})\,(\boldsymbol{\mu}_k - \mathbf{x})/\sigma^2$ with $r_k(\mathbf{x}) = \pi_k\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_k, \sigma^2I)/\sum_j\pi_j\mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_j, \sigma^2I)$: the posterior-weighted pull towards each component's mean. The weights $\pi_k$ enter only through $r_k$, which near one component is essentially 1 for it, so the score inside a mode carries almost no information about the modes' relative weights (lesson 25's Langevin experiment).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> <b>Tweedie for two points.</b> $x_0 = \pm1$ with equal probability, and $x = x_0 + \sigma\epsilon$. Compute $\mathbb{E}[x_0\mid x]$ directly, then via Tweedie's formula $\mathbb{E}[x_0\mid x] = x + \sigma^2\frac{d}{dx}\log p(x)$, and check that they agree. Sketch it for small and large $\sigma$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Directly: $P(x_0 = 1\mid x)\propto e^{-(x-1)^2/2\sigma^2}$, so $\mathbb{E}[x_0\mid x] = \frac{e^{x/\sigma^2} - e^{-x/\sigma^2}}{e^{x/\sigma^2} + e^{-x/\sigma^2}} = \tanh(x/\sigma^2)$. Tweedie: $p(x)\propto e^{-x^2/2\sigma^2}\cosh(x/\sigma^2)$, so $\frac{d}{dx}\log p = -x/\sigma^2 + \tanh(x/\sigma^2)/\sigma^2$, and $x + \sigma^2(\cdot) = \tanh(x/\sigma^2)$. ✓ For small $\sigma$ it is nearly a step function (the denoiser snaps to the nearer point); for large $\sigma$ it is nearly the line $x/\sigma^2$, close to 0: the best guess is the average of the two points, the blur of high noise levels.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> <b>Negative prompts.</b> Text-to-image systems let you give a negative prompt $y^-$ and sample with $\tilde{\boldsymbol{\epsilon}} = \boldsymbol{\epsilon}(\mathbf{x}, y^-) + (1 + w)\big(\boldsymbol{\epsilon}(\mathbf{x}, y) - \boldsymbol{\epsilon}(\mathbf{x}, y^-)\big)$. Which score does this correspond to, and what density (in the sense of lesson 25, exercise 3)? What is $w = -1$?</p>
+        <details><summary>Solution</summary><div>
+          <p>In score terms: $\nabla\log q(\mathbf{x}\mid y^-) + (1 + w)\big(\nabla\log q(\mathbf{x}\mid y) - \nabla\log q(\mathbf{x}\mid y^-)\big)$, the score of $q(\mathbf{x}\mid y)^{1+w}q(\mathbf{x}\mid y^-)^{-w}$. It favours images likely under $y$ and unlikely under $y^-$. It is ordinary classifier-free guidance with the negative prompt in place of the empty one. With $w = -1$ the expression is just $\boldsymbol{\epsilon}(\mathbf{x}, y^-)$: sampling from the negative prompt.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> <b>The probability-flow ODE for Gaussian data.</b> Use the "variance-exploding" parameterisation $\mathbf{x}_\sigma = \mathbf{x}_0 + \sigma\boldsymbol{\epsilon}$, for which the probability-flow ODE is $d\mathbf{x}/d\sigma = -\sigma\nabla\log q_\sigma(\mathbf{x})$. For $\mathbf{x}_0\sim\mathcal{N}(\mathbf{0}, s^2I)$, solve it, and find the deterministic map from a sample at $\sigma_\text{max}$ to $\sigma = 0$. Check that it carries $\mathcal{N}(\mathbf{0}, (s^2 + \sigma_\text{max}^2)I)$ to $\mathcal{N}(\mathbf{0}, s^2I)$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$q_\sigma = \mathcal{N}(\mathbf{0}, (s^2 + \sigma^2)I)$, score $-\mathbf{x}/(s^2 + \sigma^2)$, so $\frac{d\mathbf{x}}{d\sigma} = \frac{\sigma\mathbf{x}}{s^2 + \sigma^2}$. Then $\frac{d\log|x_i|}{d\sigma} = \frac{\sigma}{s^2 + \sigma^2} = \frac{d}{d\sigma}\tfrac12\log(s^2 + \sigma^2)$, so $\mathbf{x}(\sigma) = \mathbf{c}\sqrt{s^2 + \sigma^2}$. Going from $\sigma_\text{max}$ to 0: $\mathbf{x}(0) = \mathbf{x}(\sigma_\text{max})\,s/\sqrt{s^2 + \sigma_\text{max}^2}$, a linear rescaling, which maps standard deviation $\sqrt{s^2 + \sigma_\text{max}^2}$ to $s$. ✓ Each noise sample goes to one data sample, deterministically, and the map is invertible.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> With flow matching on straight paths $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\boldsymbol{\epsilon}$, suppose the data is a single point $\mathbf{a}$. Find $\mathbf{v}^*(\mathbf{x}, t)$ and show that one Euler step of the ODE from $t = 1$ to $t = 0$ lands exactly on $\mathbf{a}$. What changes with two data points?</p>
+        <details><summary>Solution</summary><div>
+          <p>Given $\mathbf{x}_t = \mathbf{x}$, the noise is determined: $\boldsymbol{\epsilon} = (\mathbf{x} - (1 - t)\mathbf{a})/t$, so $\mathbf{v}^* = \boldsymbol{\epsilon} - \mathbf{a} = (\mathbf{x} - \mathbf{a})/t$. An Euler step from $t = 1$ with $\Delta t = -1$: $\mathbf{x} - \mathbf{v}^*(\mathbf{x}, 1) = \mathbf{x} - (\mathbf{x} - \mathbf{a}) = \mathbf{a}$. With two points, $\mathbf{v}^*$ at $t = 1$ points towards their weighted average, so one step lands between them; the true ODE paths curve, and following them needs several steps. "Rectifying" (retraining on the model's own noise–sample pairs) straightens the paths, which is the idea behind few-step rectified-flow samplers.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> Explain why classifier-free guidance at a large $w$ can make samples <i>less</i> realistic while making them more recognisably of the class. Use the result of lesson 25's exercise 3 for two Gaussians, and the code's measurement of where guided samples land.</p>
+        <details><summary>Solution</summary><div>
+          <p>Guidance samples (approximately) from $q(\mathbf{x}\mid y)^{1+w}q(\mathbf{x})^{-w}$, which is not the class-conditional distribution: it is sharpened, and shifted away from regions that other classes also occupy. For two Gaussians the mean moved from 1 to 1.6 and the variance fell from 1 to 0.4 at $w = 3$; in the code the class-0 samples' centre moved from 1.51 to 2.20, beyond the true centre at 1.5, into a region where real class-0 data is rarer. Each sample is more unambiguous (the posterior of the class rises to 0.99), but the set no longer looks like real data of that class: too extreme and too uniform. In images this shows up as oversaturated colours, exaggerated features and low variety.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

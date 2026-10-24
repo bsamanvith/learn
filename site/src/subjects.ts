@@ -35,6 +35,7 @@ const registries = import.meta.glob<{ widgets: Widget[] }>("../../subjects/*/wid
 const lessonLists = import.meta.glob<Lessons>("../../subjects/*/lessons.json", { eager: true, import: "default" });
 const lessonHtml = import.meta.glob<string>("../../subjects/*/lessons/*.html", { eager: true, query: "?raw", import: "default" });
 const pageHtml = import.meta.glob<string>("../../subjects/*/pages/*.html", { eager: true, query: "?raw", import: "default" });
+const figureSvg = import.meta.glob<string>("../../subjects/*/figures/*.svg", { eager: true, query: "?raw", import: "default" });
 const slugOf = (p: string) => {
   const parts = p.split("/");
   const i = parts.lastIndexOf("subjects");
@@ -63,11 +64,16 @@ export const subjectOf = (id: string) => id.split("/")[0];
 export const slugIn = (id: string) => id.split("/")[1];
 export const chapterUrl = (id: string) => u(`/${id}/`);
 
-// Sort "1.10" after "1.9", and "02" after "01".
+// Sort "1.10" after "1.9", "02" after "01", and lettered chapters ("M1", the math toolkit) after numbered ones.
+const chapterKey = (c: string) => {
+  const m = c.match(/^([A-Za-z]*)(.*)$/)!;
+  return { prefix: m[1], nums: m[2].split(".").map(Number) };
+};
 export const byChapter = (a: { chapter: string }, b: { chapter: string }) => {
-  const as = a.chapter.split(".").map(Number), bs = b.chapter.split(".").map(Number);
-  for (let i = 0; i < Math.max(as.length, bs.length); i++) {
-    const d = (as[i] ?? 0) - (bs[i] ?? 0);
+  const ka = chapterKey(a.chapter), kb = chapterKey(b.chapter);
+  if (ka.prefix !== kb.prefix) return ka.prefix === "" ? -1 : kb.prefix === "" ? 1 : ka.prefix.localeCompare(kb.prefix);
+  for (let i = 0; i < Math.max(ka.nums.length, kb.nums.length); i++) {
+    const d = (ka.nums[i] ?? 0) - (kb.nums[i] ?? 0);
     if (d) return d;
   }
   return 0;
@@ -117,8 +123,14 @@ export async function liveSubjects() {
   return SUBJECTS.filter((s) => es.some((e) => e.subject === s.slug));
 }
 
+// Figures are SVG files in subjects/<s>/figures/, pulled inline with <!-- figure: name --> so they
+// inherit the page's colours (they draw with currentColor and the theme's CSS variables).
+const withFigures = (html: string, subject: string) =>
+  html.replace(/<!--\s*figure:\s*([\w-]+)\s*-->/g, (all, name) =>
+    Object.entries(figureSvg).find(([p]) => p.endsWith(`/subjects/${subject}/figures/${name}.svg`))?.[1]
+      .replace(/<\?xml[^>]*>\s*/, "") ?? all);
 const fragment = (files: Record<string, string>, subject: string, dir: string, file: string) =>
-  withBase(Object.entries(files).find(([p]) => p.endsWith(`/subjects/${subject}/${dir}/${file}.html`))?.[1] ?? "");
+  withBase(withFigures(Object.entries(files).find(([p]) => p.endsWith(`/subjects/${subject}/${dir}/${file}.html`))?.[1] ?? "", subject));
 export const lessonBody = (id: string) => fragment(lessonHtml, subjectOf(id), "lessons", slugIn(id));
 export const pageBody = (subject: string, file: string) => fragment(pageHtml, subject, "pages", file);
 

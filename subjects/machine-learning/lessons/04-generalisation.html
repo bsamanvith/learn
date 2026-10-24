@@ -1,0 +1,201 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 04 · Stage 2: making models honest</div>
+  <h1>Generalisation</h1>
+  <p class="lede">A model that fits its training data perfectly can still be useless. What we actually care about is error on data the model has never seen. This lesson defines that error precisely, splits it into three parts (bias, variance and noise), proves where the gap between training and test error comes from, and shows how to estimate test error honestly.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/01-linear-regression/">lesson 01</a></span><span><b>Math pulled in:</b> expectation over random datasets, the bias–variance decomposition, the trace of a projection, cross-validation</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Take 15 noisy points from a sine curve and fit polynomials of increasing degree. A straight line is too stiff. A cubic follows the shape. A degree-12 polynomial threads through nearly every point, so its training error is almost zero, yet between the points it swings wildly and would predict new data badly.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: gen-fits --></div>
+    </figure>
+    <p class="muted">The dashed curve is the truth, $f(x) = \sin 2\pi x$. The dots are $y_i = f(x_i) + \varepsilon_i$ with noise standard deviation $\sigma = 0.3$. The orange curve is the least-squares polynomial.</p>
+    <p>Training error always falls as the model gets more flexible. Test error does not. The rest of this lesson makes that sentence precise.</p>
+  </section>
+
+  <section id="risk">
+    <h2>Two kinds of error</h2>
+    <p>Assume the data come from a fixed but unknown distribution $p(\mathbf{x}, y)$, and that the training pairs are drawn from it independently. For a predictor $f$ and the squared loss, the quantity we care about is the <b>expected risk</b> (also called test error or generalisation error):</p>
+    <div class="eq">$$R(f) = \mathbb{E}_{(\mathbf{x}, y) \sim p}\big[(y - f(\mathbf{x}))^2\big].$$</div>
+    <p>We cannot compute it, because we don't know $p$. What we can compute is the <b>empirical risk</b> on the training set $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^n$:</p>
+    <div class="eq">$$\hat R_{\mathcal{D}}(f) = \frac1n \sum_{i=1}^n \big(y_i - f(\mathbf{x}_i)\big)^2 .$$</div>
+    <p>Lessons 01 to 03 all minimised $\hat R$. For any <i>fixed</i> $f$, $\hat R_{\mathcal{D}}(f)$ is an unbiased estimate of $R(f)$, because it is an average of $n$ independent copies of the loss. The trouble is that we don't evaluate a fixed $f$. We evaluate $\hat f_{\mathcal{D}}$, which was <i>chosen</i> to make $\hat R_{\mathcal{D}}$ small. On its own training data it looks better than it is. The difference</p>
+    <div class="eq">$$\text{gap} = R(\hat f_{\mathcal{D}}) - \hat R_{\mathcal{D}}(\hat f_{\mathcal{D}})$$</div>
+    <p>is the <b>generalisation gap</b>. A model <b>overfits</b> when the gap is large: it has fitted the noise in this particular sample. It <b>underfits</b> when even the training error is high: it is too simple to capture the signal.</p>
+  </section>
+
+  <section id="decomposition">
+    <h2>The bias–variance decomposition</h2>
+    <p>Here is the central calculation of the lesson. Suppose the data follow</p>
+    <div class="eq">$$y = f(\mathbf{x}) + \varepsilon, \qquad \mathbb{E}[\varepsilon] = 0,\quad \operatorname{Var}(\varepsilon) = \sigma^2,$$</div>
+    <p>with the noise $\varepsilon$ independent of everything else. Fix a test input $\mathbf{x}$. The fitted model $\hat f_{\mathcal{D}}(\mathbf{x})$ is a random variable, because the training set $\mathcal{D}$ is random: draw a different sample, get a different fit. Write its average over training sets as</p>
+    <div class="eq">$$\bar f(\mathbf{x}) = \mathbb{E}_{\mathcal{D}}\big[\hat f_{\mathcal{D}}(\mathbf{x})\big].$$</div>
+    <p>Now take the expected squared error at $\mathbf{x}$, averaging over both the training set and a fresh test label $y$. Drop the argument $\mathbf{x}$ to keep it readable, and write $\hat f$ for $\hat f_{\mathcal{D}}(\mathbf{x})$.</p>
+    <p><b>Step 1: split off the noise.</b> Substitute $y = f + \varepsilon$:</p>
+    <div class="eq">$$\mathbb{E}\big[(y - \hat f)^2\big] = \mathbb{E}\big[(\varepsilon + f - \hat f)^2\big] = \mathbb{E}[\varepsilon^2] + 2\,\mathbb{E}\big[\varepsilon\,(f - \hat f)\big] + \mathbb{E}\big[(f - \hat f)^2\big].$$</div>
+    <p>The test noise $\varepsilon$ is independent of $\hat f$ (it was not in the training set) and has mean zero, so the middle term is $2\,\mathbb{E}[\varepsilon]\,\mathbb{E}[f - \hat f] = 0$. The first term is $\sigma^2$.</p>
+    <p><b>Step 2: split the remaining error around the average fit.</b> Add and subtract $\bar f$:</p>
+    <div class="eq">$$\mathbb{E}\big[(f - \hat f)^2\big] = \mathbb{E}\big[(f - \bar f + \bar f - \hat f)^2\big] = (f - \bar f)^2 + 2\,(f - \bar f)\,\mathbb{E}\big[\bar f - \hat f\big] + \mathbb{E}\big[(\hat f - \bar f)^2\big].$$</div>
+    <p>$f - \bar f$ is a constant (no randomness left in it), and $\mathbb{E}[\hat f] = \bar f$ by definition, so the cross term vanishes again. Putting the pieces together:</p>
+    <div class="result">
+      <div class="label">Bias–variance decomposition (squared loss)</div>
+      <div class="eq">$$\mathbb{E}_{\mathcal{D},\,\varepsilon}\big[(y - \hat f_{\mathcal{D}}(\mathbf{x}))^2\big] = \underbrace{\big(f(\mathbf{x}) - \bar f(\mathbf{x})\big)^2}_{\text{bias}^2} + \underbrace{\mathbb{E}_{\mathcal{D}}\big[(\hat f_{\mathcal{D}}(\mathbf{x}) - \bar f(\mathbf{x}))^2\big]}_{\text{variance}} + \underbrace{\sigma^2}_{\text{noise}}.$$</div>
+    </div>
+    <ul>
+      <li><b>Bias²</b> is how far the <i>average</i> model is from the truth. It is the error you would still make with infinitely many training sets averaged together, so it measures what the model family cannot express. A straight line through a sine wave has large bias.</li>
+      <li><b>Variance</b> is how much the fit wobbles from one training set to the next. Flexible models chase the noise, so they wobble a lot.</li>
+      <li><b>Noise</b> $\sigma^2$ is irreducible. No model can predict $\varepsilon$.</li>
+    </ul>
+    <p>Averaging over $\mathbf{x}$ as well turns this pointwise identity into one for the expected risk. Here is that computation for the sine example, with 4,000 simulated training sets per degree:</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: gen-curves --></div>
+    </figure>
+    <p class="muted">Left: training error falls every time we add a degree. Test error falls until degree 3, then rises. Right: the same test error split into its parts. Bias² collapses once the polynomial can bend like a sine (degree 3); after that, every extra degree only adds variance. Degree 12 has 13 parameters for 15 points, and its variance explodes.</p>
+    <div class="detour">
+      <div class="label">Math detour · expectation over datasets</div>
+      <p>"$\mathbb{E}_{\mathcal{D}}$" means: imagine drawing a fresh training set of the same size from the same distribution, fitting again, and averaging the result over infinitely many such repeats. You only ever see one $\mathcal{D}$, but the identity tells you what your one fit is a sample of. Simulations like the one above approximate $\mathbb{E}_{\mathcal{D}}$ by literally repeating the experiment.</p>
+    </div>
+  </section>
+
+  <section id="optimism">
+    <h2>How big is the gap? An exact answer for least squares</h2>
+    <p>For linear least squares we can compute the generalisation gap exactly. Use a fixed design matrix $X \in \mathbb{R}^{n\times p}$ (rank $p$) and suppose the true function is in the model, $\mathbf{y} = X\boldsymbol\beta + \boldsymbol\varepsilon$ with $\mathbb{E}[\boldsymbol\varepsilon] = \mathbf{0}$ and $\operatorname{Cov}(\boldsymbol\varepsilon) = \sigma^2 I$. Lesson 01 showed the fitted values are a projection, $\hat{\mathbf{y}} = H\mathbf{y}$ with $H = X(X^\top X)^{-1}X^\top$.</p>
+    <p><b>Training error.</b> The residual is $\mathbf{y} - H\mathbf{y} = (I - H)\mathbf{y} = (I-H)\boldsymbol\varepsilon$, because $(I-H)X\boldsymbol\beta = \mathbf{0}$. For any matrix $A$, $\mathbb{E}\big[\boldsymbol\varepsilon^\top A\,\boldsymbol\varepsilon\big] = \sigma^2 \operatorname{tr}(A)$. Since $I - H$ is a symmetric projection, $(I-H)^\top(I-H) = I - H$, so</p>
+    <div class="eq">$$\mathbb{E}\,\lVert(I - H)\boldsymbol\varepsilon\rVert^2 = \sigma^2 \operatorname{tr}(I - H) = \sigma^2 (n - p).$$</div>
+    <p>The trace of a projection is the dimension it projects onto: $\operatorname{tr}(H) = \operatorname{tr}\big((X^\top X)^{-1}X^\top X\big) = \operatorname{tr}(I_p) = p$.</p>
+    <p><b>Error on fresh labels.</b> Now draw new labels at the same inputs, $\mathbf{y}' = X\boldsymbol\beta + \boldsymbol\varepsilon'$, with $\boldsymbol\varepsilon'$ independent of $\boldsymbol\varepsilon$. Then $\mathbf{y}' - \hat{\mathbf{y}} = \boldsymbol\varepsilon' - H\boldsymbol\varepsilon$ and</p>
+    <div class="eq">$$\mathbb{E}\,\lVert\boldsymbol\varepsilon' - H\boldsymbol\varepsilon\rVert^2 = \mathbb{E}\lVert\boldsymbol\varepsilon'\rVert^2 + \mathbb{E}\lVert H\boldsymbol\varepsilon\rVert^2 = n\sigma^2 + p\,\sigma^2 .$$</div>
+    <div class="result">
+      <div class="label">Train and test error of least squares with p parameters</div>
+      <div class="eq">$$\mathbb{E}[\text{train MSE}] = \sigma^2\Big(1 - \frac{p}{n}\Big), \qquad \mathbb{E}[\text{test MSE}] = \sigma^2\Big(1 + \frac{p}{n}\Big), \qquad \text{gap} = \frac{2\sigma^2 p}{n}.$$</div>
+    </div>
+    <p>Every parameter you add buys a $\sigma^2/n$ drop in training error that is fake, and costs a $\sigma^2/n$ rise in test error that is real. The simulation above confirms it. For degrees 5 to 12 (where bias is essentially zero) the measured training error matches $\sigma^2(1 - p/n)$ with $p = \text{degree} + 1$ to three decimals, for example $0.0122$ against $0.09 \times 2/15 = 0.012$ at degree 12.</p>
+    <p>The formula also says what more data does: the gap shrinks like $1/n$. Overfitting is a statement about parameters <i>relative to</i> data, not parameters alone.</p>
+  </section>
+
+  <section id="splits">
+    <h2>Estimating test error: train, validation, test</h2>
+    <p>Since training error is biased low, we estimate test error on data the model never touched. The standard protocol has three disjoint sets:</p>
+    <ul>
+      <li><b>Training set</b>: fit the parameters ($\mathbf{w}$).</li>
+      <li><b>Validation set</b>: choose everything else, the <b>hyperparameters</b> (polynomial degree, regularisation strength, learning rate, when to stop).</li>
+      <li><b>Test set</b>: evaluate the final model <i>once</i>.</li>
+    </ul>
+    <p>Why a separate test set? Choosing the best of many models on the validation set is itself a fit, and the winning validation score is biased low for exactly the reason training error is: you picked the model that happened to do well on that sample. The test set is only honest if nothing about the model was chosen by looking at it.</p>
+    <div class="note">
+      <div class="label">Leakage</div>
+      <p>Anything computed from the full dataset before splitting leaks test information into training: standardising features with the global mean, selecting features by their correlation with the label, removing "outliers". Fit every preprocessing step on the training split only, then apply it unchanged to validation and test data.</p>
+    </div>
+  </section>
+
+  <section id="cv">
+    <h2>Cross-validation</h2>
+    <p>With little data, holding out a large validation set is expensive. <b>K-fold cross-validation</b> reuses every point. Split the data into $K$ folds $F_1, \dots, F_K$. For each $k$, fit on everything except $F_k$, giving $\hat f^{(-k)}$, and measure the error on $F_k$:</p>
+    <div class="eq">$$\mathrm{CV}_K = \frac1n \sum_{k=1}^K \sum_{i \in F_k} \big(y_i - \hat f^{(-k)}(\mathbf{x}_i)\big)^2 .$$</div>
+    <p>Each point is predicted by a model that did not see it. $K = 5$ or $10$ is typical. With $K = n$ (leave-one-out, LOOCV), linear least squares has a closed form that needs only one fit:</p>
+    <div class="result">
+      <div class="label">LOOCV shortcut for linear smoothers</div>
+      <div class="eq">$$\mathrm{CV}_n = \frac1n\sum_{i=1}^n \left(\frac{y_i - \hat y_i}{1 - H_{ii}}\right)^2 .$$</div>
+    </div>
+    <p>$H_{ii}$ is the <b>leverage</b> of point $i$: how strongly its own label pulls its own prediction. A high-leverage point's residual understates its true prediction error, and dividing by $1 - H_{ii}$ corrects for that exactly. Exercise 5 derives it.</p>
+    <p>CV has two costs. It is $K$ times as expensive, and the estimate is noisy, because it is an average of correlated quantities. In the code below, 5-fold CV and LOOCV pick slightly different degrees from the same 15 points.</p>
+  </section>
+
+  <section id="curves">
+    <h2>Learning curves and what to do next</h2>
+    <p>Plot training and validation error against the number of training examples. The shape tells you which term dominates:</p>
+    <ul>
+      <li><b>High bias</b>: both errors are high and close together, and plateau quickly. More data won't help. Use a more flexible model or better features.</li>
+      <li><b>High variance</b>: training error is low, validation error is much higher, and the gap shrinks as $n$ grows (like $2\sigma^2 p/n$ above). More data, regularisation (lesson 05) or a simpler model will help.</li>
+    </ul>
+    <div class="detour">
+      <div class="label">Beyond the U-curve · double descent</div>
+      <p>The U-shaped curve is not the whole story for very large models. If you keep adding parameters past the point where the model can interpolate the training data ($p \approx n$), test error can fall a <i>second</i> time. Among the many interpolating solutions, gradient descent (and the pseudo-inverse) picks the one with the smallest norm, and that implicit preference acts like regularisation. This is part of why heavily over-parameterised neural networks generalise. The peak at $p = n$ in our degree-12 fit is the first half of that curve. See Belkin et al. (2019) below.</p>
+    </div>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+n, sigma = 15, 0.3
+x = (np.arange(n) + 0.5) / n
+y = np.sin(2 * np.pi * x) + sigma * rng.standard_normal(n)
+
+def design(x, d):                      # columns 1, t, t^2, ..., t^d with t in [-1, 1]
+    return np.vander(2 * x - 1, d + 1, increasing=True)
+
+def fit(x, y, d):
+    return np.linalg.lstsq(design(x, d), y, rcond=None)[0]
+
+def kfold_cv(x, y, d, k=5):
+    idx = rng.permutation(len(x))
+    folds = np.array_split(idx, k)
+    errs = []
+    for f in folds:
+        train = np.setdiff1d(idx, f)
+        w = fit(x[train], y[train], d)
+        errs.append(np.mean((design(x[f], d) @ w - y[f]) ** 2))
+    return np.mean(errs)
+
+def loocv(x, y, d):                    # the closed form for linear smoothers
+    X = design(x, d)
+    H = X @ np.linalg.pinv(X)
+    r = y - H @ y
+    return np.mean((r / (1 - np.diag(H))) ** 2)
+
+for d in range(0, 10):
+    w = fit(x, y, d)
+    train = np.mean((design(x, d) @ w - y) ** 2)
+    print(f"degree {d}: train {train:.3f}   5-fold CV {kfold_cv(x, y, d):.3f}   LOOCV {loocv(x, y, d):.3f}")
+
+# degree 0: train 0.776   5-fold CV 0.856   LOOCV 0.891
+# degree 1: train 0.287   5-fold CV 0.341   LOOCV 0.396
+# degree 2: train 0.283   5-fold CV 0.503   LOOCV 0.540
+# degree 3: train 0.054   5-fold CV 0.125   LOOCV 0.102   &lt;- LOOCV's choice
+# degree 4: train 0.052   5-fold CV 0.165   LOOCV 0.173
+# degree 5: train 0.043   5-fold CV 0.114   LOOCV 0.153   &lt;- 5-fold's choice
+# degree 6: train 0.040   5-fold CV 0.281   LOOCV 0.148
+# degree 7: train 0.039   5-fold CV 3.501   LOOCV 1.470
+# degree 8: train 0.038   5-fold CV 20.681  LOOCV 20.932
+# degree 9: train 0.011   5-fold CV 27.911  LOOCV 34.547</code></pre>
+    <p class="muted">Training error only ever falls. Both CV estimates bottom out around degree 3 to 5 and then explode. The two disagree on the exact winner: with 15 points, CV is itself a noisy estimate. You can check the LOOCV shortcut against a brute-force loop that refits 15 times; they agree to machine precision.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>A model always predicts the training-set mean $\bar y$, whatever the input. With $y = f(\mathbf{x}) + \varepsilon$, what are its bias² and variance at a point $\mathbf{x}$? (Treat $\bar y$ as the average of $n$ independent labels.)</li>
+      <li>Show that $\mathbb{E}[\boldsymbol\varepsilon^\top A\boldsymbol\varepsilon] = \sigma^2\operatorname{tr}(A)$ when $\operatorname{Cov}(\boldsymbol\varepsilon) = \sigma^2 I$ and $\mathbb{E}[\boldsymbol\varepsilon] = \mathbf{0}$.</li>
+      <li>Using the result of the optimism section, find an unbiased estimate of $\sigma^2$ from the training residuals of a least-squares fit with $p$ parameters.</li>
+      <li>You have 1,000 examples. You try 200 hyperparameter settings and report the best validation accuracy. Why is that number optimistic, and what should you report instead?</li>
+      <li>Derive the LOOCV shortcut. Hint: let $\hat y_i^{(-i)}$ be the prediction at $\mathbf{x}_i$ from the fit without point $i$. Show that refitting with $y_i$ replaced by $\hat y_i^{(-i)}$ gives back the same leave-one-out fit, then use $\hat y_i = \sum_j H_{ij} y_j$.</li>
+      <li>A $k$-nearest-neighbour regressor predicts the average label of the $k$ closest training points. As $k$ grows from 1 to $n$, what happens to bias and to variance? Which $k$ interpolates the training data?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\mathbb{E}[\bar y] = \bar f$, the average of $f$ over the training inputs, so bias² $= (f(\mathbf{x}) - \bar f)^2$, large wherever $f$ varies. Variance $= \operatorname{Var}(\bar y) = \sigma^2/n$, tiny. It is the extreme high-bias, low-variance model.</p>
+        <p><b>2.</b> $\boldsymbol\varepsilon^\top A\boldsymbol\varepsilon = \sum_{i,j} A_{ij}\varepsilon_i\varepsilon_j$. Take expectations: $\mathbb{E}[\varepsilon_i\varepsilon_j] = \sigma^2\delta_{ij}$, so the sum is $\sigma^2\sum_i A_{ii} = \sigma^2\operatorname{tr}(A)$.</p>
+        <p><b>3.</b> $\mathbb{E}\lVert\mathbf{y} - \hat{\mathbf{y}}\rVert^2 = \sigma^2(n-p)$, so $\hat\sigma^2 = \lVert\mathbf{y}-\hat{\mathbf{y}}\rVert^2/(n-p)$ is unbiased. Dividing by $n$ instead underestimates the noise; that is the same "$n-1$" correction as the sample variance, which is the case $p = 1$.</p>
+        <p><b>4.</b> The maximum of 200 noisy estimates is biased upward: some settings win by luck on that particular validation set. Report the chosen model's accuracy on a held-out test set that played no part in the choice, or use nested cross-validation.</p>
+        <p><b>5.</b> Write $\tilde{\mathbf{y}}$ for $\mathbf{y}$ with $y_i$ replaced by $\hat y_i^{(-i)}$. The leave-one-out fit already predicts $\hat y_i^{(-i)}$ at $\mathbf{x}_i$, so adding the point $(\mathbf{x}_i, \hat y_i^{(-i)})$ costs it nothing and it stays optimal: $\hat y_i^{(-i)} = (H\tilde{\mathbf{y}})_i = \sum_{j\ne i}H_{ij}y_j + H_{ii}\hat y_i^{(-i)}$. Subtract this from $\hat y_i = \sum_{j\ne i}H_{ij}y_j + H_{ii}y_i$ to get $\hat y_i - \hat y_i^{(-i)} = H_{ii}(y_i - \hat y_i^{(-i)})$. Rearranging, $y_i - \hat y_i^{(-i)} = (y_i - \hat y_i)/(1 - H_{ii})$.</p>
+        <p><b>6.</b> $k = 1$ interpolates the training data (each training point is its own nearest neighbour): low bias, high variance. Increasing $k$ averages more labels, so variance falls (roughly $\sigma^2/k$) but the average reaches further from $\mathbf{x}$, so bias grows. At $k = n$ it is the constant model from exercise 1.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Hastie, Tibshirani, Friedman, <i>The Elements of Statistical Learning</i></b>, chapter 7. Bias–variance, optimism of the training error, AIC, cross-validation, the bootstrap.</li>
+      <li><b>James et al., <i>An Introduction to Statistical Learning</i></b>, chapters 2.2 and 5. The same ideas with lots of pictures.</li>
+      <li><b>Bishop, <i>Pattern Recognition and Machine Learning</i></b>, section 3.2. The decomposition for regression, with the same sine-curve example.</li>
+      <li><b>Belkin, Hsu, Ma, Mandal, "Reconciling modern machine-learning practice and the classical bias–variance trade-off"</b> (PNAS, 2019). Double descent.</li>
+    </ul>
+  </section>
+</article>

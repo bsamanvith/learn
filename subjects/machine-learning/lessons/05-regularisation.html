@@ -1,0 +1,204 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 05 · Stage 2: making models honest</div>
+  <h1>Regularisation</h1>
+  <p class="lede">Lesson 04 showed that a flexible model overfits because its variance explodes. Regularisation is the cure: keep the flexible model, but charge it for large weights. This lesson derives ridge regression in closed form, reads it through the SVD, shows it is a Gaussian prior in disguise, and then swaps the squared penalty for an absolute value to get the lasso, which sets weights to exactly zero.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/01-linear-regression/">lesson 01</a>, <a href="/machine-learning/04-generalisation/">lesson 04</a></span><span><b>Math pulled in:</b> vector norms, the SVD, MAP estimation, the Laplace distribution, subgradients</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Go back to the degree-12 polynomial from lesson 04, fitted to 15 noisy points. Unregularised, its coefficients are in the thousands (their norm is about 2,000) and they cancel each other almost perfectly at the training points while swinging wildly between them. Add a penalty on the size of the coefficients and the same model, with the same 13 parameters, becomes smooth.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: reg-fits --></div>
+    </figure>
+    <p class="muted">Same 15 points, same degree-12 polynomial, three penalty strengths. The coefficient norm falls from about 2,000 to 4.7 to 0.9, and the mean squared distance from the true curve falls from 0.21 at $\lambda = 0$ to 0.055 at $\lambda = 0.01$. Too little penalty overfits, too much flattens the curve toward a constant: the strength $\lambda$ trades variance for bias.</p>
+    <p>So instead of choosing the <i>number</i> of parameters (the degree), we choose how much to <i>constrain</i> them. That turns a discrete choice into a continuous dial, and it is how almost every modern model, neural networks included, is kept honest.</p>
+  </section>
+
+  <section id="ridge">
+    <h2>Ridge regression</h2>
+    <p><b>Ridge regression</b> adds the squared Euclidean norm of the weights to the least-squares loss:</p>
+    <div class="eq">$$J(\mathbf{w}) = \lVert\mathbf{y} - X\mathbf{w}\rVert^2 + \lambda\,\lVert\mathbf{w}\rVert^2, \qquad \lambda \ge 0 .$$</div>
+    <p>Expand and differentiate, exactly as in lesson 01. The gradient is</p>
+    <div class="eq">$$\nabla J = -2X^\top(\mathbf{y} - X\mathbf{w}) + 2\lambda\mathbf{w} .$$</div>
+    <p>Setting it to zero gives $(X^\top X + \lambda I)\,\mathbf{w} = X^\top\mathbf{y}$.</p>
+    <div class="result">
+      <div class="label">Ridge solution</div>
+      <div class="eq">$$\hat{\mathbf{w}}_\lambda = (X^\top X + \lambda I)^{-1} X^\top \mathbf{y} .$$</div>
+    </div>
+    <p>The Hessian is $2(X^\top X + \lambda I)$. For any $\mathbf{v} \ne \mathbf{0}$, $\mathbf{v}^\top(X^\top X + \lambda I)\mathbf{v} = \lVert X\mathbf{v}\rVert^2 + \lambda\lVert\mathbf{v}\rVert^2 &gt; 0$ when $\lambda &gt; 0$. So the matrix is positive definite, hence invertible, and $J$ is strictly convex with a unique minimum. This holds <i>even when $p &gt; n$</i>, where plain least squares has infinitely many solutions. Historically that was ridge's first job: Hoerl and Kennard (1970) added $\lambda I$ to fix near-singular $X^\top X$.</p>
+    <p>Two practical rules come straight from the formula:</p>
+    <ul>
+      <li><b>Standardise the features first.</b> The penalty $\lambda\sum_j w_j^2$ treats every weight alike, but a feature measured in millimetres needs a weight 1,000 times smaller than the same feature in metres. Rescale each column to mean 0 and variance 1 so the penalty is fair.</li>
+      <li><b>Don't penalise the intercept.</b> Shifting every $y$ by a constant should shift the prediction by that constant. If you centre $\mathbf{y}$ and the columns of $X$, the intercept is simply $\bar y$ and you can drop it from the penalty.</li>
+    </ul>
+  </section>
+
+  <section id="svd">
+    <h2>What ridge does, seen through the SVD</h2>
+    <p>Write the thin singular value decomposition $X = UDV^\top$, where $U \in \mathbb{R}^{n\times p}$ and $V \in \mathbb{R}^{p\times p}$ have orthonormal columns and $D = \operatorname{diag}(d_1 \ge \dots \ge d_p \ge 0)$. (The <a href="/machine-learning/M1-linear-algebra/">math toolkit, M1</a>, covers the SVD in full.) Then $X^\top X = VD^2V^\top$, and</p>
+    <div class="eq">$$\hat{\mathbf{w}}_\lambda = (VD^2V^\top + \lambda VV^\top)^{-1}VDU^\top\mathbf{y} = V\,(D^2 + \lambda I)^{-1}D\,U^\top\mathbf{y} .$$</div>
+    <p>The fitted values are $\hat{\mathbf{y}} = X\hat{\mathbf{w}}_\lambda = UD(D^2+\lambda I)^{-1}DU^\top\mathbf{y}$, which is a sum over directions:</p>
+    <div class="result">
+      <div class="label">Ridge as shrinkage along principal directions</div>
+      <div class="eq">$$\hat{\mathbf{y}} = \sum_{j=1}^{p} \mathbf{u}_j\,\frac{d_j^2}{d_j^2 + \lambda}\,\mathbf{u}_j^\top\mathbf{y} .$$</div>
+    </div>
+    <p>Least squares ($\lambda = 0$) projects $\mathbf{y}$ onto each direction $\mathbf{u}_j$ and keeps it all. Ridge keeps a fraction $d_j^2/(d_j^2 + \lambda)$. Directions where the data vary a lot (large $d_j$) are barely touched. Directions where the data hardly vary (small $d_j$) are shrunk almost to zero. Those low-variance directions are exactly where the least-squares estimate is noisiest, since its variance along direction $j$ is $\sigma^2/d_j^2$.</p>
+    <p><b>Effective number of parameters.</b> Ridge fitted values are still linear in $\mathbf{y}$, $\hat{\mathbf{y}} = H_\lambda\mathbf{y}$. Lesson 04 showed that for least squares $\operatorname{tr}(H) = p$ counts the parameters and sets the train–test gap. The same trace for ridge gives a continuous count:</p>
+    <div class="eq">$$\operatorname{df}(\lambda) = \operatorname{tr}(H_\lambda) = \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda},$$</div>
+    <p>which slides from $p$ at $\lambda = 0$ down to $0$ as $\lambda \to \infty$. In the code below, 8 features with $\lambda = 30$ behave like 5.08 parameters.</p>
+  </section>
+
+  <section id="bias-variance">
+    <h2>Why shrinking helps: bias against variance</h2>
+    <p>Assume $\mathbf{y} = X\boldsymbol\beta + \boldsymbol\varepsilon$ with $\operatorname{Cov}(\boldsymbol\varepsilon) = \sigma^2 I$, and work in the rotated coordinates $\theta_j = \mathbf{v}_j^\top\boldsymbol\beta$. Along direction $j$, least squares estimates $\theta_j$ without bias and with variance $\sigma^2/d_j^2$. Ridge multiplies that estimate by $s_j = d_j^2/(d_j^2+\lambda)$, so</p>
+    <div class="eq">$$\text{bias}_j^2 = (1 - s_j)^2\theta_j^2 = \Big(\frac{\lambda}{d_j^2+\lambda}\Big)^2\theta_j^2, \qquad \text{var}_j = s_j^2\,\frac{\sigma^2}{d_j^2} = \frac{\sigma^2 d_j^2}{(d_j^2+\lambda)^2}.$$</div>
+    <p>As $\lambda$ grows, bias rises from zero and variance falls. At $\lambda = 0$ the bias² term has zero slope (it is quadratic in $\lambda$) while the variance term is falling, so a small enough $\lambda &gt; 0$ <i>always</i> beats least squares in mean squared error (exercise 3). That is the Hoerl–Kennard theorem, and it is the bias–variance trade-off of lesson 04 with a dial on it. In practice we pick $\lambda$ by cross-validation.</p>
+  </section>
+
+  <section id="map">
+    <h2>A penalty is a prior</h2>
+    <p>Lesson 01 showed that least squares is maximum likelihood under Gaussian noise. Ridge comes from adding a prior belief that weights are small. Put an independent Gaussian prior on each weight, $w_j \sim \mathcal{N}(0, \tau^2)$, and keep the likelihood $y_i \mid \mathbf{x}_i, \mathbf{w} \sim \mathcal{N}(\mathbf{w}^\top\mathbf{x}_i, \sigma^2)$. Bayes' rule gives the posterior up to a constant:</p>
+    <div class="eq">$$p(\mathbf{w}\mid\mathcal{D}) \propto \prod_{i=1}^n \exp\!\Big(-\frac{(y_i - \mathbf{w}^\top\mathbf{x}_i)^2}{2\sigma^2}\Big)\;\prod_{j=1}^p\exp\!\Big(-\frac{w_j^2}{2\tau^2}\Big).$$</div>
+    <p>The <b>maximum a posteriori</b> (MAP) estimate maximises this, which is the same as minimising the negative log:</p>
+    <div class="eq">$$-\log p(\mathbf{w}\mid\mathcal{D}) = \frac{1}{2\sigma^2}\lVert\mathbf{y} - X\mathbf{w}\rVert^2 + \frac{1}{2\tau^2}\lVert\mathbf{w}\rVert^2 + \text{const}.$$</div>
+    <p>Multiply by $2\sigma^2$ and this is the ridge objective with</p>
+    <div class="result">
+      <div class="label">Ridge = MAP with a Gaussian prior</div>
+      <div class="eq">$$\lambda = \frac{\sigma^2}{\tau^2} = \frac{\text{noise variance}}{\text{prior variance}} .$$</div>
+    </div>
+    <p>The ratio makes sense. Noisy data (large $\sigma^2$) should lean more on the prior; a confident prior (small $\tau^2$) should pull harder. As the data grow, the likelihood term has $n$ summands while the prior term stays fixed, so the prior's influence fades. The <a href="/machine-learning/M3-probability/">math toolkit, M3</a>, goes further and keeps the whole posterior rather than only its peak.</p>
+    <div class="detour">
+      <div class="label">Math detour · norms</div>
+      <p>For $\mathbf{w}\in\mathbb{R}^p$, the $\ell_q$ norm is $\lVert\mathbf{w}\rVert_q = \big(\sum_j |w_j|^q\big)^{1/q}$. The $\ell_2$ norm is ordinary length; the $\ell_1$ norm $\sum_j|w_j|$ is the "taxicab" length. Their unit balls are a circle and a diamond (a square rotated 45°). For $q &lt; 1$ the "ball" is no longer convex, which is why $\ell_1$ is the smallest $q$ that keeps the problem convex.</p>
+    </div>
+  </section>
+
+  <section id="lasso">
+    <h2>The lasso: penalising the absolute value</h2>
+    <p>Replace the squared penalty with the $\ell_1$ norm:</p>
+    <div class="eq">$$J(\mathbf{w}) = \frac{1}{2n}\lVert\mathbf{y} - X\mathbf{w}\rVert^2 + \lambda\lVert\mathbf{w}\rVert_1 .$$</div>
+    <p>(The $1/2n$ is a convention that makes $\lambda$ comparable across dataset sizes.) This is the <b>lasso</b> (Tibshirani, 1996). By the same MAP argument it corresponds to a <b>Laplace prior</b> $p(w_j) \propto e^{-|w_j|/b}$, which has a sharp peak at zero and heavier tails than a Gaussian. It believes many weights are <i>exactly</i> zero and a few are large. And that is what the lasso produces.</p>
+    <p><b>Why exact zeros: the geometry.</b> Minimising the penalised loss is equivalent to minimising the loss subject to a budget, $\lVert\mathbf{w}\rVert \le t$, for some $t$ that depends on $\lambda$. (This equivalence is Lagrange duality; see the <a href="/machine-learning/M5-optimisation/">math toolkit, M5</a>.) The solution is where the smallest loss contour touches the budget region.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: reg-geometry --></div>
+    </figure>
+    <p class="muted">The loss contours are ellipses around the least-squares solution. The circle is smooth, so the first contour to touch it does so at a generic point with both weights nonzero, here $(0.85, 0.52)$. The diamond has corners on the axes, and an expanding ellipse usually hits a corner first: here $(1, 0)$, so $w_2 = 0$ exactly. In $p$ dimensions the $\ell_1$ ball has many corners and edges, and most of them lie in low-dimensional coordinate subspaces.</p>
+    <p><b>Why exact zeros: the calculus.</b> The lasso has no closed form, but each coordinate has one. Fix every weight except $w_j$ and let $\mathbf{r}_j = \mathbf{y} - \sum_{k\ne j}\mathbf{x}_k w_k$ be the partial residual. As a function of $w_j$ alone the objective is</p>
+    <div class="eq">$$\frac{s_j}{2}w_j^2 - \rho_j\,w_j + \lambda|w_j| + \text{const},\qquad s_j = \frac{\lVert\mathbf{x}_j\rVert^2}{n},\quad \rho_j = \frac{\mathbf{x}_j^\top\mathbf{r}_j}{n}.$$</div>
+    <p>$|w|$ has no derivative at $0$, so use its <b>subgradient</b>: $\partial|w| = \{\operatorname{sign}(w)\}$ for $w \ne 0$, and the whole interval $[-1, 1]$ at $w = 0$. A minimum is where $0 \in s_jw_j - \rho_j + \lambda\,\partial|w_j|$. Check the three cases:</p>
+    <ul>
+      <li>$w_j &gt; 0$: $w_j = (\rho_j - \lambda)/s_j$, consistent only if $\rho_j &gt; \lambda$.</li>
+      <li>$w_j &lt; 0$: $w_j = (\rho_j + \lambda)/s_j$, consistent only if $\rho_j &lt; -\lambda$.</li>
+      <li>$w_j = 0$: need $0 \in -\rho_j + \lambda[-1,1]$, that is $|\rho_j| \le \lambda$.</li>
+    </ul>
+    <div class="result">
+      <div class="label">Coordinate update for the lasso: soft thresholding</div>
+      <div class="eq">$$w_j \leftarrow \frac{S(\rho_j, \lambda)}{s_j}, \qquad S(z, \lambda) = \operatorname{sign}(z)\,\max(|z| - \lambda,\, 0).$$</div>
+    </div>
+    <p>Every correlation $\rho_j$ smaller than $\lambda$ in size is snapped to an exact zero, and the rest are pulled toward zero by $\lambda$. Cycling this update over $j$ until nothing changes is <b>coordinate descent</b>, and because the objective is convex it converges to the global minimum. Two consequences:</p>
+    <ul>
+      <li>If $\lambda \ge \lambda_{\max} = \max_j |\mathbf{x}_j^\top\mathbf{y}|/n$, every weight is zero. The path of solutions starts there.</li>
+      <li>As $\lambda$ decreases, features <i>enter</i> the model one at a time. The lasso does variable selection and fitting in one convex problem.</li>
+    </ul>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: reg-paths --></div>
+    </figure>
+    <p class="muted">Eight standardised features, 60 points, true weights $(3, 0, -2, 0, 1.5, 0, 0, 0)$, and feature 2 correlated with feature 1. Left: ridge shrinks every coefficient smoothly and none reaches zero. Right: lasso coefficients enter one by one, largest effect first; the five irrelevant ones stay at or very near zero for most of the path.</p>
+    <p><b>Where each one wins.</b> Ridge handles correlated features gracefully: it spreads weight among them. The lasso tends to pick one of a correlated group arbitrarily. The <b>elastic net</b> (Zou &amp; Hastie, 2005) uses both penalties, $\lambda_1\lVert\mathbf{w}\rVert_1 + \lambda_2\lVert\mathbf{w}\rVert^2$, to get sparsity and stability together.</p>
+  </section>
+
+  <section id="deep">
+    <h2>Regularisation in neural networks</h2>
+    <p>The same ideas, under other names, run through the rest of this curriculum.</p>
+    <p><b>Weight decay.</b> Gradient descent on $L(\mathbf{w}) + \tfrac{\lambda}{2}\lVert\mathbf{w}\rVert^2$ takes the step</p>
+    <div class="eq">$$\mathbf{w} \leftarrow \mathbf{w} - \eta\big(\nabla L + \lambda\mathbf{w}\big) = (1 - \eta\lambda)\,\mathbf{w} - \eta\,\nabla L .$$</div>
+    <p>Each step first shrinks ("decays") every weight by a factor $1 - \eta\lambda$, then follows the loss gradient. This is ridge for any differentiable model. With adaptive optimisers like Adam the two are no longer the same thing, and lesson 07 explains why AdamW applies the decay separately.</p>
+    <p><b>Early stopping.</b> Run gradient descent on plain least squares from $\mathbf{w} = \mathbf{0}$ with step size $\eta$. In the SVD coordinates each component evolves independently (lesson 02), and after $t$ steps the fit along direction $j$ is a fraction $1 - (1 - \eta d_j^2)^t$ of the least-squares value. Compare ridge's fraction $d_j^2/(d_j^2+\lambda)$. Both are near 1 for large $d_j$ and near 0 for small $d_j$. Stopping after $t$ steps acts roughly like ridge with $\lambda \approx 1/(\eta t)$: <i>training time is a regulariser</i>.</p>
+    <p><b>Others you will meet:</b> dropout (lesson 14) randomly zeroes activations; data augmentation (lesson 15) adds transformed copies of the training data; and the double-descent effect from lesson 04 comes from gradient descent's implicit preference for small-norm solutions.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+n, p = 60, 8
+X = rng.standard_normal((n, p))
+X[:, 1] = 0.7 * X[:, 0] + 0.7 * X[:, 1]          # make features 1 and 2 correlated
+X = (X - X.mean(0)) / X.std(0)                    # standardise: penalties need a common scale
+beta = np.array([3.0, 0, -2.0, 0, 1.5, 0, 0, 0])
+y = X @ beta + rng.standard_normal(n)
+y = y - y.mean()                                  # centre y, so there is no intercept to fit
+
+def ridge(X, y, lam):                             # via the SVD: shrink each direction by d^2/(d^2+lam)
+    U, d, Vt = np.linalg.svd(X, full_matrices=False)
+    return Vt.T @ (d / (d**2 + lam) * (U.T @ y))
+
+def soft(z, t):
+    return np.sign(z) * np.maximum(np.abs(z) - t, 0.0)
+
+def lasso(X, y, lam, iters=1000):                 # minimise (1/2n)||y - Xw||^2 + lam ||w||_1
+    n = len(y)
+    w = np.zeros(X.shape[1]); r = y.copy()
+    sq = (X**2).sum(0) / n
+    for _ in range(iters):
+        for j in range(len(w)):
+            r += X[:, j] * w[j]                   # remove feature j's contribution
+            w[j] = soft(X[:, j] @ r / n, lam) / sq[j]
+            r -= X[:, j] * w[j]
+    return w
+
+np.set_printoptions(precision=2, suppress=True)
+print("least squares ", ridge(X, y, 0.0))
+print("ridge  λ=30   ", ridge(X, y, 30.0))
+print("lasso  λ=0.3  ", lasso(X, y, 0.3))
+U, d, Vt = np.linalg.svd(X, full_matrices=False)
+for lam in [0, 30, 300]:
+    print(f"df(λ={lam}) =", round(np.sum(d**2 / (d**2 + lam)), 2))
+
+# least squares  [ 3.17 -0.25 -1.98  0.2   1.7  -0.03  0.17 -0.18]
+# ridge  λ=30    [ 1.82  0.37 -1.29  0.03  1.16  0.07  0.11 -0.22]
+# lasso  λ=0.3   [ 2.67  0.   -1.72  0.    1.43 -0.    0.   -0.  ]
+# df(λ=0) = 8.0
+# df(λ=30) = 5.08
+# df(λ=300) = 1.3</code></pre>
+    <p class="muted">Least squares gives every feature some weight. Ridge shrinks them all, and notice that it moves weight onto feature 2 (0.37), the one correlated with feature 1: ridge spreads weight across correlated features. The lasso keeps exactly the three true features and sets the other five to zero (the "−0." is a signed zero). Its surviving weights are shrunk by about $\lambda$, which is the price of the $\ell_1$ penalty; refitting least squares on the selected features (the "relaxed lasso") removes that bias.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Suppose $X^\top X = I$ (orthonormal features), and let $\hat{\mathbf{w}} = X^\top\mathbf{y}$ be the least-squares solution. Show that ridge with objective $\lVert\mathbf{y}-X\mathbf{w}\rVert^2 + \lambda\lVert\mathbf{w}\rVert^2$ gives $\hat w_j/(1+\lambda)$, and that the lasso with objective $\tfrac12\lVert\mathbf{y}-X\mathbf{w}\rVert^2 + \lambda\lVert\mathbf{w}\rVert_1$ gives $S(\hat w_j, \lambda)$.</li>
+      <li>Show that ridge regression is ordinary least squares on an augmented dataset: append $p$ rows $\sqrt\lambda\,I$ to $X$ and $p$ zeros to $\mathbf{y}$.</li>
+      <li>Using the bias and variance along one direction from the bias–variance section, show that $\frac{d}{d\lambda}(\text{bias}_j^2 + \text{var}_j)$ is negative at $\lambda = 0$. Then find the $\lambda$ that minimises the sum for that one direction.</li>
+      <li>Two features are identical, $\mathbf{x}_1 = \mathbf{x}_2$. What does ridge do with their weights? What does the lasso do?</li>
+      <li>Derive the MAP objective for a Laplace prior $p(w_j) = \frac{1}{2b}e^{-|w_j|/b}$ with Gaussian noise of variance $\sigma^2$, and express the lasso's $\lambda$ (in the form $\lVert\mathbf{y}-X\mathbf{w}\rVert^2 + \lambda\lVert\mathbf{w}\rVert_1$) in terms of $\sigma^2$ and $b$.</li>
+      <li>Show that ridge with $\lambda &gt; 0$ is unchanged if you rotate the features, $X \to XQ$ with $Q$ orthogonal (the predictions are the same), but the lasso is not. What does that say about when each is appropriate?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Ridge: $(I + \lambda I)^{-1}X^\top\mathbf{y} = \hat{\mathbf{w}}/(1+\lambda)$. Lasso: with $X^\top X = I$, $\tfrac12\lVert\mathbf{y}-X\mathbf{w}\rVert^2 = \tfrac12\lVert\mathbf{w}-\hat{\mathbf{w}}\rVert^2 + \text{const}$, so the problem splits into $p$ separate problems $\tfrac12(w_j - \hat w_j)^2 + \lambda|w_j|$, each solved by soft thresholding (the case analysis in the lasso section with $s = 1$, $\rho = \hat w_j$). Ridge shrinks proportionally; the lasso shifts toward zero by a constant and stops there.</p>
+        <p><b>2.</b> With $\tilde X = \begin{bmatrix}X\\ \sqrt\lambda I\end{bmatrix}$ and $\tilde{\mathbf{y}} = \begin{bmatrix}\mathbf{y}\\ \mathbf{0}\end{bmatrix}$: $\lVert\tilde{\mathbf{y}} - \tilde X\mathbf{w}\rVert^2 = \lVert\mathbf{y} - X\mathbf{w}\rVert^2 + \lambda\lVert\mathbf{w}\rVert^2$, and $\tilde X^\top\tilde X = X^\top X + \lambda I$. The penalty is "fake data" pinning each weight to zero.</p>
+        <p><b>3.</b> $\text{MSE}(\lambda) = \dfrac{\lambda^2\theta^2 + \sigma^2d^2}{(d^2+\lambda)^2}$. Its derivative is $\dfrac{2\lambda\theta^2(d^2+\lambda) - 2(\lambda^2\theta^2 + \sigma^2d^2)}{(d^2+\lambda)^3} = \dfrac{2d^2(\lambda\theta^2 - \sigma^2)}{(d^2+\lambda)^3}$. At $\lambda = 0$ it equals $-2\sigma^2/d^4 &lt; 0$. It is zero at $\lambda^* = \sigma^2/\theta^2$: noise variance over signal size squared, the same ratio as the MAP answer.</p>
+        <p><b>4.</b> Only $w_1 + w_2$ affects the fit. Ridge minimises $w_1^2 + w_2^2$ for a fixed sum, so it splits the weight equally. For the lasso $|w_1| + |w_2|$ is the same for every split with matching signs, so the solution is not unique, and coordinate descent will settle on one depending on the order of updates. This is the instability the elastic net fixes.</p>
+        <p><b>5.</b> $-\log p(\mathbf{w}\mid\mathcal{D}) = \frac{1}{2\sigma^2}\lVert\mathbf{y}-X\mathbf{w}\rVert^2 + \frac1b\lVert\mathbf{w}\rVert_1 + \text{const}$. Multiply by $2\sigma^2$: $\lambda = 2\sigma^2/b$.</p>
+        <p><b>6.</b> With $\tilde X = XQ$, $\tilde X^\top\tilde X + \lambda I = Q^\top(X^\top X + \lambda I)Q$, so $\tilde{\mathbf{w}} = Q^\top\hat{\mathbf{w}}$ and $\tilde X\tilde{\mathbf{w}} = X\hat{\mathbf{w}}$: same predictions, because $\lVert Q^\top\mathbf{w}\rVert_2 = \lVert\mathbf{w}\rVert_2$. The $\ell_1$ norm is not rotation invariant (a rotated diamond is a different region), so the lasso's answer depends on the coordinate system. The lasso makes sense when individual features are meaningful and you believe few of them matter; ridge makes sense when only the span of the features matters.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Hastie, Tibshirani, Friedman, <i>The Elements of Statistical Learning</i></b>, section 3.4. Ridge, lasso, the SVD view and effective degrees of freedom; figure 3.11 is the original ball-and-diamond picture.</li>
+      <li><b>Bishop, <i>Pattern Recognition and Machine Learning</i></b>, sections 1.1, 3.1.4 and 3.3. Regularised least squares on the same polynomial example, and the Bayesian view.</li>
+      <li><b>Murphy, <i>Probabilistic Machine Learning: An Introduction</i></b>, sections 11.3 and 11.4. Ridge and lasso as MAP estimates.</li>
+      <li><b>Hoerl &amp; Kennard, "Ridge regression: biased estimation for nonorthogonal problems"</b> (Technometrics, 1970).</li>
+      <li><b>Tibshirani, "Regression shrinkage and selection via the lasso"</b> (JRSS-B, 1996). Zou &amp; Hastie, "Regularization and variable selection via the elastic net" (JRSS-B, 2005).</li>
+      <li><b>Friedman, Hastie, Tibshirani, "Regularization paths for generalized linear models via coordinate descent"</b> (J. Stat. Software, 2010). The algorithm in the code above, as used by glmnet.</li>
+    </ul>
+  </section>
+</article>

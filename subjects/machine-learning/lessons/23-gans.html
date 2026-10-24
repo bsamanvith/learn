@@ -1,0 +1,209 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 23 · Stage 6: generative models</div>
+  <h1>Generative adversarial networks</h1>
+  <p class="lede">A GAN learns to generate data without ever writing down a likelihood. A generator turns random noise into samples; a discriminator tries to tell those samples from real data; each is trained against the other. Goodfellow et al. (2014) showed that this game has a clean answer: for a fixed generator the best discriminator is a ratio of densities, and against that discriminator the generator is minimising the Jensen–Shannon divergence between its distribution and the data's. This lesson derives both facts, explains why the original loss stalls and how the "non-saturating" loss fixes it, discusses mode collapse and the Wasserstein alternative, and trains a GAN with hand-written gradients on a mixture of eight Gaussians.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/03-logistic-regression/">lesson 03</a>, <a href="/machine-learning/M4-information-theory/">M4</a>, <a href="/machine-learning/22-autoencoders-and-vaes/">lesson 22</a></span><span><b>Math pulled in:</b> minimax games, pointwise optimisation of functionals, Jensen–Shannon divergence, the Wasserstein distance (light)</span></div>
+</header>
+
+<article class="lesson">
+  <section id="game">
+    <h2>The game</h2>
+    <p>The generator $G_\theta$ maps noise $\mathbf{z}\sim p(\mathbf{z})$, say $\mathcal{N}(\mathbf{0}, I)$, to a sample $G_\theta(\mathbf{z})$. That defines a distribution $p_g$ over samples, which we can draw from but whose density we can't evaluate: it is the push-forward of $p(\mathbf{z})$ through a neural network. So we can't fit it by maximum likelihood, as the VAE does with its bound. Instead, a second network, the discriminator $D_\phi(\mathbf{x})\in(0, 1)$, estimates the probability that $\mathbf{x}$ is real rather than generated. The two play the minimax game</p>
+    <div class="eq">$$\min_G\max_D\ V(G, D) = \mathbb{E}_{\mathbf{x}\sim p_\text{data}}[\log D(\mathbf{x})] + \mathbb{E}_{\mathbf{z}\sim p(\mathbf{z})}[\log(1 - D(G(\mathbf{z})))] .$$</div>
+    <p>For a fixed generator, maximising $V$ over $D$ is exactly logistic regression (lesson 03) with real examples labelled 1 and generated ones labelled 0: $V$ is the negative of the cross-entropy loss. The generator then changes so as to make the discriminator's job harder. Training alternates: a gradient step on $D$ to increase $V$, then a gradient step on $G$ to decrease it, with gradients reaching $G$ by backpropagating through $D$ into the sample and from there into $G$'s parameters.</p>
+  </section>
+
+  <section id="theory">
+    <h2>What the game optimises</h2>
+    <p><b>The optimal discriminator.</b> Fix $G$. Writing the second expectation over $\mathbf{x}\sim p_g$,</p>
+    <div class="eq">$$V(G, D) = \int\big[p_\text{data}(\mathbf{x})\log D(\mathbf{x}) + p_g(\mathbf{x})\log(1 - D(\mathbf{x}))\big]\,d\mathbf{x}.$$</div>
+    <p>An unrestricted $D$ can choose its value at each $\mathbf{x}$ separately, so it maximises the integrand pointwise. The function $y\mapsto a\log y + b\log(1 - y)$ on $(0, 1)$ has derivative $a/y - b/(1 - y)$, zero at $y = a/(a + b)$, and it is concave, so that is the maximum:</p>
+    <div class="result">
+      <div class="label">The optimal discriminator</div>
+      <p>$$D^*_G(\mathbf{x}) = \frac{p_\text{data}(\mathbf{x})}{p_\text{data}(\mathbf{x}) + p_g(\mathbf{x})} .$$</p>
+    </div>
+    <p>It is the posterior probability that $\mathbf{x}$ is real, when real and fake are equally likely a priori. Equivalently, its logit is $\log p_\text{data}(\mathbf{x}) - \log p_g(\mathbf{x})$: like InfoNCE in lesson 21, a classifier trained to tell two distributions apart learns their log density ratio.</p>
+    <p><b>The generator's objective.</b> Substitute $D^*_G$. With the mixture $m = \frac12(p_\text{data} + p_g)$, we have $D^* = p_\text{data}/2m$ and $1 - D^* = p_g/2m$, so</p>
+    <div class="eq">$$V(G, D^*_G) = \mathbb{E}_{p_\text{data}}\left[\log\frac{p_\text{data}}{2m}\right] + \mathbb{E}_{p_g}\left[\log\frac{p_g}{2m}\right] = -\log4 + \operatorname{KL}(p_\text{data}\,\|\,m) + \operatorname{KL}(p_g\,\|\,m).$$</div>
+    <p>The two KL terms together are twice the <b>Jensen–Shannon divergence</b>, $\operatorname{JSD}(p, q) = \tfrac12\operatorname{KL}(p\,\|\,m) + \tfrac12\operatorname{KL}(q\,\|\,m)$, a symmetric, bounded ($0\le\operatorname{JSD}\le\log2$) relative of the KL divergence (M4). So</p>
+    <div class="eq">$$V(G, D^*_G) = -\log4 + 2\operatorname{JSD}(p_\text{data}, p_g),$$</div>
+    <p>which is minimised, at $-\log 4$, exactly when $p_g = p_\text{data}$, where $D^* = \tfrac12$ everywhere: the discriminator can do no better than guess. In this idealised picture, with unlimited capacity and the inner maximisation solved exactly, the game recovers the data distribution. Part 1 of the code checks both identities numerically in one dimension.</p>
+    <p>The idealisation hides most of what makes GANs hard. The discriminator is never trained to optimality; the two networks take simultaneous small steps in a game, not an optimisation, and gradient descent on games can circle instead of converging (exercise 5); and real data lies near low-dimensional surfaces, so $p_g$ and $p_\text{data}$ often barely overlap, where the JSD is stuck at $\log 2$ and gives no useful signal.</p>
+  </section>
+
+  <section id="saturation">
+    <h2>Saturation, and the non-saturating loss</h2>
+    <p>Write the discriminator's output as $D = \sigma(a)$, with $a$ its logit. The generator's term in $V$ is $\log(1 - \sigma(a))$, whose derivative with respect to $a$ is $-\sigma(a)$. Early in training, the generator's samples are bad and the discriminator rejects them confidently: $D(G(\mathbf{z}))\approx0$, so the gradient $-\sigma(a)\approx0$. The generator learns slowest exactly when it is worst. Goodfellow et al. proposed instead that the generator maximise $\log D(G(\mathbf{z}))$, the "non-saturating" loss, whose derivative is $1 - \sigma(a)\approx1$ when the samples are rejected:</p>
+    <div class="eq">$$\text{minimax: } \min_G\,\mathbb{E}\log(1 - D(G(\mathbf{z}))) \quad\text{vs}\quad \text{non-saturating: } \min_G\,-\mathbb{E}\log D(G(\mathbf{z})).$$</div>
+    <p>Both push $D(G(\mathbf{z}))$ up and have the same fixed point, but the second has strong gradients where the first has none. It is no longer a zero-sum game, and at the optimal discriminator it minimises a different divergence, $\operatorname{KL}(p_g\,\|\,p_\text{data}) - 2\operatorname{JSD}$ (Arjovsky &amp; Bottou, 2017). The reverse KL $\operatorname{KL}(p_g\,\|\,p_\text{data})$ is large when the generator puts mass where there is no data, but cheap when the generator ignores part of the data, which is one explanation of the next problem.</p>
+  </section>
+
+  <section id="collapse">
+    <h2>Mode collapse, and the Wasserstein GAN</h2>
+    <p><b>Mode collapse.</b> If the data has several clusters (modes), a generator can do well against the current discriminator by producing only one of them. The discriminator then learns that region is suspicious, the generator jumps to another mode, and so on; or it settles on a few modes and never covers the rest. Nothing in the generator's loss rewards diversity directly: each sample is judged on its own. The 8-Gaussian example in the code is the standard test, because counting covered modes is easy.</p>
+    <p><b>The Wasserstein GAN</b> (Arjovsky, Chintala &amp; Bottou, 2017) replaces the JSD with the earth mover's distance: the minimum, over all ways of transporting the mass of $p_g$ onto $p_\text{data}$, of the average distance moved. Unlike the JSD, it changes smoothly as two non-overlapping distributions move towards each other: two point masses at distance $\delta$ have JSD $\log2$ for every $\delta &gt; 0$, but Wasserstein distance $\delta$. By the Kantorovich–Rubinstein duality,</p>
+    <div class="eq">$$W(p_\text{data}, p_g) = \sup_{\lVert f\rVert_L\le1}\ \mathbb{E}_{p_\text{data}}[f(\mathbf{x})] - \mathbb{E}_{p_g}[f(\mathbf{x})],$$</div>
+    <p>a supremum over 1-Lipschitz functions $f$, the "critic", which replaces the discriminator and outputs an unbounded score instead of a probability. The Lipschitz constraint was first enforced by clipping weights, later by a penalty on the critic's gradient norm (WGAN-GP, Gulrajani et al., 2017). Spectral normalisation of every layer (Miyato et al., 2018) is a cheaper way to the same end.</p>
+    <p><b>Where GANs stand.</b> With careful architectures (DCGAN, progressive growing, StyleGAN), GANs produced the first photorealistic faces, in 2018–2019, and they generate in one forward pass, which is fast. They can't evaluate likelihoods, they are hard to train, and they tend to cover the data less completely than likelihood-based models. Diffusion models (lessons 24–25) overtook them for most image generation from about 2021, though adversarial losses survive inside other systems: the autoencoder of latent diffusion, and "distilled" one-step diffusion samplers, are trained partly with a discriminator.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 takes $p_\text{data} = \mathcal{N}(0, 1)$ and $p_g = \mathcal{N}(1, 1.5^2)$, computes $D^*$ and $V(G, D^*)$ by numerical integration, checks it against $-\log 4 + 2\operatorname{JSD}$, and checks that perturbing $D^*$ lowers $V$. Part 2 trains a GAN on eight Gaussians of standard deviation 0.05, placed on a circle of radius 2. Both networks are MLPs with two hidden layers of 128 leaky-ReLU units; the backward pass is written by hand (the discriminator's backward pass returns the gradient with respect to its input, which is then fed into the generator's backward pass). Both use Adam with $\beta_1 = 0.5$, the usual choice for GANs. Each configuration is run with three seeds, once with the minimax generator loss and once with the non-saturating one; a mode counts as covered if it receives at least 1% of 2,000 samples.</p>
+<pre><code>import copy
+import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. The optimal discriminator and the Jensen-Shannon divergence, in 1-D on a grid.
+# p_data = N(0, 1), p_g = N(1, 1.5^2). D*(x) = p_data / (p_data + p_g), and V(G, D*) = -log 4 + 2 JSD.
+x = np.linspace(-12, 12, 200_001); dx = x[1] - x[0]
+pd = np.exp(-x ** 2 / 2) / np.sqrt(2 * np.pi)
+pg = np.exp(-(x - 1) ** 2 / (2 * 1.5 ** 2)) / (1.5 * np.sqrt(2 * np.pi))
+Dstar = pd / (pd + pg)
+V = np.sum(pd * np.log(Dstar) + pg * np.log(1 - Dstar)) * dx
+m = (pd + pg) / 2
+jsd = 0.5 * np.sum(pd * np.log(pd / m)) * dx + 0.5 * np.sum(pg * np.log(pg / m)) * dx
+print(f"V(G, D*) = {V:.4f};  -log 4 + 2 JSD = {-np.log(4) + 2 * jsd:.4f};  JSD = {jsd:.4f} nats (max log 2 = 0.6931)")
+for t in [0.0, 0.5, 1.0]:                      # any other discriminator does worse
+    D = np.clip(Dstar + t * 0.2 * np.sin(x), 1e-9, 1 - 1e-9)
+    print(f"  perturbed discriminator ({t:.1f}): V = {np.sum(pd * np.log(D) + pg * np.log(1 - D)) * dx:.4f}")
+
+# 2. A small MLP with a hand-written backward pass, used for both networks.
+class MLP:
+    def __init__(self, sizes):
+        self.W = [rng.standard_normal((a, b)) * np.sqrt(2 / a) for a, b in zip(sizes, sizes[1:])]
+        self.b = [np.zeros(b) for b in sizes[1:]]
+        self.m = [np.zeros_like(p) for p in self.W + self.b]; self.v = [np.zeros_like(p) for p in self.W + self.b]; self.t = 0
+    def forward(self, x):
+        self.hs = [x]
+        for i, (W, b) in enumerate(zip(self.W, self.b)):
+            x = x @ W + b
+            if i &lt; len(self.W) - 1:
+                x = np.where(x &gt; 0, x, 0.2 * x)                        # leaky ReLU
+            self.hs.append(x)
+        return x
+    def backward(self, g):
+        """Given dLoss/d(output), store parameter gradients and return dLoss/d(input)."""
+        self.gW, self.gb = [None] * len(self.W), [None] * len(self.W)
+        for i in reversed(range(len(self.W))):
+            if i &lt; len(self.W) - 1:
+                g = g * np.where(self.hs[i + 1] &gt; 0, 1, 0.2)
+            self.gW[i], self.gb[i] = self.hs[i].T @ g, g.sum(0)
+            g = g @ self.W[i].T
+        return g
+    def adam(self, lr, b1=0.5, b2=0.999):
+        self.t += 1
+        for p, g, m, v in zip(self.W + self.b, self.gW + self.gb, self.m, self.v):
+            m *= b1; m += (1 - b1) * g; v *= b2; v += (1 - b2) * g * g
+            p -= lr * (m / (1 - b1 ** self.t)) / (np.sqrt(v / (1 - b2 ** self.t)) + 1e-8)
+
+sig = lambda a: 1 / (1 + np.exp(-a))
+centres = 2 * np.stack([np.cos(np.arange(8) * np.pi / 4), np.sin(np.arange(8) * np.pi / 4)], 1)
+def data(n):                                                      # 8 Gaussians on a circle of radius 2
+    return centres[rng.integers(0, 8, n)] + 0.05 * rng.standard_normal((n, 2))
+
+def coverage(S):
+    """How many of the 8 modes get at least 1% of the samples, and what fraction is near any mode."""
+    d = np.linalg.norm(S[:, None] - centres[None], axis=2); near = d.min(1) &lt; 0.15
+    counts = np.bincount(d.argmin(1)[near], minlength=8)
+    return int(np.sum(counts &gt; 0.01 * len(S))), near.mean()
+
+def d_step(G, D, lr=3e-4):
+    """One discriminator step: logistic regression, real (label 1) against generated (label 0)."""
+    real, fake = data(128), G.forward(rng.standard_normal((128, 2)))
+    a = D.forward(np.vstack([real, fake]))[:, 0]
+    y = np.r_[np.ones(128), np.zeros(128)]
+    D.backward(((sig(a) - y) / 256)[:, None]); D.adam(lr)
+
+def g_step(G, D, loss, lr=3e-4):
+    """One generator step; returns the mean size of the gradient that reaches the samples."""
+    fake = G.forward(rng.standard_normal((128, 2)))
+    a = D.forward(fake)[:, 0]
+    if loss == "minimax":                                         # descend log(1 - D(G(z)))
+        ga = -sig(a) / 128                                        # d/da log(1 - sigmoid(a))
+    else:                                                         # "non-saturating": descend -log D(G(z))
+        ga = -(1 - sig(a)) / 128                                  # d/da -log sigmoid(a)
+    gx = D.backward(ga[:, None])
+    G.backward(gx); G.adam(lr)
+    return np.linalg.norm(gx, axis=1).mean() * 128
+
+# Part 2: a GAN with the non-saturating loss, snapshots of its samples along the way
+G, D = MLP([2, 128, 128, 2]), MLP([2, 128, 128, 1])
+snapshots = {}
+for t in range(0, 8001):
+    if t in (0, 500, 2000, 8000):
+        S = G.forward(rng.standard_normal((2000, 2))); snapshots[t] = S
+        k, f = coverage(S)
+        print(f"step {t:4d}: {k}/8 modes covered, {f:.2f} of samples within 0.15 of a mode, mean D(G(z)) {np.mean(sig(D.forward(S)[:, 0])):.2f}")
+    if t &lt; 8000:
+        d_step(G, D); g_step(G, D, "non-saturating")
+
+# Part 3: saturation. Give the discriminator a head start of 1,000 steps against the initial generator,
+# then train each version for 3,000 steps from that same state.
+G0, D0 = MLP([2, 128, 128, 2]), MLP([2, 128, 128, 1])
+for _ in range(1000):
+    d_step(G0, D0, lr=1e-3)
+print(f"after the head start: mean D(G(z)) = {np.mean(sig(D0.forward(G0.forward(rng.standard_normal((2000, 2))))[:, 0])):.4f}")
+for loss in ["minimax", "non-saturating"]:
+    G, D = copy.deepcopy(G0), copy.deepcopy(D0)
+    sizes = []
+    for t in range(3000):
+        d_step(G, D); sizes.append(g_step(G, D, loss))
+    k, f = coverage(G.forward(rng.standard_normal((2000, 2))))
+    print(f"{loss:15s}: gradient reaching the samples, first 100 steps {np.mean(sizes[:100]):.4f};"
+          f" after 3,000 steps {k}/8 modes, {f:.2f} near a mode")
+
+# V(G, D*) = -1.1877;  -log 4 + 2 JSD = -1.1877;  JSD = 0.0993 nats (max log 2 = 0.6931)
+#   perturbed discriminator (0.0): V = -1.1877
+#   perturbed discriminator (0.5): V = -1.2147
+#   perturbed discriminator (1.0): V = -1.2749
+# step    0: 0/8 modes covered, 0.01 of samples within 0.15 of a mode, mean D(G(z)) 0.42
+# step  500: 1/8 modes covered, 0.06 of samples within 0.15 of a mode, mean D(G(z)) 0.46
+# step 2000: 6/8 modes covered, 0.11 of samples within 0.15 of a mode, mean D(G(z)) 0.39
+# step 8000: 8/8 modes covered, 0.57 of samples within 0.15 of a mode, mean D(G(z)) 0.39
+# after the head start: mean D(G(z)) = 0.0699
+# minimax        : gradient reaching the samples, first 100 steps 0.7862; after 3,000 steps 3/8 modes, 0.73 near a mode
+# non-saturating : gradient reaching the samples, first 100 steps 5.0442; after 3,000 steps 3/8 modes, 0.83 near a mode</code></pre>
+    <p class="muted">Part 1 confirms the theory: $V(G, D^*) = -1.1877 = -\log4 + 2\operatorname{JSD}$, and every perturbation of $D^*$ lowers $V$. In part 2 the untrained generator scatters its samples widely. By step 2,000 it has organised them into rays pointing out towards the modes and reaches 6 of the 8, but loosely; by step 8,000 it covers all 8, with 57% of its samples within 0.15 (three standard deviations) of a mode. Most of the rest lie on thin bridges between neighbouring modes. That is forced: the generator is a continuous map from a connected noise distribution, so its samples can't form 8 separate islands, only islands joined by low-density paths. The discriminator's average verdict on generated samples settles near 0.4, not at the theoretical 0.5. In part 3, after the discriminator's head start, it rates the generator's samples at 0.07; in the first 100 steps the non-saturating loss passes gradients 6.4 times larger to the samples (5.04 against 0.79). Both runs then collapse: after 3,000 steps each covers only 3 of the 8 modes, although most of its samples sit tightly on those three. A discriminator that gets far ahead early is a classic cause of mode collapse.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: gan --></div>
+    </figure>
+    <p class="muted" id="gan-caption">Samples (dots) from the generator of part 2 at four points in training, with the 8 data modes marked by rings of radius 0.15. The untrained generator's samples are scattered; during training they form rays aimed at the modes, then gather on the circle and concentrate on the modes, leaving thin bridges between them.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show that $\operatorname{JSD}(p, q)\le\log2$, with equality exactly when $p$ and $q$ have disjoint supports.</li>
+      <li>Derive the optimal discriminator when real and generated examples are mixed in proportions $\pi$ and $1 - \pi$ in the discriminator's training data. What is $D^*$ when $p_g = p_\text{data}$?</li>
+      <li>Two point masses at $0$ and at $\delta &gt; 0$: compute their JSD, their KL divergences in both directions, and their Wasserstein distance. Which of these gives a useful gradient with respect to $\delta$?</li>
+      <li>Show that with the logit $a$ of the discriminator, the gradient of the minimax generator loss with respect to $a$ is $-\sigma(a)$, and of the non-saturating loss $-(1 - \sigma(a))$. At what value of $D$ are they equal?</li>
+      <li>Simultaneous gradient descent–ascent on $V(x, y) = xy$ (the generator minimises over $x$, the discriminator maximises over $y$) with step size $\eta$: show that the iterates satisfy $x_{t+1}^2 + y_{t+1}^2 = (1 + \eta^2)(x_t^2 + y_t^2)$, so they spiral outward from the equilibrium at the origin. What does this suggest about training GANs?</li>
+      <li>Explain why a discriminator that judges each sample independently can't detect mode collapse, and how a discriminator that sees a whole batch at once (minibatch discrimination, Salimans et al., 2016) could.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\operatorname{KL}(p\,\|\,m) = \mathbb{E}_p\log\frac{2p}{p + q}\le\mathbb{E}_p\log2 = \log2$, since $p/(p + q)\le1$, with equality iff $q = 0$ wherever $p &gt; 0$. Same for the other term. So $\operatorname{JSD}\le\log2$, with equality iff the supports are disjoint (up to sets of measure zero).</p>
+        <p><b>2.</b> Maximise $\pi p_\text{data}\log D + (1 - \pi)p_g\log(1 - D)$ pointwise: $D^* = \pi p_\text{data}/(\pi p_\text{data} + (1 - \pi)p_g)$, Bayes' rule with prior $\pi$. When $p_g = p_\text{data}$, $D^* = \pi$.</p>
+        <p><b>3.</b> Disjoint supports for every $\delta &gt; 0$: $\operatorname{JSD} = \log 2$, constant; both KL divergences are infinite. The Wasserstein distance is $\delta$, which decreases smoothly as the masses approach, so its gradient points the generator the right way. This is the motivating example of the WGAN paper.</p>
+        <p><b>4.</b> $\frac{d}{da}\log(1 - \sigma(a)) = -\sigma(a)$ and $\frac{d}{da}[-\log\sigma(a)] = -(1 - \sigma(a))$. Equal when $\sigma(a) = \tfrac12$. For $D &lt; \tfrac12$, which is where a generator starts, the non-saturating gradient is larger, and as $D\to0$ the ratio grows without bound.</p>
+        <p><b>5.</b> $x_{t+1} = x_t - \eta y_t$, $y_{t+1} = y_t + \eta x_t$. Then $x_{t+1}^2 + y_{t+1}^2 = x_t^2 + \eta^2y_t^2 - 2\eta x_ty_t + y_t^2 + \eta^2x_t^2 + 2\eta x_ty_t = (1 + \eta^2)(x_t^2 + y_t^2)$. The update is a rotation plus a small expansion: the players chase each other around the equilibrium and diverge. Gradient descent can fail on games even when it would succeed on each player's problem alone; remedies include smaller steps, alternating updates, averaging the iterates, extra-gradient methods, and regularising the discriminator.</p>
+        <p><b>6.</b> Each sample from a collapsed generator can look perfectly real; what is wrong is the <i>distribution</i> (too little variety), which a per-sample function can't see. A discriminator that compares samples within a batch can notice that they are too similar to each other, and penalise it.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Goodfellow et al., "Generative adversarial nets"</b> (NeurIPS 2014). The game, the optimal discriminator and the JSD.</li>
+      <li><b>Goodfellow, "NIPS 2016 tutorial: generative adversarial networks"</b> (2016). Intuitions, tricks and failure modes.</li>
+      <li><b>Arjovsky &amp; Bottou, "Towards principled methods for training generative adversarial networks"</b> (ICLR 2017); and <b>Arjovsky, Chintala &amp; Bottou, "Wasserstein GAN"</b> (ICML 2017).</li>
+      <li><b>Gulrajani et al., "Improved training of Wasserstein GANs"</b> (NeurIPS 2017). The gradient penalty.</li>
+      <li><b>Karras et al., "A style-based generator architecture for generative adversarial networks"</b> (StyleGAN, CVPR 2019).</li>
+      <li><b>Mescheder, Geiger &amp; Nowozin, "Which training methods for GANs do actually converge?"</b> (ICML 2018). The dynamics of the game.</li>
+    </ul>
+  </section>
+</article>

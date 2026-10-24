@@ -64,3 +64,19 @@ for i in range(9):
 p.rect(x0 - 2, y0 - 2, 9 * cell + 1, 9 * cell + 1, color="card", opacity=0, stroke="rule", px=True)
 p.text(x0, 22, "decoded from a grid of codes, z from −2.4 to 2.4", color="fg", size=12, px=True)
 p.save(OUT / "vae.svg", "Left: the 2-D latent means of 500 test bars, coloured by angle, forming a ring whose angle around the origin follows twice the bar angle. Right: a 9 by 9 grid of images decoded from codes between minus 2.4 and 2.4; going around the centre rotates the bar and going outward lengthens it, with blurred images near the centre")
+
+
+# ---------- 23: GAN samples on the 8-Gaussian mixture at four points in training ----------
+ns = run("23-gans")
+snaps, centres = ns["snapshots"], ns["centres"]
+p = Plot(900, 250)
+for k, t in enumerate(sorted(snaps)):
+    p.panel(k * 225, 0, 225, 250, (-3, 3), (-3, 3), margin=(14, 8, 32, 14))
+    p.rect(-3, -3, 6, 6, color="card", opacity=0, stroke="rule")
+    S = snaps[t][:1000]
+    S = S[(np.abs(S) < 2.95).all(1)]
+    p.dots(S[:, 0], S[:, 1], color="accent", r=1.3, opacity=0.45)
+    for cx, cy in centres:
+        p.items.append(f'<circle cx="{p.X(cx):.1f}" cy="{p.Y(cy):.1f}" r="{p.X(0.15) - p.X(0):.1f}" style="fill:none;stroke:{c("fg")};stroke-width:1.2"/>')
+    p.text(p.box[0], 22, f"step {t:,}", color="fg", size=12, px=True)
+p.save(OUT / "gan.svg", "Four scatter plots of 1,000 generator samples at steps 0, 500, 2,000 and 8,000, with eight rings marking the data modes on a circle; the samples move from a wide scatter, through rays aimed at the modes, onto the eight modes joined by thin bridges")

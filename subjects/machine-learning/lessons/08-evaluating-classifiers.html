@@ -65,6 +65,20 @@
       <p>AUC is the probability that the classifier scores a randomly chosen positive above a randomly chosen negative. 0.5 is chance, 1 is a perfect ranking.</p>
     </div>
     <p>This also gives a way to compute it without drawing the curve: rank all test scores from 1 to $n$, add up the ranks of the $n_1$ positives, and subtract the smallest possible total $n_1(n_1+1)/2$. What remains counts the (positive, negative) pairs in the right order, so dividing by $n_1 n_0$ gives the AUC. (This is the Mann–Whitney $U$ statistic.) Two consequences of the definition: AUC depends only on the <i>ranking</i>, so any increasing transformation of the score leaves it unchanged; and it doesn't depend on the base rate, because it only compares positives with negatives.</p>
+    <figure class="plate wide" data-scene="roc">
+      <div class="stage">
+        <canvas aria-label="Score distributions for negatives and positives with a threshold, and the ROC curve with the current operating point"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="rc-dp">separation d′ <input id="rc-dp" type="range" data-k="dp" min="0" max="4" step="0.05"><output data-out="dp"></output></label>
+            <label for="rc-tau">threshold <input id="rc-tau" type="range" data-k="tau" min="-3" max="5" step="0.01"><output data-out="tau"></output></label>
+            <label for="rc-prev">log₁₀ share positive <input id="rc-prev" type="range" data-k="prev" min="-2.5" max="-0.3" step="0.01"><output data-out="prev"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each threshold is one point on the ROC curve; sliding it traces the whole curve. The separation $d'$ alone sets the curve and its AUC, $\Phi(d'/\sqrt2)$. Now drop the share of positives to 1%: the ROC point does not move at all, but precision collapses, because almost every alarm comes from the far larger negative class. ROC curves are blind to base rates; precision is not.</p>
   </section>
 
   <section id="pr">

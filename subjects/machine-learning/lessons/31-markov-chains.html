@@ -58,6 +58,19 @@
     </figure>
     <p class="muted">Left: from state 0, the periodic walk never gets closer to uniform than 0.5 in total variation, while the lazy walk's distance falls by the factor $\lambda_2$ per step (dashed). Right: two Metropolis–Hastings chains targeting a mixture of Gaussians at ±3, from the code's part 5.</p>
     <p><b>Time averages.</b> The <b>ergodic theorem</b> for Markov chains says that for an irreducible chain and any function $f$, $\frac1T\sum_{t=0}^{T-1}f(X_t)\to\sum_i\pi(i)f(i)$ with probability 1, from any start. One long run of the chain therefore estimates expectations under $\boldsymbol{\pi}$, which is the basis of both simulation and MCMC. The samples are correlated, so the error falls more slowly than for independent samples (the effective sample size, below).</p>
+    <figure class="plate wide" data-scene="markov">
+      <div class="stage">
+        <canvas aria-label="Four hundred walkers hopping on a three-state Markov chain, with the share in each state approaching the stationary distribution"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="mk-stay">stay probability <input id="mk-stay" type="range" data-k="stay" min="0" max="0.95" step="0.01"><output data-out="stay"></output></label>
+            <button type="button" data-act="reset">Start everyone in A</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> 400 independent walkers start in state A and take one step every two thirds of a second. The bars are the share in each state; the dashed lines are the stationary distribution π. Whatever the start, the bars settle onto π, and the gap shrinks by roughly $|\lambda_2|$ per step. Raise the stay probability and $|\lambda_2|$ moves towards 1: π does not change at all, but the walkers take far longer to get there.</p>
   </section>
 
   <section id="absorbing">

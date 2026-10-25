@@ -49,6 +49,22 @@
     <div class="eq">$$V^* - V^\pi = (\mathcal{T}V^* - \mathcal{T}V) + (\mathcal{T}^\pi V - \mathcal{T}^\pi V^\pi).$$</div>
     <p>By the contractions, the sup norm of the right side is at most $\gamma\epsilon + \gamma\|V - V^\pi\|\le\gamma\epsilon + \gamma(\epsilon + \|V^* - V^\pi\|)$. Collect the $\|V^* - V^\pi\|$ terms: $(1 - \gamma)\|V^* - V^\pi\|\le2\gamma\epsilon$. $\square$</p>
     <p>The factor $1/(1 - \gamma)$ is the horizon again: a small error in every state can steer the agent wrong at every step, and those losses accumulate over the horizon. The bound is tight in the worst case, but in practice the greedy policy is usually exactly optimal long before the values converge, because only the <i>ordering</i> of the actions matters. The code's value iteration needed 197 sweeps to bring the values within $5\times10^{-7}$ of $V^*$; its greedy policy was already exactly optimal after 32. A common stopping rule: stop when $\|V_{k+1} - V_k\|_\infty &lt; \epsilon(1 - \gamma)/(2\gamma)$, which by the a posteriori bound puts $V_{k+1}$ within $\epsilon/2$ of $V^*$.</p>
+    <figure class="plate wide" data-scene="valueiter">
+      <div class="stage">
+        <canvas aria-label="A gridworld with walls, a +1 and a −1 exit, showing the value of each square and the greedy action after each sweep of value iteration"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="vi-gamma">discount γ <input id="vi-gamma" type="range" data-k="gamma" min="0.5" max="0.99" step="0.01"><output data-out="gamma"></output></label>
+            <label for="vi-slip">slip probability <input id="vi-slip" type="range" data-k="slip" min="0" max="0.6" step="0.01"><output data-out="slip"></output></label>
+            <button type="button" data-act="sweep">One sweep</button>
+            <button type="button" data-act="run">Run to convergence</button>
+            <button type="button" data-act="reset">Reset</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Press <i>One sweep</i> repeatedly. Values spread outwards from the exits one square per sweep, and the arrows (the greedy policy) settle long before the numbers stop changing. Raise the slip probability and the policy starts giving the −1 square a wide berth, taking the longer route; lower γ and distant rewards fade until some squares prefer to wander.</p>
   </section>
 
   <section id="policy-iteration">

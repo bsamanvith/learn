@@ -62,6 +62,19 @@
     <h2>Thompson sampling</h2>
     <p>The oldest bandit algorithm (Thompson, 1933) is Bayesian. Keep a posterior over each arm's mean; at each step, draw one sample from each arm's posterior and pull the arm whose sample is largest. Each arm is pulled with exactly the posterior probability that it is the best one: <b>probability matching</b>. An arm whose posterior is wide sometimes produces a high sample and gets explored; an arm that is confidently bad almost never does.</p>
     <p>For Bernoulli rewards the posterior is conjugate. With a uniform prior, $\mathrm{Beta}(1, 1)$, after $s$ successes in $n$ pulls the posterior of $\mu_a$ is $\mathrm{Beta}(1 + s, 1 + n - s)$. The algorithm is three lines, and it attains the Lai–Robbins constant asymptotically (Kaufmann, Korda and Munos, 2012; Agrawal and Goyal, 2012): it is optimal in the strongest sense available. It is also easy to extend to any model where posterior samples can be drawn, which is why it is widely used in practice.</p>
+    <figure class="plate wide" data-scene="bandit">
+      <div class="stage">
+        <canvas aria-label="Estimates of five slot machines' win rates with uncertainty bands and pull counts, and cumulative regret curves for each strategy"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <div class="seg" data-opt="algo" role="group"><button type="button" data-v="greedy">ε-greedy</button><button type="button" data-v="ucb">UCB</button><button type="button" data-v="thompson">Thompson</button></div>
+            <button type="button" data-act="restart">New casino run</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Five machines with win rates 0.2, 0.45, 0.3, 0.7 and 0.55. Each strategy plays 5,000 pulls; switch between them and the earlier runs stay on the regret plot. ε-greedy's regret grows in a straight line, because it spends a tenth of its pulls exploring forever. UCB's curve bends over, the $\log T$ shape, though with its generous bonus it is no better than ε-greedy at this horizon. Thompson sampling does best by a wide margin: watch the pull counts under the arms, where the bad arms get only a few dozen pulls each. <i>New casino run</i> reruns with fresh luck; occasionally a strategy commits to the 0.55 arm for a long time.</p>
   </section>
 
   <section id="gradient">

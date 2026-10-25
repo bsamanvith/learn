@@ -11,10 +11,10 @@
   const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const fmt = (x, d = 3) => !isFinite(x) ? "—" : Math.abs(x) >= 1e4 ? x.toExponential(1) : x.toFixed(d);
 
-  let C = {};
+  const C = {};
   function readColors() {
     const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue(k).trim();
-    C = { panel: g("--card") || g("--panel"), ink: g("--ink"), muted: g("--muted"), line: g("--line"), accent: g("--accent"), data: g("--data"), class1: g("--class1"), soft: g("--soft"), bad: g("--bad"), good: g("--good"), mono: g("--f-mono"), display: g("--f-display"), body: g("--f-body") };
+    Object.assign(C, { panel: g("--card") || g("--panel"), ink: g("--ink"), muted: g("--muted"), line: g("--line"), accent: g("--accent"), data: g("--data"), class1: g("--class1"), soft: g("--soft"), bad: g("--bad"), good: g("--good"), mono: g("--f-mono"), display: g("--f-display"), body: g("--f-body") });
   }
   const probe = document.createElement("canvas").getContext("2d");
   function alpha(color, a) {
@@ -468,28 +468,87 @@
     return { el: root, tick(dt) { stepTween(S, dt, show); draw(); } };
   }
 
+  // ---------- small drawing kit shared with the scene files in assets/scenes/ ----------
+  // Axis frame with ticks; xs and ys are tick values, fx and fy format them.
+  function axes(k, B, { xs = [], ys = [], fx = String, fy = String, xl = "", yl = "", grid = false } = {}) {
+    k.strokeStyle = C.line; k.lineWidth = 1;
+    k.beginPath(); k.moveTo(B.left, B.top); k.lineTo(B.left, B.top + B.height); k.lineTo(B.left + B.width, B.top + B.height); k.stroke();
+    if (grid) { k.strokeStyle = alpha(C.line, 0.6); k.setLineDash([2, 4]); for (const y of ys) { k.beginPath(); k.moveTo(B.left, B.Y(y)); k.lineTo(B.left + B.width, B.Y(y)); k.stroke(); } k.setLineDash([]); }
+    for (const x of xs) label(k, fx(x), B.X(x), B.top + B.height + 15, { align: "center", size: 11 });
+    for (const y of ys) label(k, fy(y), B.left - 7, B.Y(y), { align: "right", base: "middle", size: 11 });
+    if (xl) label(k, xl, B.left + B.width, B.top + B.height + 30, { align: "right", size: 11 });
+    if (yl) label(k, yl, B.left + 6, B.top + 2, { base: "top", size: 11 });
+  }
+  // Stroke f over [x0, x1] inside B (clipped to the box).
+  function curve(k, B, f, x0, x1, color, lw = 2.5, { n = 200, dash = null } = {}) {
+    k.save(); k.beginPath(); k.rect(B.left, B.top - 2, B.width, B.height + 4); k.clip();
+    k.strokeStyle = color; k.lineWidth = lw; if (dash) k.setLineDash(dash); k.beginPath();
+    let on = false;
+    for (let s = 0; s <= n; s++) { const x = x0 + (x1 - x0) * s / n, y = f(x); if (!isFinite(y)) { on = false; continue; } on ? k.lineTo(B.X(x), B.Y(y)) : k.moveTo(B.X(x), B.Y(y)); on = true; }
+    k.stroke(); k.restore();
+  }
+  // Stroke a list of [x, y] data points inside B.
+  function path(k, B, pts, color, lw = 2, dash = null) {
+    k.save(); k.beginPath(); k.rect(B.left, B.top - 2, B.width, B.height + 4); k.clip();
+    k.strokeStyle = color; k.lineWidth = lw; if (dash) k.setLineDash(dash); k.beginPath();
+    pts.forEach(([x, y], i) => i ? k.lineTo(B.X(x), B.Y(y)) : k.moveTo(B.X(x), B.Y(y)));
+    k.stroke(); k.restore();
+  }
+  // Wires <button data-act="name"> to handlers, and <div class="seg" data-opt="key"> button groups to S[key].
+  function wire(root, S, acts = {}, onOpt = () => {}) {
+    for (const [a, f] of Object.entries(acts)) root.querySelectorAll(`[data-act="${a}"]`).forEach(b => b.addEventListener("click", f));
+    root.querySelectorAll("[data-opt]").forEach(g => {
+      const key = g.dataset.opt, bs = [...g.querySelectorAll("button[data-v]")];
+      const paint = () => bs.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === String(S[key]))));
+      bs.forEach(b => b.addEventListener("click", () => { S[key] = isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v; paint(); onOpt(key); }));
+      paint();
+    });
+  }
+  // Canvas size for most interactive figures: wide on a desktop, taller on a phone.
+  const shape = (cv, wide = 0.46, narrow = 0.8) => fit(cv, cv.clientWidth < 600 ? narrow : wide);
+  // Two panels: side by side on a desktop (the first takes frac of the width), stacked on a phone.
+  function panes(cv, { frac = 0.56, wide = 0.42, narrow = 1.05, gap = 26 } = {}) {
+    const n = cv.clientWidth < 600, { k, W, H } = fit(cv, n ? narrow : wide);
+    if (n) { const h = (H - gap) / 2; return { k, W, H, narrow: n, a: { x: 0, y: 0, w: W, h }, b: { x: 0, y: h + gap, w: W, h } }; }
+    const w = (W - gap) * frac;
+    return { k, W, H, narrow: n, a: { x: 0, y: 0, w, h: H }, b: { x: w + gap, y: 0, w: W - w - gap, h: H } };
+  }
+  // A data box inside a panel, leaving room for tick labels.
+  const boxIn = (p, x0, x1, y0, y1, l = 40, t = 16, r = 14, b = 36) => box(x0, x1, y0, y1, p.x + l, p.y + t, p.w - l - r, p.h - t - b);
+
   // ---------- mount and run ----------
   const SCENES = { linefit: LineFit, race: Race, logistic: Logistic, squares: Squares, tangent: Tangent, sigmoid: Sigmoid, logcost: LogCost };
-  readColors();
-  const scenes = [...document.querySelectorAll("[data-scene]")].map(el => {
-    const s = SCENES[el.dataset.scene](el); s.visible = true; return s;
-  });
-  if ("IntersectionObserver" in window) {
-    const io = new IntersectionObserver(es => es.forEach(e => { const s = scenes.find(s => s.el === e.target); if (s) s.visible = e.isIntersecting; }), { rootMargin: "80px" });
-    scenes.forEach(s => io.observe(s.el));
-  }
-  const refresh = () => { readColors(); scenes.forEach(s => s.tick(0)); };
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh);
-  new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  if (document.fonts) document.fonts.ready.then(refresh);
-  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(refresh, 80); });
+  // Scene files register more scenes here before the page finishes loading.
+  window.Learn = {
+    register: (name, make) => { SCENES[name] = make; },
+    rng, gauss, ease, lerp, sigmoid, reduced, fmt, C, alpha, fit, shape, panes, boxIn, box, label, dot, timeline, knobs, tweenTo, stepTween, axes, curve, path, wire,
+  };
+  function mount() {
+    readColors();
+    const scenes = [...document.querySelectorAll("[data-scene]")].flatMap(el => {
+      const make = SCENES[el.dataset.scene];
+      if (!make) { console.warn(`learn.js: no scene called "${el.dataset.scene}"`); return []; }
+      try { const s = make(el); s.visible = true; return [s]; } catch (e) { console.error(e); return []; }
+    });
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver(es => es.forEach(e => { const s = scenes.find(s => s.el === e.target); if (s) s.visible = e.isIntersecting; }), { rootMargin: "80px" });
+      scenes.forEach(s => io.observe(s.el));
+    }
+    const refresh = () => { readColors(); scenes.forEach(s => s.tick(0)); };
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh);
+    new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    if (document.fonts) document.fonts.ready.then(refresh);
+    let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(refresh, 80); });
 
-  let last = performance.now();
-  function frame(now) {
-    const dt = Math.min(100, now - last); last = now;
-    scenes.forEach(s => { if (s.visible) s.tick(dt); });
+    let last = performance.now();
+    function frame(now) {
+      const dt = Math.min(100, now - last); last = now;
+      scenes.forEach(s => { if (s.visible) s.tick(dt); });
+      requestAnimationFrame(frame);
+    }
+    scenes.forEach(s => s.tick(0));
     requestAnimationFrame(frame);
   }
-  scenes.forEach(s => s.tick(0));
-  requestAnimationFrame(frame);
+  // Deferred scene files run after this one but before DOMContentLoaded (readyState is already "interactive" here).
+  if (document.readyState === "complete") mount(); else document.addEventListener("DOMContentLoaded", mount);
 })();

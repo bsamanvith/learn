@@ -56,6 +56,19 @@
     </figure>
     <p class="muted">Left: reward per episode while learning on the cliff, averaged over 50 runs and smoothed over 10 episodes; the first episodes, far below −100, are cut off. Right: maximisation bias, the fraction of 2,000 runs that choose the worse action in state A (below). From the code.</p>
     <p>Q-learning learns the values of the greedy policy, so its greedy path is the optimal one along the edge (13 steps). But it <i>behaves</i> $\varepsilon$-greedily, and one random step in ten from the edge cell above the cliff has a one-in-four chance of pointing down: it falls off often, and earns about $-49$ per episode late in training. SARSA learns the value of the $\varepsilon$-greedy policy it actually follows, whose values near the edge include the risk of those random steps, so it learns a safer path one or two rows up (17 steps in the run shown) and earns about $-26$. Expected SARSA, with the same targets but less noise, does best online, at about $-21$. Which answer is right depends on the question. If exploration will stop once learning is done, Q-learning's policy is the one to deploy. If the agent must keep exploring, or will be deployed with some noise in its actions, SARSA's caution is correct, because it has learned the value of what will actually happen.</p>
+    <figure class="plate wide" data-scene="cliff">
+      <div class="stage">
+        <canvas aria-label="The cliff-walking gridworld with the greedy paths learned by SARSA and Q-learning, and their returns per episode"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="cf-eps">exploration ε <input id="cf-eps" type="range" data-k="eps" min="0" max="0.3" step="0.01"><output data-out="eps"></output></label>
+            <button type="button" data-act="reset">Learn again</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Both agents learn from scratch for 500 episodes with the same ε-greedy exploration and $\alpha = 0.1$, smaller than above so that the greedy paths settle. Q-learning learns the values of the greedy policy, so its path hugs the cliff edge; but it is still exploring, and every so often a random step sends it over, which is why its returns are worse. SARSA learns the value of what it actually does, exploration included, and takes a safer route, further from the edge. Set ε to 0 and both converge to the edge path.</p>
   </section>
 
   <section id="bias">

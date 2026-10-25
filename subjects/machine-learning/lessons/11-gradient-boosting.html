@@ -15,6 +15,19 @@
       <div class="stage"><!-- figure: boosting --></div>
     </figure>
     <p class="muted">Left: boosting depth-1 trees ("stumps") on noisy samples of a sine curve with squared loss and $\nu = 0.3$. After 1 round the model is a single step; after 10 it has the rough shape; after 100 it follows the curve closely and starts chasing noise. Right: test log-loss of the code's classifier on lesson 10's problem, for 1,500 rounds. With $\nu = 1$ the best test loss (0.449) comes after 17 trees and then it overfits badly; with $\nu = 0.1$ it reaches 0.421 after 333 trees and degrades much more slowly.</p>
+    <figure class="plate wide" data-scene="boost">
+      <div class="stage">
+        <canvas aria-label="Boosting with decision stumps on 1D data: the current fit, residuals, the last stump, and train and test error by round"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="bo-m">rounds <input id="bo-m" type="range" data-k="m" min="0" max="300" step="1"><output data-out="m"></output></label>
+            <label for="bo-nu">shrinkage ν <input id="bo-nu" type="range" data-k="nu" min="0.02" max="1" step="0.01"><output data-out="nu"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each round fits one stump to the current residuals (the faint vertical lines) and adds ν times it. Step through the first ten rounds slowly: each stump fixes the biggest remaining error. With ν = 1 the test error bottoms out within a few dozen rounds and then rises as stumps start fitting noise; with small ν it falls more slowly, reaches a lower minimum, and rises far later.</p>
   </section>
 
   <section id="functional">

@@ -44,6 +44,19 @@
       <div class="stage"><!-- figure: resnet-training --></div>
     </figure>
     <p class="muted">Training loss of plain and residual networks on lesson 12's spirals with SGD and momentum (learning rate 0.01). At 26 layers the plain network gets there, but erratically, with long stalls and spikes. At 50 layers it never leaves the starting loss for long. The residual networks of both depths reach zero loss within about 400 steps; the deeper one is no harder to train than the shallower one.</p>
+    <figure class="plate wide" data-scene="depth" data-init='{"res": 1, "act": "relu", "g": -1.75}'>
+      <div class="stage">
+        <canvas aria-label="Standard deviation of activations and gradients through 30 layers, with or without residual connections"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="dr-g">log₂ gain g <input id="dr-g" type="range" data-k="g" min="-2" max="2" step="0.01"><output data-out="g"></output></label>
+            <div class="seg" data-opt="res" role="group"><button type="button" data-v="0">plain</button><button type="button" data-v="1">residual</button></div>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The same 30-layer experiment as in lesson 14, now with a switch for skip connections $\mathbf h_{l+1} = \mathbf h_l + \phi(W_l\mathbf h_l)$. Turn the gain down to 0.3: the plain network's gradient vanishes by many orders of magnitude, while the residual network's stays near 1, because the identity path carries it straight down. Turn the gain up and the residual network's activations grow instead, which is why real ResNets add normalisation and scale down the last layer of each block.</p>
   </section>
 
   <section id="blocks">

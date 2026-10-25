@@ -1,11 +1,18 @@
 ---
 // Scripts for hand-written HTML lessons and pages: the canvas scene engine and math typesetting.
+import { existsSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { u } from "../subjects";
 interface Props { subject: string; }
 const { subject } = Astro.props;
+// Extra scenes live in subjects/<subject>/assets/scenes/*.js and register themselves with learn.js.
+// The build runs from site/, so the subjects folder is one level up.
+const sceneDir = resolve(process.cwd(), "..", "subjects", subject, "assets", "scenes");
+const sceneFiles = existsSync(sceneDir) ? readdirSync(sceneDir).filter(f => f.endsWith(".js")).sort() : [];
 const book = u(`/${subject}/problems/`);
 ---
 <script is:inline src={u(`/subjects/${subject}/assets/learn.js`)} defer></script>
+{sceneFiles.map(f => <script is:inline src={u(`/subjects/${subject}/assets/scenes/${f}`)} defer></script>)}
 <script>
   import renderMathInElement from "katex/contrib/auto-render";
   // Hand-written lessons carry raw TeX between $...$ and $$...$$; typeset it in place.

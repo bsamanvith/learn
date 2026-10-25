@@ -38,6 +38,19 @@
     <h2>Vanishing and exploding gradients</h2>
     <p>The gradient reaching layer $\ell$ is the loss gradient multiplied by the Jacobians of all later layers (lesson 13): $\bar{\mathbf{h}}_\ell^\top = \bar{\mathbf{h}}_L^\top J_LJ_{L-1}\cdots J_{\ell+1}$. Each Jacobian is $\operatorname{diag}(\phi'(\mathbf{z}))W$. If their typical gain is below 1, early layers get exponentially small gradients and learn nothing (vanishing); above 1, the updates explode. Sigmoid networks vanish almost automatically, since $\sigma'\le\tfrac14$. The right initialisation makes the gain 1 at the start, but training changes the weights, and in recurrent networks (lesson 17) the same matrix is multiplied in at every time step, which makes the problem far worse.</p>
     <p>Three further defences are standard. <b>Normalisation layers</b> (next section) re-standardise activations at every layer, throughout training. <b>Residual connections</b>, $\mathbf{h}_{\ell+1} = \mathbf{h}_\ell + f(\mathbf{h}_\ell)$, make each Jacobian $I + \partial f/\partial\mathbf{h}$, so the product contains a path of identities and gradients reach every layer (lesson 16). <b>Gradient clipping</b> rescales the whole gradient when its norm exceeds a threshold $c$, $\mathbf{g}\leftarrow\mathbf{g}\cdot\min(1, c/\lVert\mathbf{g}\rVert)$: it keeps the direction and caps the step, which protects against rare explosions without affecting normal steps.</p>
+    <figure class="plate wide" data-scene="depth">
+      <div class="stage">
+        <canvas aria-label="Standard deviation of activations and gradients through 30 layers for adjustable initialisation gain and activation"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="dp-g">log₂ gain g <input id="dp-g" type="range" data-k="g" min="-2" max="2" step="0.01"><output data-out="g"></output></label>
+            <div class="seg" data-opt="act" role="group"><button type="button" data-v="tanh">tanh</button><button type="button" data-v="relu">ReLU</button><button type="button" data-v="linear">linear</button></div>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> A real 30-layer network of width 96 with random Gaussian weights, run forwards on 32 inputs and backwards from a random gradient. The shaded band is ±one order of magnitude. Move the gain off its sweet spot and the signal dies or blows up exponentially with depth, in both directions. The sweet spot depends on the activation: $g = 1$ for tanh and linear layers (Xavier), $g = \sqrt2$ for ReLU (He), exactly as derived above.</p>
   </section>
 
   <section id="normalisation">

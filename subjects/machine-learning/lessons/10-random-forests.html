@@ -40,6 +40,20 @@
     <p>Bagged trees stay correlated: if one feature is a strong predictor, almost every tree splits on it at the root, and the trees end up looking alike. A <b>random forest</b> (Breiman, 2001) adds one rule: <b>at each split, consider only a random subset of $m$ of the $d$ features</b>. Strong features are now unavailable at many splits, so different trees grow different structures. Typical defaults are $m = \sqrt d$ for classification and $m = d/3$ for regression; $m = d$ is plain bagging.</p>
     <p>Each tree gets slightly worse (higher $\sigma^2$, and sometimes higher bias), but $\rho$ drops, and by the formula above the floor $\rho\sigma^2$ is what matters for a large forest. The code shows the whole trade: one random-forest tree is less accurate than one bagged tree (0.699 against 0.712), the trees' correlation falls from 0.36 to 0.20, and with 100 trees the forest wins (0.800 against 0.785).</p>
     <p>Random forests are hard to beat as a first model on tabular data. There is little to tune: more trees never hurt (only cost), $m$ and the minimum leaf size are the main knobs, and the OOB error tells you how you're doing.</p>
+    <figure class="plate wide" data-scene="forestvar">
+      <div class="stage">
+        <canvas aria-label="Twenty-four forests of correlated trees, and the variance of their average against the number of trees"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="fv-rho">correlation ρ <input id="fv-rho" type="range" data-k="rho" min="0" max="1" step="0.01"><output data-out="rho"></output></label>
+            <label for="fv-B">log₁₀ trees <input id="fv-B" type="range" data-k="B" min="0" max="3" step="0.01"><output data-out="B"></output></label>
+            <button type="button" data-act="resample">Resample</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each row is one forest trained on a fresh dataset: the ticks are its trees' predictions at one input, the orange dot their average. Add trees and the dots tighten, but only down to a floor of $\rho\sigma^2$: the shared part of the error averages out of nothing. Lower ρ (that is what random feature subsets do) and the floor drops.</p>
   </section>
 
   <section id="vote">

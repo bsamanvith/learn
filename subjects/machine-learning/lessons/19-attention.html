@@ -34,6 +34,19 @@
       <div class="stage"><!-- figure: attention --></div>
     </figure>
     <p class="muted">Left: the entropy of attention weights over 16 random keys as the dimension grows, with and without the $1/\sqrt d$ scaling (log scale on the horizontal axis). Without it, attention collapses onto a single key. Right: the trained attention head from the code on 12 test examples. Each row is an example, each column one of its 8 (key, value) pairs; the ring marks the pair whose key matches the query. The head puts most of its weight there.</p>
+    <figure class="plate wide" data-scene="attention">
+      <div class="stage">
+        <canvas aria-label="A query vector and six unit-length keys, with the softmax attention weights as bars"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="at-ang">query angle° <input id="at-ang" type="range" data-k="ang" min="0" max="360" step="1"><output data-out="ang"></output></label>
+            <label for="at-mag">query length <input id="at-mag" type="range" data-k="mag" min="0" max="10" step="0.1"><output data-out="mag"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Rotate the query and the weight moves to the keys it points at. Now lengthen it. Scores grow in proportion, so the softmax sharpens towards one-hot; at length 0 attention is a plain average. In $d$ dimensions, dot products of random unit-variance vectors have standard deviation $\sqrt d$, which is exactly a long query: dividing by $\sqrt d$ keeps the scores, and the gradients, in a usable range.</p>
   </section>
 
   <section id="properties">

@@ -42,6 +42,20 @@
       <div class="stage"><!-- figure: cnn-equivariance --></div>
     </figure>
     <p class="muted">From the code below. Left: a test image with the "+" pattern at a position seen in training, and the same image shifted 9 pixels to the right, where no training image had the pattern. Middle: the feature map of one learned filter on each; the bright response moves with the pattern, which is equivariance. Global max pooling then gives the same number for both, which is invariance. Right: the eight learned $5\times5$ filters. A few show bars or diagonals from the two patterns, but most look noisy: 300 training steps are enough to separate the two classes, not to produce clean detectors.</p>
+    <figure class="plate wide" data-scene="conv">
+      <div class="stage">
+        <canvas aria-label="A 3 by 3 kernel sliding over a 12 by 12 binary image, filling in the output map"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <div class="seg" data-opt="kern" role="group"><button type="button" data-v="vertical">vertical edges</button><button type="button" data-v="horizontal">horizontal edges</button><button type="button" data-v="blur">blur</button><button type="button" data-v="sharpen">sharpen</button></div>
+            <button type="button" data-act="shift">Shift the image</button>
+            <button type="button" data-act="pause">Pause</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The orange frame is the patch the kernel sees; the output cell is the sum of kernel × patch. A vertical-edge kernel fires positive on left edges and negative on right edges, and is zero on flat regions inside and outside the shape. Press <i>Shift the image</i>: the output map moves by the same amount and is otherwise unchanged. That is translation equivariance, and it is why one kernel can be shared across the whole image.</p>
   </section>
 
   <section id="receptive">

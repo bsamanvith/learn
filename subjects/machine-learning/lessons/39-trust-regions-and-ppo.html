@@ -72,6 +72,19 @@
     </ul>
     <p>The full loss adds a value-function regression term for the critic and usually an entropy bonus to keep exploring. Nothing enforces the KL constraint exactly; the clip only removes the gradient that would push individual ratios far, and with many epochs or large learning rates the policy can still drift. Implementations therefore also normalise advantages per minibatch, clip the gradient norm, and sometimes stop the epochs early when the measured KL exceeds a threshold. Engstrom et al. (2020) found that such "code-level" details account for much of PPO's advantage over TRPO, which is a useful warning about attributing results to the headline idea.</p>
     <p>PPO is the algorithm InstructGPT used for RLHF (lesson 28), with the policy a language model, an episode a response, and a per-token KL penalty to the supervised model added to the reward. GRPO, used for reasoning models, is PPO without the critic: it estimates each response's advantage by comparing its reward with the other responses sampled for the same prompt.</p>
+    <figure class="plate wide" data-scene="ppoclip">
+      <div class="stage">
+        <canvas aria-label="The PPO clipped surrogate objective against the probability ratio, for positive and negative advantage"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="pp-eps">clip ε <input id="pp-eps" type="range" data-k="eps" min="0.05" max="0.5" step="0.01"><output data-out="eps"></output></label>
+            <label for="pp-r">ratio r <input id="pp-r" type="range" data-k="r" min="0" max="2" step="0.01"><output data-out="r"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each panel is one sample's contribution to the PPO objective as the new policy changes the probability of its action by the ratio $r$. With a positive advantage, raising $r$ helps only up to $1 + \varepsilon$; past that the objective is flat and the gradient vanishes, so there is no reason to move further. With a negative advantage it is flat below $1 - \varepsilon$. The minimum keeps the pessimistic branch: an update that makes things worse is always penalised in full.</p>
   </section>
 
   <section id="cartpole">

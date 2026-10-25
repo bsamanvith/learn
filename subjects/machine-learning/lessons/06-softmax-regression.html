@@ -94,6 +94,22 @@
     <h2>Temperature and label smoothing</h2>
     <p>Dividing the logits by a <b>temperature</b> $T &gt; 0$ before the softmax, $\mathbf{p} = \operatorname{softmax}(\mathbf{z}/T)$, changes how peaked the distribution is without changing its order. As $T \to 0$ it becomes one-hot on the largest logit; as $T \to \infty$ it becomes uniform (exercise 6). The right panel of the figure shows logits $(2, 1, 0.2, -1)$: the top class gets 0.86 at $T = 0.5$, 0.63 at $T = 1$ and 0.38 at $T = 3$. You will meet temperature again when sampling text from a language model (lessons 26 and 30), in knowledge distillation (lesson 29), and in contrastive learning (lesson 21).</p>
     <p><b>Label smoothing</b> replaces the one-hot target with $(1-\epsilon)\mathbf{y} + \epsilon/K$. The best achievable logits are then finite, so they stop growing once the training data are fitted, and the model's confidence stays closer to its accuracy. It is a standard regulariser for large image classifiers and transformers ($\epsilon = 0.1$ is typical).</p>
+    <figure class="plate wide" data-scene="softmax">
+      <div class="stage">
+        <canvas aria-label="Four logits as bars and their softmax probabilities at an adjustable temperature"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sm-z0">z cat <input id="sm-z0" type="range" data-k="z0" min="-4" max="4" step="0.1"><output data-out="z0"></output></label>
+            <label for="sm-z1">z dog <input id="sm-z1" type="range" data-k="z1" min="-4" max="4" step="0.1"><output data-out="z1"></output></label>
+            <label for="sm-z2">z fox <input id="sm-z2" type="range" data-k="z2" min="-4" max="4" step="0.1"><output data-out="z2"></output></label>
+            <label for="sm-z3">z owl <input id="sm-z3" type="range" data-k="z3" min="-4" max="4" step="0.1"><output data-out="z3"></output></label>
+            <label for="sm-T">log₁₀ T <input id="sm-T" type="range" data-k="T" min="-1.3" max="1" step="0.01"><output data-out="T"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Raise all four logits together and nothing changes: softmax only sees differences. Slide the temperature down and the largest logit takes everything (argmax); slide it up and the distribution flattens towards uniform, with entropy approaching 2 bits. The ranking of the classes never changes at any temperature.</p>
   </section>
 
   <section id="code">

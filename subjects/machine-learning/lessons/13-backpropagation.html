@@ -30,6 +30,22 @@
       <p>summing over every node $v$ that takes $u$ as an input. Equivalently, $\partial L/\partial u$ is the sum, over every path from $u$ to $L$, of the product of the local derivatives along the path.</p>
     </div>
     <p>The sum over paths can have exponentially many terms, but the sum over children doesn't: if every child $v$ already knows $\partial L/\partial v$, then $u$ needs one multiply-add per child. So visit the nodes in <b>reverse topological order</b>, children before parents, and each node's gradient is ready when it is needed. Each edge of the graph is used once, so the backward pass does a constant amount of work per edge, the same order as the forward pass. In code, each node adds its contribution to its parent's gradient with <code>+=</code>, which is exactly the sum over children.</p>
+    <figure class="plate wide" data-scene="backprop">
+      <div class="stage">
+        <canvas aria-label="A computational graph for L = (σ(w·x + b) − 1)² with forward values above each node and gradients below"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="bk-x">x <input id="bk-x" type="range" data-k="x" min="-3" max="3" step="0.01"><output data-out="x"></output></label>
+            <label for="bk-w">w <input id="bk-w" type="range" data-k="w" min="-3" max="3" step="0.01"><output data-out="w"></output></label>
+            <label for="bk-b">b <input id="bk-b" type="range" data-k="b" min="-3" max="3" step="0.01"><output data-out="b"></output></label>
+            <button type="button" data-act="step">Gradient step on w and b</button>
+            <button type="button" data-act="reset">Reset</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Values flow left to right; gradients flow right to left (orange arrows, thicker when larger). Each node multiplies the gradient arriving from above by its own local derivative: the + node passes it on unchanged, the × node swaps in the other input, σ multiplies by $\sigma(z)(1-\sigma(z))$. Make $z$ large and negative with $w$ and watch every gradient upstream of σ shrink to almost nothing: that is saturation. Press <i>Gradient step</i> a few times to see $L$ fall.</p>
   </section>
 
   <section id="modes">

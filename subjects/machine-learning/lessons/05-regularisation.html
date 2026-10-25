@@ -107,6 +107,19 @@
     </figure>
     <p class="muted">Eight standardised features, 60 points, true weights $(3, 0, -2, 0, 1.5, 0, 0, 0)$, and feature 2 correlated with feature 1. Left: ridge shrinks every coefficient smoothly and none reaches zero. Right: lasso coefficients enter one by one, largest effect first; the five irrelevant ones stay at or very near zero for most of the path.</p>
     <p><b>Where each one wins.</b> Ridge handles correlated features gracefully: it spreads weight among them. The lasso tends to pick one of a correlated group arbitrarily. The <b>elastic net</b> (Zou &amp; Hastie, 2005) uses both penalties, $\lambda_1\lVert\mathbf{w}\rVert_1 + \lambda_2\lVert\mathbf{w}\rVert^2$, to get sparsity and stability together.</p>
+    <figure class="plate wide" data-scene="ballpath">
+      <div class="stage">
+        <canvas aria-label="Loss contours around the least-squares solution with an L1 diamond or L2 disc growing until it touches them"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="bp-lam">log₁₀ λ <input id="bp-lam" type="range" data-k="lam" min="-2" max="0.7" step="0.01"><output data-out="lam"></output></label>
+            <div class="seg" data-opt="mode" role="group"><button type="button" data-v="l2">ridge (L2)</button><button type="button" data-v="l1">lasso (L1)</button></div>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The ellipses are contours of the squared loss around the least-squares solution; the shaded shape is the smallest ball, in the chosen norm, that reaches the penalised solution. Increase λ and the solution slides along the dashed path towards zero. With ridge it slides smoothly and never lands on an axis. With the lasso the diamond's corner meets a contour first: past λ ≈ 1.2, $w_2$ is exactly zero and stays there, and past λ ≈ 3.1 so is $w_1$. That is sparsity, seen as geometry.</p>
   </section>
 
   <section id="deep">

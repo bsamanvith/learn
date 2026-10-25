@@ -49,6 +49,20 @@
     <h2>Finding the best split</h2>
     <p>For a node with $n$ points and $d$ features, only thresholds between consecutive distinct values of a feature give different splits, so there are at most $n - 1$ candidates per feature. Sort the points by feature $j$ once, then sweep the cut from left to right, moving one point at a time from the right child's class counts to the left's. Each candidate's impurity is then $O(K)$ to evaluate, and the whole node costs $O(d\,n\log n)$, dominated by the sort. The code below does the sweep with a cumulative sum. Because the points at each level of the tree are partitioned among its nodes, each level costs $O(d\,n\log n)$ in total, and so does a tree of depth $D$ times $D$.</p>
     <p>Gradient-boosting libraries go further and bucket each feature into about 256 bins once, before training (lesson 11). Then a node's split search is a histogram sweep over 256 bins instead of a sort.</p>
+    <figure class="plate wide" data-scene="split">
+      <div class="stage">
+        <canvas aria-label="Two-class points with an axis-aligned split, and weighted impurity as a function of the threshold"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sp-t">threshold <input id="sp-t" type="range" data-k="t" min="0.01" max="0.99" step="0.01"><output data-out="t"></output></label>
+            <div class="seg" data-opt="axis" role="group"><button type="button" data-v="0">split on x₁</button><button type="button" data-v="1">split on x₂</button></div>
+            <button type="button" data-act="best">Best Gini split</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The right panel is exactly what the greedy search computes: for every threshold, the size-weighted impurity of the two children. Gini and entropy are smooth and concave, so they reward any split that makes a child purer. Misclassification error is piecewise flat: over long stretches it cannot tell splits apart at all, which is why trees are not grown with it.</p>
   </section>
 
   <section id="regression">

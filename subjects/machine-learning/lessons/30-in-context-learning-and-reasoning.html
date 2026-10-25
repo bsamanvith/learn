@@ -20,6 +20,21 @@
       <li><b>Top-$p$ or nucleus sampling</b> (Holtzman et al., 2020) keeps the smallest set of most likely tokens whose total probability is at least $p$, renormalises, and samples. Unlike top-$k$, the size of the set adapts: after "The capital of France is", the nucleus is one or two tokens; at the start of a story it is hundreds.</li>
     </ul>
     <p>The reason for truncating at all is the tail. A model's distribution over 100,000 tokens puts a small probability on each of tens of thousands of bad continuations, and together they add up: sample a few hundred tokens and you are likely to hit one, after which the text goes off the rails, because the model conditions on its own mistake. Truncation removes the tail at the cost of some diversity. None of these rules changes the model, and each is a different trade between quality and variety.</p>
+    <figure class="plate wide" data-scene="sampling">
+      <div class="stage">
+        <canvas aria-label="Next-token probabilities after The cat sat on the, filtered by temperature, top-k and top-p"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sa-T">temperature <input id="sa-T" type="range" data-k="T" min="-1" max="0.6" step="0.01"><output data-out="T"></output></label>
+            <label for="sa-p">top-p <input id="sa-p" type="range" data-k="p" min="0.05" max="1" step="0.01"><output data-out="p"></output></label>
+            <label for="sa-k">top-k <input id="sa-k" type="range" data-k="k" min="1" max="12" step="1"><output data-out="k"></output></label>
+            <button type="button" data-act="draw">Sample 12 tokens</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The outline is the distribution after temperature; the filled bar is what is actually sampled from, after truncation and renormalisation. Set top-$p$ to 0.5 and only the two most likely tokens survive. Lower the temperature and the same $p$ keeps fewer tokens, because the head of the distribution grows. Press <i>Sample</i> at $T = 2$ with no truncation to see why unfiltered high-temperature text drifts: the long tail gets real probability.</p>
   </section>
 
   <section id="icl">

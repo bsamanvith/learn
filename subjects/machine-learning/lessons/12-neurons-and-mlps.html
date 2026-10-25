@@ -44,6 +44,22 @@
       <div class="stage"><!-- figure: relu-pieces --></div>
     </figure>
     <p class="muted">Left: the universal approximation construction below. A one-hidden-layer network with 8 ReLUs, whose kinks (dots) sit at evenly spaced knots, interpolates a smooth function (dashed) with straight segments. Right: the tent map composed with itself 1, 2 and 3 times. Each composition doubles the number of linear pieces, using only two more units.</p>
+    <figure class="plate wide" data-scene="mlp">
+      <div class="stage">
+        <canvas aria-label="A small neural network training live on a two-class dataset; the background shows its decision regions and dashed lines show each hidden unit"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="mp-h">hidden units <input id="mp-h" type="range" data-k="h" min="1" max="16" step="1"><output data-out="h"></output></label>
+            <div class="seg" data-opt="set" role="group"><button type="button" data-v="xor">XOR</button><button type="button" data-v="circles">circles</button><button type="button" data-v="spiral">spiral</button></div>
+            <div class="seg" data-opt="act" role="group"><button type="button" data-v="tanh">tanh</button><button type="button" data-v="relu">ReLU</button><button type="button" data-v="linear">linear</button></div>
+            <button type="button" data-act="reset">New initialisation</button>
+            <button type="button" data-act="pause">Pause</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> A network with one hidden layer, trained live by Adam on 200 points. Each dashed line is one hidden unit's hyperplane $\mathbf w_j^\top\mathbf x + b_j = 0$; the output can only combine these bends. Circles need three units, because three lines can enclose a region; try 1 and 2 and watch it fail. XOR needs at least two, and with exactly two, training often stalls in a poor local minimum: press <i>New initialisation</i> a few times. The spiral needs many units and many steps. Then switch the activation to linear and see every dataset collapse to one straight boundary.</p>
   </section>
 
   <section id="universal">

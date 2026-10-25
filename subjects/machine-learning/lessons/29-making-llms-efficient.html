@@ -38,6 +38,19 @@
     <h2>Quantisation</h2>
     <p>Store each weight as a small integer and a shared scale: $\hat w = s\cdot\operatorname{round}(w/s)$. With $b$-bit signed integers, the <b>absmax</b> scale $s = \max|w|/(2^{b-1} - 1)$ maps the largest weight to the largest integer. The rounding error of each weight is at most $s/2$, and if errors are uniform its variance is $s^2/12$. So everything depends on how large $s$ is, and one large weight makes $s$ large for everyone that shares it.</p>
     <p>LLMs have exactly this problem: past a few billion parameters, a handful of hidden dimensions carry values tens of times larger than the rest (Dettmers et al., 2022). The fixes give outliers their own scale: one scale per output channel (column) or per group of 32 to 128 weights, at the cost of storing the scales. LLM.int8 keeps outlier dimensions in 16 bits; GPTQ (Frantar et al., 2023) rounds weights one at a time and adjusts the remaining weights to compensate for each rounding error, using second-order information from a little calibration data. Four-bit weights with group-wise scales lose little quality and cut memory, and so generation time, by a factor of four.</p>
+    <figure class="plate wide" data-scene="quant">
+      <div class="stage">
+        <canvas aria-label="A histogram of 4,000 weights with the grid of quantisation levels, for adjustable bit width, with or without outliers"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="qt-bits">bits <input id="qt-bits" type="range" data-k="bits" min="2" max="8" step="1"><output data-out="bits"></output></label>
+            <div class="seg" data-opt="keep" role="group"><button type="button" data-v="0">one scale for all</button><button type="button" data-v="1">outliers kept in 16 bits</button></div>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> 4,000 weights with standard deviation 0.02, plus three outliers near ±0.4. With one absmax scale for the whole tensor, the outliers set the grid: at 4 bits the levels are 0.06 apart, so almost every ordinary weight rounds to zero. Keep the three outliers aside and the grid shrinks to fit the bulk; the signal-to-noise ratio at 4 bits jumps from about 3 dB to 17 dB. Per-channel and per-group scales get most of the same benefit.</p>
   </section>
 
   <section id="lora">

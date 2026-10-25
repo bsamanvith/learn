@@ -61,6 +61,18 @@
       <li><b>Forward KL, $\operatorname{KL}(p\Vert q)$</b>, averages $\log(p/q)$ over $p$. Wherever $p$ has mass and $q$ is tiny, the penalty is huge, so $q$ must <i>cover</i> all of $p$. For a Gaussian $q$ the optimum matches the mean and variance of $p$ exactly (exercise 5), here mean 0 and standard deviation 2.62, which puts most of its mass in the gap where $p$ has almost none. This is the direction MLE uses, which is why maximum-likelihood models tend to be "blurry" and spread out.</li>
       <li><b>Reverse KL, $\operatorname{KL}(q\Vert p)$</b>, averages over $q$. Putting $q$'s mass where $p$ is tiny is costly, while ignoring part of $p$ is free. So $q$ <i>seeks one mode</i> and fits it tightly: mean $-2.5$, standard deviation 0.82. Variational inference uses this direction (lesson 22), and so does the KL penalty in RLHF (lesson 28).</li>
     </ul>
+    <figure class="plate wide" data-scene="kldir">
+      <div class="stage">
+        <canvas aria-label="A two-bump distribution with the single Gaussians that minimise forward and reverse KL divergence"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="kd-sep">separation of the bumps <input id="kd-sep" type="range" data-k="sep" min="0" max="3.5" step="0.01"><output data-out="sep"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> $p$ is an even mixture of two Gaussians with standard deviation 0.6 at $\pm$ the separation; $q$ must be a single Gaussian. Minimising $\mathrm{KL}(p\,\|\,q)$ punishes $q$ for missing any of $p$'s mass, so it matches $p$'s mean and variance and spreads over both bumps, including the empty middle. Minimising $\mathrm{KL}(q\,\|\,p)$ punishes $q$ for putting mass where $p$ has none, so once the bumps separate it locks onto one of them. Maximum likelihood is the forward direction; variational inference is the reverse one, which is why variational posteriors tend to be overconfident.</p>
   </section>
 
   <section id="mutual">

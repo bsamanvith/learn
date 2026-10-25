@@ -53,6 +53,25 @@
       <li><b>Condition number</b> $\kappa(A) = \sigma_1/\sigma_r$. Note $\kappa(X^\top X) = \kappa(X)^2$: forming the normal equations squares the conditioning, which is why least-squares solvers use QR or the SVD instead.</li>
     </ul>
     <p><b>The pseudo-inverse.</b> Define $A^+ = \sum_{i=1}^r\sigma_i^{-1}\mathbf{v}_i\mathbf{u}_i^\top$. Then $\hat{\mathbf{w}} = X^+\mathbf{y}$ solves least squares, and when the solution isn't unique it is the one with the smallest norm: it lies in the row space, with no component in the null space (any null-space component would add length without changing $X\mathbf{w}$). Ridge regression (lesson 05) replaces each $1/\sigma_i$ with $\sigma_i/(\sigma_i^2 + \lambda)$, which is the pseudo-inverse with the small singular values tamed.</p>
+    <figure class="plate wide" data-scene="matrix">
+      <div class="stage">
+        <canvas aria-label="A 2 by 2 matrix acting on the plane: the image of the grid, the unit circle's image ellipse, eigenvector lines and singular axes"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="mx-a">a <input id="mx-a" type="range" data-k="a" min="-2" max="2" step="0.01"><output data-out="a"></output></label>
+            <label for="mx-b">b <input id="mx-b" type="range" data-k="b" min="-2" max="2" step="0.01"><output data-out="b"></output></label>
+            <label for="mx-c">c <input id="mx-c" type="range" data-k="c" min="-2" max="2" step="0.01"><output data-out="c"></output></label>
+            <label for="mx-d">d <input id="mx-d" type="range" data-k="d" min="-2" max="2" step="0.01"><output data-out="d"></output></label>
+            <button type="button" data-act="rotation">Rotation</button>
+            <button type="button" data-act="shear">Shear</button>
+            <button type="button" data-act="symmetric">Symmetric</button>
+            <button type="button" data-act="singular">Singular</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The matrix is $\begin{pmatrix}a&b\\c&d\end{pmatrix}$. Blue lines are the image of the square grid; the orange ellipse is the image of the unit circle, and its semi-axes (dotted) are the singular values times the left singular vectors. Black dashed lines are eigenvector directions, which the matrix only stretches. Try the presets: a rotation has no real eigenvectors but both singular values are 1; a shear has one eigenvector direction and an ellipse; a symmetric matrix's eigenvectors coincide with the ellipse's axes, the spectral theorem; a singular matrix squashes everything onto a line, and its determinant, the shaded area, is zero.</p>
   </section>
 
   <section id="low-rank">

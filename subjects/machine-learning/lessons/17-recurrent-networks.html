@@ -38,6 +38,19 @@
       <div class="stage"><!-- figure: rnn-gradients --></div>
     </figure>
     <p class="muted">Left: the norm of $\partial\mathbf{h}_t/\partial\mathbf{h}_0$ for an untrained tanh RNN with $W$ equal to 0.5, 1 and 2 times an orthogonal matrix, on a log scale. Right: test accuracy on the code's task (output the first of $T$ noisy bits) after the same training. The plain RNN falls to chance at $T = 50$; the LSTM still gets about 90% right.</p>
+    <figure class="plate wide" data-scene="bptt">
+      <div class="stage">
+        <canvas aria-label="Gradient size against number of steps back for a tanh RNN and for an LSTM cell path"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="bt-rho">spectral radius ρ <input id="bt-rho" type="range" data-k="rho" min="0.5" max="1.5" step="0.01"><output data-out="rho"></output></label>
+            <label for="bt-f">forget gate f <input id="bt-f" type="range" data-k="f" min="0.8" max="1" step="0.001"><output data-out="f"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> A 32-unit tanh RNN with an orthogonal recurrent matrix scaled to spectral radius ρ, driven by random inputs for 100 steps; the blue curve is the exact backpropagated gradient. Below ρ = 1 it decays geometrically. Above 1 the tanh saturates and the derivative factors pull it down anyway. The LSTM's cell path multiplies only by the forget gate: with $f = 0.99$ a hundredth of the signal is lost per step, so more than a third survives 100 steps.</p>
   </section>
 
   <section id="lstm">

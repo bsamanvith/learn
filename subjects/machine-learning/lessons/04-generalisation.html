@@ -14,6 +14,19 @@
     </figure>
     <p class="muted">The dashed curve is the truth, $f(x) = \sin 2\pi x$. The dots are $y_i = f(x_i) + \varepsilon_i$ with noise standard deviation $\sigma = 0.3$. The orange curve is the least-squares polynomial.</p>
     <p>Training error always falls as the model gets more flexible. Test error does not. The rest of this lesson makes that sentence precise.</p>
+    <figure class="plate wide" data-scene="polyfit">
+      <div class="stage">
+        <canvas aria-label="Fifteen noisy points with a polynomial fit of adjustable degree, and train and test error against degree"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="pf-d">degree <input id="pf-d" type="range" data-k="d" min="0" max="12" step="1"><output data-out="d"></output></label>
+            <button type="button" data-act="resample">New noisy sample</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Drag the degree from 0 to 12 and watch the two curves on the right part ways: training error keeps falling, test error turns round after degree 3. Then press <i>New noisy sample</i> a few times at degree 3 and at degree 12. The cubic barely moves; the degree-12 curve is different every time. That instability is the variance term of the next section.</p>
   </section>
 
   <section id="risk">

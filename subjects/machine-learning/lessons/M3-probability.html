@@ -104,6 +104,20 @@
       <div class="eq">$$\sqrt n\,\big(\bar X_n - \mu\big)\;\xrightarrow{\ d\ }\;\mathcal{N}(0,\sigma^2).$$</div>
     </div>
     <p>So $\bar X_n$ is approximately $\mathcal{N}(\mu, \sigma^2/n)$, which justifies the standard errors and confidence intervals of lesson 08 and the Gaussian model of minibatch noise in lesson 07. The skewness of the mean falls like $1/\sqrt n$, which is why the code finds 2.0, 0.90 and 0.37 for $n = 1, 5, 30$.</p>
+    <figure class="plate wide" data-scene="clt">
+      <div class="stage">
+        <canvas aria-label="Histogram of standardised sums of n random draws against the standard normal density"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="cl-n">draws per sum n <input id="cl-n" type="range" data-k="n" min="1" max="60" step="1"><output data-out="n"></output></label>
+            <div class="seg" data-opt="dist" role="group"><button type="button" data-v="uniform">uniform</button><button type="button" data-v="exponential">exponential</button><button type="button" data-v="coin">coin, p = 0.2</button></div>
+            <button type="button" data-act="resample">Resample</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each bar chart is 6,000 sums of $n$ independent draws, shifted and scaled to mean 0 and variance 1. Start the exponential at $n = 1$: a lopsided ramp. By $n = 10$ the bell is visible, and by 60 the histogram sits on the normal curve. The uniform converges fastest because it is symmetric; the leftover skewness falls only as $1/\sqrt n$, which is why sums of very skewed variables need a large $n$.</p>
   </section>
 
   <section id="code">

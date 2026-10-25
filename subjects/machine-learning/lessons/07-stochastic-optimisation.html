@@ -71,6 +71,21 @@
     </div>
     <p>Momentum replaces $\kappa$ by $\sqrt\kappa$. For $\kappa = 100$, plain descent needs about 50 steps to shrink the error by a factor of $e$; momentum needs about 5. On the right of the figure ($\kappa = 25$, both methods tuned optimally) gradient descent takes 44 steps to reduce the loss a thousandfold and momentum takes 15.</p>
     <p>With noisy gradients the same $\mathbf{g}/(1-\beta)$ amplification applies to the noise, so momentum with step $\eta$ has roughly the noise floor of SGD with step $\eta/(1-\beta)$. In the code, momentum with $\eta = 0.01$, $\beta = 0.9$ ends near SGD with $\eta = 0.1$. The <b>Nesterov</b> variant evaluates the gradient at the look-ahead point $\mathbf{w}_t - \eta\beta\mathbf{v}_{t-1}$, which is slightly more stable and achieves the $\sqrt\kappa$ rate on all smooth convex functions, not just quadratics.</p>
+    <figure class="plate wide" data-scene="sgd">
+      <div class="stage">
+        <canvas aria-label="Minibatch SGD path on the contours of a stretched least-squares bowl, and its loss over 150 steps"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sg-lr">η <input id="sg-lr" type="range" data-k="lr" min="0.02" max="1.2" step="0.01"><output data-out="lr"></output></label>
+            <label for="sg-bs">log₂ batch <input id="sg-bs" type="range" data-k="bs" min="0" max="8" step="1"><output data-out="bs"></output></label>
+            <label for="sg-mom">momentum β <input id="sg-mom" type="range" data-k="mom" min="0" max="0.95" step="0.01"><output data-out="mom"></output></label>
+            <button type="button" data-act="rerun">Rerun with new batches</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> This is real minibatch SGD on a 2-parameter least-squares problem with 256 points and correlated features. With batch 1 the path rattles around the minimum and the loss stalls at a noise floor; each doubling of the batch lowers the floor. Push η past about 1.1 with β = 0 and it diverges along the steep direction. Add momentum and the path accelerates down the long valley, but at large β it overshoots and circles.</p>
   </section>
 
   <section id="adam">

@@ -67,6 +67,19 @@
     <p>Hoffmann et al. estimated the exponents three ways. Two methods, which take the lowest-loss model at each budget directly from the runs, gave $N_\text{opt}\propto C^{0.50}$ and $C^{0.49}$, and about 20 training tokens per parameter. Kaplan et al. had concluded $N_\text{opt}\propto C^{0.73}$: make models much bigger and train them on relatively little data. GPT-3 and Gopher (280B parameters, 300B tokens) were built on that advice, with about 1 token per parameter. Chinchilla tested the claim: with Gopher's compute it trained a 70B model on 1.4T tokens, and beat Gopher on nearly every benchmark. Much of the disagreement has since been traced to choices in Kaplan's set-up: a learning-rate schedule whose length did not match each run's length, which handicaps short runs, and the counting of non-embedding parameters in small models (Pearce and Song, 2024).</p>
     <p>A cautionary footnote. Besiroglu et al. (2024) refitted the third method from Chinchilla's own figures and found that the published constants above do not fit the data well. Plug them into the formula and Gopher's compute gives a 32B model at 93 tokens per parameter. Their refit, $E = 1.82$, $A = 482$, $B = 2085$, $\alpha = 0.348$, $\beta = 0.366$, gives 72B at 18 tokens per parameter, agreeing with the other two methods. Scaling laws are fitted curves, and fits with five parameters can go wrong in ways that are invisible until you check them.</p>
     <p><b>Beyond Chinchilla.</b> "Compute-optimal" minimises the cost of training only. A model that will answer billions of queries costs $2N$ FLOPs per generated token forever after, so it pays to train a smaller model for longer than Chinchilla prescribes, accepting a little more training compute for a cheaper model to run (Sardana and Frankle, 2023). Llama 3 8B saw about 1,900 tokens per parameter. The other limit is data: there are only so many tokens of good text, and Muennighoff et al. (2023) found that repeating data for up to about four epochs is nearly as good as fresh data, with fast-diminishing returns after that.</p>
+    <figure class="plate wide" data-scene="scaling">
+      <div class="stage">
+        <canvas aria-label="Predicted loss against model size for fixed training compute, with the compute-optimal point"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sl-c">log₁₀ compute (FLOPs) <input id="sl-c" type="range" data-k="c" min="18" max="26" step="0.1"><output data-out="c"></output></label>
+            <div class="seg" data-opt="fit" role="group"><button type="button" data-v="hoffmann">published fit</button><button type="button" data-v="besiroglu">Besiroglu refit</button></div>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each grey curve is one compute budget $C$: spend it on a bigger model and you can afford fewer tokens, $D = C/6N$. Every curve has a minimum, and the dashed line joins them. With the published constants, $L = 1.69 + 406.4/N^{0.34} + 410.7/D^{0.28}$, the best ratio drifts from about 30 to 150 tokens per parameter as you slide the budget from $10^{19}$ to $10^{26}$ FLOPs: the poor fit described above. Switch to the Besiroglu refit and it stays between 16 and 25, in line with Chinchilla's other two methods and its 70B, 1.4T-token model.</p>
   </section>
 
   <section id="code">

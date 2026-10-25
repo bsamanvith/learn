@@ -405,7 +405,7 @@
       "build": "Logistic regression from scratch on separable and non-separable 2D data.",
       "check": "On separable data ‖w‖ grows like log t and the boundary drifts to the max-margin line; on overlapping data it settles.",
       "visual": "The boundary every 1,000 steps, and ‖w‖ against log t.",
-      "status": "planned",
+      "status": "written",
       "notes": ""
     },
     {
@@ -414,9 +414,9 @@
       "time": "90 min",
       "after": "05",
       "build": "Fit polynomials of degree 0–20 to 20 noisy points; add ridge and sweep λ.",
-      "check": "Train error falls forever, test error is U-shaped; ridge flattens the right side of the U.",
+      "check": "Degree 19 fits the 20 points exactly and scores about 1e14 on test data; ridge chosen by leave-one-out brings it to 0.23, and letting leave-one-out pick the degree gives degree 3 at 0.099.",
       "visual": "Train and test error against degree; the wiggly degree-15 fit with and without ridge.",
-      "status": "planned",
+      "status": "written",
       "notes": ""
     },
     {
@@ -444,14 +444,36 @@
       "where": "A4"
     },
     {
-      "id": "mnist-numpy",
-      "title": "MNIST in pure NumPy",
-      "time": "120–180 min",
+      "id": "digits-numpy",
+      "title": "Handwritten digits in pure NumPy",
+      "time": "2 hours",
       "after": "14",
-      "build": "A two-layer network with ReLU and softmax, trained with mini-batch SGD, no framework.",
-      "check": "Above 97% test accuracy; with bad initialisation the loss sits at ln 10 ≈ 2.30.",
-      "visual": "Loss curves for good and bad init; a grid of misclassified digits.",
-      "status": "planned",
+      "build": "A two-layer network with ReLU and softmax on scikit-learn's 8×8 digits: forward pass, hand-written backprop with a gradient check, mini-batch SGD. Then break it three ways.",
+      "check": "Loss starts near ln 10 = 2.30, the gradient check agrees to 1e-8, and test accuracy reaches 97.3% (softmax regression alone gets 96.9%).",
+      "visual": "Learning curves on a log scale, and a strip of the twelve digits it misreads.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "paint-coordinates",
+      "title": "Paint a picture with a neural network",
+      "time": "90–120 min",
+      "after": "14",
+      "build": "An MLP that maps pixel coordinates to brightness, trained to repaint a smiley. Raw coordinates give a creased, piecewise-linear face; random Fourier features make it sharp; too-high frequencies make it memorise static.",
+      "check": "Raw coordinates reach 24.7 dB on the in-between pixels, Fourier features at scale 0.5 reach 40.2 dB, and scale 10 falls to 7 dB, worse than flat grey.",
+      "visual": "The target beside six paintings, one per input encoding.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "edge-detector",
+      "title": "Build an edge detector, then teach one",
+      "time": "90 min",
+      "after": "15",
+      "build": "Convolution by hand, Sobel edges, equivariance and composition checked numerically; then a 3×3 kernel learns Sobel from examples by gradient descent, and fails to on a smooth picture.",
+      "check": "The learned kernel matches Sobel to 4e-14 on the drawing; trained on a smooth blob it becomes a different kernel, perfect on the blob and off by 0.53 on the drawing.",
+      "visual": "The drawing, its Sobel-x map and edge magnitude, and the badly taught kernel applied to the drawing.",
+      "status": "written",
       "notes": ""
     },
     {
@@ -484,9 +506,9 @@
       "time": "90 min",
       "after": "32",
       "build": "A 10-armed bandit; ε-greedy, UCB and Thompson sampling agents.",
-      "check": "Greedy sometimes locks onto a bad arm; UCB and Thompson regret grows like log T.",
+      "check": "Greedy ends on the best machine in only 36% of casinos; Thompson sampling reaches 92% with a seventh of greedy's regret; when the casino changes, UCB recovers best.",
       "visual": "Average cumulative regret over 1,000 runs for each agent.",
-      "status": "planned",
+      "status": "written",
       "notes": ""
     },
     {

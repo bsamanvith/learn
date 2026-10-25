@@ -104,7 +104,6 @@
     <h2>Code from scratch</h2>
     <p>Part 1 builds the car rental MDP exactly and solves it by policy iteration from "never move a car", printing the value of the state (10, 10) and the number of states whose action changes in each round. It then runs value iteration from zero with the stopping rule above, records its error against the policy iteration answer, notes the first sweep at which its greedy policy is already optimal, and repeats with in-place (Gauss–Seidel) updates. Part 2 runs value iteration on lesson 33's gridworld and compares the observed error rate with $\gamma$ times the spectral radius of the optimal policy's chain on the cells.</p>
 <pre><code>import math
-import time
 import numpy as np
 
 # ---- Part 1: Jack's car rental (Sutton and Barto, example 4.2) ----
@@ -154,7 +153,6 @@ def greedy(V):
     return Q.argmax(0), Q.max(0)
 
 # Policy iteration, starting from "never move a car".
-t0 = time.time()
 pi = np.full(S, MOVE)                                    # index of action 0
 for it in range(1, 50):
     V = evaluate(pi)
@@ -165,11 +163,10 @@ for it in range(1, 50):
         break
     pi = new
 V_pi, pi_star = V, pi
-print(f"policy iteration: {it} evaluations, {time.time() - t0:.2f} s; V* ranges from {V_pi.min():.1f} to {V_pi.max():.1f}")
+print(f"policy iteration: {it} evaluations; V* ranges from {V_pi.min():.1f} to {V_pi.max():.1f}")
 
 # Value iteration from zero, stopped when successive iterates differ by less than
 # eps (1 - gamma) / (2 gamma) with eps = 1e-6, which guarantees ||V - V*|| &lt; eps / 2 (the a posteriori bound).
-t0 = time.time()
 V = np.zeros(S)
 first_optimal, jack_errs = None, []
 for k in range(1, 10_000):
@@ -180,7 +177,7 @@ for k in range(1, 10_000):
     diff = np.abs(V_new - V).max(); V = V_new
     if diff &lt; 1e-6 * (1 - gamma) / (2 * gamma):
         break
-print(f"value iteration: {k} sweeps, {time.time() - t0:.2f} s; max |V - V_PI| = {np.abs(V - V_pi).max():.2e};"
+print(f"value iteration: {k} sweeps; max |V - V_PI| = {np.abs(V - V_pi).max():.2e};"
       f" its greedy policy was already optimal after sweep {first_optimal}")
 jack_errs = np.array(jack_errs)
 print(f"error ||V_k - V*|| after 10, 50, 100 sweeps: {jack_errs[9]:.3e} {jack_errs[49]:.3e} {jack_errs[99]:.3e};"
@@ -188,7 +185,6 @@ print(f"error ||V_k - V*|| after 10, 50, 100 sweeps: {jack_errs[9]:.3e} {jack_er
 print(f"observed contraction per sweep, sweeps 50 to 100: {(jack_errs[99] / jack_errs[49]) ** (1 / 50):.4f}")
 
 # Gauss-Seidel value iteration: update states in place, one at a time, using the newest values.
-t0 = time.time()
 V = np.zeros(S)
 for k_gs in range(1, 10_000):
     diff = 0.0
@@ -197,7 +193,7 @@ for k_gs in range(1, 10_000):
         diff = max(diff, abs(v - V[s_])); V[s_] = v
     if diff &lt; 1e-6 * (1 - gamma) / (2 * gamma):
         break
-print(f"Gauss-Seidel value iteration: {k_gs} sweeps, {time.time() - t0:.2f} s; max |V - V_PI| = {np.abs(V - V_pi).max():.2e}")
+print(f"Gauss-Seidel value iteration: {k_gs} sweeps; max |V - V_PI| = {np.abs(V - V_pi).max():.2e}")
 print("optimal number of cars to move (rows: cars at location 1 = 20, 15, 10, 5, 0; columns: location 2 = 0, 5, ..., 20):")
 for r in [20, 15, 10, 5, 0]:
     print("  ", " ".join(f"{actions[pi_star[r * n + c]]:+d}" for c in range(0, n, 5)))
@@ -245,11 +241,11 @@ for g in [0.9, 0.99]:
 # policy iteration 3: V(10, 10) = 574.82, states whose action changes: 79
 # policy iteration 4: V(10, 10) = 574.95, states whose action changes: 8
 # policy iteration 5: V(10, 10) = 574.95, states whose action changes: 0
-# policy iteration: 5 evaluations, 0.11 s; V* ranges from 421.4 to 637.0
-# value iteration: 197 sweeps, 0.43 s; max |V - V_PI| = 4.71e-07; its greedy policy was already optimal after sweep 32
+# policy iteration: 5 evaluations; V* ranges from 421.4 to 637.0
+# value iteration: 197 sweeps; max |V - V_PI| = 4.71e-07; its greedy policy was already optimal after sweep 32
 # error ||V_k - V*|| after 10, 50, 100 sweeps: 1.903e+02 2.510e+00 1.294e-02; the bound gamma^k ||V*||: 2.221e+02 3.283e+00 1.692e-02
 # observed contraction per sweep, sweeps 50 to 100: 0.9000
-# Gauss-Seidel value iteration: 108 sweeps, 0.46 s; max |V - V_PI| = 2.46e-07
+# Gauss-Seidel value iteration: 108 sweeps; max |V - V_PI| = 2.46e-07
 # optimal number of cars to move (rows: cars at location 1 = 20, 15, 10, 5, 0; columns: location 2 = 0, 5, ..., 20):
 #    +5 +4 +2 +1 +0
 #    +5 +2 +0 +0 +0
@@ -258,7 +254,7 @@ for g in [0.9, 0.99]:
 #    +0 +0 -2 -3 -4
 # gridworld, gamma 0.9: ||V_k - V*|| after 10, 20, 40 sweeps: 1.33e-02 2.06e-06 1.05e-13; observed rate 0.432, gamma * rho(P_pi* on the cells) = 0.438
 # gridworld, gamma 0.99: ||V_k - V*|| after 10, 20, 40 sweeps: 9.57e-02 1.34e-04 2.21e-11; observed rate 0.458, gamma * rho(P_pi* on the cells) = 0.433</code></pre>
-    <p><b>Reading the output.</b> Policy iteration finishes in five evaluations and well under a second; the value of (10, 10) rises from 550.75 under "never move" to 574.95, and most of the gain comes in the first two rounds. Value iteration reaches the same values (to $5\times10^{-7}$) after 197 sweeps; its error after 10, 50 and 100 sweeps, 190, 2.51 and 0.0129, sits just below the a priori bound $0.9^k\|V^*\|_\infty$ (222, 3.28, 0.0169), and the measured rate is 0.9000 per sweep. The bound is nearly tight here. Gauss–Seidel updating meets the same stopping rule in 108 sweeps instead of 197, because each sweep already uses the values it has just computed. The optimal policy has the shape of Sutton and Barto's figure 4.2, which also needed four improvements. On the gridworld, value iteration is far faster than its worst case, at the rate predicted by the spectral radius.</p>
+    <p><b>Reading the output.</b> Policy iteration finishes in five evaluations; the value of (10, 10) rises from 550.75 under "never move" to 574.95, and most of the gain comes in the first two rounds. Value iteration reaches the same values (to $5\times10^{-7}$) after 197 sweeps; its error after 10, 50 and 100 sweeps, 190, 2.51 and 0.0129, sits just below the a priori bound $0.9^k\|V^*\|_\infty$ (222, 3.28, 0.0169), and the measured rate is 0.9000 per sweep. The bound is nearly tight here. Gauss–Seidel updating meets the same stopping rule in 108 sweeps instead of 197, because each sweep already uses the values it has just computed. The optimal policy has the shape of Sutton and Barto's figure 4.2, which also needed four improvements. On the gridworld, value iteration is far faster than its worst case, at the rate predicted by the spectral radius.</p>
   </section>
 
   <section id="exercises">

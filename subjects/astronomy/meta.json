@@ -1,13 +1,18 @@
 {
   "title": "Astronomy",
   "tagline": "What the light tells us, across forty powers of ten.",
-  "intro": "Astronomy starts here with practice: three problem sets with worked solutions, from the parallax of the nearest star to the horizon of the observable universe. Almost everything we know about the sky comes from a few laws of physics applied with care, and these problems show how far a little gravity, light and counting can take you. Lessons will follow.",
+  "intro": "Astronomy starts here with practice: a ladder of four levels from first problems to olympiad problems, then three topic sets that move outwards from the Solar System to the whole universe. Every problem has a full worked solution, written so you can learn the method from it. Lessons for each topic will follow, and the problems will stay as their practice.",
   "partLabel": "Part",
   "parts": {
     "1": {
-      "title": "Problems with worked solutions",
+      "title": "The ladder",
+      "blurb": "Four levels of problems, from basics through intermediate and advanced to olympiad. Climb in order.",
+      "label": "Ladder"
+    },
+    "2": {
+      "title": "Topic sets",
       "blurb": "Orbits and the sky, light and the stars, planets, galaxies and the universe.",
-      "label": "Practice"
+      "label": "Topics"
     }
   }
 }

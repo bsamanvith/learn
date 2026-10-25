@@ -1,7 +1,7 @@
 {
   "_about": "The physics problem book's registry: key books and named classics. See principles/problem-books.md. Every named classic here is solved in a problem set; \"where\" points to it.",
   "intro": "Physics problems are worth doing when the answer surprises you. Each set asks for a guess first, then the calculation, then a check against a number you know.",
-  "lede": "Pick a topic and guess before you calculate.",
+  "lede": "Climb the ladder from Level 1, or pick a topic, and guess before you calculate.",
   "search": "Search: pendulum, entropy, tunnelling…",
   "volumes": {
     "stage": {

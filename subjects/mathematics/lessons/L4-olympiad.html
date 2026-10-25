@@ -1,0 +1,158 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 4 of 4 · Olympiad</div>
+  <h1>Level 4: olympiad</h1>
+  <p class="lede">Sixteen problems from mathematical olympiads and the Putnam competition, or in their style, including three famous IMO problems. Each falls to one idea: a well-chosen remainder, a substitution, a symmetry, an extremal choice, a quantity that only ever decreases. Give each a real attempt, an hour or more for the later ones, before opening the hint, and then try again before reading the solution. The solutions say where the idea comes from, which is the part you can reuse.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/mathematics/L3-advanced/">Level 3</a>, and stubbornness</span><span><b>Then:</b> the topic sets, starting with <a href="/mathematics/P1-numbers-and-counting/">numbers and counting</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag olympiad">olympiad</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="number-theory">
+    <h2>Number theory</h2>
+    <ol>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A lonely prime.) Find all primes $p$ for which $p^2 + 2$ is also prime.</p>
+        <details><summary>Hint</summary><div><p>Try small cases, notice which one works, and look at remainders modulo 3.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$p = 2$ gives 6, $p = 3$ gives 11 (prime), $p = 5$ gives 27, $p = 7$ gives 51. Every prime other than 3 is $\equiv \pm1 \pmod 3$, so its square is $\equiv 1$, and $p^2 + 2 \equiv 0 \pmod 3$. Since $p^2 + 2 &gt; 3$, it is then not prime. So $p = 3$ is the only answer. The habit to learn: when a pattern fails for all but one small case, look for a modulus that explains it. Small moduli (2, 3, 4, 8, 9) settle a surprising number of olympiad problems.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (An impossible polynomial.) Is there a polynomial $P$ with integer coefficients such that $P(7) = 5$ and $P(15) = 9$?</p>
+        <details><summary>Hint</summary><div><p>For integers $a$ and $b$, $a - b$ divides $a^k - b^k$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>No. If $P(x) = \sum c_kx^k$, then $P(a) - P(b) = \sum c_k(a^k - b^k)$, and each $a^k - b^k = (a - b)(a^{k-1} + \dots + b^{k-1})$ is divisible by $a - b$. So $a - b$ divides $P(a) - P(b)$ for every integer polynomial. Here $15 - 7 = 8$ would have to divide $9 - 5 = 4$, which it doesn't. This one fact, $a - b \mid P(a) - P(b)$, is the most useful property of integer polynomials in competitions.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Fermat numbers never share a factor.) The Fermat numbers are $F_n = 2^{2^n} + 1$: 3, 5, 17, 257, 65 537, … Prove that $F_0F_1\cdots F_{n-1} = F_n - 2$, deduce that any two Fermat numbers are coprime, and give a new proof that there are infinitely many primes.</p>
+        <details><summary>Hint</summary><div><p>Use induction and the difference of two squares: $(2^{2^n} - 1)(2^{2^n} + 1) = 2^{2^{n+1}} - 1$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>For $n = 1$: $F_0 = 3 = 5 - 2$. If $F_0\cdots F_{n-1} = F_n - 2 = 2^{2^n} - 1$, then multiplying by $F_n = 2^{2^n} + 1$ gives $2^{2^{n+1}} - 1 = F_{n+1} - 2$. That completes the induction.</p>
+          <p>Now if $d$ divides both $F_m$ and $F_n$ with $m &lt; n$, then $d$ divides the product $F_0\cdots F_{n-1}$ and $F_n$, hence their difference, 2. Fermat numbers are odd, so $d = 1$. Each $F_n$ has at least one prime factor, and these primes are all different, so there are infinitely many primes (Pólya's proof). Fermat guessed every $F_n$ is prime; Euler found $F_5 = 641\times6\,700\,417$, and no Fermat prime beyond $F_4$ is known.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (IMO 1975.) Let $A$ be the sum of the digits of $4444^{4444}$, written in base 10, let $B$ be the sum of the digits of $A$, and let $C$ be the sum of the digits of $B$. Find $C$.</p>
+        <details><summary>Hint</summary><div><p>Two ingredients: a digit sum keeps the remainder mod 9, and each digit sum is much smaller than the number. Bound $C$ from above, then find $C$ mod 9.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Size: $4444^{4444} &lt; 10\,000^{4444} = 10^{17\,776}$, so it has at most 17 776 digits and $A \le 9\times17\,776 &lt; 160\,000$. A number below 160 000 has digit sum at most $1 + 5\times9 = 46$, so $B \le 46$. A number at most 46 has digit sum at most $3 + 9 = 12$ (for 39), so $C \le 12$.</p>
+          <p>Remainder: digit sums preserve the remainder mod 9 (problem 4 of <a href="/mathematics/L1-basics/">Level 1</a>). $4444 \equiv 16 \equiv 7$, and $7^3 = 343 \equiv 1 \pmod 9$. Since $4444 = 3\times1481 + 1$, $4444^{4444} \equiv 7^{4444} \equiv 7$. So $C \equiv 7 \pmod 9$ and $1 \le C \le 12$: $C = 7$. Neither half alone determines $C$, but together they do. Combining a crude size bound with an exact congruence is a pattern worth remembering.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (IMO 1987.) Prove that there is no function $f$ from the non-negative integers to themselves such that $f(f(n)) = n + 1987$ for every $n$.</p>
+        <details><summary>Hint</summary><div><p>First show that $f(n + 1987) = f(n) + 1987$, by computing $f(f(f(n)))$ in two ways. Then look at what $f$ does to remainders mod 1987, and use the fact that 1987 is odd.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Apply $f$ to both sides: $f(f(f(n))) = f(n + 1987)$. But also $f(f(f(n))) = f(n) + 1987$, applying the equation to $f(n)$. So $f(n + 1987) = f(n) + 1987$, and by induction $f(n + 1987k) = f(n) + 1987k$ for $k \ge 0$. Hence $f(n) \bmod 1987$ depends only on $n \bmod 1987$, which defines a map $g$ on the 1987 remainders, and $g(g(r)) \equiv r + 1987 \equiv r$.</p>
+          <p>So $g$ pairs the remainders up (each $r$ with $g(r)$), except for those with $g(r) = r$. There are 1987 remainders, an odd number, so at least one $r$ is fixed: $f(r) = r + 1987k$ for some $k \ge 0$. Then $f(f(r)) = f(r + 1987k) = f(r) + 1987k = r + 2\cdot1987k$. This should be $r + 1987$, so $2k = 1$: impossible. The same proof works for any odd number in place of 1987, and for any even number such an $f$ exists. Parity of a pairing, once more, does the work.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (IMO 1988.) Let $a$ and $b$ be positive integers such that $ab + 1$ divides $a^2 + b^2$. Prove that $\frac{a^2 + b^2}{ab + 1}$ is a perfect square.</p>
+        <details><summary>Hint</summary><div><p>Fix the quotient $k$ and suppose it is not a square. Among all pairs with quotient $k$, take one with $a + b$ smallest and $a \ge b$. View $a^2 - kb\,a + b^2 - k = 0$ as a quadratic in $a$: its other root gives a smaller pair. This technique is called Vieta jumping.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Suppose $k = (a^2 + b^2)/(ab + 1)$ is an integer but not a square, and choose a pair $(a, b)$ with this $k$, $a \ge b &gt; 0$, and $a + b$ as small as possible. Then $a$ is a root of $x^2 - kbx + (b^2 - k) = 0$. By Vieta's formulas the other root is $a' = kb - a = (b^2 - k)/a$. The first expression shows $a'$ is an integer.</p>
+          <p>$a' \ne 0$, since otherwise $k = b^2$, a square. $a' &gt; 0$: if $a' \le -1$, then $a'^2 - kba' + b^2 - k \ge a'^2 + kb + b^2 - k &gt; 0$, so $a'$ would not be a root. And $a' = (b^2 - k)/a &lt; b^2/a \le a$. So $(a', b)$ is another pair of positive integers with the same quotient $k$ and a smaller sum, a contradiction. Hence $k$ is a square. (For example $a = 8$, $b = 30$: $964/241 = 4$.) This problem was considered the hardest ever set at the IMO when it appeared; of the 268 contestants, 11 solved it fully. Vieta jumping has since become a standard tool.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="algebra-and-analysis">
+    <h2>Algebra and analysis</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Nested roots.) Find all real $x$ with $\sqrt{x + 3 - 4\sqrt{x - 1}} + \sqrt{x + 8 - 6\sqrt{x - 1}} = 1$.</p>
+        <details><summary>Hint</summary><div><p>Put $t = \sqrt{x - 1}$. Both expressions under the outer roots become perfect squares.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $t = \sqrt{x - 1} \ge 0$, $x = t^2 + 1$, so $x + 3 - 4t = (t - 2)^2$ and $x + 8 - 6t = (t - 3)^2$. The equation becomes $|t - 2| + |t - 3| = 1$. The left side is the sum of the distances from $t$ to 2 and to 3 on the number line, which is at least 1, with equality exactly when $t$ is between them. So $2 \le t \le 3$, that is $5 \le x \le 10$: a whole interval of solutions. Squaring both sides, the usual approach, leads into a mess; the substitution reveals the structure.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (Nesbitt's inequality.) Prove that for positive $a$, $b$, $c$: $\frac{a}{b + c} + \frac{b}{c + a} + \frac{c}{a + b} \ge \frac32$. When does equality hold?</p>
+        <details><summary>Hint</summary><div><p>Add 1 to each fraction. With $S = a + b + c$, the sum becomes $S\big(\frac{1}{b + c} + \frac{1}{c + a} + \frac{1}{a + b}\big) - 3$. Now use problem 10 of Level 3 with the three numbers $b + c$, $c + a$, $a + b$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Since $\frac{a}{b + c} + 1 = \frac{S}{b + c}$, the left side is $S\sum\frac{1}{b + c} - 3$. The three numbers $x = b + c$, $y = c + a$, $z = a + b$ add up to $2S$, and by Cauchy–Schwarz (problem 10 of <a href="/mathematics/L3-advanced/">Level 3</a>), $(x + y + z)(\frac1x + \frac1y + \frac1z) \ge 9$. So $2S\sum\frac{1}{b + c} \ge 9$, and the left side is at least $\frac92 - 3 = \frac32$. Equality needs $x = y = z$, that is $a = b = c$.</p>
+          <p>The trick of adding the same constant to each term, to make the numerators equal, turns an awkward sum into a known one. Many symmetric inequalities in three variables have several proofs, by Cauchy–Schwarz, rearrangement, or by substituting $a + b + c = 1$; finding the shortest is part of the art.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (Putnam 1980.) Evaluate $\displaystyle\int_0^{\pi/2}\frac{dx}{1 + (\tan x)^{\sqrt2}}$.</p>
+        <details><summary>Hint</summary><div><p>The $\sqrt2$ is a distraction. Substitute $x \to \frac\pi2 - x$, which turns $\tan$ into $\cot$, and add the result to the original integral.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Call the integral $I$ and write $r = \sqrt2$. Substituting $u = \frac\pi2 - x$, and using $\tan(\frac\pi2 - u) = 1/\tan u$:</p>
+          $$I = \int_0^{\pi/2}\frac{du}{1 + (\tan u)^{-r}} = \int_0^{\pi/2}\frac{(\tan u)^r}{(\tan u)^r + 1}\,du.$$
+          <p>Adding the two forms, the integrands sum to exactly 1, so $2I = \frac\pi2$, and $I = \frac\pi4$, for any exponent at all. When an integral looks impossible, check whether a symmetry of the interval pairs it with a "partner" that makes the sum easy. This is the same idea as Gauss's sum in Level 1.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="combinatorics">
+    <h2>Combinatorics and probability</h2>
+    <ol start="10">
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (No two in a row.) How many subsets of $\{1, 2, \dots, n\}$ contain no two consecutive numbers? Find the answer for $n = 10$.</p>
+        <details><summary>Hint</summary><div><p>Let $a_n$ be the number. Split by whether the subset contains $n$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>A good subset either doesn't contain $n$, and is then any good subset of $\{1, \dots, n - 1\}$, or does contain $n$, so doesn't contain $n - 1$, and the rest is any good subset of $\{1, \dots, n - 2\}$. So $a_n = a_{n-1} + a_{n-2}$, with $a_1 = 2$ (the empty set and $\{1\}$) and $a_2 = 3$. These are Fibonacci numbers shifted by two: $a_n = F_{n+2}$, with $F_1 = F_2 = 1$. For $n = 10$, $a_{10} = F_{12} = 144$.</p>
+          <p>Fibonacci numbers count many such "tilings": the ways to climb $n$ stairs in steps of 1 or 2, the ways to tile a $2\times n$ strip with dominoes, and these subsets, which correspond to tilings by squares and dominoes after a small shift. A recurrence from "what happens at the end" is the first thing to try in any counting problem with a size parameter.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Josephus.) $n$ people stand in a circle, numbered 1 to $n$. Going round, every second person is removed: 2, 4, 6, …, continuing round the circle until one person is left. Show that if $n = 2^m + l$ with $0 \le l &lt; 2^m$, the survivor is number $2l + 1$. Who survives with 41 people, and with 100?</p>
+        <details><summary>Hint</summary><div><p>After one trip round a circle of $2n$ people, the survivors are $1, 3, 5, \dots, 2n - 1$, and the count starts again at 1. So $J(2n) = 2J(n) - 1$. Find the similar rule for $2n + 1$, then prove the formula by induction.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $2n$ people, the first round removes all the even numbers, leaving $n$ people $1, 3, \dots, 2n - 1$ with the count about to start again at 1. This is the original game on $n$ people, relabelled by $k \to 2k - 1$, so $J(2n) = 2J(n) - 1$. With $2n + 1$ people, the first round removes the even numbers and then person 1, leaving $3, 5, \dots, 2n + 1$, starting from 3: $J(2n + 1) = 2J(n) + 1$. With $J(1) = 1$, induction on $n$ proves $J(2^m + l) = 2l + 1$: both rules double the offset $l$ (and add 1 for the odd case) as $m$ goes up by one.</p>
+          <p>For $n = 41 = 32 + 9$, the survivor is 19; for $n = 100 = 64 + 36$, it is 73. In binary, the rule says: move the leading 1 of $n$ to the end. For $41 = 101001_2$ that gives $010011_2 = 19$. The legend has Flavius Josephus calculating where to stand among 41 rebels; finding a closed form by computing small cases, guessing and proving is how most such problems are cracked.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (Does the triangle hold the centre?) Three points are chosen independently and uniformly on a circle. What is the probability that the triangle they form contains the centre? (The 1992 Putnam asked the same for four points on a sphere and a tetrahedron.)</p>
+        <details><summary>Hint</summary><div><p>Choosing a random point is the same as choosing a random diameter and then one of its two ends with a fair coin. Fix three random diameters and look at the eight triangles you can make from their ends.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Pick three diameters at random, then flip a coin for each to pick one of its ends. This gives three independent uniform points. Fix the diameters (any three distinct ones) and consider the $2^3 = 8$ triangles formed by choosing ends. The six ends divide the circle into six arcs. A triangle contains the centre exactly when no semicircle contains all three of its corners. Going round the circle, the six ends alternate between the three diameters, and exactly two of the eight choices pick every other end, giving two triangles that contain the centre; each of the other six has all three points within a semicircle. So the probability is $\frac28 = \frac14$, whatever the diameters.</p>
+          <p>For four points on a sphere, the same trick with four random diameters gives $\frac{2}{16} = \frac18$ for the tetrahedron. The idea, condition on something that makes the problem symmetric and then count, turns a hard integral into a count of eight cases.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Two rooms, few enemies.) In a group of people, each person has at most three enemies in the group (enmity is mutual). Prove that the group can be split into two rooms so that each person has at most one enemy in their own room.</p>
+        <details><summary>Hint</summary><div><p>Among all ways to split the group, take the one with the fewest pairs of enemies in the same room. What would happen if someone had two or more enemies in their room?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>There are finitely many splits, so one has the smallest number of enemy pairs sharing a room. Suppose in that split someone, say Ana, has at least two enemies in her room. She has at most three enemies in total, so at most one in the other room. Moving her across removes at least two same-room enemy pairs and adds at most one, lowering the total: impossible, since the total was smallest. So nobody has more than one enemy in their room.</p>
+          <p>Equivalently, start from any split and keep moving anyone with two or more roommate enemies: each move lowers the count, which can't go on forever, so the process stops, and when it stops the condition holds. A quantity that strictly decreases and can't go below zero (a "monovariant") is how you prove that a process terminates, and the extremal choice is the same argument run backwards.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="geometry">
+    <h2>Geometry</h2>
+    <ol start="14">
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The Euler line.) Put the origin at the circumcentre $O$ of triangle $ABC$, so that the corners are vectors $\mathbf a$, $\mathbf b$, $\mathbf c$ of equal length. Show that the point $\mathbf h = \mathbf a + \mathbf b + \mathbf c$ is the orthocentre, where the altitudes meet. Deduce that the orthocentre $H$, the centroid $G$ and the circumcentre $O$ lie on a line, with $HG = 2\,GO$.</p>
+        <details><summary>Hint</summary><div><p>A point $\mathbf h$ lies on the altitude from $A$ when $\mathbf h - \mathbf a$ is perpendicular to $\mathbf c - \mathbf b$. Use $|\mathbf b| = |\mathbf c|$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The line from $A$ to $\mathbf h$ has direction $\mathbf h - \mathbf a = \mathbf b + \mathbf c$, and $(\mathbf b + \mathbf c)\cdot(\mathbf c - \mathbf b) = |\mathbf c|^2 - |\mathbf b|^2 = 0$. So it is perpendicular to $BC$: it is the altitude from $A$. By symmetry $\mathbf h$ is on all three altitudes, so it is the orthocentre (and this proves that the altitudes meet in a point). The centroid is $\mathbf g = (\mathbf a + \mathbf b + \mathbf c)/3 = \mathbf h/3$. So $O$, $G$ and $H$ are on one line through the origin, with $G$ a third of the way from $O$ to $H$: $HG = 2\,GO$.</p>
+          <p>Choosing the origin well made a famous theorem a two-line calculation. The midpoint of $OH$ is the centre of the nine-point circle, which passes through the midpoints of the sides and the feet of the altitudes; with this setup that is just as quick to prove.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (Ptolemy's theorem.) For four points $A$, $B$, $C$, $D$ in order on a circle, prove that $AC\cdot BD = AB\cdot CD + AD\cdot BC$. Apply it to four corners of a regular pentagon to show that the ratio of diagonal to side is the golden ratio $\frac{1 + \sqrt5}{2}$.</p>
+        <details><summary>Hint</summary><div><p>Choose the point $K$ on the diagonal $BD$ with $\angle BAK = \angle CAD$. Then find two pairs of similar triangles, using angles on the same arc, and add.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Take $K$ on $BD$ with $\angle BAK = \angle CAD$. Triangles $ABK$ and $ACD$ are similar: they share this angle, and $\angle ABK = \angle ABD = \angle ACD$, angles standing on the arc $AD$. So $BK/CD = AB/AC$, giving $BK = AB\cdot CD/AC$. Also $\angle KAD = \angle BAC$ (add $\angle KAC$ to both equal angles), and $\angle ADK = \angle ADB = \angle ACB$, on the arc $AB$. So triangles $AKD$ and $ABC$ are similar, and $KD = AD\cdot BC/AC$. Adding, $BD = BK + KD = (AB\cdot CD + AD\cdot BC)/AC$, which is the theorem.</p>
+          <p>In a regular pentagon with side $s$ and diagonal $d$, take four consecutive corners: three sides $s$ and one diagonal $d$ as the sides of the quadrilateral, and diagonals $d$, $d$. Ptolemy gives $d\cdot d = s\cdot s + s\cdot d$, so with $\phi = d/s$, $\phi^2 = 1 + \phi$, and $\phi = \frac{1 + \sqrt5}{2} = 1.618$. Ptolemy used his theorem around 150 AD to build a table of chords, the ancestor of the sine table.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The Sylvester–Gallai theorem.) A finite set of points in the plane is not all on one line. Prove that some line passes through exactly two of the points.</p>
+        <details><summary>Hint</summary><div><p>Consider all pairs (a point $P$ of the set, a line $L$ through at least two points of the set, with $P$ not on $L$). Choose the pair with the smallest distance from $P$ to $L$, and show $L$ contains exactly two points.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Since the points are not all on a line, such pairs exist, and there are finitely many, so take the one with the smallest positive distance from $P$ to $L$. Let $F$ be the foot of the perpendicular from $P$ to $L$. Suppose $L$ contains three or more points of the set. Then two of them, call them $Q$ and $R$, lie on the same side of $F$ (one may be at $F$), with $Q$ between $F$ and $R$ or at $F$.</p>
+          <p>Now look at the line $PR$, which passes through two points of the set, and the point $Q$, not on it. The distance from $Q$ to line $PR$ is less than the distance from $F$ to $PR$ (since $Q$ is closer to $R$ along $L$), which in turn is less than $PF$ (in the right triangle $PFR$, the height from $F$ is shorter than the leg $PF$). So $(Q, PR)$ is a pair with a smaller distance than $(P, L)$: a contradiction. Hence $L$ has exactly two points. Sylvester posed the problem in 1893; it stood for 40 years. This proof, by L. M. Kelly, is the classic example of the extremal principle: take the smallest of something, and show a smaller one exists unless the claim holds.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

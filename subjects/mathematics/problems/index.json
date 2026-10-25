@@ -1,7 +1,7 @@
 {
   "_about": "The mathematics problem book's registry: key books and named classics. See principles/problem-books.md. Every named classic here is solved in a problem set; \"where\" points to it.",
   "intro": "Each of these problems turns on one idea: a bijection, an invariant, a symmetry, a clever bound. Look for the idea before you calculate.",
-  "lede": "Pick a set, look for the idea before you calculate, and open a hint only when you're stuck.",
+  "lede": "Climb the ladder from Level 1, or pick a set; look for the idea before you calculate, and open a hint only when you're stuck.",
   "search": "Search: primes, Basel, Burnside…",
   "volumes": {
     "stage": { "title": "By topic", "blurb": "Three sets of classic results, each with hints and full proofs, from warm-ups to problems that need a real idea." }

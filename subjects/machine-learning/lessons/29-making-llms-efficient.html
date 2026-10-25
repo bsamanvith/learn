@@ -1,0 +1,249 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 29 · Stage 7: large language models</div>
+  <h1>Making LLMs efficient</h1>
+  <p class="lede">A 70-billion-parameter model needs over a terabyte of memory to train and 140 GB just to hold in 16-bit precision, and generating text with it is limited less by arithmetic than by how fast the weights can be read from memory. This lesson does the memory and bandwidth arithmetic, then derives the main techniques that make LLMs affordable. Some save memory or time without changing the answer: the KV cache, FlashAttention's online softmax, and speculative decoding, which is provably exact. Others trade a little accuracy for a lot of memory: quantisation, and LoRA, which fine-tunes a low-rank update instead of every weight. Mixture-of-experts layers decouple parameter count from compute. Each exact method is checked against the direct computation in code.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/27-pretraining-and-scaling-laws/">lesson 27</a>, <a href="/machine-learning/20-transformer/">lesson 20</a>, <a href="/machine-learning/M1-linear-algebra/">M1</a></span><span><b>Math pulled in:</b> memory and bandwidth arithmetic, the log-sum-exp trick in streaming form, low-rank matrices and the Eckart–Young theorem, rounding error, rejection sampling</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Lesson 27 counted FLOPs. On real hardware, FLOPs are often not the bottleneck. A GPU has a fixed amount of fast memory (80 GB on an A100 or H100), and moving data between that memory and the arithmetic units has a fixed bandwidth (about 2 TB/s on an A100), which is much slower than the arithmetic (312 TFLOP/s in bfloat16). Most of this lesson is about one of two things: fitting into memory, or doing more arithmetic per byte moved.</p>
+  </section>
+
+  <section id="memory">
+    <h2>Where the memory goes</h2>
+    <p><b>Training.</b> Mixed-precision training with Adam keeps, for every parameter, a 16-bit weight (2 bytes) and gradient (2 bytes), a 32-bit master copy of the weight (4 bytes), and Adam's two moment estimates in 32 bits (8 bytes): 16 bytes per parameter. A 70B model needs 1.1 TB for these alone, before the activations stored for the backward pass. This is why training is spread across many GPUs. <b>Data parallelism</b> gives each GPU a different slice of the batch and averages gradients; <b>ZeRO</b> and <b>FSDP</b> also split the optimiser states, gradients and weights between the GPUs, gathering each layer's weights only when needed (Rajbhandari et al., 2020). <b>Tensor parallelism</b> splits each weight matrix across GPUs (Shoeybi et al., 2019), and <b>pipeline parallelism</b> puts different layers on different GPUs. Activation memory is cut by <b>checkpointing</b>: store the activations at only some layers and recompute the rest during the backward pass, trading about a third more compute for much less memory.</p>
+    <p><b>Inference.</b> Only the weights are needed: 2 bytes per parameter in 16 bits, so 140 GB for a 70B model, plus the KV cache, below.</p>
+    <p><b>Why generation is slow.</b> Generating one token with batch size 1 multiplies every weight matrix by a single vector: 2 FLOPs per weight, while every weight (2 bytes) must be read from memory. That is 1 FLOP per byte. The A100 can do $312\times10^{12}/2\times10^{12}\approx156$ FLOPs in the time it takes to read one byte, so the arithmetic units sit idle more than 99% of the time. A 70B model needs $140\text{ GB}/(2\text{ TB/s}) = 70$ ms per token just to stream its weights, while the arithmetic takes about half a millisecond. Generation is <b>memory-bandwidth bound</b>. Batching many users' requests helps, because one read of each weight then serves the whole batch; so do the techniques below, which make the weights smaller (quantisation) or get more than one token out of each read (speculative decoding).</p>
+  </section>
+
+  <section id="kv">
+    <h2>The KV cache</h2>
+    <p>In causal attention, the keys and values of token $j$ depend only on tokens $1, \dots, j$. When generating token $t + 1$, the keys and values of the first $t$ tokens are exactly what they were at the previous step. So keep them. Each step then computes the query, key and value of one new token, appends the key and value to the cache, and attends over the cache. Without the cache, step $t$ recomputes the projections of all $t$ tokens, so generating $T$ tokens costs $O(T^2)$ projections instead of $O(T)$.</p>
+    <p>The cache costs memory. Per token it stores a key and a value in every layer and every key–value head:</p>
+    <div class="eq">$$\text{KV bytes per token} = 2\times n_\text{layer}\times n_\text{kv heads}\times d_\text{head}\times\text{bytes per number}.$$</div>
+    <p>For a model with 80 layers and 64 heads of size 128 in 16 bits, that is 2.6 MB per token, or 10.7 GB for one 4,096-token conversation. This is why <b>multi-query</b> attention (Shazeer, 2019), where all query heads share one key and value head, and <b>grouped-query attention</b> (Ainslie et al., 2023), where groups of query heads share one, are now standard. Llama 2 70B has the dimensions above with 8 key–value heads, which cuts its cache eightfold, to 1.3 GB per 4,096 tokens.</p>
+  </section>
+
+  <section id="flash">
+    <h2>FlashAttention</h2>
+    <p>Standard attention computes the $n\times n$ score matrix $S = QK^\top/\sqrt d$, writes it to GPU memory, reads it back for the softmax, writes the probabilities, and reads them again to multiply by $V$. For long sequences, that traffic, not the arithmetic, dominates the time, and the matrix itself is $O(n^2)$ memory. FlashAttention (Dao et al., 2022) never forms it. It processes a block of queries against one block of keys at a time, in the GPU's small on-chip memory, and combines the blocks with an <b>online softmax</b> (Milakov and Gimelshein, 2018).</p>
+    <p>The difficulty is that softmax normalises over the whole row, and a block only sees part of it. For one query, keep three running quantities over the blocks seen so far: the largest score $m$, the sum $\ell = \sum_j e^{s_j - m}$, and the vector $\mathbf{a} = \sum_j e^{s_j - m}\mathbf{v}_j$. When a new block of scores $s_j$ arrives, let $m' = \max(m, \max_j s_j)$ and update</p>
+    <div class="eq">$$\ell' = e^{m - m'}\ell + \sum_{j\in\text{block}}e^{s_j - m'},\qquad \mathbf{a}' = e^{m - m'}\mathbf{a} + \sum_{j\in\text{block}}e^{s_j - m'}\mathbf{v}_j .$$</div>
+    <p>Multiplying the old sums by $e^{m - m'}$ re-expresses them relative to the new maximum, so after every update $\ell = \sum_j e^{s_j - m}$ and $\mathbf{a} = \sum_j e^{s_j - m}\mathbf{v}_j$ over all keys seen. After the last block, $\mathbf{a}/\ell = \sum_j\frac{e^{s_j}}{\sum_k e^{s_k}}\mathbf{v}_j$, exactly the attention output. Subtracting the running maximum keeps every exponential at most 1, which is the stable log-sum-exp trick. The result is identical attention with $O(n)$ memory, several times faster, because the score matrix never leaves the chip; the backward pass recomputes the blocks instead of storing them.</p>
+  </section>
+
+  <section id="quant">
+    <h2>Quantisation</h2>
+    <p>Store each weight as a small integer and a shared scale: $\hat w = s\cdot\operatorname{round}(w/s)$. With $b$-bit signed integers, the <b>absmax</b> scale $s = \max|w|/(2^{b-1} - 1)$ maps the largest weight to the largest integer. The rounding error of each weight is at most $s/2$, and if errors are uniform its variance is $s^2/12$. So everything depends on how large $s$ is, and one large weight makes $s$ large for everyone that shares it.</p>
+    <p>LLMs have exactly this problem: past a few billion parameters, a handful of hidden dimensions carry values tens of times larger than the rest (Dettmers et al., 2022). The fixes give outliers their own scale: one scale per output channel (column) or per group of 32 to 128 weights, at the cost of storing the scales. LLM.int8 keeps outlier dimensions in 16 bits; GPTQ (Frantar et al., 2023) rounds weights one at a time and adjusts the remaining weights to compensate for each rounding error, using second-order information from a little calibration data. Four-bit weights with group-wise scales lose little quality and cut memory, and so generation time, by a factor of four.</p>
+  </section>
+
+  <section id="lora">
+    <h2>LoRA</h2>
+    <p>Fine-tuning every weight of a large model needs the full 16 bytes per parameter of training memory, and a full copy of the model for each task. Hu et al. (2021) observed that the change made by fine-tuning has low "intrinsic rank", and proposed training only a low-rank update. For a frozen weight $W_0\in\mathbb{R}^{d\times k}$, the layer becomes</p>
+    <div class="result">
+      <div class="label">Low-rank adaptation</div>
+      <p>$$\mathbf{h} = W_0\mathbf{x} + \frac{\alpha}{r}BA\mathbf{x},\qquad B\in\mathbb{R}^{d\times r},\ A\in\mathbb{R}^{r\times k},\ r\ll\min(d, k).$$</p>
+    </div>
+    <p>Only $A$ and $B$ are trained: $r(d + k)$ numbers instead of $dk$. With $d = k = 4096$ and $r = 8$ that is 65,536 instead of 16.8 million, 256 times fewer, and the optimiser states shrink with them. $A$ starts random and $B$ starts at zero, so $BA = 0$ and the model starts exactly at $W_0$, while gradients can still flow (exercise 5). After training, $BA$ can be added into $W_0$, so inference costs nothing extra; or many small adapters can be kept for one shared base model. QLoRA (Dettmers et al., 2023) stores the frozen $W_0$ in 4 bits and trains 16-bit adapters on top, which fine-tuned a 65B model on a single 48 GB GPU.</p>
+    <p>By the Eckart–Young theorem (M1), the best rank-$r$ approximation of a matrix keeps its top $r$ singular values. If the change a task needs, $\Delta$, has rank above $r$, LoRA can at best capture its top $r$ singular directions, and the rest is lost. The code shows both sides.</p>
+  </section>
+
+  <section id="moe">
+    <h2>Mixture of experts</h2>
+    <p>A mixture-of-experts layer replaces the feed-forward block with $E$ copies ("experts") and a router, a linear layer with a softmax, that sends each token to the top $k$ experts, usually $k = 1$ or 2; their outputs are added, weighted by the router probabilities (Shazeer et al., 2017; Fedus et al., 2021). Each token uses $k$ experts' worth of compute, but the model has $E$ experts' worth of parameters. Mixtral 8x7B (2024) has 8 experts per layer and uses 2: 46.7B parameters in total, 12.9B used per token, with the speed of a 13B model and much of the quality of a larger one. Two complications: an auxiliary loss is needed to keep the router from sending most tokens to a few experts, and all the parameters must still be stored in memory, so MoE saves compute, not memory.</p>
+  </section>
+
+  <section id="spec">
+    <h2>Speculative decoding</h2>
+    <p>Since generation is bandwidth-bound, checking several tokens costs the big model about the same time as generating one: a forward pass on 5 tokens reads the weights once, the same as for 1 token. Speculative decoding (Leviathan et al., 2023; Chen et al., 2023) uses that slack. A small, fast draft model proposes the next $\gamma$ tokens; the big model scores all of them in one pass; and a rejection rule decides how many to keep, in a way that leaves the output distribution exactly that of the big model.</p>
+    <p>For one token, let $p$ be the big model's distribution and $q$ the draft's. Sample $x\sim q$. Accept it with probability $\min(1, p(x)/q(x))$. If it is rejected, sample instead from the residual distribution $(p - q)_+/Z$, where $(\cdot)_+$ is the positive part and $Z = \sum_x(p(x) - q(x))_+$.</p>
+    <div class="result">
+      <div class="label">The output is distributed exactly as $p$</div>
+      <p>$P(\text{output} = x) = q(x)\min\big(1, \tfrac{p(x)}{q(x)}\big) + P(\text{reject})\frac{(p(x) - q(x))_+}{Z} = \min\big(p(x), q(x)\big) + \big(p(x) - q(x)\big)_+ = p(x),$</p>
+      <p>because $P(\text{reject}) = 1 - \sum_x\min(p(x), q(x)) = \sum_x(p(x) - q(x))_+ = Z$.</p>
+    </div>
+    <p>The acceptance rate is $\sum_x\min(p(x), q(x)) = 1 - \mathrm{TV}(p, q)$, so the better the draft imitates the big model, the more tokens survive. With acceptance rate $a$ per token and $\gamma$ drafted tokens, each big-model pass produces on average $(1 - a^{\gamma+1})/(1 - a)$ tokens (exercise 4). Unlike quantisation, nothing is approximated.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Five independent parts. Part 1 compares FlashAttention-style tiled attention (blocks of 64 with the online softmax) with the direct formula. Part 2 generates 200 tokens through one causal attention layer with a KV cache and compares the outputs with a full recomputation. Part 3 quantises a weight matrix whose four output columns are 30 times larger than the rest, in five ways, and measures the relative error of $\mathbf{y} = \mathbf{x}W$. Part 4 fine-tunes a frozen $256\times256$ linear model on a task that needs a rank-4 change, with LoRA of ranks 1 to 8 and with full fine-tuning, all trained with Adam. Part 5 runs speculative sampling 200,000 times and compares the frequencies with $p$.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. FlashAttention's arithmetic: attention computed block by block with an online softmax,
+# never forming the full n x n score matrix, gives the same answer as the direct formula.
+def attention(Q, K, V):
+    S = Q @ K.T / np.sqrt(Q.shape[1])
+    P = np.exp(S - S.max(1, keepdims=True))
+    return (P / P.sum(1, keepdims=True)) @ V
+
+def tiled_attention(Q, K, V, block=64):
+    n, d = Q.shape
+    out = np.zeros_like(Q)
+    for i in range(0, n, block):                       # one block of queries at a time
+        q = Q[i:i + block] / np.sqrt(d)
+        m = np.full(len(q), -np.inf)                   # running max of the scores
+        l = np.zeros(len(q))                           # running sum of exp(score - m)
+        acc = np.zeros((len(q), V.shape[1]))           # running sum of exp(score - m) * v
+        for j in range(0, n, block):                   # stream over blocks of keys and values
+            s = q @ K[j:j + block].T
+            m_new = np.maximum(m, s.max(1))
+            scale = np.exp(m - m_new)                  # rescale what was summed under the old max
+            p = np.exp(s - m_new[:, None])
+            l = l * scale + p.sum(1)
+            acc = acc * scale[:, None] + p @ V[j:j + block]
+            m = m_new
+        out[i:i + block] = acc / l[:, None]
+    return out
+
+n, d = 1024, 64
+Q, K, V = (rng.standard_normal((n, d)) for _ in range(3))
+print(f"tiled vs direct attention: max difference {np.abs(tiled_attention(Q, K, V) - attention(Q, K, V)).max():.1e};"
+      f" the direct version stores {n * n:,} scores, the tiled one {64 * 64:,} at a time")
+
+# 2. The KV cache: when generating token t, the keys and values of tokens 1..t-1 do not change
+# (causal attention), so keep them instead of recomputing them.
+d_model, T = 64, 200
+Wq, Wk, Wv = (rng.standard_normal((d_model, d_model)) / np.sqrt(d_model) for _ in range(3))
+X = rng.standard_normal((T, d_model))
+def causal_full(X):
+    Q, K, V = X @ Wq, X @ Wk, X @ Wv
+    S = Q @ K.T / np.sqrt(d_model) + np.triu(np.full((len(X), len(X)), -np.inf), 1)
+    P = np.exp(S - S.max(1, keepdims=True))
+    return (P / P.sum(1, keepdims=True)) @ V
+cache_k, cache_v, outs = [], [], []
+for t in range(T):                                     # one token at a time, as in generation
+    x = X[t]
+    cache_k.append(x @ Wk); cache_v.append(x @ Wv)
+    s = np.array(cache_k) @ (x @ Wq) / np.sqrt(d_model)
+    p = np.exp(s - s.max())
+    outs.append(p @ np.array(cache_v) / p.sum())
+print(f"KV-cached decoding vs recomputing everything: max difference {np.abs(np.array(outs) - causal_full(X)).max():.1e}")
+proj_no_cache = sum(3 * t * d_model * d_model for t in range(1, T + 1))
+print(f"projection multiply-adds for {T} tokens: {proj_no_cache:,} without a cache, {3 * T * d_model * d_model:,} with one")
+
+# 3. Quantisation: store weights as small integers times a scale. A weight matrix with a few
+# outlier input channels, as in real LLMs, quantised in three ways; error of y = x W.
+W = rng.standard_normal((512, 512)) * 0.02
+W[:, rng.choice(512, 4, replace=False)] *= 30         # 4 outlier output columns
+x = rng.standard_normal((256, 512))
+def quantise(W, bits, axis=None, group=None):
+    qmax = 2 ** (bits - 1) - 1
+    if group:                                          # one scale per group of `group` rows in each column
+        Wg = W.reshape(-1, group, W.shape[1])
+        s = np.abs(Wg).max(1, keepdims=True) / qmax
+        return (np.round(Wg / s) * s).reshape(W.shape)
+    s = np.abs(W).max(axis, keepdims=True) / qmax
+    return np.round(W / s) * s
+y = x @ W
+for name, Wq_ in [("int8, one scale per tensor", quantise(W, 8)),
+                  ("int8, one scale per column", quantise(W, 8, axis=0)),
+                  ("int4, one scale per tensor", quantise(W, 4)),
+                  ("int4, one scale per column", quantise(W, 4, axis=0)),
+                  ("int4, groups of 64 per column", quantise(W, 4, group=64))]:
+    err = np.linalg.norm(x @ Wq_ - y) / np.linalg.norm(y)
+    print(f"{name:31s} relative output error {err:.4f}")
+
+# 4. LoRA: adapt a frozen W0 by a low-rank update B A. The "task" needs a rank-4 change to W0.
+# Full fine-tuning trains all d*k weights; LoRA trains r*(d+k).
+d_in, d_out, n_train = 256, 256, 2000
+W0 = rng.standard_normal((d_in, d_out)) / np.sqrt(d_in)
+delta = rng.standard_normal((d_in, 4)) @ rng.standard_normal((4, d_out)) / np.sqrt(d_in) * 0.5
+Xtr, Xte = rng.standard_normal((n_train, d_in)), rng.standard_normal((1000, d_in))
+Ytr = Xtr @ (W0 + delta) + 0.1 * rng.standard_normal((n_train, d_out)); Yte = Xte @ (W0 + delta)
+def fit(r, steps=1500, lr=0.02):
+    """Adam on the mean squared error; r = None means full fine-tuning."""
+    if r is None:
+        params = [np.zeros((d_in, d_out))]             # a dense update dW
+    else:                                              # LoRA: A random, B zero, so B A = 0 at the start
+        params = [rng.standard_normal((d_in, r)) / np.sqrt(d_in), np.zeros((r, d_out))]
+    m = [np.zeros_like(p) for p in params]; v = [np.zeros_like(p) for p in params]
+    for t in range(1, steps + 1):
+        dW = params[0] if r is None else params[0] @ params[1]
+        G = 2 * Xtr.T @ (Xtr @ (W0 + dW) - Ytr) / (n_train * d_out)
+        grads = [G] if r is None else [G @ params[1].T, params[0].T @ G]
+        for p, g, mi, vi in zip(params, grads, m, v):
+            mi *= 0.9; mi += 0.1 * g; vi *= 0.999; vi += 0.001 * g * g
+            p -= lr * (mi / (1 - 0.9 ** t)) / (np.sqrt(vi / (1 - 0.999 ** t)) + 1e-8)
+    dW = params[0] if r is None else params[0] @ params[1]
+    return sum(p.size for p in params), np.mean((Xte @ (W0 + dW) - Yte) ** 2)
+print(f"no fine-tuning: test error {np.mean((Xte @ W0 - Yte) ** 2):.2e}")
+for r in [1, 2, 4, 8, None]:
+    n_p, err = fit(r)
+    print(f"{'full fine-tuning' if r is None else f'LoRA rank {r}':16s} {n_p:6,} trainable parameters, test error {err:.2e}")
+
+# 5. Speculative decoding: a cheap draft model q proposes a token, the big model p accepts it
+# with probability min(1, p/q), and on rejection samples from the normalised (p - q)+.
+# The tokens that come out are distributed exactly as p, and the acceptance rate is sum min(p, q).
+Vsz = 8
+p = rng.dirichlet(np.ones(Vsz)); q = 0.6 * p + 0.4 * rng.dirichlet(np.ones(Vsz))
+def speculative_sample(r):
+    x = r.choice(Vsz, p=q)
+    if r.random() &lt; min(1, p[x] / q[x]):
+        return x, True
+    resid = np.maximum(p - q, 0)
+    return r.choice(Vsz, p=resid / resid.sum()), False
+r = np.random.default_rng(1)
+draws = [speculative_sample(r) for _ in range(200_000)]
+freq = np.bincount([x for x, _ in draws], minlength=Vsz) / len(draws)
+print(f"speculative sampling: largest |frequency - p| = {np.abs(freq - p).max():.4f} over 200,000 draws;"
+      f" accepted {np.mean([a for _, a in draws]):.4f} of drafts, predicted sum min(p, q) = {np.minimum(p, q).sum():.4f}")
+
+# tiled vs direct attention: max difference 3.9e-16; the direct version stores 1,048,576 scores, the tiled one 4,096 at a time
+# KV-cached decoding vs recomputing everything: max difference 1.8e-15
+# projection multiply-adds for 200 tokens: 246,988,800 without a cache, 2,457,600 with one
+# int8, one scale per tensor      relative output error 0.0825
+# int8, one scale per column      relative output error 0.0068
+# int4, one scale per tensor      relative output error 0.3706
+# int4, one scale per column      relative output error 0.1255
+# int4, groups of 64 per column   relative output error 0.1070
+# no fine-tuning: test error 9.52e-01
+# LoRA rank 1         512 trainable parameters, test error 6.43e-01
+# LoRA rank 2       1,024 trainable parameters, test error 3.64e-01
+# LoRA rank 4       2,048 trainable parameters, test error 4.15e-05
+# LoRA rank 8       4,096 trainable parameters, test error 1.37e-04
+# full fine-tuning 65,536 trainable parameters, test error 1.49e-03
+# speculative sampling: largest |frequency - p| = 0.0018 over 200,000 draws; accepted 0.8268 of drafts, predicted sum min(p, q) = 0.8268</code></pre>
+    <p><b>Reading the output.</b> Tiled attention and KV-cached decoding agree with the direct computations to rounding error ($10^{-15}$), as the derivations say they must. The cache cuts the projection work for 200 tokens a hundredfold, from 247 million multiply-adds to 2.5 million. For quantisation, the outliers set the per-tensor scale, so with int8 the ordinary weights get only a few distinct levels and the output error is 8.3%. One scale per column cuts it to 0.7%. At 4 bits, a per-tensor scale is useless (37% error), and per-column (12.6%) and group-wise (10.7%) scales are the minimum; real 4-bit schemes add calibration-based corrections like GPTQ's on top. For LoRA, ranks 1 and 2 cannot represent the rank-4 change and leave test errors of 0.64 and 0.36. Those are almost exactly the energy in the singular values they miss, as Eckart–Young predicts (exercise 6). Rank 4 and above fit the change essentially exactly, with 2,048 parameters instead of 65,536. Full fine-tuning is slightly <i>worse</i> on the test set than LoRA rank 4, because its 65,536 free parameters also fit some of the training noise: the low-rank constraint acts as a regulariser. Speculative sampling reproduces $p$ to within the sampling noise of 200,000 draws, and accepts 82.68% of drafts, matching $\sum\min(p, q)$.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>How much memory does full fine-tuning of a 7B model with Adam in mixed precision need for weights, gradients and optimiser states? How much with LoRA of rank 16 on the four attention projections of each of its 32 layers ($d_\text{model} = 4096$), if the frozen base is stored in 16 bits?</li>
+      <li>Compute the KV cache size per token for Llama 2 70B (80 layers, 8 key–value heads of size 128, 16-bit). How many 4,096-token conversations fit in the 20 GB left on two 80 GB GPUs after loading the 16-bit weights? How many without grouped-query attention?</li>
+      <li>Prove by induction over blocks that the online-softmax updates maintain $\ell = \sum_j e^{s_j - m}$ and $\mathbf{a} = \sum_j e^{s_j - m}\mathbf{v}_j$ over all keys processed so far.</li>
+      <li>In speculative decoding with $\gamma$ drafted tokens, suppose each is accepted independently with probability $a$ and generation stops at the first rejection, after which the big model's corrected token is still produced. Show that the expected number of tokens per big-model pass is $(1 - a^{\gamma+1})/(1 - a)$. Evaluate it for the code's $a = 0.8268$ and $\gamma = 1, 2, 4, 8$.</li>
+      <li>In LoRA, what goes wrong if $A$ and $B$ both start at zero? And if both start random?</li>
+      <li>Inputs $\mathbf{x}\sim\mathcal{N}(\mathbf{0}, I)$. Show that the expected squared error per output of using $W_0 + \Delta_r$ when the truth is $W_0 + \Delta$ is $\|\Delta - \Delta_r\|_F^2/d_\text{out}$, and use Eckart–Young to predict the test errors of the code's rank-1 and rank-2 LoRA. The squared singular values of $\Delta$ are 79.80, 70.80, 53.01 and 38.69.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $7\times10^9\times16$ bytes $= 112$ GB, more than one 80 GB GPU. With LoRA: the base weights are $7\times10^9\times2 = 14$ GB; each adapter has $16\times(4096 + 4096) = 131{,}072$ parameters, times 4 projections times 32 layers $= 16.8$M trainable parameters, needing $16.8\text{M}\times16$ bytes $= 0.27$ GB. About 14.3 GB in total, plus activations: it fits on one consumer GPU.</p>
+        <p><b>2.</b> $2\times80\times8\times128\times2 = 327{,}680$ bytes $= 320$ KiB per token, so $4096\times320$ KiB $= 1.34$ GB per conversation, and 14 conversations fit in 20 GB. Without GQA (64 key–value heads) it is 10.7 GB per conversation, so only 1 fits.</p>
+        <p><b>3.</b> Initially $m = -\infty$, $\ell = 0$, $\mathbf{a} = \mathbf{0}$ (empty sums). Suppose the invariant holds before a block. Then $e^{m - m'}\ell = \sum_{\text{old}}e^{s_j - m}e^{m - m'} = \sum_{\text{old}}e^{s_j - m'}$, and adding the block's terms gives $\sum_{\text{all}}e^{s_j - m'}$; the same for $\mathbf{a}$. Since $m' \ge$ every score seen, all exponents are $\le0$.</p>
+        <p><b>4.</b> The number of accepted drafts $K$ satisfies $P(K\ge i) = a^i$ for $i\le\gamma$, and the pass produces $K + 1$ tokens (the accepted ones plus a corrected or bonus token). $\mathbb{E}[K + 1] = 1 + \sum_{i=1}^\gamma a^i = \sum_{i=0}^{\gamma}a^i = (1 - a^{\gamma+1})/(1 - a)$. For $a = 0.8268$: 1.83, 2.51, 3.54 and 4.73 tokens per pass for $\gamma = 1, 2, 4, 8$. The draft model's own cost limits how large $\gamma$ is worth making.</p>
+        <p><b>5.</b> Both zero: $\partial L/\partial A = B^\top G = 0$ and $\partial L/\partial B = GA^\top = 0$, so nothing ever changes (a saddle point). Both random: $BA\ne0$ at the start, so the model begins somewhere other than the pretrained $W_0$, with a random perturbation that training must first undo. One zero and one random gives a zero update but nonzero gradients for the zero factor.</p>
+        <p><b>6.</b> The error per output is $\mathbb{E}\|\mathbf{x}^\top(\Delta - \Delta_r)\|^2/d_\text{out} = \operatorname{tr}\big((\Delta - \Delta_r)^\top\mathbb{E}[\mathbf{x}\mathbf{x}^\top](\Delta - \Delta_r)\big)/d_\text{out} = \|\Delta - \Delta_r\|_F^2/d_\text{out}$. The best rank-$r$ approximation leaves the remaining squared singular values: $(70.80 + 53.01 + 38.69)/256 = 0.635$ for rank 1 and $(53.01 + 38.69)/256 = 0.358$ for rank 2, against the measured 0.643 and 0.364 (the test set is finite, and no fine-tuning, predicted 0.946, measured 0.952).</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Dao et al., "FlashAttention: fast and memory-efficient exact attention with IO-awareness"</b> (NeurIPS 2022).</li>
+      <li><b>Hu et al., "LoRA: low-rank adaptation of large language models"</b> (ICLR 2022), and <b>Dettmers et al., "QLoRA"</b> (NeurIPS 2023).</li>
+      <li><b>Dettmers et al., "LLM.int8()"</b> (NeurIPS 2022), and <b>Frantar et al., "GPTQ"</b> (ICLR 2023).</li>
+      <li><b>Leviathan, Kalman &amp; Matias, "Fast inference from transformers via speculative decoding"</b> (ICML 2023).</li>
+      <li><b>Fedus, Zoph &amp; Shazeer, "Switch Transformers"</b> (JMLR 2022), and <b>Jiang et al., "Mixtral of experts"</b> (2024).</li>
+      <li><b>Austin et al., "How to scale your model"</b> (Google DeepMind online book, 2025). Memory, bandwidth and parallelism arithmetic in detail.</li>
+    </ul>
+  </section>
+</article>

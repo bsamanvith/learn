@@ -65,6 +65,32 @@ p.text(p.box[0], 18, "compression: how long the tokens are", color="fg", size=12
 p.save(OUT / "lm-ngrams-bpe.svg", "Left: held-out bits per character of character n-gram models against n, falling from 3.99 at n = 1 to 0.26 at n = 8 and levelling off on a dashed line at the true model's 0.264. Right: average characters per BPE token against the number of merges, rising from 1 to about 4.6 at 150 merges, where most words are single tokens")
 
 
+# ---------- 27: held-out loss against tokens for six widths, with the fitted Chinchilla form ----------
+ns = run("27-pretraining-and-scaling-laws")
+res, widths, n_params = ns["results"], ns["widths"], ns["n_params"]
+E0, A, Bc, alpha, beta = ns["E0"], ns["A"], ns["Bc"], ns["alpha"], ns["beta"]
+Dgrid = sorted({k[1] for k in res})
+lx = lambda v: np.log10(v)
+p = Plot(900, 380)
+p.panel(0, 0, 900, 380, (lx(3000), lx(1e6)), (1.7, 3.6), margin=(40, 150, 46, 52))
+p.axes("training tokens D (log scale)", "held-out loss, nats per character", xticks=[lx(v) for v in [1e4, 1e5, 1e6]],
+       yticks=[1.8, 2.0, 2.4, 2.8, 3.2, 3.6], fmt=lambda v: f"{10 ** v:,.0f}" if v > 3.9 else f"{v:.1f}")
+p.rect(lx(3000), 1.7, lx(1e5) - lx(3000), 1.9, color="muted", opacity=0.08)
+p.text(lx(3300), 1.78, "not used in the fit", size=10.5)
+cols = [f"hsl({h}, 60%, 48%)" for h in (200, 170, 130, 60, 30, 0)]
+label_y, prev = {}, -1
+for H in sorted(widths, key=lambda H: res[(n_params(H), Dgrid[-1])]):      # spread the labels apart
+    prev = label_y[H] = max(res[(n_params(H), Dgrid[-1])], prev + 0.1)
+for H, col in zip(widths, cols):
+    N = n_params(H)
+    p.dots([lx(d) for d in Dgrid], [res[(N, d)] for d in Dgrid], color=col, r=3.0)
+    Ds = np.geomspace(1e5, Dgrid[-1], 40)
+    p.line([lx(d) for d in Ds], E0 + A / N ** alpha + Bc / Ds ** beta, color=col, width=1.6)
+    p.text(lx(Dgrid[-1]) + 0.04, label_y[H] - 0.02, f"H = {H}", size=10.5, color=col)
+p.text(p.box[0], 22, f"dots: measured; lines: L = {E0:.2f} + {A:.0f}/N^{alpha:.2f} + {Bc:.0f}/D^{beta:.2f}", color="fg", size=12, px=True)
+p.save(OUT / "scaling-law.svg", "Held-out loss against training tokens on a log scale for MLP language models of six widths. All curves fall from about 3.3 nats; by 900,000 tokens the loss is ordered by width, from 2.17 for H = 16 down to 1.82 for H = 512. Fitted Chinchilla-form curves, drawn from 100,000 tokens on, follow the dots closely")
+
+
 # ---------- 28: reward over-optimisation along the KL-regularised path, and DPO's trajectory ----------
 ns = run("28-fine-tuning-and-alignment")
 betas = np.geomspace(20, 0.005, 60)
@@ -89,3 +115,26 @@ for i, (col, dash, lab) in enumerate([("data", "6 4", "reward model's score, RLH
     p.text(bx + bw + 46, y + 4, lab, size=10.5, px=True)
 p.text(p.box[0], 22, "optimising a learned reward: the proxy keeps rising, the true reward peaks and falls", color="fg", size=12, px=True)
 p.save(OUT / "rlhf-overoptimisation.svg", "Expected reward against KL divergence from the reference model. Along the RLHF path the reward model's score (dashed) rises steadily to 2.4, while the true reward (solid orange) rises to a peak of 1.45 near 2.5 nats and then falls to below 0.3 at 7.6 nats. DPO's checkpoints (dark dots) reach a true reward of 2.9 at about 4.9 nats before falling back slightly")
+
+
+# ---------- 30: self-consistency, majority vote accuracy against the number of samples ----------
+ns = run("30-in-context-learning-and-reasoning")
+Ns = list(range(1, 42, 2))
+p = Plot(900, 340)
+p.panel(0, 0, 900, 340, (0, 42), (0, 1.02), margin=(40, 220, 44, 52))
+p.axes("number of sampled answers N", "accuracy of the majority answer", xticks=[1, 5, 10, 15, 20, 25, 30, 35, 41], yticks=[0, 0.2, 0.4, 0.6, 0.8, 1.0])
+p.line([0, 42], [0.4, 0.4], color="muted", width=1.2, dash="4 4")
+series = [(0.4, 10, "accent", "40% right|wrong answers spread|over 10 values"),
+          (0.4, 1, "data", "40% right|one wrong answer at 60%"),
+          (0.25, 10, "fg", "25% right|wrong answers spread|over 10 values")]
+bx, by, bw, bh = p.box
+for i, (pr, nw, col, lab) in enumerate(series):
+    acc = [ns["majority_accuracy"](pr, nw, N, trials=4000) for N in Ns]
+    p.line(Ns, acc, color=col)
+    p.dots(Ns, acc, color=col, r=2.6)
+    y = by + 24 + 60 * i
+    p.items.append(f'<line x1="{bx + bw + 14}" y1="{y}" x2="{bx + bw + 36}" y2="{y}" style="stroke:{c(col)};stroke-width:2.2"/>')
+    for j, part in enumerate(lab.split("|")):
+        p.text(bx + bw + 42, y + 4 + 14 * j, part, size=10.5, px=True)
+p.text(p.box[0], 22, "self-consistency works when the right answer is the most likely single answer", color="fg", size=12, px=True)
+p.save(OUT / "self-consistency.svg", "Accuracy of the majority answer against the number of samples, from 1 to 41. A model right 40% of the time with wrong answers spread over 10 values climbs to nearly 100%; the same model with a single wrong answer at 60% falls towards 0; a model right 25% of the time with spread-out wrong answers also climbs towards 100%, more slowly")

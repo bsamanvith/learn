@@ -1,0 +1,256 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 31 · Stage 8: reinforcement learning</div>
+  <h1>Markov chains</h1>
+  <p class="lede">Reinforcement learning is built on one assumption about the world: what happens next depends only on where you are now, not on how you got there. This lesson studies that assumption on its own, before any decisions or rewards. It covers what a Markov chain is, how its distribution evolves by matrix multiplication, when it settles into a unique stationary distribution, and how fast it gets there, by a coupling argument and by eigenvalues. It then computes absorption probabilities and expected durations with the fundamental matrix, and turns the theory around to build chains with a chosen stationary distribution: PageRank, and Markov chain Monte Carlo. The code checks every formula against simulation.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/M1-linear-algebra/">M1</a>, <a href="/machine-learning/M3-probability/">M3</a></span><span><b>Math pulled in:</b> stochastic matrices, eigenvectors and the Perron–Frobenius theorem, total variation distance, coupling, the spectral gap, Neumann series, detailed balance</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>A <b>Markov chain</b> is a sequence of random states $X_0, X_1, X_2, \dots$ in a set $\mathcal{S}$ such that the next state depends on the past only through the present:</p>
+    <div class="eq">$$P(X_{t+1} = j\mid X_t = i, X_{t-1}, \dots, X_0) = P(X_{t+1} = j\mid X_t = i) = P_{ij}.$$</div>
+    <p>This lesson takes $\mathcal{S}$ finite, $\{1, \dots, n\}$, and the transition probabilities $P_{ij}$ the same at every step (time-homogeneous). Then the whole chain is described by the <b>transition matrix</b> $P$, whose row $i$ is the distribution of the next state from $i$. Every entry is non-negative and every row sums to 1: $P$ is a <b>stochastic matrix</b>, and $P\mathbf{1} = \mathbf{1}$.</p>
+    <p>The Markov property is a modelling choice, and a flexible one: if the next state depends on the last two states, make the pair the state. In reinforcement learning, the state of an agent's world is assumed to be Markov in this sense (lesson 33), and once the agent fixes how it acts, the sequence of states it visits is exactly a Markov chain. Everything in this lesson, stationary distributions, mixing and absorption, reappears there.</p>
+  </section>
+
+  <section id="evolution">
+    <h2>How the distribution evolves</h2>
+    <p>Write the distribution of $X_t$ as a row vector $\boldsymbol{\mu}_t$, with $\mu_t(i) = P(X_t = i)$. By the law of total probability,</p>
+    <div class="eq">$$\mu_{t+1}(j) = \sum_i\mu_t(i)P_{ij},\qquad\text{i.e.}\qquad\boldsymbol{\mu}_{t+1} = \boldsymbol{\mu}_tP,\qquad\boldsymbol{\mu}_t = \boldsymbol{\mu}_0P^t .$$</div>
+    <p>So the $t$-step transition probabilities are the entries of the matrix power: $P(X_{s+t} = j\mid X_s = i) = (P^t)_{ij}$. The identity $P^{s+t} = P^sP^t$, read entrywise, is the <b>Chapman–Kolmogorov equation</b>: to go from $i$ to $j$ in $s + t$ steps, pass through some state $k$ at step $s$.</p>
+    <p><b>Example.</b> Weather that is sunny, cloudy or rainy, with</p>
+    <div class="eq">$$P = \begin{pmatrix}0.7 &amp; 0.2 &amp; 0.1\\ 0.3 &amp; 0.4 &amp; 0.3\\ 0.2 &amp; 0.3 &amp; 0.5\end{pmatrix}.$$</div>
+    <p>Starting from a rainy day, $\boldsymbol{\mu}_0 = (0, 0, 1)$, tomorrow is $(0.2, 0.3, 0.5)$, and after 10 days the distribution is $(0.4562, 0.2827, 0.2611)$ and has almost stopped changing. Started from a sunny day it ends at the same place. The chain forgets where it started.</p>
+  </section>
+
+  <section id="stationary">
+    <h2>Stationary distributions</h2>
+    <p>A distribution $\boldsymbol{\pi}$ is <b>stationary</b> if $\boldsymbol{\pi}P = \boldsymbol{\pi}$: once the chain is distributed as $\boldsymbol{\pi}$, it stays so forever. Equivalently, $\boldsymbol{\pi}^\top$ is an eigenvector of $P^\top$ with eigenvalue 1, normalised to sum to 1. For the weather chain, $\boldsymbol{\pi} = (0.4565, 0.2826, 0.2609)$.</p>
+    <p><b>Existence.</b> Every finite chain has at least one stationary distribution. Since $P\mathbf{1} = \mathbf{1}$, 1 is an eigenvalue of $P$, hence of $P^\top$; the work is to show the eigenvector can be chosen non-negative. A probabilistic proof: the averages $\bar{\boldsymbol{\mu}}_T = \frac1T\sum_{t=0}^{T-1}\boldsymbol{\mu}_0P^t$ are distributions, a closed and bounded set, so some subsequence converges to a distribution $\boldsymbol{\pi}$. And $\bar{\boldsymbol{\mu}}_TP - \bar{\boldsymbol{\mu}}_T = \frac1T(\boldsymbol{\mu}_0P^T - \boldsymbol{\mu}_0)$, whose entries are at most $2/T$ in size, so in the limit $\boldsymbol{\pi}P = \boldsymbol{\pi}$.</p>
+    <p><b>Uniqueness</b> needs every state to be able to reach every other. A chain is <b>irreducible</b> if for every $i, j$ there is some $t$ with $(P^t)_{ij} &gt; 0$. An irreducible finite chain has exactly one stationary distribution, and every $\pi(i) &gt; 0$; in fact $\pi(i) = 1/\mathbb{E}_i[\tau_i]$, where $\tau_i$ is the time to return to $i$ (Kac's formula). A chain with two closed groups of states that cannot reach each other has a stationary distribution for each group, and any mixture of them is stationary too.</p>
+    <p><b>Detailed balance.</b> A useful sufficient condition: if a distribution $\boldsymbol{\pi}$ satisfies</p>
+    <div class="result">
+      <div class="label">Detailed balance</div>
+      <p>$$\pi(i)P_{ij} = \pi(j)P_{ji}\quad\text{for all } i, j,$$</p>
+      <p>then $\boldsymbol{\pi}$ is stationary, because $\sum_i\pi(i)P_{ij} = \sum_i\pi(j)P_{ji} = \pi(j)\sum_iP_{ji} = \pi(j)$.</p>
+    </div>
+    <p>The probability flow from $i$ to $j$ equals the flow back, for every pair. Such a chain is called <b>reversible</b>: run in its stationary distribution, it looks the same played backwards. Stationarity only requires the total flow into each state to equal the total flow out; detailed balance is stronger, and much easier to check. It is how MCMC algorithms are designed (below).</p>
+  </section>
+
+  <section id="convergence">
+    <h2>Convergence</h2>
+    <p>Irreducibility gives a unique $\boldsymbol{\pi}$, but not convergence to it. The walk that steps left or right around a cycle of 20 states is irreducible, with the uniform distribution stationary, yet started from state 0 it is on an even state at every even time and an odd state at every odd time, forever. The <b>period</b> of state $i$ is the greatest common divisor of the times $t$ at which a return is possible, $\{t\ge1: (P^t)_{ii} &gt; 0\}$; a chain is <b>aperiodic</b> if every state has period 1. A self-loop, $P_{ii} &gt; 0$, is enough. Making a chain "lazy", $P\to\frac12(I + P)$, removes periodicity and keeps the same stationary distribution.</p>
+    <p>Distance between distributions is measured in <b>total variation</b>, the largest difference in the probability they give to any event:</p>
+    <div class="eq">$$\|\boldsymbol{\mu} - \boldsymbol{\nu}\|_\text{TV} = \max_{A\subseteq\mathcal{S}}|\mu(A) - \nu(A)| = \tfrac12\sum_i|\mu(i) - \nu(i)| .$$</div>
+    <div class="result">
+      <div class="label">The convergence theorem</div>
+      <p>If a finite chain is irreducible and aperiodic, then for every starting distribution, $\|\boldsymbol{\mu}_0P^t - \boldsymbol{\pi}\|_\text{TV}\to0$ as $t\to\infty$, and the convergence is geometric: there are $C$ and $\rho &lt; 1$ with $\max_i\|P^t(i, \cdot) - \boldsymbol{\pi}\|_\text{TV}\le C\rho^t$.</p>
+    </div>
+    <p><b>Proof by coupling</b> (Doeblin, 1938). Run two copies of the chain: $X_t$ from $\boldsymbol{\mu}_0$, and $Y_t$ from $\boldsymbol{\pi}$, so that $Y_t\sim\boldsymbol{\pi}$ at every $t$. Move them independently until the first time $\tau$ they are in the same state, and together afterwards. Each copy, on its own, is still a Markov chain with matrix $P$. For any event $A$, $P(X_t\in A) - P(Y_t\in A)\le P(X_t\ne Y_t) = P(\tau &gt; t)$, so</p>
+    <div class="eq">$$\|\boldsymbol{\mu}_0P^t - \boldsymbol{\pi}\|_\text{TV}\le P(\tau &gt; t).$$</div>
+    <p>It remains to show the chains meet. Irreducibility and aperiodicity together imply that some power $P^r$ has every entry positive (a number-theory lemma about the return times). Let $\epsilon$ be the smallest entry of $P^r$. Wherever the two chains are, the probability that both are in state 1 after $r$ more steps is at least $\epsilon^2$. So each block of $r$ steps gives a fresh chance of at least $\epsilon^2$ to meet, and $P(\tau &gt; kr)\le(1 - \epsilon^2)^k$. $\square$</p>
+    <p><b>The speed, from eigenvalues.</b> For a reversible chain, the matrix $D^{1/2}PD^{-1/2}$ with $D = \operatorname{diag}(\boldsymbol{\pi})$ is symmetric (detailed balance says exactly this), so $P$ has real eigenvalues $1 = \lambda_1 &gt; \lambda_2\ge\dots\ge\lambda_n\ge-1$ and a full set of eigenvectors. Expanding the starting distribution in them, every component except the stationary one shrinks by its eigenvalue at each step, so the distance to $\boldsymbol{\pi}$ decays like $\lambda_*^t$, where $\lambda_* = \max(|\lambda_2|, |\lambda_n|)$. Precisely,</p>
+    <div class="eq">$$\|P^t(i, \cdot) - \boldsymbol{\pi}\|_\text{TV}\le\frac12\sqrt{\frac{1 - \pi(i)}{\pi(i)}}\,\lambda_*^t .$$</div>
+    <p>The <b>spectral gap</b> $1 - \lambda_*$ sets the mixing time: about $\frac{1}{1 - \lambda_*}\log\frac{1}{\pi_\text{min}}$ steps to get close. A periodic chain has $\lambda_n = -1$ and no gap. The lazy walk on a cycle of 20 has $\lambda_2 = \frac12(1 + \cos\frac{2\pi}{20}) = 0.9755$, a gap of only 0.0245: on a cycle, information spreads diffusively, and the mixing time grows as the square of the cycle's length.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: markov-mixing --></div>
+    </figure>
+    <p class="muted">Left: from state 0, the periodic walk never gets closer to uniform than 0.5 in total variation, while the lazy walk's distance falls by the factor $\lambda_2$ per step (dashed). Right: two Metropolis–Hastings chains targeting a mixture of Gaussians at ±3, from the code's part 5.</p>
+    <p><b>Time averages.</b> The <b>ergodic theorem</b> for Markov chains says that for an irreducible chain and any function $f$, $\frac1T\sum_{t=0}^{T-1}f(X_t)\to\sum_i\pi(i)f(i)$ with probability 1, from any start. One long run of the chain therefore estimates expectations under $\boldsymbol{\pi}$, which is the basis of both simulation and MCMC. The samples are correlated, so the error falls more slowly than for independent samples (the effective sample size, below).</p>
+  </section>
+
+  <section id="absorbing">
+    <h2>Absorbing chains</h2>
+    <p>A state is <b>absorbing</b> if the chain never leaves it, $P_{ii} = 1$. Order the states with the transient ones first, and write</p>
+    <div class="eq">$$P = \begin{pmatrix}Q &amp; R\\ 0 &amp; I\end{pmatrix},$$</div>
+    <p>where $Q$ holds the transitions among transient states and $R$ those from transient to absorbing states. If absorption is possible from everywhere, $Q^t\to0$ and the <b>fundamental matrix</b></p>
+    <div class="result">
+      <div class="label">The fundamental matrix</div>
+      <p>$$N = (I - Q)^{-1} = I + Q + Q^2 + \cdots$$</p>
+      <p>has entry $N_{ij}$ equal to the expected number of visits to $j$ starting from $i$, because $(Q^t)_{ij}$ is the probability of being at $j$ at time $t$. The expected time to absorption is $N\mathbf{1}$, and the probability of ending in each absorbing state is given by $B = NR$.</p>
+    </div>
+    <p>The series is a Neumann series, the matrix version of $1/(1 - q) = 1 + q + q^2 + \cdots$, and it converges because $Q^t\to0$. These are the first-step equations in matrix form: the absorption probabilities satisfy $B = R + QB$, which says "either be absorbed now, or move to a transient state and be absorbed from there".</p>
+    <p><b>Gambler's ruin.</b> A gambler with $k$ coins bets one coin at a time, winning with probability $p$, and stops at 0 or $N$. With $h_k$ the probability of reaching $N$, the first-step equations are $h_k = ph_{k+1} + (1 - p)h_{k-1}$ with $h_0 = 0$ and $h_N = 1$. Trying $h_k = r^k$ gives $pr^2 - r + (1 - p) = 0$, with roots 1 and $r = (1 - p)/p$, and the boundary conditions give</p>
+    <div class="eq">$$h_k = \frac{1 - r^k}{1 - r^N}\qquad(p\ne\tfrac12),\qquad h_k = \frac kN\qquad(p = \tfrac12).$$</div>
+    <p>With $p = 0.45$, $N = 10$ and $k = 5$, a gambler with a small disadvantage per bet reaches 10 only 26.8% of the time. The same equations, with a reward attached to each step and discounting, are the Bellman equations of lesson 33.</p>
+  </section>
+
+  <section id="pagerank">
+    <h2>Designing a stationary distribution: PageRank</h2>
+    <p>Brin and Page (1998) ranked web pages by the stationary distribution of a random surfer who, at each step, follows a random link on the current page with probability $d = 0.85$, and otherwise jumps to a page chosen uniformly at random. A page with no links jumps anywhere. The transition matrix is $M = dG + \frac{1 - d}{n}\mathbf{1}\mathbf{1}^\top$, where $G$ is the link-following matrix. The jump is what makes the theory apply: every entry of $M$ is at least $(1 - d)/n &gt; 0$, so the chain is irreducible and aperiodic, $\boldsymbol{\pi}$ is unique, and power iteration $\boldsymbol{\mu}\leftarrow\boldsymbol{\mu}M$ converges at rate $d$ or faster (exercise 5). A page ranks highly if highly ranked pages link to it.</p>
+  </section>
+
+  <section id="mcmc">
+    <h2>Markov chain Monte Carlo</h2>
+    <p>So far the chain was given and $\boldsymbol{\pi}$ was unknown. MCMC turns this around: given a target distribution $\pi$ known only up to a constant, as Bayesian posteriors and energy-based models usually are, build a chain whose stationary distribution is $\pi$, run it, and use its states as (correlated) samples.</p>
+    <p><b>Metropolis–Hastings</b> (Metropolis et al., 1953; Hastings, 1970). From state $x$, propose $y\sim q(y\mid x)$, and accept it with probability</p>
+    <div class="eq">$$\alpha(x, y) = \min\Big(1, \frac{\pi(y)q(x\mid y)}{\pi(x)q(y\mid x)}\Big),$$</div>
+    <p>otherwise stay at $x$. Only the ratio $\pi(y)/\pi(x)$ is needed, so the normalising constant cancels. For a symmetric proposal, such as $y = x + s\epsilon$ with Gaussian $\epsilon$, the $q$ terms cancel too: always accept a move uphill, and accept a move downhill with probability $\pi(y)/\pi(x)$.</p>
+    <p><b>Why it works.</b> For $x\ne y$ the chain moves from $x$ to $y$ with probability $q(y\mid x)\alpha(x, y)$, so</p>
+    <div class="eq">$$\pi(x)q(y\mid x)\alpha(x, y) = \min\big(\pi(x)q(y\mid x),\ \pi(y)q(x\mid y)\big),$$</div>
+    <p>which is symmetric in $x$ and $y$. That is detailed balance, so $\pi$ is stationary. If the proposal can reach everywhere, the chain is irreducible, and the ergodic theorem makes its time averages converge to expectations under $\pi$.</p>
+    <p><b>Tuning.</b> The step size $s$ trades acceptance against distance. Tiny steps are almost always accepted but explore slowly, like the cycle walk; huge steps are almost always rejected. Successive samples are correlated, and the <b>effective sample size</b> $n/(1 + 2\sum_{k\ge1}\rho_k)$, where $\rho_k$ is the autocorrelation at lag $k$, says how many independent samples they are worth. For targets with several separated modes, a local proposal may take an extremely long time to cross between them, and no diagnostic computed from one run can reveal a mode it has never visited.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 finds the weather chain's stationary distribution as an eigenvector, watches $\boldsymbol{\mu}_0P^t$ converge to it, and compares it with the fraction of time spent in each state over 100,000 simulated days. Part 2 computes the total variation distance to uniform for the plain and lazy walks on a cycle of 20 states. Part 3 solves gambler's ruin with the fundamental matrix and checks it against the closed form and 20,000 simulated games. Part 4 computes PageRank on an 8-page graph by power iteration. Part 5 runs Metropolis–Hastings on a two-mode target with four step sizes and estimates each run's effective sample size.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. A three-state weather chain. Rows of P are "from", columns "to"; each row sums to 1.
+states = ["sunny", "cloudy", "rainy"]
+P = np.array([[0.7, 0.2, 0.1],
+              [0.3, 0.4, 0.3],
+              [0.2, 0.3, 0.5]])
+w, U = np.linalg.eig(P.T)                                  # pi P = pi  &lt;=&gt;  P^T pi^T = pi^T
+pi = np.real(U[:, np.argmin(np.abs(w - 1))]); pi /= pi.sum()
+print("stationary distribution:", ", ".join(f"{s} {v:.4f}" for s, v in zip(states, pi)))
+mu = np.array([0.0, 0.0, 1.0])                             # start: rainy for sure
+for n in [1, 2, 5, 10, 20]:
+    print(f"  after {n:2d} days from 'rainy': {np.round(mu @ np.linalg.matrix_power(P, n), 4)}")
+x, counts = 2, np.zeros(3)
+for _ in range(100_000):                                   # the ergodic theorem: time averages
+    x = rng.choice(3, p=P[x]); counts[x] += 1
+print("fraction of 100,000 simulated days:", np.round(counts / counts.sum(), 4))
+print("eigenvalues of P:", np.round(np.sort(np.abs(np.linalg.eigvals(P)))[::-1], 4))
+
+# 2. Mixing on a cycle of 20 states. The plain walk (step left or right) is periodic: on an even
+# cycle it alternates between even and odd states forever. The lazy walk (stay with prob. 1/2)
+# converges, at a rate set by its second-largest eigenvalue.
+m = 20
+walk = np.zeros((m, m))
+for i in range(m):
+    walk[i, (i + 1) % m] = walk[i, (i - 1) % m] = 0.5
+lazy = 0.5 * np.eye(m) + 0.5 * walk
+uniform = np.full(m, 1 / m)
+lam2 = np.sort(np.abs(np.linalg.eigvals(lazy)))[-2]
+tv = lambda p, q: 0.5 * np.abs(p - q).sum()
+for name, Q in [("plain", walk), ("lazy", lazy)]:
+    d = [tv(np.linalg.matrix_power(Q, n)[0], uniform) for n in [10, 50, 100, 200, 400]]
+    print(f"{name:5s} walk, TV distance to uniform after 10/50/100/200/400 steps:", " ".join(f"{v:.2e}" for v in d))
+print(f"lazy walk: second eigenvalue {lam2:.5f} (= (1 + cos(2 pi / 20)) / 2 = {(1 + np.cos(2 * np.pi / m)) / 2:.5f});"
+      f" the distance shrinks by about this factor per step")
+
+# 3. Absorbing chains: gambler's ruin. Start with k of N = 10 coins; win a coin with p = 0.45.
+N, p = 10, 0.45
+Q = np.zeros((N - 1, N - 1)); Rb = np.zeros((N - 1, 2))   # transient states 1..9; absorbing 0 and N
+for k in range(1, N):
+    if k + 1 &lt; N: Q[k - 1, k] = p
+    else: Rb[k - 1, 1] = p
+    if k - 1 &gt; 0: Q[k - 1, k - 2] = 1 - p
+    else: Rb[k - 1, 0] = 1 - p
+Nf = np.linalg.inv(np.eye(N - 1) - Q)                       # fundamental matrix: expected visits
+win = (Nf @ Rb)[:, 1]; duration = Nf.sum(1)
+r = (1 - p) / p
+print(f"start with 5: P(reach {N}) = {win[4]:.4f} (formula (1 - r^5) / (1 - r^10) = {(1 - r ** 5) / (1 - r ** N):.4f}),"
+      f" expected number of bets {duration[4]:.2f}")
+sims = []
+for _ in range(20000):
+    k, t = 5, 0
+    while 0 &lt; k &lt; N:
+        k += 1 if rng.random() &lt; p else -1; t += 1
+    sims.append((k == N, t))
+sims = np.array(sims)
+print(f"simulated 20,000 games: P(reach {N}) = {sims[:, 0].mean():.4f}, mean number of bets {sims[:, 1].mean():.2f}")
+
+# 4. PageRank: a random surfer follows a random link with probability 0.85, otherwise jumps to a
+# random page. The jump makes the chain irreducible and aperiodic, so pi exists and is unique.
+links = {0: [1, 2], 1: [2], 2: [0], 3: [2], 4: [2, 3], 5: [4, 6], 6: [4, 5, 7], 7: []}  # 7 has no links
+n_pages = 8
+G = np.zeros((n_pages, n_pages))
+for i, out in links.items():
+    G[i, out if out else range(n_pages)] = 1 / (len(out) if out else n_pages)  # a dead end jumps anywhere
+M = 0.85 * G + 0.15 / n_pages
+rank = np.full(n_pages, 1 / n_pages)
+for it in range(100):
+    new = rank @ M
+    if np.abs(new - rank).sum() &lt; 1e-12:
+        break
+    rank = new
+print(f"PageRank after {it} power iterations:", np.round(rank, 4))
+
+# 5. Markov chain Monte Carlo. Metropolis-Hastings builds a chain whose stationary distribution is
+# a target known only up to a constant: here a mixture of two Gaussians at -3 and +3.
+log_target = lambda x: np.logaddexp(-0.5 * (x + 3) ** 2, -0.5 * (x - 3) ** 2)
+def metropolis(step, n=50_000, x=0.0, seed=1):
+    r = np.random.default_rng(seed)
+    xs, acc = np.empty(n), 0
+    for i in range(n):
+        y = x + step * r.standard_normal()                  # symmetric proposal
+        if np.log(r.random()) &lt; log_target(y) - log_target(x):
+            x, acc = y, acc + 1
+        xs[i] = x
+    return xs, acc / n
+def ess(xs):
+    """Effective sample size: n / (1 + 2 * sum of autocorrelations), summed until they turn negative."""
+    z = xs - xs.mean(); n = len(z)
+    f = np.fft.rfft(z, 2 * n); ac = np.fft.irfft(f * np.conj(f))[:n] / (z @ z)
+    s = 0.0
+    for k in range(1, n):
+        if ac[k] &lt; 0:
+            break
+        s += ac[k]
+    return n / (1 + 2 * s)
+for step in [0.1, 1.0, 4.0, 30.0]:
+    xs, a = metropolis(step)
+    print(f"step {step:5.1f}: acceptance {a:.3f}, fraction of time at x &gt; 0 {np.mean(xs &gt; 0):.3f},"
+          f" mean {xs.mean():+.3f}, effective sample size {ess(xs):8.1f} of 50,000")
+
+# stationary distribution: sunny 0.4565, cloudy 0.2826, rainy 0.2609
+#   after  1 days from 'rainy': [0.2 0.3 0.5]
+#   after  2 days from 'rainy': [0.33 0.31 0.36]
+#   after  5 days from 'rainy': [0.4429 0.2862 0.2708]
+#   after 10 days from 'rainy': [0.4562 0.2827 0.2611]
+#   after 20 days from 'rainy': [0.4565 0.2826 0.2609]
+# fraction of 100,000 simulated days: [0.4594 0.2812 0.2594]
+# eigenvalues of P: [1.     0.4732 0.1268]
+# plain walk, TV distance to uniform after 10/50/100/200/400 steps: 6.41e-01 5.00e-01 5.00e-01 5.00e-01 5.00e-01
+# lazy  walk, TV distance to uniform after 10/50/100/200/400 steps: 5.35e-01 1.84e-01 5.30e-02 4.45e-03 3.13e-05
+# lazy walk: second eigenvalue 0.97553 (= (1 + cos(2 pi / 20)) / 2 = 0.97553); the distance shrinks by about this factor per step
+# start with 5: P(reach 10) = 0.2683 (formula (1 - r^5) / (1 - r^10) = 0.2683), expected number of bets 23.17
+# simulated 20,000 games: P(reach 10) = 0.2671, mean number of bets 23.40
+# PageRank after 52 power iterations: [0.3134 0.1554 0.3426 0.0418 0.0461 0.0324 0.0359 0.0324]
+# step   0.1: acceptance 0.968, fraction of time at x &gt; 0 0.895, mean +2.296, effective sample size     11.6 of 50,000
+# step   1.0: acceptance 0.716, fraction of time at x &gt; 0 0.484, mean -0.091, effective sample size    181.8 of 50,000
+# step   4.0: acceptance 0.407, fraction of time at x &gt; 0 0.505, mean +0.026, effective sample size   5201.8 of 50,000
+# step  30.0: acceptance 0.083, fraction of time at x &gt; 0 0.502, mean -0.002, effective sample size   2052.7 of 50,000</code></pre>
+    <p><b>Reading the output.</b> The weather chain's eigenvalues are 1, 0.4732 and 0.1268, so the distance to stationarity shrinks by a factor of about 2 per day; 20 days are enough for four decimal places, and the simulated frequencies agree to about 0.003. The plain cycle walk stays at distance exactly 0.5, the mass of the wrong parity class, while the lazy walk's distance falls by $\lambda_2 = 0.9755$ per step, from $4.45\times10^{-3}$ at 200 steps to $3.13\times10^{-5}$ at 400 ($0.9755^{200} = 0.0070$). Gambler's ruin matches the formula exactly and the simulation within sampling error. In PageRank, page 2, which four pages link to, ranks highest, and page 0, linked only from page 2, comes second because page 2 is important. The MCMC runs show the trade-off: with step 0.1, 97% of proposals are accepted, but the chain spends 90% of its time in one mode and its 50,000 samples are worth about 12 independent ones. With step 4, 41% acceptance, both modes are visited equally and the effective sample size is about 5,200. With step 30, 92% of proposals are rejected and the effective size falls again.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Find the stationary distribution of the two-state chain with $P = \begin{pmatrix}1 - a &amp; a\\ b &amp; 1 - b\end{pmatrix}$, and show that $\boldsymbol{\mu}_t - \boldsymbol{\pi}$ shrinks by the factor $1 - a - b$ each step. What happens when $a = b = 1$?</li>
+      <li>Show that every two-state chain satisfies detailed balance with respect to its stationary distribution. Find a three-state chain whose stationary distribution is uniform but which does not satisfy detailed balance. (Hint: a chain that cycles $1\to2\to3\to1$ with high probability.)</li>
+      <li>Show that the eigenvalues of a stochastic matrix satisfy $|\lambda|\le1$. (Hint: look at the largest entry of an eigenvector $P\mathbf{v} = \lambda\mathbf{v}$.)</li>
+      <li>Derive the expected duration of gambler's ruin from first-step equations, $D_k = 1 + pD_{k+1} + (1 - p)D_{k-1}$ with $D_0 = D_N = 0$, for $p = \frac12$, and check that it gives $D_k = k(N - k)$.</li>
+      <li>Show that if every entry of a stochastic matrix $M$ is at least $\epsilon$ (with $n$ states), then $\|\boldsymbol{\mu}M - \boldsymbol{\nu}M\|_\text{TV}\le(1 - n\epsilon)\|\boldsymbol{\mu} - \boldsymbol{\nu}\|_\text{TV}$. What does this give for PageRank's convergence rate?</li>
+      <li>In Metropolis–Hastings with an <i>independent</i> proposal $q(y\mid x) = g(y)$, write the acceptance probability. What happens if $g = \pi$? What goes wrong if $g$ has lighter tails than $\pi$?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\boldsymbol{\pi} = \big(\frac{b}{a + b}, \frac{a}{a + b}\big)$, from $\pi_1a = \pi_2b$. The eigenvalues of $P$ are 1 and $1 - a - b$ (trace $2 - a - b$), and $\boldsymbol{\mu}_t - \boldsymbol{\pi}$ is a multiple of the second left eigenvector $(1, -1)$, so it is multiplied by $1 - a - b$ each step. With $a = b = 1$ the factor is $-1$: the chain alternates deterministically, is periodic, and never converges unless it starts at $\boldsymbol{\pi} = (\frac12, \frac12)$.</p>
+        <p><b>2.</b> With two states the only condition is $\pi_1P_{12} = \pi_2P_{21}$, which is the stationarity equation for state 1. For three states take $P_{12} = P_{23} = P_{31} = 0.9$ and $P_{13} = P_{21} = P_{32} = 0.1$. Each column sums to 1, so the uniform distribution is stationary, but $\pi_1P_{12} = 0.3\ne\pi_2P_{21} = 0.033$: the probability circulates around the cycle, and the chain played backwards would circulate the other way.</p>
+        <p><b>3.</b> Let $|v_k|$ be the largest $|v_i|$. Then $|\lambda||v_k| = |\sum_jP_{kj}v_j|\le\sum_jP_{kj}|v_j|\le|v_k|\sum_jP_{kj} = |v_k|$.</p>
+        <p><b>4.</b> With $p = \frac12$: $D_{k+1} - 2D_k + D_{k-1} = -2$, a constant second difference, so $D_k$ is quadratic with $D_k'' = -2$: $D_k = -k^2 + ck + d$. The boundary conditions give $d = 0$ and $c = N$: $D_k = k(N - k)$. Check: $1 + \frac12(k + 1)(N - k - 1) + \frac12(k - 1)(N - k + 1) = 1 + k(N - k) - 1$.</p>
+        <p><b>5.</b> Write $M = n\epsilon U + (1 - n\epsilon)M'$ with $U = \frac1n\mathbf{1}\mathbf{1}^\top$ (every row uniform) and $M'$ another stochastic matrix (non-negative because every entry of $M$ is at least $\epsilon$). Then $\boldsymbol{\mu}U = \boldsymbol{\nu}U$, so $\boldsymbol{\mu}M - \boldsymbol{\nu}M = (1 - n\epsilon)(\boldsymbol{\mu} - \boldsymbol{\nu})M'$, and a stochastic matrix never increases total variation. For PageRank, $n\epsilon = 1 - d$, so the error shrinks by at least $d = 0.85$ per iteration: about 140 iterations for $10^{-10}$, whatever the size of the web. (The code stopped after 52 because its graph mixes faster.)</p>
+        <p><b>6.</b> $\alpha = \min\big(1, \frac{\pi(y)g(x)}{\pi(x)g(y)}\big) = \min(1, w(y)/w(x))$ with importance weights $w = \pi/g$. If $g = \pi$ every proposal is accepted and the samples are independent. If $g$ has lighter tails, $w$ is huge far out: once the chain reaches such a state $x$, almost every proposal has $w(y)\ll w(x)$ and is rejected, so the chain sticks there for very long stretches.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Levin &amp; Peres, <i>Markov Chains and Mixing Times</i></b> (2nd edition, 2017), chapters 1, 4, 5 and 12. Coupling, total variation and spectral gaps.</li>
+      <li><b>Norris, <i>Markov Chains</i></b> (1997), chapter 1. Hitting times, absorption and the ergodic theorem.</li>
+      <li><b>Grinstead &amp; Snell, <i>Introduction to Probability</i></b>, chapter 11 (free online). Absorbing chains and the fundamental matrix.</li>
+      <li><b>Brin &amp; Page, "The anatomy of a large-scale hypertextual web search engine"</b> (1998).</li>
+      <li><b>MacKay, <i>Information Theory, Inference, and Learning Algorithms</i></b> (2003), chapter 29. Monte Carlo methods, with good pictures of MCMC's failure modes.</li>
+    </ul>
+  </section>
+</article>

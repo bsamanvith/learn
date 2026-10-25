@@ -1,0 +1,176 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P7 · Stage 7: large language models</div>
+  <h1>Problem set: stage 7</h1>
+  <p class="lede">Twenty-three problems on lessons 26–30: cross-entropy and its units, n-grams and tokenisers, the cost and scaling of pretraining, reward models, the KL-regularised optimum and DPO, the memory and bandwidth arithmetic of efficient models, and the mechanics of sampling, voting and chains of thought. Try each one on paper before opening its solution. Problems marked <span class="tag">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/26-language-modelling-and-tokenisation/">26</a>, <a href="/machine-learning/27-pretraining-and-scaling-laws/">27</a>, <a href="/machine-learning/28-fine-tuning-and-alignment/">28</a>, <a href="/machine-learning/29-making-llms-efficient/">29</a>, <a href="/machine-learning/30-in-context-learning-and-reasoning/">30</a></span><span><b>Difficulty:</b> <span class="tag">warm-up</span> <span class="tag">core</span> <span class="tag">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="lm">
+    <h2>Language modelling and tokenisation</h2>
+    <ol>
+      <li>
+        <p><span class="tag">warm-up</span> On half the tokens of a text a model gives the correct token probability 0.5, and on the other half 0.125. What is its perplexity? Why is it not $1/\bar q$, where $\bar q$ is the average probability of the correct token?</p>
+        <details><summary>Solution</summary><div>
+          <p>The loss is $\tfrac12\ln2 + \tfrac12\ln8 = 2\ln2$ nats, so the perplexity is $e^{2\ln2} = 4$: the geometric mean of $1/q$, which is $\sqrt{2\times8}$. The average probability is 0.3125, and $1/0.3125 = 3.2$. Perplexity is an exponentiated average log-probability, so a few very confident correct predictions cannot make up for many poor ones.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Show that $H(X_i\mid X_{i-n+1}, \dots, X_{i-1})$ cannot increase as $n$ grows. What does this say about the best possible cross-entropy of n-gram models with unlimited data, and why do real n-gram models nevertheless get worse beyond some $n$?</p>
+        <details><summary>Solution</summary><div>
+          <p>Conditioning on more variables cannot increase entropy: $H(X\mid Y, Z)\le H(X\mid Y)$, because the difference is the conditional mutual information $I(X; Z\mid Y)\ge0$. An $(n+1)$-gram conditions on everything an $n$-gram does, plus one more token. With unlimited data an n-gram model converges to the true conditional distribution of its context, so its cross-entropy is this conditional entropy, non-increasing in $n$. With finite data each longer context is seen fewer times, the estimates get noisier and more probability goes to smoothing, so the held-out loss eventually rises: the variance side of the trade-off.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">warm-up</span> A model scores 0.9 bits per character on a test set in which 5% of the characters take two bytes in UTF-8 and the rest take one. What is its score in bits per byte?</p>
+        <details><summary>Solution</summary><div>
+          <p>There are 1.05 bytes per character on average, so $0.9/1.05 = 0.857$ bits per byte. The total number of bits is the same; it is divided by a larger count.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> A word bigram model has a vocabulary of 10,000 words. The context "strong" appears 3 times in training, twice followed by "tea". Compare the maximum-likelihood and add-one estimates of $q(\text{tea}\mid\text{strong})$. What goes wrong, and what do interpolation methods do instead?</p>
+        <details><summary>Solution</summary><div>
+          <p>Maximum likelihood gives $2/3$. Add-one gives $(2 + 1)/(3 + 10{,}000) = 0.0003$: the 9,999 imaginary observations of other words swamp the 3 real ones, so almost all the probability goes to words never seen after "strong". Add-$k$ with small $k$ is less extreme, but the real fix is to give unseen continuations probability in proportion to a lower-order model, $\lambda\hat q(w\mid c) + (1 - \lambda)\hat q(w)$, with $\lambda$ depending on how much evidence the context has. Kneser–Ney refines the lower-order model to count in how many different contexts a word appears, rather than how often.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">code</span> Train BPE with lesson 26's algorithm on the first 90% of Tiny Shakespeare (lesson 27 downloads it), with a pretokeniser that also handles capitals, digits, punctuation and newlines, such as <code>re.findall(r" ?[A-Za-z]+| ?[0-9]+| ?[^\sA-Za-z0-9]+|\s+", text)</code>. Report the first merges and the characters per token on the last 10% after 100 and 500 merges, and tokenise " Romeo", " wherefore" and " understanding". Why is the compression much lower than on lesson 26's toy language?</p>
+        <details><summary>Solution</summary><div>
+          <p>The first merges are " t", "he", " a", "ou", " s", " m", "in", " w", "re", "ha", " the", "nd", … The held-out text has 1.62 characters per token after 100 merges and 2.13 after 500. " Romeo" becomes [" Rome", "o"], " wherefore" [" where", "fore"], and " understanding" [" u", "nd", "er", "st", "and", "ing"]. The toy language had 38 word types, so 150 merges made almost every word a single token. Shakespeare has over 10,000 word types, plus capitalised speaker names, punctuation and line breaks, so 500 merges cover only the commonest words and pieces. GPT-2 needed 50,000 merges to reach about 4 characters per token on English.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> <b>Unigram tokenisation.</b> A unigram tokeniser has pieces with probabilities "un" 0.05, "u" 0.04, "n" 0.04, "related" 0.01, "relate" 0.02, "rel" 0.02, "ated" 0.01, "d" 0.03 (and others not relevant here). Find the most probable segmentation of "unrelated" by dynamic programming, stating the recursion. How does sampling a segmentation instead of taking the best ("subword regularisation") help a translation model?</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $b(i)$ be the best log-probability of segmenting the first $i$ characters: $b(0) = 0$ and $b(i) = \max_{j &lt; i,\ s[j:i]\in\mathcal{V}}\big(b(j) + \log P(s[j:i])\big)$, keeping a pointer to the best $j$ (Viterbi). The candidates are un·related $= 0.05\times0.01 = 5\times10^{-4}$, un·relate·d $= 3\times10^{-5}$, u·n·related $= 1.6\times10^{-5}$ and un·rel·ated $= 10^{-5}$, so the answer is un·related. Sampling segmentations in proportion to their probability shows the model the same word cut in different ways during training, which makes it robust to the arbitrary choices of the tokeniser and acts as a regulariser (Kudo, 2018).</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="scaling">
+    <h2>Pretraining and scaling</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag">warm-up</span> How many FLOPs does it take to train a 7B model on 2T tokens? How long would that take on 1,024 H100 GPUs (989 TFLOP/s in bfloat16) at 40% utilisation?</p>
+        <details><summary>Solution</summary><div>
+          <p>$6\times7\times10^9\times2\times10^{12} = 8.4\times10^{22}$ FLOPs. The cluster sustains $1024\times989\times10^{12}\times0.4 = 4.05\times10^{17}$ FLOP/s, so it takes $2.07\times10^5$ seconds, 2.4 days.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Using the rule of thumb of 20 tokens per parameter, find the compute-optimal $N$ and $D$ for a budget of $10^{24}$ FLOPs.</p>
+        <details><summary>Solution</summary><div>
+          <p>With $D = 20N$, $C = 6N\cdot20N = 120N^2$, so $N = \sqrt{C/120} = \sqrt{8.33\times10^{21}} = 9.1\times10^{10}$ (91B parameters) and $D = 1.8\times10^{12}$ tokens.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Two models reach losses of 3.5 at $N = 10^8$ and 3.0 at $N = 10^9$, both trained to convergence. Estimate the exponent $\alpha$ of $L\propto N^{-\alpha}$. Then assume the law has a floor, $L = E + AN^{-\alpha}$ with $E = 1.7$, and estimate $\alpha$ again. Predict the loss at $N = 10^{11}$ both ways.</p>
+        <details><summary>Solution</summary><div>
+          <p>Without a floor: $\alpha = \log_{10}(3.5/3.0) = 0.067$, and at $10^{11}$, $L = 3.0\times100^{-0.067} = 2.21$. With the floor, the reducible part goes from 1.8 to 1.3: $\alpha = \log_{10}(1.8/1.3) = 0.141$, and $L = 1.7 + 1.3\times100^{-0.141} = 2.36$. The two fits agree on the data and disagree by 0.15 nats two decades later. A floor makes the reducible part fall faster but leaves less to fall, and only data far out can tell the two apart.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> Under the Chinchilla law with the published constants ($E = 1.69$, $A = 406.4$, $B = 410.7$, $\alpha = 0.34$, $\beta = 0.28$), compare the predicted losses of Gopher (280B parameters, 300B tokens) and Chinchilla (70B, 1.4T), which used about the same compute. Under Kaplan's allocation $N\propto C^{0.73}$, how do the parameters and data change when compute grows a thousandfold?</p>
+        <details><summary>Solution</summary><div>
+          <p>Gopher: $1.69 + 406.4/(2.8\times10^{11})^{0.34} + 410.7/(3\times10^{11})^{0.28} = 1.993$. Chinchilla: $1.69 + 406.4/(7\times10^{10})^{0.34} + 410.7/(1.4\times10^{12})^{0.28} = 1.937$, lower by 0.056 nats for slightly more compute ($5.9$ against $5.0\times10^{23}$). Under Kaplan's allocation, a thousandfold budget makes the model $1000^{0.73} = 155$ times larger and the data $1000^{0.27} = 6.5$ times larger, so tokens per parameter fall 24-fold; repeated over GPT-3-sized jumps, that is how models ended up at about 1 token per parameter.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="alignment">
+    <h2>Fine-tuning and alignment</h2>
+    <ol start="11">
+      <li>
+        <p><span class="tag">warm-up</span> Under Bradley–Terry, how large a reward difference makes people prefer one response 90% of the time? 99%?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\sigma(\Delta) = 0.9$ gives $\Delta = \ln9 = 2.20$; 99% needs $\ln99 = 4.60$. Each extra "nine" of reliability costs about 2.3 units of reward.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> Three responses have rewards 0, 1 and 2 and the reference policy is uniform. With $\beta = 0.5$, find the optimal policy, its expected reward, its KL from the reference, and check that $J(\pi^*) = \beta\log Z$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Weights $\tfrac13e^{r/\beta} = \tfrac13(1, e^2, e^4) = \tfrac13(1, 7.39, 54.60)$, so $\pi^* = (0.0159, 0.1173, 0.8668)$. Expected reward $0.1173 + 2\times0.8668 = 1.851$. KL $= \sum\pi^*\ln(3\pi^*) = 0.658$ nats. $J = 1.851 - 0.5\times0.658 = 1.522$, and $\beta\log Z = 0.5\ln(62.99/3) = 1.522$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> A DPO dataset contains a single pair, $(y_w, y_l)$, for one prompt. Show that the DPO loss has no minimum: it can always be made smaller. What does the policy do as training continues? How does this relate to the drift seen in lesson 28's code?</p>
+        <details><summary>Solution</summary><div>
+          <p>The loss is $-\log\sigma(h)$ with $h = \beta(\log\frac{\pi(y_w)}{\pi_\text{ref}(y_w)} - \log\frac{\pi(y_l)}{\pi_\text{ref}(y_l)})$. It is positive and decreases towards 0 as $h\to\infty$, which happens as $\pi(y_l)\to0$, whatever $\pi(y_w)$ does; no finite $h$ attains the infimum. So gradient descent keeps pushing $\pi(y_l)$ down, and the probability it frees goes wherever the parameterisation sends it, possibly to responses never compared. With many pairs the infimum can still be approached by sending some implicit rewards to infinity (any response that always wins), which is why lesson 28's DPO run kept moving away from the reference model. IPO (Azar et al., 2023) replaces $-\log\sigma(h)$ by the squared loss $(\Delta - \frac{1}{2\tau})^2$, where $\Delta = h/\beta$ is the difference of log-ratios and $\tau$ plays the part of $\beta$; it has a finite target, so the policy stops moving.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">code</span> In lesson 28's code, train DPO with $\beta = 0.05$ instead of 0.25, with the same learning rate, and report the loss, the KL to the reference model and the expected true reward at 100, 1,000, 10,000 and 32,000 epochs. How does $\beta$ affect the speed and the end point?</p>
+        <details><summary>Solution</summary><div>
+          <p>With $\beta = 0.05$: KL 1.094, 2.264, 4.084 and 5.373 nats, and true reward 1.159, 1.825, 2.605 and 2.920; the loss falls from 0.655 to 0.416. With $\beta = 0.25$: KL 1.036, 2.612, 4.875 and 4.554, true reward 1.514, 2.305, 2.891 and 2.624. A smaller $\beta$ means each unit of implicit reward needs a larger log-ratio, $\hat r/\beta$, so the policy has to move further to fit the same preferences and gets there more slowly (the gradient carries a factor $\beta$). At 32,000 epochs it is still moving away from the reference model. In neither case does $\beta$ act as a hard limit on the KL, as it does in the closed-form RLHF solution.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> <b>Which KL?</b> RLHF penalises $\mathrm{KL}(\pi\,\|\,\pi_\text{ref})$. Show that its optimum can only put probability where $\pi_\text{ref}$ does. Then solve $\max_\pi\mathbb{E}_\pi[r] - \beta\,\mathrm{KL}(\pi_\text{ref}\,\|\,\pi)$ instead, and describe how its solution differs.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\pi^*\propto\pi_\text{ref}e^{r/\beta}$ is zero wherever $\pi_\text{ref}$ is; and any $\pi$ with mass where $\pi_\text{ref} = 0$ has infinite KL. With the reversed KL, the Lagrangian $\sum_y\pi(y)r(y) - \beta\sum_y\pi_\text{ref}(y)\log\frac{\pi_\text{ref}(y)}{\pi(y)} - \lambda(\sum_y\pi(y) - 1)$ has derivative $r(y) + \beta\pi_\text{ref}(y)/\pi(y) - \lambda = 0$, so $\pi(y) = \frac{\beta\,\pi_\text{ref}(y)}{\lambda - r(y)}$, with $\lambda &gt; \max_y r(y)$ fixed by normalisation. The tilt is now polynomial in the reward instead of exponential: high-reward responses are boosted much less, and every response keeps probability proportional to $\pi_\text{ref}$ (the forward KL is infinite if $\pi$ drops any of them), so the policy stays "mass-covering".</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="efficiency">
+    <h2>Efficiency</h2>
+    <ol start="16">
+      <li>
+        <p><span class="tag">warm-up</span> How much memory do the weights of a 13B model take in 16 bits, 8 bits and 4 bits? With 4-bit weights in groups of 64 that each store a 16-bit scale?</p>
+        <details><summary>Solution</summary><div>
+          <p>26 GB, 13 GB and 6.5 GB. The scales add 16 bits per 64 weights, 0.25 bits per weight, so 4.25 bits per weight and 6.9 GB.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> During generation with a batch of $B$ sequences, each weight is read once per step and used for $B$ multiply-adds. What is the arithmetic intensity in FLOPs per byte of weights read, with 16-bit weights? Above what batch size does an A100 (312 TFLOP/s, 2 TB/s) stop being limited by bandwidth, ignoring the KV cache? Why does the KV cache make this worse?</p>
+        <details><summary>Solution</summary><div>
+          <p>$2B$ FLOPs per 2 bytes: $B$ FLOPs per byte. The machine's balance point is $312/2 = 156$ FLOPs per byte, so batches above about 156 are compute-bound. The KV cache is different for every sequence, so reading it is not shared across the batch: each sequence's attention reads its own cache, adding bytes in proportion to $B\times$ context length, which keeps long-context generation bandwidth-bound even at large batch sizes.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">code</span> In lesson 29's code, quantise the weight matrix to 4 bits with groups of 128, 64, 32, 16 and 8 rows per scale, and to 3 bits with groups of 64 and 16. Report the relative output errors. Counting a 16-bit scale per group, what are the bits per weight?</p>
+        <details><summary>Solution</summary><div>
+          <p>4 bits: 0.1141, 0.1070, 0.0952, 0.0863 and 0.0717 for groups of 128, 64, 32, 16 and 8, at 4.125, 4.25, 4.5, 5 and 6 bits per weight. 3 bits: 0.2546 with groups of 64 (3.25 bits) and 0.1923 with groups of 16 (4 bits). Smaller groups help steadily but cost storage. At 4 bits per weight, 3-bit groups of 16 are worse than 4-bit groups of 128, so the extra bit in the integer is worth more than smaller groups here. With these Gaussian weights the gain from grouping is modest; it is larger when outliers are scattered through the matrix.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">code</span> Simulate speculative decoding with the $p$ and $q$ of lesson 29's code: draft up to $\gamma$ tokens independently, stop at the first rejection, and count the tokens produced per big-model pass (accepted drafts plus one). Compare with $(1 - a^{\gamma+1})/(1 - a)$ for $\gamma = 1, 2, 4, 8$.</p>
+        <details><summary>Solution</summary><div>
+          <p>With 20,000 passes each: 1.829, 2.510, 3.534 and 4.766 tokens per pass, against 1.827, 2.510, 3.543 and 4.731 from the formula with $a = 0.8268$. The differences are sampling noise. Real draft acceptance is not independent from token to token (easy stretches of text have long runs of acceptances), which makes the formula only a guide.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="reasoning">
+    <h2>In-context learning and reasoning</h2>
+    <ol start="20">
+      <li>
+        <p><span class="tag">warm-up</span> A model gives the right answer with probability 0.6 and otherwise one fixed wrong answer. What is the accuracy of a majority vote over 3 samples? Over 5?</p>
+        <details><summary>Solution</summary><div>
+          <p>Three samples: $0.6^3 + 3\times0.6^2\times0.4 = 0.216 + 0.432 = 0.648$. Five: $\sum_{k=3}^5\binom5k0.6^k0.4^{5-k} = 0.3456 + 0.2592 + 0.0778 = 0.683$. It rises towards 1, slowly, because $0.6 &gt; 0.4$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">code</span> Use lesson 30's <code>mlp_train</code> to learn parity directly from 5,000 random strings of 4, 8, 12, 16 and 20 bits. Then try 24 bits with 50,000 strings, for 4,000 and for 20,000 steps. What does the pattern say about why chain of thought helped?</p>
+        <details><summary>Solution</summary><div>
+          <p>Test accuracies: 1.000 (4 bits), 1.000 (8), 0.999 (12), 0.906 (16) and 0.527 (20, with 91.3% training accuracy: memorisation). With 24 bits and 50,000 strings: 0.497 after 4,000 steps, 0.823 after 20,000. Direct learning gets rapidly harder with the number of bits, in data and in steps, because the gradient's signal shrinks as the parity involves more bits. The chain-of-thought version needs to learn only a two-input function at each step, whose difficulty does not grow with the length, so 5,000 strings and 4,000 steps suffice at 24 bits.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">core</span> <b>In-context learning as inference.</b> Tasks are coins with unknown bias $\theta\sim\mathrm{Beta}(1, 1)$, and a prompt shows $n$ flips of one coin, $k$ of them heads. What is the Bayes-optimal probability that the next flip is heads? How does it behave for small and large $n$, and what is the analogue in an LLM given $n$ examples of a task?</p>
+        <details><summary>Solution</summary><div>
+          <p>The posterior is $\mathrm{Beta}(1 + k, 1 + n - k)$ and the predictive is its mean, $(k + 1)/(n + 2)$: Laplace's rule of succession. With no examples it is $\tfrac12$, the prior; with many it approaches the empirical frequency $k/n$. A model trained on many tasks and predicting optimally behaves the same way: with few examples, its predictions lean on what is typical across pretraining tasks; with many, on the examples in the prompt.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag">hard</span> Majority voting assumes the samples are independent. Suppose each chain is right with probability 0.4 but, with probability 0.5, all $N$ chains copy the first chain's answer, what is the accuracy of the majority vote as $N\to\infty$ (wrong answers spread over many values)? What does this suggest about sampling at low temperature?</p>
+        <details><summary>Solution</summary><div>
+          <p>The majority depends only on the counts of each answer. With probability 0.5 all chains agree, and the vote is right with probability 0.4; with probability 0.5 the chains are independent and, as $N\to\infty$, the vote is right with probability 1 (since $0.4$ exceeds any single wrong answer's probability). So the limit is $0.5\times0.4 + 0.5\times1 = 0.7$, well short of 1. Voting needs diverse samples. At low temperature, chains tend to agree with each other, so their errors are correlated and voting helps less; self-consistency is run at a temperature around 0.7–1.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

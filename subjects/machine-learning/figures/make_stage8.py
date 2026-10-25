@@ -1,0 +1,101 @@
+"""Figures for stage 8 (lessons 31-41). Run from the repo root:
+    python3 subjects/machine-learning/figures/make_stage6.py
+Figures that illustrate a lesson's code run that code (code/<lesson>.py), so they show
+exactly what the lesson prints."""
+import contextlib
+import io
+import runpy
+import sys
+from pathlib import Path
+import numpy as np
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT))
+from tools.figures.svgplot import Plot, c  # noqa: E402
+
+OUT = Path(__file__).resolve().parent
+CODE = OUT.parent / "code"
+
+
+def run(name):
+    with contextlib.redirect_stdout(io.StringIO()):
+        return runpy.run_path(str(CODE / f"{name}.py"))
+
+
+def image(p, A, x0, y0, size, diverging=False, frame=True):
+    """Draw array A as a grid of cells in pixel coordinates, top-left at (x0, y0)."""
+    h, w = A.shape
+    cell = size / max(h, w)
+    m = np.max(np.abs(A)) or 1
+    for i in range(h):
+        for j in range(w):
+            v = A[i, j] / m
+            if diverging:
+                col, op = ("accent" if v > 0 else "data"), abs(v)
+            else:
+                col, op = "fg", max(v, 0)
+            if op > 0.02:
+                p.rect(x0 + j * cell, y0 + i * cell, cell + 0.3, cell + 0.3, color=col, opacity=round(float(op) * 0.9, 2), px=True)
+    if frame:
+        p.rect(x0, y0, w * cell, h * cell, color="card", opacity=0, stroke="rule", px=True)
+
+
+
+# ---------- 31: mixing of random walks on a cycle, and Metropolis-Hastings traces ----------
+ns = run("31-markov-chains")
+walk, lazy, uniform, tv, lam2 = ns["walk"], ns["lazy"], ns["uniform"], ns["tv"], ns["lam2"]
+p = Plot(900, 340)
+steps = np.arange(0, 401, 5)
+p.panel(0, 0, 450, 340, (0, 400), (-5, 0.2), margin=(40, 20, 44, 56))
+p.axes("steps n", "TV distance to uniform (log10)", xticks=[0, 100, 200, 300, 400], yticks=[-5, -4, -3, -2, -1, 0])
+for Q, col, lab, yl in [(walk, "data", "plain walk: periodic, stuck at 0.5", -0.15), (lazy, "accent", "lazy walk", -2.0)]:
+    d = []
+    for n in steps:
+        d.append(np.log10(max(tv(np.linalg.matrix_power(Q, int(n))[0], uniform), 1e-12)))
+    p.line(steps, d, color=col)
+p.line(steps, [np.log10(lam2) * n for n in steps], color="muted", width=1.3, dash="5 4")
+p.text(395, -0.75, "plain walk: periodic, stuck at 0.5", anchor="end", size=10.5)
+p.text(150, -2.6, "lazy walk", size=10.5)
+p.text(250, -4.4, "dashed: λ₂ⁿ", size=10.5)
+p.text(p.box[0], 22, "a walk on a cycle of 20 states", color="fg", size=12, px=True)
+p.panel(450, 0, 450, 340, (0, 3000), (-6.5, 6.5), margin=(40, 20, 44, 46))
+p.axes("iteration", "x", xticks=[0, 1000, 2000, 3000], yticks=[-6, -3, 0, 3, 6])
+for step, col in [(0.1, "data"), (4.0, "accent")]:
+    xs, _ = ns["metropolis"](step, n=3000)
+    p.line(np.arange(3000), xs, color=col, width=1.0, opacity=0.85)
+p.text(p.box[0], 22, "Metropolis–Hastings: step 0.1 (blue), step 4 (orange)", color="fg", size=12, px=True)
+p.save(OUT / "markov-mixing.svg", "Left: total variation distance to the uniform distribution on a log scale against the number of steps, for two random walks on a cycle of 20 states. The plain walk stays at 0.5 because it is periodic; the lazy walk falls in a straight line on the log scale, parallel to the dashed line lambda-two to the n. Right: the first 3,000 iterations of two Metropolis-Hastings chains targeting modes at minus 3 and plus 3; with step 0.1 the chain stays near one mode, with step 4 it jumps between both")
+
+
+# ---------- 32: cumulative regret of six bandit algorithms ----------
+ns = run("32-bandits-and-exploration")
+res, T, c_lr = ns["results"], ns["T"], ns["c_lr"]
+styles = [("greedy", "fg"), ("epsilon-greedy 0.1", "muted"), ("epsilon-greedy 0.01", "both"),
+          ("UCB1", "data"), ("Thompson sampling", "accent"), ("gradient bandit", "good")]
+p = Plot(900, 360)
+t = np.unique(np.geomspace(1, T, 400).astype(int))
+p.panel(0, 0, 430, 360, (0, T), (0, 2100), margin=(40, 16, 44, 56))
+p.axes("pulls t", "cumulative regret", xticks=[0, 10000, 20000, 30000, 40000, 50000], yticks=[0, 500, 1000, 1500, 2000],
+       fmt=lambda v: f"{int(v / 1000)}k" if v >= 1000 and v % 1000 == 0 and v > 2100 else f"{int(v)}")
+for name, col in styles:
+    p.line(t, res[name][t - 1], color=col, width=1.8)
+p.text(48000, 1900, "greedy", anchor="end", size=10.5, color="fg")
+p.text(48000, 1500, "ε = 0.1", anchor="end", size=10.5)
+p.text(p.box[0], 22, "linear time: greedy and ε = 0.1 grow linearly", color="fg", size=12, px=True)
+p.panel(450, 0, 450, 360, (1, np.log10(T)), (0, 700), margin=(40, 150, 44, 50))
+p.axes("log₁₀ t", "", xticks=[1, 2, 3, 4], yticks=[0, 100, 200, 300, 400, 500, 600, 700])
+tt = t[t >= 10]
+for name, col in styles:
+    y = np.minimum(res[name][tt - 1], 700)
+    p.line(np.log10(tt), y, color=col, width=1.8)
+p.line(np.log10(tt), c_lr * np.log(tt), color="muted", width=1.3, dash="5 4")
+ends = {"greedy": 712, "epsilon-greedy 0.1": 668, "epsilon-greedy 0.01": res["epsilon-greedy 0.01"][-1],
+        "UCB1": res["UCB1"][-1], "gradient bandit": res["gradient bandit"][-1] + 12,
+        "Thompson sampling": res["Thompson sampling"][-1] - 22}
+labels = {"greedy": "greedy (off scale)", "epsilon-greedy 0.1": "ε = 0.1 (off scale)", "epsilon-greedy 0.01": "ε = 0.01",
+          "UCB1": "UCB1", "gradient bandit": "gradient", "Thompson sampling": "Thompson"}
+for name, col in styles:
+    p.text(p.X(np.log10(T)) + 8, p.Y(ends[name]) + 4, labels[name], color=col, size=10.5, px=True)
+p.text(p.X(np.log10(T)) + 8, p.Y(c_lr * np.log(T)) + 16, "Lai–Robbins bound", size=10.5, px=True)
+p.text(p.box[0], 22, "log scale of t: log T regret becomes a straight line", color="fg", size=12, px=True)
+p.save(OUT / "bandit-regret.svg", "Cumulative regret of six bandit algorithms on a 10-armed Bernoulli bandit, averaged over 200 runs of 50,000 pulls. Left, against t on a linear axis: greedy and epsilon-greedy with epsilon 0.1 grow linearly, reaching about 2,000 and 1,700. Right, against log t: UCB1, epsilon 0.01 and the gradient bandit bend into roughly straight lines, Thompson sampling stays lowest at about 68, below the dashed Lai-Robbins asymptotic lower bound of 10.1 log t, which only binds as t grows")

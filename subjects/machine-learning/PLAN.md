@@ -74,10 +74,10 @@ written; the rest are planned, in this order.
 | # | Lesson | The one idea | Math pulled in |
 |---|--------|--------------|----------------|
 | 26 ✅ | Language modelling and tokenisation | A language model is next-token prediction; perplexity measures it; BPE decides the tokens | Chain rule of probability, cross-entropy per token, perplexity |
-| 27 | Pretraining and scaling laws | A decoder-only transformer trained on the web; loss falls as a power law in compute, data and parameters | Power laws, compute ≈ 6ND, Chinchilla-optimal allocation |
+| 27 ✅ | Pretraining and scaling laws | A decoder-only transformer trained on the web; loss falls as a power law in compute, data and parameters | Power laws, compute ≈ 6ND, Chinchilla-optimal allocation |
 | 28 ✅ | Fine-tuning and alignment | SFT teaches the format, RLHF and DPO teach preferences | Bradley–Terry model, KL-regularised RL, the DPO derivation |
-| 29 | Making LLMs efficient | KV cache, quantisation, LoRA, mixture of experts, FlashAttention | Low-rank updates, memory arithmetic, IO-aware attention |
-| 30 | In-context learning and reasoning | Prompts as conditioning; chain of thought, sampling, and test-time compute | Sampling temperature, top-p, self-consistency as majority vote |
+| 29 ✅ | Making LLMs efficient | KV cache, quantisation, LoRA, mixture of experts, FlashAttention | Low-rank updates, memory arithmetic, IO-aware attention |
+| 30 ✅ | In-context learning and reasoning | Prompts as conditioning; chain of thought, sampling, and test-time compute | Sampling temperature, top-p, self-consistency as majority vote |
 
 ## Stage 8 · Reinforcement learning (from Markov chains to AlphaZero)
 
@@ -86,8 +86,8 @@ a from-scratch implementation on a small environment, and a problem set.
 
 | # | Lesson | The one idea | Math pulled in |
 |---|--------|--------------|----------------|
-| 31 | Markov chains | The future depends only on the present; long-run behaviour is the stationary distribution | Transition matrices, stationary distributions, ergodicity, mixing, detailed balance |
-| 32 | Bandits and exploration | Try options, learn which pays best, balance exploring and exploiting | Regret, ε-greedy, UCB and its confidence bound, Thompson sampling, the Lai–Robbins lower bound |
+| 31 ✅ | Markov chains | The future depends only on the present; long-run behaviour is the stationary distribution | Transition matrices, stationary distributions, ergodicity, mixing, detailed balance |
+| 32 ✅ | Bandits and exploration | Try options, learn which pays best, balance exploring and exploiting | Regret, ε-greedy, UCB and its confidence bound, Thompson sampling, the Lai–Robbins lower bound |
 | 33 | Markov decision processes and the Bellman equations | Value = reward now + discounted value of what comes next | Returns, policies, V and Q, Bellman expectation and optimality equations |
 | 34 | Dynamic programming | When the model is known, iterate the Bellman equation to the answer | Contraction mappings, Banach fixed point, policy evaluation, policy and value iteration, the policy improvement theorem |
 | 35 | Monte Carlo and temporal-difference learning | Learn values from experience: wait for the return (MC) or bootstrap from the next estimate (TD) | Stochastic approximation, bias vs variance of targets, n-step returns, TD(λ) and eligibility traces |
@@ -110,7 +110,7 @@ RLHF and the RL used to train reasoning models are in stage 7 (lessons 28 and 30
 
 Every lesson ends with short exercises and answers. On top of that:
 
-- **Problem sets**, one per stage (P2 … P9, plus one for the math toolkit; P2 ✅, P3 ✅, P4 ✅, P5 ✅ and P6 ✅ are written): 15–25 problems each, a mix of
+- **Problem sets**, one per stage (P2 … P9, plus one for the math toolkit; P2 ✅, P3 ✅, P4 ✅, P5 ✅, P6 ✅ and P7 ✅ are written): 15–25 problems each, a mix of
   derivations, proofs, "compute this by hand" and short coding questions, graded easy → hard, with full
   worked solutions hidden behind a click. Together they form the problems book.
 - **Assignments** for the important topics: a real programming project with starter code
@@ -126,7 +126,7 @@ Every lesson ends with short exercises and answers. On top of that:
 | A5 ✅ | A CNN with a residual block, hand-written convolution and its backward pass | 15–16 |
 | A6 | A character-level GPT: attention, a transformer block, training and sampling | 19–20, 26 |
 | A7 | A VAE and a DDPM diffusion model on 2D data and MNIST | 22–25 |
-| A8 | DPO on a toy preference dataset; LoRA fine-tuning | 28–29 |
+| A8 ✅ | DPO on a toy preference dataset; LoRA fine-tuning | 28–29 |
 | A9 | Gridworld RL: policy/value iteration, Q-learning, SARSA | 31–36 |
 | A10 | DQN on CartPole and PPO on a continuous-control task | 37–39 |
 | A11 | AlphaZero for Connect Four (MCTS + self-play) | 40–41 |

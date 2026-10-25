@@ -120,7 +120,7 @@ Every lesson ends with short exercises and answers. On top of that:
 | # | Assignment | Covers |
 |---|-----------|--------|
 | A1 ✅ | Linear and logistic regression from scratch, with regularisation and cross-validation | 01–05 |
-| A2 | An optimiser zoo: SGD, momentum, Adam, schedules, on a real dataset | 06–08 |
+| A2 ✅ | An optimiser zoo: SGD, momentum, Adam, schedules, on a real dataset | 06–08 |
 | A3 ✅ | Gradient-boosted trees from scratch | 09–11 |
 | A4 ✅ | A tiny autograd engine and an MLP trained on MNIST | 12–14 |
 | A5 ✅ | A CNN with a residual block, hand-written convolution and its backward pass | 15–16 |

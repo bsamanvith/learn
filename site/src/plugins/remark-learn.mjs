@@ -2,7 +2,8 @@
 // stay readable on GitHub and in an editor and never need editing for the site:
 //
 //   > 🎛 **Play:** [name](../widgets/x.html) ...   -> an embedded, theme-synced widget
-//   ../text/*.md, ../exercises/*.md, ../sims/*.py  -> site routes
+//   ../text/*.md, ../exercises/*.md, ../sims/*.py,
+//   ../problems/*.md, ../lessons/*.html            -> site routes
 //   ## 1. Hook: Title                              -> <section class="sec sec-hook"> with an eyebrow
 //   ### 1.5.3 🟢 Title (exercise files)            -> problem card linked to its solution
 //   <details><summary>1.5.3</summary>               -> gets id="sol-1.5.3"
@@ -12,8 +13,9 @@ import path from "node:path";
 const KINDS = [
   ["hook", /^hook/i], ["intuition", /^intuition/i], ["definition", /^definition/i],
   ["worked", /^worked/i], ["faded", /^faded/i], ["checks", /^quick check/i],
-  ["theory", /^theory/i], ["pitfalls", /^pitfall/i], ["simulation", /^simulation/i],
-  ["connections", /^connections/i], ["reading", /^further reading/i], ["solutions", /^solutions/i],
+  ["theory", /^theory/i], ["pitfalls", /^(pitfall|wrong turn)/i], ["simulation", /^(simulation|check by simulation)/i],
+  ["connections", /^(connections|going further)/i], ["reading", /^further reading/i], ["solutions", /^solutions/i],
+  ["hints", /^hints/i], ["answer", /^picture the answer/i],
 ];
 
 const kindOf = (title) => (KINDS.find(([, re]) => re.test(title)) || ["other"])[0];
@@ -35,6 +37,8 @@ export function rewriteHref(href, fromFile, base = "") {
   if (dir === "text" && file) return `${BASE}/${file.replace(/\.md$/, "")}/${frag}`;
   if (dir === "exercises" && file) return `${BASE}/${file.replace(/\.md$/, "")}/exercises/${frag}`;
   if (dir === "sims" && file) return `${BASE}/sims/${file.replace(/\.py$/, "")}/`;
+  if (dir === "problems" && file) return `${BASE}/problems/${file.replace(/\.md$/, "")}/${frag}`;
+  if (dir === "lessons" && file) return `${BASE}/${file.replace(/\.html$/, "")}/${frag}`;
   if (dir === "README.md" || dir === "PLAN.md" || !dir) return `${BASE}/`;
   return href;
 }

@@ -14,6 +14,10 @@ export type Widget = { file: string; title: string; chapter: string; idea: strin
 type LessonInfo = { file: string; chapter: string; part: number; title: string; added?: string; prerequisites?: string[]; leads_to?: string[]; blurb?: string };
 type PageInfo = { file: string; title: string; added?: string; idea?: string };
 type Lessons = { lessons?: LessonInfo[]; pages?: PageInfo[] };
+export type Book = { title: string; author: string; level: string; free: boolean; when: string };
+export type HardProblem = { id: string; title: string; stars: number; unlocks: string; idea: string; visual: string; source: string; status: string; notes: string };
+export type Assignment = { id: string; title: string; time: string; after: string; build: string; check: string; visual: string; status: string; notes: string };
+export type ProblemBook = { intro?: string; books: Book[]; hard: HardProblem[]; assignments: Assignment[] };
 
 export type Entry = {
   id: string;          // "probability/1.3-counting"
@@ -32,6 +36,7 @@ export type Entry = {
 
 const metas = import.meta.glob<SubjectMeta>("../../subjects/*/meta.json", { eager: true, import: "default" });
 const registries = import.meta.glob<{ widgets: Widget[] }>("../../subjects/*/widgets/index.json", { eager: true, import: "default" });
+const problemBooks = import.meta.glob<ProblemBook>("../../subjects/*/problems/index.json", { eager: true, import: "default" });
 const lessonLists = import.meta.glob<Lessons>("../../subjects/*/lessons.json", { eager: true, import: "default" });
 const lessonHtml = import.meta.glob<string>("../../subjects/*/lessons/*.html", { eager: true, query: "?raw", import: "default" });
 const pageHtml = import.meta.glob<string>("../../subjects/*/pages/*.html", { eager: true, query: "?raw", import: "default" });
@@ -54,6 +59,9 @@ export const SUBJECTS = index.subjects;
 export const meta = (slug: string): SubjectMeta | undefined => forSubject(metas, slug);
 export const widgetsOf = (slug: string): Widget[] => forSubject(registries, slug)?.widgets ?? [];
 export const pagesOf = (slug: string): PageInfo[] => forSubject(lessonLists, slug)?.pages ?? [];
+export const problemBookOf = (slug: string): ProblemBook | undefined => forSubject(problemBooks, slug);
+// A problem-book entry is written once it has a page; planned ones only appear in the list.
+export const isWritten = (status: string) => !["planned", "drop"].includes(status);
 export const partLabel = (slug: string) => meta(slug)?.partLabel ?? "Part";
 export const partTitle = (slug: string, part: number) => meta(slug)?.parts[String(part)]?.title ?? `${partLabel(slug)} ${part}`;
 export const subjectTitle = (slug: string) => meta(slug)?.title ?? SUBJECTS.find((s) => s.slug === slug)?.title ?? slug;

@@ -16,6 +16,8 @@
     { "file": "lattice-paths.html", "title": "Counting paths two ways", "chapter": "1.4",
       "idea": "Lattice paths give Pascal's rule and Vandermonde's identity as stories.", "status": "new", "notes": "" },
     { "file": "hat-check.html", "title": "The hat-check problem", "chapter": "1.5",
-      "idea": "P(no one gets their own hat) → 1/e, and the match count looks Poisson(1).", "status": "new", "notes": "" }
+      "idea": "P(no one gets their own hat) → 1/e, and the match count looks Poisson(1).", "status": "new", "notes": "" },
+    { "file": "menage.html", "title": "The ménage problem", "chapter": "1.5",
+      "idea": "Problem book: couples round a table, nobody beside their partner. The answer creeps to e⁻² like 1/n, against 1/n! for hat-check.", "status": "new", "notes": "" }
   ]
 }

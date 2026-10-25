@@ -1,0 +1,65 @@
+---
+import { getCollection, render } from "astro:content";
+import Base from "../../../layouts/Base.astro";
+import { chaptersOf, problemBookOf, subjectOf, slugIn, subjectTitle, chapterUrl, u } from "../../../subjects";
+
+// One written problem-book entry: subjects/<slug>/problems/<id>.md.
+export async function getStaticPaths() {
+  return (await getCollection("problems")).map((entry) => ({
+    params: { subject: subjectOf(entry.id), id: slugIn(entry.id) },
+    props: { entry },
+  }));
+}
+const { entry } = Astro.props;
+const subject = subjectOf(entry.id), id = slugIn(entry.id);
+const { Content } = await render(entry);
+const d = entry.data;
+const chapters = await chaptersOf(subject);
+const chapterLink = (ch?: string) => {
+  const c = ch ? chapters.find((x) => x.chapter === ch) : undefined;
+  return c ? { href: chapterUrl(c.id), label: `${c.chapter} ${c.title}` } : ch ? { href: undefined, label: ch } : undefined;
+};
+const unlock = chapterLink(d.unlocks ?? d.after);
+const level = ["", "Warm", "Needs care", "Needs an idea", "Boss problem"];
+// The next written entry of the same kind, in registry order, for the pager.
+const book = problemBookOf(subject);
+const list = (d.kind === "hard" ? book?.hard : book?.assignments) ?? [];
+const written = new Set((await getCollection("problems")).filter((e) => subjectOf(e.id) === subject).map((e) => slugIn(e.id)));
+const order = list.filter((p) => written.has(p.id));
+const next = order[order.findIndex((p) => p.id === id) + 1];
+---
+<Base title={d.title} subject={{ slug: subject, title: subjectTitle(subject) }} crumb="Problem book" description={d.title}>
+  <div class="reader reader-single">
+    <main class="prose problem-entry" data-key={`${subject}/${id}`}>
+      <p class="kicker"><a href={u(`/${subject}/problems/`)}>{subjectTitle(subject)} problem book · {d.kind === "hard" ? "hard problem" : "assignment"}</a></p>
+      <div class="chapter-meta">
+        {d.stars && <span class="chip stars" title={level[d.stars]}>{"★".repeat(d.stars)}{"☆".repeat(4 - d.stars)} {level[d.stars]}</span>}
+        {d.time && <span class="chip">⏱ {d.time}</span>}
+        {unlock && (unlock.href ? <a class="chip" href={unlock.href}>after {unlock.label}</a> : <span class="chip">after {unlock.label}</span>)}
+        {d.uses.length > 0 && <span>uses</span>}
+        {d.uses.map((ch) => { const l = chapterLink(ch)!; return l.href ? <a class="chip" href={l.href}>{ch}</a> : <span class="chip">{ch}</span>; })}
+      </div>
+      <Content />
+      <p class="clear-row"><label class="cleared big"><input type="checkbox" data-clear={`${subject}/${id}`} /> {d.kind === "hard" ? "I've cleared this one" : "Done it"}</label></p>
+      <nav class="pager">
+        <a href={u(`/${subject}/problems/`)}><small>Back to</small>← The problem book</a>
+        {next && <a class="next" href={u(`/${subject}/problems/${next.id}/`)}><small>Next {d.kind === "hard" ? "hard problem" : "assignment"}</small>{next.title} →</a>}
+      </nav>
+    </main>
+  </div>
+</Base>
+
+<script>
+  const KEY = "learn-cleared";
+  let cleared: Record<string, string> = {};
+  try { cleared = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch {}
+  const box = document.querySelector<HTMLInputElement>("input[data-clear]");
+  if (box) {
+    box.checked = Boolean(cleared[box.dataset.clear!]);
+    box.addEventListener("change", () => {
+      if (box.checked) cleared[box.dataset.clear!] = new Date().toISOString().slice(0, 10);
+      else delete cleared[box.dataset.clear!];
+      try { localStorage.setItem(KEY, JSON.stringify(cleared)); } catch {}
+    });
+  }
+</script>

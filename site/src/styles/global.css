@@ -343,3 +343,36 @@ a.crumb { color: var(--fg); }
 .ml-main > .mobile-nav { margin: 0; }
 .ml-page { max-width: 1080px; margin: 0 auto; padding: 48px 24px 0; display: grid; gap: 56px; }
 @media (max-width: 760px) { .ml-page { padding: 32px 16px 0; } }
+
+/* ---------- problem book: hard problems, assignments, key books ---------- */
+.pb-section { margin: 72px 0 0; display: grid; gap: 24px; }
+.pb-section .part-label p { max-width: 70ch; }
+.pb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.pb-card { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); font-family: var(--sans); font-size: 14.5px; line-height: 1.5; }
+.pb-card h3 { margin: 0; font: 600 1.18rem/1.25 var(--serif); }
+.pb-card h3 a { color: var(--fg); text-decoration: none; }
+.pb-card h3 a:hover { color: var(--accent); }
+.pb-card p { margin: 0; color: var(--soft); }
+.pb-card.written { border-color: color-mix(in srgb, var(--accent) 60%, var(--rule)); box-shadow: 0 10px 28px -20px color-mix(in srgb, var(--accent) 60%, transparent); }
+.pb-card.locked { background: transparent; }
+.pb-card.locked h3, .pb-card.locked p { color: var(--muted); }
+.pb-card.is-cleared { background: var(--tint-good); border-color: color-mix(in srgb, var(--good) 50%, var(--rule)); }
+.pb-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+.stars { color: var(--accent); letter-spacing: .08em; font-size: 15px; }
+.chip.stars { letter-spacing: .04em; color: color-mix(in srgb, var(--accent) 80%, var(--fg)); }
+.cleared { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none; }
+.cleared input { accent-color: var(--good); }
+.cleared.big { font: 550 15px var(--sans); padding: 10px 16px; border: 1px solid var(--rule); border-radius: 10px; }
+.clear-row { margin: 3em 0 0; }
+.pb-visual { font-size: 13.5px; }
+.pb-visual span { color: var(--event-a); }
+.pb-check b { color: var(--fg); font-weight: 600; }
+.pb-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; padding-top: 6px; font-size: 12.5px; }
+.pb-source { color: var(--muted); font-size: 12px; flex-basis: 100%; }
+.pb-books { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-family: var(--sans); font-size: 15px; }
+.pb-books li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--rule); color: var(--soft); }
+.pb-books li b { color: var(--fg); font: 600 1.08rem var(--serif); }
+.pb-books .pb-by { flex-basis: 100%; color: var(--muted); font-size: 13.5px; }
+.reader-single { grid-template-columns: minmax(0, 1fr); }
+.problem-entry { padding-bottom: 0; }
+@media (max-width: 760px) { .pb-grid { grid-template-columns: 1fr; } .pb-section { margin-top: 48px; } }

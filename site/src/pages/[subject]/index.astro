@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { liveSubjects, chaptersOf, meta, widgetsOf, pagesOf, partTitle, partLabel, SUBJECTS, chapterUrl, u } from "../../subjects";
+import { liveSubjects, chaptersOf, meta, widgetsOf, pagesOf, problemBookOf, partTitle, partLabel, SUBJECTS, chapterUrl, u } from "../../subjects";
 
 export async function getStaticPaths() {
   return (await liveSubjects()).map((s) => ({ params: { subject: s.slug } }));
@@ -15,6 +15,7 @@ const chapters = await chaptersOf(subject);
 const exercises = await getCollection("exercises");
 const widgets = widgetsOf(subject);
 const pages = pagesOf(subject);
+const book = problemBookOf(subject);
 const written = [...new Set(chapters.map((c) => c.part))];
 const upcoming = Object.keys(m?.parts ?? {}).map(Number).filter((p) => !written.includes(p));
 const first = chapters[0];
@@ -32,6 +33,7 @@ const first = chapters[0];
       </div>
       <div class="actions">
         {first && <a class="btn primary" href={chapterUrl(first.id)} data-resume={subject}>Start reading · {first.chapter}</a>}
+        {book && <a class="btn" href={u(`/${subject}/problems/`)}>Problem book · {book.hard.length} hard problems</a>}
         {(widgets.length + pages.length) > 0 && <a class="btn" href={u(`/animations/#${subject}`)}>{widgets.length + pages.length} animations</a>}
       </div>
     </section>

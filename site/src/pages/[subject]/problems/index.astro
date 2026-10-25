@@ -1,0 +1,136 @@
+---
+import Base from "../../../layouts/Base.astro";
+import { liveSubjects, chaptersOf, problemBookOf, isWritten, subjectTitle, chapterUrl, u } from "../../../subjects";
+
+// A subject's problem book: hard problems, assignments and key books, from subjects/<slug>/problems/index.json.
+export async function getStaticPaths() {
+  return (await liveSubjects()).filter((s) => problemBookOf(s.slug)).map((s) => ({ params: { subject: s.slug } }));
+}
+const { subject } = Astro.params;
+const book = problemBookOf(subject)!;
+const title = subjectTitle(subject);
+const chapters = await chaptersOf(subject);
+// "1.5" or "02" unlocks once that chapter is written; a bare part number ("4") once any chapter of it is.
+const chapterOf = (id: string) => chapters.find((c) => c.chapter === id) ?? (/^\d+$/.test(id) ? chapters.find((c) => c.part === Number(id)) : undefined);
+const stars = (n: number) => "★".repeat(n) + "☆".repeat(4 - n);
+const level = ["", "Warm", "Needs care", "Needs an idea", "Boss problem"];
+const href = (id: string) => u(`/${subject}/problems/${id}/`);
+const written = [...book.hard, ...book.assignments].filter((p) => isWritten(p.status));
+---
+<Base title={`${title} problem book`} subject={{ slug: subject, title }} crumb="Problem book" description={book.intro}>
+  <main class="home problem-book" data-subject={subject}>
+    <section class="hero">
+      <p class="kicker">Problem book</p>
+      <h1>{title}, <em>the hard way</em></h1>
+      {book.intro && <p>{book.intro}</p>}
+      <div class="progress-line">
+        <div class="bar"><span data-cleared-bar></span></div>
+        <span class="mono"><span data-cleared>0</span> of {book.hard.length} hard problems cleared · {written.length} written so far</span>
+      </div>
+      <nav class="actions">
+        <a class="btn primary" href="#hard">{book.hard.length} hard problems</a>
+        <a class="btn" href="#assignments">{book.assignments.length} assignments</a>
+        <a class="btn" href="#books">{book.books.length} key books</a>
+      </nav>
+    </section>
+
+    <section class="pb-section" id="hard">
+      <div class="part-label">
+        <div class="n">Hard problems</div>
+        <h2>Problems that need an idea</h2>
+        <p>★ warm · ★★ needs care · ★★★ needs an idea · ★★★★ boss problem. Each one names the chapter that unlocks it and the picture that goes with it. Tick one off when you've cleared it (only this browser remembers).</p>
+      </div>
+      <div class="pb-grid">
+        {book.hard.map((p) => {
+          const ch = chapterOf(p.unlocks);
+          const open = isWritten(p.status);
+          return (
+            <article class:list={["pb-card", { written: open, locked: !ch }]} data-key={`${subject}/${p.id}`}>
+              <div class="pb-top">
+                <span class="stars" title={level[p.stars]} aria-label={`${p.stars} of 4 stars: ${level[p.stars]}`}>{stars(p.stars)}</span>
+                <label class="cleared"><input type="checkbox" data-clear={`${subject}/${p.id}`} /> cleared</label>
+              </div>
+              <h3>{open ? <a href={href(p.id)}>{p.title}</a> : p.title}</h3>
+              <p>{p.idea}</p>
+              <p class="pb-visual"><span aria-hidden="true">◐</span> {p.visual}</p>
+              <div class="pb-meta">
+                {open ? <a class="chip status" href={href(p.id)}>Written · open it →</a> : <span class="chip">Planned</span>}
+                {ch ? <a class="chip" href={chapterUrl(ch.id)}>after {p.unlocks}</a> : <span class="chip" title="That chapter isn't written yet">🔒 unlocks at {p.unlocks}</span>}
+                <span class="pb-source">{p.source}</span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+
+    <section class="pb-section" id="assignments">
+      <div class="part-label">
+        <div class="n">Assignments</div>
+        <h2>Build it, break it, watch it work</h2>
+        <p>One sitting each. You end with something you made: a script, a plot, a measured number. Checkpoints tell you you're on track without opening the solution.</p>
+      </div>
+      <div class="pb-grid">
+        {book.assignments.map((a) => {
+          const ch = chapterOf(a.after);
+          const open = isWritten(a.status);
+          return (
+            <article class:list={["pb-card", "assignment", { written: open, locked: !ch }]}>
+              <div class="pb-top"><span class="mono">{a.time}</span><label class="cleared"><input type="checkbox" data-clear={`${subject}/${a.id}`} /> done</label></div>
+              <h3>{open ? <a href={href(a.id)}>{a.title}</a> : a.title}</h3>
+              <p>{a.build}</p>
+              <p class="pb-check"><b>You'll see:</b> {a.check}</p>
+              <p class="pb-visual"><span aria-hidden="true">◐</span> {a.visual}</p>
+              <div class="pb-meta">
+                {open ? <a class="chip status" href={href(a.id)}>Written · start it →</a> : <span class="chip">Planned</span>}
+                {ch ? <a class="chip" href={chapterUrl(ch.id)}>after {a.after}</a> : <span class="chip" title="That chapter isn't written yet">🔒 after {a.after}</span>}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+
+    <section class="pb-section" id="books">
+      <div class="part-label">
+        <div class="n">Key books</div>
+        <h2>Problem books worth owning</h2>
+        <p>The classic collections, and when to pick each one up. We point to them and never copy them.</p>
+      </div>
+      <ul class="pb-books">
+        {book.books.map((b) => (
+          <li>
+            <b>{b.title}</b>{b.free && <span class="chip status">free online</span>}
+            <span class="pb-by">{b.author} · {b.level}</span>
+            <span>{b.when}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </main>
+</Base>
+
+<script>
+  // "Cleared" ticks live in this browser only, under learn-cleared: { "<subject>/<id>": "YYYY-MM-DD" }.
+  const KEY = "learn-cleared";
+  let cleared: Record<string, string> = {};
+  try { cleared = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch {}
+  const boxes = [...document.querySelectorAll<HTMLInputElement>("input[data-clear]")];
+  const hard = [...document.querySelectorAll<HTMLElement>("#hard [data-key]")];
+  function render() {
+    for (const b of boxes) {
+      b.checked = Boolean(cleared[b.dataset.clear!]);
+      b.closest(".pb-card")?.classList.toggle("is-cleared", b.checked);
+    }
+    const n = hard.filter((c) => cleared[c.dataset.key!]).length;
+    document.querySelector("[data-cleared]")!.textContent = String(n);
+    document.querySelector<HTMLElement>("[data-cleared-bar]")!.style.width = `${(100 * n) / Math.max(hard.length, 1)}%`;
+  }
+  for (const b of boxes) b.addEventListener("change", () => {
+    if (b.checked) cleared[b.dataset.clear!] = new Date().toISOString().slice(0, 10);
+    else delete cleared[b.dataset.clear!];
+    try { localStorage.setItem(KEY, JSON.stringify(cleared)); } catch {}
+    render();
+  });
+  render();
+</script>

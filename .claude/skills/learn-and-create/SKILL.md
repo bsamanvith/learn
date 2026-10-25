@@ -77,6 +77,7 @@ They may also paste reading notes ("1.4 hockey stick didn't click"), or replace
 | Subject list (home page) | `subjects/index.json` |
 | Book title, intro, parts | `subjects/<subject>/meta.json` |
 | Widget registry | `subjects/<subject>/widgets/index.json` |
+| Problem book (hard problems, assignments, key books) | `subjects/<subject>/problems/index.json`, written ones in `problems/<id>.md`; rules in `principles/problem-books.md`; site `/<subject>/problems/` |
 | Plan + progress | `subjects/<subject>/PLAN.md` |
 | Site routes | `/<subject>/`, `/<subject>/<id>/`, `/subjects/<subject>/widgets/x.html` |
 

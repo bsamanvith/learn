@@ -210,7 +210,7 @@ a.chip:hover { color: var(--fg); background: color-mix(in srgb, var(--panel) 70%
 .part-label .n { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .part-label h2 { font-family: var(--serif); font-size: 1.5rem; line-height: 1.2; margin: .2em 0 .4em; letter-spacing: -0.01em; font-weight: 600; }
 .part-label p { font-size: 14px; color: var(--muted); margin: 0; line-height: 1.5; }
-.chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; align-content: start; }
+.chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 14px; align-content: start; }
 .chapter-card { display: flex; flex-direction: column; gap: 6px; padding: 18px 18px 16px; border: 1px solid var(--rule); border-radius: 10px; text-decoration: none; color: var(--fg); background: var(--card); transition: border-color .15s, transform .15s; }
 .chapter-card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .chapter-card .num { font: 500 12.5px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; display: flex; justify-content: space-between; gap: 8px; }
@@ -332,13 +332,14 @@ a.crumb { color: var(--fg); }
 .chapter-card.is-started .state { color: var(--accent); }
 .upcoming-list li { display: flex; flex-direction: column; padding: 8px 0; border-bottom: 1px solid var(--rule); }
 .upcoming-list li b { color: var(--fg); font-weight: 600; }
+@media (max-width: 760px) { .subject-page .part { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 960px) {
-  .subject-layout { grid-template-columns: 1fr; gap: 0; }
+  .subject-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .subject-side { position: static; margin-top: 48px; }
 }
 
 /* Hand-written lessons sit in the reading column, a little wider than prose for their figures. */
-.ml-main { width: 100%; max-width: 780px; margin: 0 auto; padding: 40px 0 0; min-width: 0; display: grid; gap: 48px; align-content: start; }
+.ml-main { width: 100%; max-width: 780px; margin: 0 auto; padding: 40px 0 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; align-content: start; }
 .ml-main > .pager { margin-top: 0; }
 .ml-main > .mobile-nav { margin: 0; }
 .ml-page { max-width: 1080px; margin: 0 auto; padding: 48px 24px 0; display: grid; gap: 56px; }

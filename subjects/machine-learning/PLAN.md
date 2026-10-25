@@ -88,7 +88,7 @@ a from-scratch implementation on a small environment, and a problem set.
 |---|--------|--------------|----------------|
 | 31 ✅ | Markov chains | The future depends only on the present; long-run behaviour is the stationary distribution | Transition matrices, stationary distributions, ergodicity, mixing, detailed balance |
 | 32 ✅ | Bandits and exploration | Try options, learn which pays best, balance exploring and exploiting | Regret, ε-greedy, UCB and its confidence bound, Thompson sampling, the Lai–Robbins lower bound |
-| 33 | Markov decision processes and the Bellman equations | Value = reward now + discounted value of what comes next | Returns, policies, V and Q, Bellman expectation and optimality equations |
+| 33 ✅ | Markov decision processes and the Bellman equations | Value = reward now + discounted value of what comes next | Returns, policies, V and Q, Bellman expectation and optimality equations |
 | 34 | Dynamic programming | When the model is known, iterate the Bellman equation to the answer | Contraction mappings, Banach fixed point, policy evaluation, policy and value iteration, the policy improvement theorem |
 | 35 | Monte Carlo and temporal-difference learning | Learn values from experience: wait for the return (MC) or bootstrap from the next estimate (TD) | Stochastic approximation, bias vs variance of targets, n-step returns, TD(λ) and eligibility traces |
 | 36 | SARSA and Q-learning | Control without a model: on-policy vs off-policy learning of action values | Convergence conditions, maximisation bias, double Q-learning, the cliff-walking example |

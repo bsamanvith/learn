@@ -99,3 +99,34 @@ for name, col in styles:
 p.text(p.X(np.log10(T)) + 8, p.Y(c_lr * np.log(T)) + 16, "Lai–Robbins bound", size=10.5, px=True)
 p.text(p.box[0], 22, "log scale of t: log T regret becomes a straight line", color="fg", size=12, px=True)
 p.save(OUT / "bandit-regret.svg", "Cumulative regret of six bandit algorithms on a 10-armed Bernoulli bandit, averaged over 200 runs of 50,000 pulls. Left, against t on a linear axis: greedy and epsilon-greedy with epsilon 0.1 grow linearly, reaching about 2,000 and 1,700. Right, against log t: UCB1, epsilon 0.01 and the gradient bandit bend into roughly straight lines, Thompson sampling stays lowest at about 68, below the dashed Lai-Robbins asymptotic lower bound of 10.1 log t, which only binds as t grows")
+
+
+# ---------- 33: optimal policies of the 4 x 3 gridworld for five living rewards ----------
+ns = run("33-mdps-and-bellman-equations")
+mdp, all_values, q_from_v, idx, terminal, wall, gamma = (ns[k] for k in ["mdp", "all_values", "q_from_v", "idx", "terminal", "wall", "gamma"])
+start = ns["start"]
+p = Plot(900, 186)
+glyph = "↑→↓←"
+for k, living in enumerate([-2.0, -0.4, -0.04, -0.01, 0.1]):
+    Pl, Rl = mdp(living)
+    _, V = all_values(Pl, Rl, gamma)
+    Vb = V[np.flatnonzero(np.all(V >= V.max(0) - 1e-10, axis=1))[0]]
+    act = q_from_v(Pl, Rl, Vb, gamma).argmax(0)
+    free = [s for c, s in idx.items() if c not in terminal]
+    lo, hi = min(Vb[s] for s in free), max(Vb[s] for s in free)
+    x0, y0, cell = k * 180 + 14, 62, 38
+    p.text(x0, 24, f"r = {living:+.2f}", color="fg", size=12, px=True)
+    p.text(x0, 42, f"V*(start) = {Vb[start]:+.2f}", size=10.5, px=True)
+    for (i, j), s in idx.items():
+        x, y = x0 + j * cell, y0 + i * cell
+        if (i, j) in terminal:
+            good = terminal[(i, j)] > 0
+            p.rect(x, y, cell, cell, color="good" if good else "bad", opacity=0.25, stroke="rule", px=True)
+            p.text(x + cell / 2, y + cell / 2 + 5, "+1" if good else "−1", color="fg", size=13, anchor="middle", px=True)
+            continue
+        op = 0.06 + 0.5 * (Vb[s] - lo) / (hi - lo + 1e-12)
+        p.rect(x, y, cell, cell, color="accent", opacity=round(float(op), 2), stroke="rule", px=True)
+        p.text(x + cell / 2, y + cell / 2 + 6, glyph[act[s]], color="fg", size=17, anchor="middle", px=True)
+    p.rect(x0 + wall[1] * cell, y0 + wall[0] * cell, cell, cell, color="muted", opacity=0.55, stroke="rule", px=True)
+    p.text(x0 + 4, y0 + 3 * cell - 4, "S", size=9.5, px=True)
+p.save(OUT / "gridworld-policies.svg", "Five copies of the 4 by 3 gridworld, each showing the optimal action in every cell as an arrow and the optimal value as shading, for living rewards of minus 2, minus 0.4, minus 0.04, minus 0.01 and plus 0.1. At minus 2 the agent heads for the nearest exit, even the minus 1 square. At minus 0.04 it takes the long safe route round the top. At minus 0.01 it avoids even a small risk of slipping into minus 1. At plus 0.1 it never leaves")

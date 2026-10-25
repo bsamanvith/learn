@@ -1,0 +1,114 @@
+<svg class="fig" viewBox="0 0 900 300" role="img" aria-label="Each dot is a paper from the tables in this lesson, placed by year along a row for its stage. The theory and optimisation rows start in the 1950s; the rows for deep architectures, generative models and language models are almost entirely after 2010" style="width:100%;height:auto;display:block;overflow:visible">
+  <line x1="118" y1="260" x2="884" y2="260" style="stroke:var(--muted);stroke-width:1"/>
+  <line x1="118" y1="30" x2="118" y2="260" style="stroke:var(--muted);stroke-width:1"/>
+  <text x="137.39" y="275" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1950</text>
+  <text x="234.35" y="275" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1960</text>
+  <text x="331.32" y="275" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1970</text>
+  <text x="428.28" y="275" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1980</text>
+  <text x="525.24" y="275" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1990</text>
+  <text x="622.2" y="275" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">2000</text>
+  <text x="719.16" y="275" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">2010</text>
+  <text x="816.13" y="275" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">2020</text>
+  <text x="884" y="289" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="end">year</text>
+  <polyline points="118,49.17 884,49.17" style="fill:none;stroke:var(--muted);stroke-width:0.6;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:2 4"/>
+  <circle cx="147.09" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="214.96" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="234.35" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="331.32" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="583.42" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="341.01" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="467.06" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="573.72" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="767.65" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="787.04" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="806.43" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="787.04" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="787.04" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="806.43" cy="49.17" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <text x="93.76" y="53" style="fill:var(--fg);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="end">1–2 foundations</text>
+  <polyline points="118,81.11 884,81.11" style="fill:none;stroke:var(--muted);stroke-width:0.6;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:2 4"/>
+  <circle cx="467.06" cy="81.11" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="583.42" cy="81.11" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="631.9" cy="81.11" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="593.11" cy="81.11" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="631.9" cy="81.11" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="777.34" cy="81.11" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <text x="93.76" y="84.94" style="fill:var(--fg);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="end">3 trees</text>
+  <polyline points="118,113.06 884,113.06" style="fill:none;stroke:var(--muted);stroke-width:0.6;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:2 4"/>
+  <circle cx="486.46" cy="113.06" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="515.54" cy="113.06" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="515.54" cy="113.06" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="719.16" cy="113.06" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="767.65" cy="113.06" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="757.95" cy="113.06" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="767.65" cy="113.06" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="777.34" cy="113.06" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <text x="93.76" y="116.89" style="fill:var(--fg);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="end">4 neural nets</text>
+  <polyline points="118,145 884,145" style="fill:none;stroke:var(--muted);stroke-width:0.6;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:2 4"/>
+  <circle cx="602.81" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="738.56" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="777.34" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="593.11" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="748.25" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="767.65" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="787.04" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="825.82" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="825.82" cy="145" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <text x="93.76" y="148.83" style="fill:var(--fg);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="end">5 architectures</text>
+  <polyline points="118,176.94 884,176.94" style="fill:none;stroke:var(--muted);stroke-width:0.6;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:2 4"/>
+  <circle cx="757.95" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="757.95" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="757.95" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="787.04" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="767.65" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="816.13" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="806.43" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="825.82" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="835.52" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="835.52" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="845.22" cy="176.94" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <text x="93.76" y="180.78" style="fill:var(--fg);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="end">6 generative</text>
+  <polyline points="118,208.89 884,208.89" style="fill:none;stroke:var(--muted);stroke-width:0.6;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:2 4"/>
+  <circle cx="777.34" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="796.73" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="806.43" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="806.43" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="816.13" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="816.13" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="835.52" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="787.04" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="835.52" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="845.22" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="835.52" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="835.52" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="787.04" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="835.52" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="845.22" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="854.91" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <circle cx="864.61" cy="208.89" r="3.6" style="fill:var(--accent);opacity:0.8"/>
+  <text x="93.76" y="212.72" style="fill:var(--fg);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="end">7 language models</text>
+  <polyline points="118,240.83 884,240.83" style="fill:none;stroke:var(--muted);stroke-width:0.6;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:2 4"/>
+  <circle cx="205.27" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="234.35" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="476.76" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="641.59" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="505.85" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="544.63" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="719.16" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="593.11" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="573.72" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="767.65" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="544.63" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="622.2" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="641.59" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="767.65" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="777.34" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="787.04" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="525.24" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="680.38" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="777.34" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="787.04" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="796.73" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <circle cx="816.13" cy="240.83" r="3.6" style="fill:var(--event-a);opacity:0.8"/>
+  <text x="93.76" y="244.67" style="fill:var(--fg);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="end">8 RL</text>
+</svg>

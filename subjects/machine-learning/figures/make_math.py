@@ -192,3 +192,24 @@ for k, (w, col) in enumerate([(0.1, "data"), (2.5, "accent"), (50.0, "fg")]):
     p.text(4950, off + 7.2, f"proposal width {w:g}", color=col, size=10, anchor="end")
 p.text(p.box[0], 22, "Metropolis–Hastings on two modes at ±3", color="fg", size=12, px=True)
 p.save(OUT / "m6-sampling.svg", "Left: RMS error of plain Monte Carlo estimates of an integral against the number of samples on log-log axes, in 1 and in 10 dimensions; both lines have slope minus one half, the 10-dimensional one higher because its integrand has larger variance. Right: the first 5,000 steps of Metropolis-Hastings chains on a target with modes at plus and minus 3, for random-walk proposals of width 0.1, 2.5 and 50; the narrow chain never leaves its first mode, the middle one moves between the modes often, and the wide one rarely moves at all")
+
+
+# ---------- 42: the landmark papers by year and stage ----------
+import re  # noqa: E402
+html42 = (OUT.parent / "lessons" / "42-landmark-papers.html").read_text()
+stages42 = []
+for head, body in re.findall(r"<h3>(.*?)</h3>\s*<div class=\"tablewrap\"><table>(.*?)</table>", html42, re.S):
+    years = [int(y) for cell in re.findall(r"<tr><td>(.*?)</td>", body) for y in re.findall(r"\((?:[^()]*?)(19\d\d|20\d\d)\)", cell)]
+    stages42.append((head, years))
+short42 = ["1–2 foundations", "3 trees", "4 neural nets", "5 architectures", "6 generative", "7 language models", "8 RL"]
+stages42 = [(s, y) for s, (_, y) in zip(short42, stages42)]
+p = Plot(900, 300)
+p.panel(0, 0, 900, 300, (1948, 2027), (len(stages42) - 0.4, -0.6), margin=(30, 16, 40, 118))
+p.axes("year", "", xticks=[1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020], yticks=[], grid=False)
+for k, (name, years) in enumerate(stages42):
+    p.line([1948, 2027], [k, k], color="muted", width=0.6, dash="2 4")
+    p.dots(years, [k] * len(years), color="accent" if k % 2 else "data", r=3.6, opacity=0.8)
+    p.text(1945.5, k + 0.12, name, color="fg", size=10.5, anchor="end")
+allyears = sorted(y for _, ys in stages42 for y in ys)
+print("42 timeline:", len(allyears), "papers;", sum(y >= 2010 for y in allyears), "from 2010 on;", [(n, len(y)) for n, y in stages42])
+p.save(OUT / "paper-timeline.svg", "Each dot is a paper from the tables in this lesson, placed by year along a row for its stage. The theory and optimisation rows start in the 1950s; the rows for deep architectures, generative models and language models are almost entirely after 2010")

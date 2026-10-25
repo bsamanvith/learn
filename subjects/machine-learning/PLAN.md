@@ -104,7 +104,7 @@ RLHF and the RL used to train reasoning models are in stage 7 (lessons 28 and 30
 
 | # | Lesson | The one idea |
 |---|--------|--------------|
-| 42 | A guided tour of landmark papers | How to read a paper, and a map of the papers this curriculum rests on, each tied to the lesson that explains it |
+| 42 ✅ | A guided tour of landmark papers | How to read a paper, and a map of the papers this curriculum rests on, each tied to the lesson that explains it |
 
 ## Problems book and assignments
 

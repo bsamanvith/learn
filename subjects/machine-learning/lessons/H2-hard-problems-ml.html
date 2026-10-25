@@ -1,0 +1,382 @@
+<header class="lesson-head">
+  <div class="eyebrow">Hard problems · Volume III, book 2</div>
+  <h1>Hard problems: machine learning and AI</h1>
+  <p class="lede">Forty-three problems that take each stage one level deeper than its problem set. They cover when ridge helps and why double descent happens, momentum and normalisation, AdaBoost as gradient descent, why attention divides by $\sqrt d$, what diffusion's forward process really is, how DPO falls out of RLHF, why speculative decoding is exact, and the contraction behind every RL algorithm. Each problem has a hint and a full solution. Try the hint before the solution. The ★ problems are the ones to do if you only do a few.</p>
+  <div class="meta"><span><b>Uses:</b> stages <a href="/machine-learning/01-linear-regression/">1</a>–<a href="/machine-learning/41-alphago-alphazero-and-muzero/">8</a>, and the <a href="/machine-learning/M1-linear-algebra/">math toolkit</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag hard">hard</span> <span class="tag code">code</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="learning-theory">
+    <h2>Learning theory and linear models</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Ridge always helps a little.) Fix a design $X$ and let $y = Xw + \varepsilon$ with $\varepsilon \sim N(0, \sigma^2I)$. Write $X^\top X = \sum_jd_jv_jv_j^\top$ with all $d_j &gt; 0$ and $w_j = v_j^\top w$. Show that the ridge estimate $\hat w_\lambda = (X^\top X + \lambda I)^{-1}X^\top y$ has mean squared error
+        $$E\|\hat w_\lambda - w\|^2 = \sum_j\frac{\lambda^2w_j^2 + \sigma^2d_j}{(d_j + \lambda)^2}.$$
+        Prove that its derivative at $\lambda = 0$ is negative, so some $\lambda &gt; 0$ beats least squares, whatever $w$ is. Which $\lambda$ is best when every $w_j^2$ equals $\alpha^2$?</p>
+        <details><summary>Hint</summary><div><p>Work in the eigenbasis: there the ridge matrix is diagonal and each coordinate is shrunk by $d_j/(d_j + \lambda)$. Split each coordinate's error into bias squared plus variance.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$E\hat w_\lambda = (X^\top X + \lambda I)^{-1}X^\top Xw$, whose $j$-th coordinate is $\frac{d_j}{d_j + \lambda}w_j$, so the bias is $-\frac{\lambda}{d_j + \lambda}w_j$. The covariance is $\sigma^2(X^\top X + \lambda I)^{-1}X^\top X(X^\top X + \lambda I)^{-1}$, diagonal in the same basis with entries $\frac{\sigma^2d_j}{(d_j + \lambda)^2}$. Adding bias squared and variance over $j$ gives the formula.</p>
+          <p>Differentiate one term: $\frac{d}{d\lambda}\frac{\lambda^2w_j^2 + \sigma^2d_j}{(d_j + \lambda)^2} = \frac{2\lambda w_j^2(d_j + \lambda) - 2(\lambda^2w_j^2 + \sigma^2d_j)}{(d_j + \lambda)^3} = \frac{2d_j(\lambda w_j^2 - \sigma^2)}{(d_j + \lambda)^3}$. At $\lambda = 0$ it is $-2\sigma^2/d_j^2 &lt; 0$ for every $j$, so the total error decreases as $\lambda$ leaves 0 (Hoerl and Kennard, 1970). Each term is minimised at $\lambda = \sigma^2/w_j^2$, so if every $w_j^2 = \alpha^2$, all terms are minimised together at $\lambda^* = \sigma^2/\alpha^2$: the noise-to-signal ratio, which is also the MAP answer for the prior $w \sim N(0, \alpha^2I)$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Leave-one-out for free.) For ridge regression with $A = X^\top X + \lambda I$ and hat matrix $H = XA^{-1}X^\top$, prove that the leave-one-out residual is $y_i - x_i^\top\hat w_{(-i)} = \frac{y_i - \hat y_i}{1 - H_{ii}}$, where $\hat w_{(-i)}$ is fitted without example $i$. What does this say about the cost of leave-one-out cross-validation, and about points with $H_{ii}$ close to 1?</p>
+        <details><summary>Hint</summary><div><p>Removing example $i$ subtracts $x_ix_i^\top$ from $A$ and $x_iy_i$ from $X^\top y$. Use Sherman–Morrison, and note that $A_{(-i)}^{-1}x_i = A^{-1}x_i/(1 - h)$ with $h = H_{ii} = x_i^\top A^{-1}x_i$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Write $x = x_i$, $b = X^\top y$, $h = x^\top A^{-1}x$. Sherman–Morrison gives $A_{(-i)}^{-1} = A^{-1} + \frac{A^{-1}xx^\top A^{-1}}{1 - h}$, so $A_{(-i)}^{-1}x = A^{-1}x\big(1 + \frac{h}{1 - h}\big) = \frac{A^{-1}x}{1 - h}$. Then $x^\top\hat w_{(-i)} = x^\top A_{(-i)}^{-1}(b - xy_i) = \frac{x^\top A^{-1}b}{1 - h} - \frac{hy_i}{1 - h} = \frac{\hat y_i - hy_i}{1 - h}$. Subtracting from $y_i$: $\frac{y_i - hy_i - \hat y_i + hy_i}{1 - h} = \frac{y_i - \hat y_i}{1 - h}$.</p>
+          <p>So leave-one-out error needs one fit and the diagonal of $H$, not $n$ refits, and the same trick scores a whole grid of $\lambda$ values from one SVD. $H_{ii}$ is the leverage of point $i$: near 1 means the fit passes almost through that point, so its ordinary residual is tiny while its leave-one-out residual is hugely inflated. High-leverage points look well fitted and are the least trustworthy.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (VC dimension of half-spaces.) Show that the classifiers $x \mapsto \operatorname{sign}(w^\top x + b)$ on $\mathbb R^d$ shatter some set of $d + 1$ points, and that no set of $d + 2$ points can be shattered. You may prove Radon's theorem on the way: any $d + 2$ points in $\mathbb R^d$ split into two groups whose convex hulls meet.</p>
+        <details><summary>Hint</summary><div><p>For shattering, try $0, e_1, \dots, e_d$. For Radon, the $d + 2$ vectors $(x_i, 1) \in \mathbb R^{d+1}$ are linearly dependent.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Take the points $0, e_1, \dots, e_d$ and any labels $y_0, \dots, y_d \in \{\pm1\}$. Set $b = y_0/2$ and $w_j = y_j$. At $0$ the score is $y_0/2$, and at $e_j$ it is $y_j + y_0/2$, which has the sign of $y_j$. So all $2^{d+1}$ labellings are realised.</p>
+          <p>Radon: the $d + 2$ vectors $(x_i, 1)$ in $\mathbb R^{d+1}$ have a non-trivial relation $\sum_ic_ix_i = 0$, $\sum_ic_i = 0$. Let $I = \{i : c_i &gt; 0\}$, $J$ the rest, and $s = \sum_{i\in I}c_i = -\sum_{j\in J}c_j &gt; 0$. Then $p = \sum_{i\in I}\frac{c_i}{s}x_i = \sum_{j\in J}\frac{-c_j}{s}x_j$ is a convex combination of both groups. Now label $I$ positive and $J$ negative. A half-space classifier with $w^\top x_i + b &gt; 0$ on $I$ has $w^\top p + b &gt; 0$, being a convex combination; but $w^\top x_j + b &lt; 0$ on $J$ forces $w^\top p + b &lt; 0$. So no $d + 2$ points are shattered, and the VC dimension is exactly $d + 1$, the number of parameters.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (PAC for a finite class.) A hypothesis class $\mathcal H$ is finite and contains a perfect classifier. Show that if $m \ge \frac1\varepsilon\big(\ln|\mathcal H| + \ln\frac1\delta\big)$, then with probability at least $1 - \delta$ every hypothesis that fits all $m$ training examples has true error at most $\varepsilon$. How many examples does this ask for when the hypotheses are described by 20 bits, $\varepsilon = 0.01$ and $\delta = 0.05$? Why does the bound depend on $\ln|\mathcal H|$ and not $|\mathcal H|$?</p>
+        <details><summary>Hint</summary><div><p>Fix one bad hypothesis (error above $\varepsilon$) and bound the chance it fits $m$ independent examples. Then take a union bound over all bad ones, and use $1 - \varepsilon \le e^{-\varepsilon}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>A hypothesis with error above $\varepsilon$ labels one random example correctly with probability below $1 - \varepsilon$, so it survives $m$ independent examples with probability below $(1 - \varepsilon)^m \le e^{-\varepsilon m}$. There are at most $|\mathcal H|$ bad hypotheses, so the chance that any survives is at most $|\mathcal H|e^{-\varepsilon m}$, which is at most $\delta$ exactly when $m \ge \frac1\varepsilon(\ln|\mathcal H| + \ln\frac1\delta)$.</p>
+          <p>With $|\mathcal H| = 2^{20}$: $m \ge 100\,(20\ln2 + \ln20) = 100\,(13.86 + 3.00) \approx 1686$. The logarithm appears because the union bound pays for the number of hypotheses only through the exponent: $\ln|\mathcal H|$ is the number of nats needed to name a hypothesis, so sample size grows with description length, not with the size of the class.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Separable data and the maximum margin.) Let the data be linearly separable through the origin and let $\gamma(u) = \min_iy_iu^\top x_i$ be the margin of a unit vector $u$, maximised at $u^*$ with $\gamma^* &gt; 0$. Show that the logistic loss $L(w) = \sum_i\log(1 + e^{-y_iw^\top x_i})$ has no minimiser, and that the minimiser $w_\lambda$ of $L(w) + \frac\lambda2\|w\|^2$ satisfies $\|w_\lambda\| \to \infty$ and $w_\lambda/\|w_\lambda\| \to u^*$ as $\lambda \to 0$ (assume $u^*$ is unique).</p>
+        <details><summary>Hint</summary><div><p>Along $w = su^*$ the loss goes to 0. For large $s$, $\log(1 + e^{-t}) \approx e^{-t}$, so $L(su)$ behaves like $e^{-s\gamma(u)}$ up to a factor between $\frac12$ and $n$. Compare two directions at the same norm.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$L &gt; 0$ everywhere, but $L(su^*) \le ne^{-s\gamma^*} \to 0$, so the infimum 0 is not attained. With the penalty, $L(w_\lambda) \le L(w_\lambda) + \frac\lambda2\|w_\lambda\|^2 \le L(su^*) + \frac\lambda2s^2$ for every $s$; choosing $s = \lambda^{-1/3}$ makes the right side tend to 0, so $L(w_\lambda) \to 0$. Since $L$ is bounded below by a positive constant on any ball, $\|w_\lambda\| \to \infty$.</p>
+          <p>Write $w_\lambda = s_\lambda u_\lambda$. Suppose some subsequence has $u_\lambda \to \bar u \ne u^*$, so $\gamma(\bar u) &lt; \gamma^*$, and by continuity $\gamma(u_\lambda) \le \gamma^* - \eta$ for some $\eta &gt; 0$ eventually. For large $s$, $\log(1 + e^{-t}) \ge \frac12e^{-t}$ when $t \ge 0$, so $L(s_\lambda u_\lambda) \ge \frac12e^{-s_\lambda(\gamma^* - \eta)}$ (if the worst margin is negative the loss is even larger). But $L(s_\lambda u^*) \le ne^{-s_\lambda\gamma^*}$, which is smaller once $e^{s_\lambda\eta} &gt; 2n$. The penalty is the same for both, so $s_\lambda u^*$ would beat the minimiser, a contradiction. Hence $u_\lambda \to u^*$. Gradient descent on the unpenalised loss shows the same implicit bias (Soudry et al., 2018), with $\|w_t\|$ growing like $\log t$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Representer theorem.) Let $\phi$ map inputs into a Hilbert space and consider $\min_w\sum_i\ell(y_i, w^\top\phi(x_i)) + \lambda\|w\|^2$. Show that some minimiser has the form $w = \sum_j\alpha_j\phi(x_j)$, and that every minimiser does if $\ell$ is convex. For squared loss, show that $\alpha = (K + \lambda I)^{-1}y$ with $K_{ij} = \phi(x_i)^\top\phi(x_j)$, so the prediction at a new $x$ needs only kernel evaluations.</p>
+        <details><summary>Hint</summary><div><p>Split $w$ into its projection onto $\operatorname{span}\{\phi(x_i)\}$ and the orthogonal remainder. Which part does the loss see?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Write $w = w_\parallel + w_\perp$ with $w_\parallel$ in the span and $w_\perp$ orthogonal to every $\phi(x_i)$. Then $w^\top\phi(x_i) = w_\parallel^\top\phi(x_i)$, so the loss depends on $w_\parallel$ only, while $\|w\|^2 = \|w_\parallel\|^2 + \|w_\perp\|^2$. Replacing $w$ by $w_\parallel$ never increases the objective and strictly decreases it when $w_\perp \ne 0$, so every minimiser has $w_\perp = 0$ (existence of a minimiser follows from convexity and coercivity in the finite-dimensional span).</p>
+          <p>For squared loss, with $w = \sum_j\alpha_j\phi(x_j)$ the predictions are $K\alpha$ and $\|w\|^2 = \alpha^\top K\alpha$. The objective $\|y - K\alpha\|^2 + \lambda\alpha^\top K\alpha$ has gradient $2K\big((K + \lambda I)\alpha - y\big)$, which vanishes at $\alpha = (K + \lambda I)^{-1}y$. The prediction is $w^\top\phi(x) = \sum_j\alpha_jk(x_j, x)$. The feature space may be infinite-dimensional (the Gaussian kernel's is), yet the problem is an $n\times n$ linear system.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Double descent, exactly.) Take $n$ examples $x_i \sim N(0, I_p)$, $y_i = x_i^\top w + \varepsilon_i$ with $\varepsilon_i \sim N(0, 1)$ and $\|w\| = 1$, and fit the minimum-norm least-squares solution $\hat w = X^+y$. Its excess test risk is $E\|\hat w - w\|^2$. Show that it equals $\frac{p}{n - p - 1}$ when $p &lt; n - 1$, and $\big(1 - \frac np\big) + \frac{n}{p - n - 1}$ when $p &gt; n + 1$. Evaluate it for $n = 100$ at $p = 50, 98, 102, 200, 1000$ and sketch the curve. You may use $E[(Z^\top Z)^{-1}] = \frac{I_p}{n - p - 1}$ for an $n\times p$ Gaussian matrix $Z$ with $n &gt; p + 1$.</p>
+        <details><summary>Hint</summary><div><p>For $p &gt; n$, $\hat w = X^\top(XX^\top)^{-1}y$, and $X^\top(XX^\top)^{-1}X$ is the projection onto the row space of $X$: a uniformly random $n$-dimensional subspace of $\mathbb R^p$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>When $p &lt; n$, $\hat w = w + (X^\top X)^{-1}X^\top\varepsilon$, unbiased, and $E\|\hat w - w\|^2 = E\operatorname{tr}(X^\top X)^{-1} = \frac{p}{n - p - 1}$.</p>
+          <p>When $p &gt; n$, $\hat w = Pw + X^\top(XX^\top)^{-1}\varepsilon$ with $P$ the projection onto the row space. The error splits into an orthogonal bias $(I - P)w$ and a noise term in the row space. By rotational symmetry the row space is a uniformly random $n$-dimensional subspace, so $E\|(I - P)w\|^2 = (1 - \frac np)\|w\|^2$. The noise term has expected squared norm $E\operatorname{tr}\big((XX^\top)^{-1}\big) = \frac{n}{p - n - 1}$, now applying the given identity to the $p\times n$ matrix $X^\top$.</p>
+          <p>For $n = 100$: $p = 50$ gives $50/49 = 1.02$; $p = 98$ gives $98$; $p = 102$ gives $0.02 + 100 = 100.0$; $p = 200$ gives $0.5 + 100/99 = 1.51$; $p = 1000$ gives $0.9 + 100/899 = 1.01$. The risk climbs to a spike at the interpolation threshold $p = n$, where $X$ is square and badly conditioned and the fit amplifies noise without limit, then descends again as extra dimensions let the minimum-norm solution spread the noise thinly. That second descent is the "double descent" curve (Belkin et al., 2019; Hastie et al., 2022).</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="optimisation">
+    <h2>Optimisation and training</h2>
+    <ol start="8">
+      <li>
+        <p><span class="tag hard">hard</span> (What Adam's corrections do.) Adam keeps $m_t = \beta_1m_{t-1} + (1 - \beta_1)g_t$, $v_t = \beta_2v_{t-1} + (1 - \beta_2)g_t^2$ from $m_0 = v_0 = 0$, and steps by $-\eta\,\hat m_t/(\sqrt{\hat v_t} + \epsilon)$ with $\hat m_t = m_t/(1 - \beta_1^t)$, $\hat v_t = v_t/(1 - \beta_2^t)$. (a) For a constant gradient $g$, show $\hat m_t = g$ and $\hat v_t = g^2$ exactly. (b) Without the corrections, how large is the first step for $\beta_1 = 0.9$, $\beta_2 = 0.999$? (c) With $\epsilon = 0$, show the update is unchanged if every gradient coordinate is multiplied by its own fixed positive constant. What does SGD do under the same rescaling?</p>
+        <details><summary>Hint</summary><div><p>Unroll: $m_t = (1 - \beta_1)\sum_{k\le t}\beta_1^{t-k}g_k$, a geometric sum when $g_k$ is constant.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>(a) $m_t = (1 - \beta_1)g\sum_{k=0}^{t-1}\beta_1^k = (1 - \beta_1^t)g$, and likewise $v_t = (1 - \beta_2^t)g^2$; the corrections divide these factors out. (b) Uncorrected, $m_1 = 0.1g$ and $\sqrt{v_1} = \sqrt{0.001}\,|g| = 0.0316|g|$, so the step is $3.16\eta$ in each coordinate: early steps more than three times too large, which is why the correction exists. (c) If $g_t \to Dg_t$ with $D$ diagonal and positive, then $m_t \to Dm_t$ and $\sqrt{v_t} \to D\sqrt{v_t}$, and the ratio is unchanged. SGD's step scales by $D$, so a badly scaled coordinate either crawls or blows up. Adam behaves like sign descent with a per-coordinate step close to $\eta$, which is why one learning rate works across very differently scaled layers.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Heavy ball beats gradient descent.) Minimise a quadratic whose Hessian has eigenvalues in $[\mu, L]$, with $\kappa = L/\mu$, using $x_{k+1} = x_k - \eta\nabla f(x_k) + \beta(x_k - x_{k-1})$. Show that with $\eta = \frac{4}{(\sqrt L + \sqrt\mu)^2}$ and $\beta = \big(\frac{\sqrt\kappa - 1}{\sqrt\kappa + 1}\big)^2$ the error contracts at rate $\sqrt\beta = \frac{\sqrt\kappa - 1}{\sqrt\kappa + 1}$ per step, against $\frac{\kappa - 1}{\kappa + 1}$ for the best fixed-step gradient descent. For $\kappa = 100$, how many steps does each need to cut the error by $10^6$?</p>
+        <details><summary>Hint</summary><div><p>In an eigendirection with eigenvalue $\lambda$ the error obeys $e_{k+1} = (1 + \beta - \eta\lambda)e_k - \beta e_{k-1}$. If the roots of $r^2 - (1 + \beta - \eta\lambda)r + \beta = 0$ are complex, both have modulus $\sqrt\beta$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The roots are complex (or a double root) when $(1 + \beta - \eta\lambda)^2 \le 4\beta$, that is $(1 - \sqrt\beta)^2 \le \eta\lambda \le (1 + \sqrt\beta)^2$, and then their product $\beta$ gives modulus $\sqrt\beta$ for both. To cover all of $[\mu, L]$, set $\eta\mu = (1 - \sqrt\beta)^2$ and $\eta L = (1 + \sqrt\beta)^2$. Dividing, $\sqrt\kappa = \frac{1 + \sqrt\beta}{1 - \sqrt\beta}$, so $\sqrt\beta = \frac{\sqrt\kappa - 1}{\sqrt\kappa + 1}$. Then $1 + \sqrt\beta = \frac{2\sqrt\kappa}{\sqrt\kappa + 1}$ and $\eta = \frac{4\kappa}{L(\sqrt\kappa + 1)^2} = \frac{4}{(\sqrt L + \sqrt\mu)^2}$. Every eigendirection then contracts at rate $\sqrt\beta$ (up to a polynomial factor at the two endpoints, where the root is double).</p>
+          <p>Gradient descent with $\eta = 2/(\mu + L)$ contracts at $\frac{\kappa - 1}{\kappa + 1}$. For $\kappa = 100$: GD's rate is $99/101 = 0.980$, needing $\ln10^6/0.0200 \approx 691$ steps; heavy ball's is $9/11 = 0.818$, needing $\ln10^6/0.201 \approx 69$. The dependence improves from $\kappa$ to $\sqrt\kappa$, a tenfold saving here.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (He initialisation.) In a ReLU network $z^{(l)} = W^{(l)}h^{(l-1)}$, $h^{(l)} = \max(0, z^{(l)})$, with independent weights $W_{ij} \sim N(0, \sigma^2)$ and layer width $n$, show that $E[(z_i^{(l)})^2] = \frac{n\sigma^2}{2}E[(z_j^{(l-1)})^2]$. Deduce the variance that keeps signals the same size, and by how much the second moment shrinks over 50 layers if you use $\sigma^2 = 1/n$ instead.</p>
+        <details><summary>Hint</summary><div><p>Condition on $h^{(l-1)}$. For a symmetric $z$, $E[\max(0, z)^2] = \frac12E[z^2]$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Given $h = h^{(l-1)}$, $z_i = \sum_jW_{ij}h_j$ has mean 0 and variance $\sigma^2\sum_jh_j^2$, so $E[z_i^2] = n\sigma^2E[h_j^2]$. The pre-activation $z_j^{(l-1)}$ is symmetric about 0 (its weights are), so $E[h_j^2] = E[z_j^2\,\mathbb 1\{z_j &gt; 0\}] = \frac12E[(z_j^{(l-1)})^2]$. The factor per layer is $n\sigma^2/2$, which is 1 at $\sigma^2 = 2/n$ (He et al., 2015). With $\sigma^2 = 1/n$ the factor is $\frac12$, and after 50 layers the signal's second moment is $2^{-50} \approx 8.9\times10^{-16}$ of the input's, and the gradients shrink in the same way going back.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Batch norm and the effective learning rate.) Let the loss $f$ depend on a weight vector $w$ only through $\mathrm{BN}(w^\top x)$, so $f(aw) = f(w)$ for $a &gt; 0$. Show that $\nabla f(w) \perp w$ and $\nabla f(aw) = \nabla f(w)/a$. Deduce that plain gradient descent makes $\|w\|$ grow, and that the direction $u = w/\|w\|$ moves at an effective step $\eta/\|w\|^2$. With weight decay $\lambda$, show that the norm settles where the angle turned per step is about $\sqrt{2\eta\lambda}$.</p>
+        <details><summary>Hint</summary><div><p>Differentiate $f(aw) = f(w)$ with respect to $a$ at $a = 1$, and with respect to $w$. For the equilibrium, balance the norm's growth $\eta^2\|g\|^2$ against the shrinkage $2\eta\lambda\|w\|^2$ from decay.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Differentiating in $a$ at $a = 1$ gives $\nabla f(w)^\top w = 0$. Differentiating in $w$ gives $a\nabla f(aw) = \nabla f(w)$. A step $w' = w - \eta g$ with $g \perp w$ has $\|w'\|^2 = \|w\|^2 + \eta^2\|g\|^2$, so the norm only grows. Since $g(w) = g(u)/\|w\|$, the direction changes by about $\eta\|g(w)\|/\|w\| = \eta\|g(u)\|/\|w\|^2$: the effective learning rate is $\eta/\|w\|^2$ and decays as the weights grow.</p>
+          <p>Weight decay multiplies $w$ by $1 - \eta\lambda$ each step, removing about $2\eta\lambda\|w\|^2$ from $\|w\|^2$, while the gradient adds $\eta^2\|g(u)\|^2/\|w\|^2$. These balance at $\|w\|^4 = \frac{\eta\|g(u)\|^2}{2\lambda}$, where the angle turned per step is $\frac{\eta\|g(u)\|}{\|w\|^2} = \sqrt{2\eta\lambda}$, independent of the gradient's size. With $\eta = 0.1$ and $\lambda = 5\times10^{-4}$ that is 0.01 radians per step. In normalised networks, weight decay is really a learning-rate controller.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Label smoothing caps the logits.) With $K$ classes, label smoothing replaces the one-hot target by $q = (1 - \varepsilon)e_y + \frac\varepsilon K\mathbf 1$. Show that the cross-entropy $-\sum_kq_k\log\operatorname{softmax}(z)_k$ is minimised when $\operatorname{softmax}(z) = q$, and find the resulting gap between the true class's logit and the others'. Evaluate it for $K = 1000$, $\varepsilon = 0.1$, and say what the gap is without smoothing.</p>
+        <details><summary>Hint</summary><div><p>Cross-entropy is $H(q) + \mathrm{KL}(q\,\|\,p)$. Logit gaps are log-ratios of probabilities.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$-\sum_kq_k\log p_k = H(q) + \mathrm{KL}(q\,\|\,p) \ge H(q)$, with equality if and only if $p = q$, which a softmax can reach because every $q_k &gt; 0$. Then $z_y - z_k = \log\frac{q_y}{q_k} = \log\frac{(1 - \varepsilon + \varepsilon/K)K}{\varepsilon}$. For $K = 1000$, $\varepsilon = 0.1$: $\log(0.9001\times10^4) = \log9001 \approx 9.11$. Without smoothing the optimum is $p = e_y$, which no finite logits reach, so the loss keeps pushing the gap to infinity and the network becomes overconfident. Smoothing gives the logits a finite target, which tends to improve calibration.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="trees">
+    <h2>Trees and ensembles</h2>
+    <ol start="13">
+      <li>
+        <p><span class="tag hard">hard</span> (Why forests decorrelate.) (a) A bootstrap sample draws $n$ points with replacement from $n$. Show that the expected fraction of distinct points tends to $1 - 1/e \approx 0.632$. (b) $B$ identically distributed predictors each have variance $\sigma^2$ and pairwise correlation $\rho$. Show that their average has variance $\rho\sigma^2 + \frac{1 - \rho}{B}\sigma^2$. With $\rho = 0.3$ and $B = 100$, what is it? Which term does random feature selection at each split attack, and why does adding more trees not?</p>
+        <details><summary>Hint</summary><div><p>(a) A given point is missed with probability $(1 - 1/n)^n$. (b) Expand $\operatorname{Var}\big(\frac1B\sum_bT_b\big)$ into $B$ variances and $B(B - 1)$ covariances.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>(a) By linearity the expected fraction of distinct points is $1 - (1 - 1/n)^n \to 1 - e^{-1} = 0.632$. The roughly 36.8% left out of each tree are its out-of-bag points, a free validation set.</p>
+          <p>(b) $\operatorname{Var}\big(\frac1B\sum T_b\big) = \frac1{B^2}\big(B\sigma^2 + B(B - 1)\rho\sigma^2\big) = \rho\sigma^2 + \frac{1 - \rho}{B}\sigma^2$. For $\rho = 0.3$, $B = 100$: $0.3\sigma^2 + 0.007\sigma^2 = 0.307\sigma^2$. More trees shrink only the second term; the floor $\rho\sigma^2$ stays. Restricting each split to a random subset of features makes trees disagree about which strong feature to split on, which lowers $\rho$, at the price of slightly higher $\sigma^2$ per tree.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (AdaBoost is gradient boosting on exponential loss.) Fit $F(x) = \sum_m\alpha_mh_m(x)$ with weak classifiers $h_m(x) \in \{\pm1\}$ by greedily minimising $\sum_ie^{-y_iF(x_i)}$ one term at a time. Show that the best $h_m$ minimises the weighted error with weights $w_i \propto e^{-y_iF_{m-1}(x_i)}$, that $\alpha_m = \frac12\ln\frac{1 - \mathrm{err}_m}{\mathrm{err}_m}$, and that each round multiplies the loss by $2\sqrt{\mathrm{err}_m(1 - \mathrm{err}_m)}$. If every round has weighted error 0.3, what bounds the training error after 50 rounds?</p>
+        <details><summary>Hint</summary><div><p>With normalised weights, the new loss is $(1 - \mathrm{err})e^{-\alpha} + \mathrm{err}\,e^{\alpha}$ times the old one. Training error is at most the exponential loss, because $\mathbb 1\{yF \le 0\} \le e^{-yF}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\sum_ie^{-y_i(F_{m-1} + \alpha h)(x_i)} = \sum_iw_ie^{-\alpha y_ih(x_i)} = e^{-\alpha}\sum_{\text{right}}w_i + e^{\alpha}\sum_{\text{wrong}}w_i$. With weights normalised to sum to 1 this is $(1 - \mathrm{err})e^{-\alpha} + \mathrm{err}\,e^{\alpha}$, which for any $\alpha &gt; 0$ is smallest when the weighted error is smallest. Setting the $\alpha$-derivative to zero gives $e^{2\alpha} = \frac{1 - \mathrm{err}}{\mathrm{err}}$, and substituting back the factor is $2\sqrt{\mathrm{err}(1 - \mathrm{err})}$, below 1 whenever $\mathrm{err} &lt; \frac12$. The new weights are $w_ie^{-\alpha y_ih(x_i)}$, the AdaBoost update: misclassified points gain weight.</p>
+          <p>Training error is at most $\frac1n\sum e^{-y_iF(x_i)} = \prod_m2\sqrt{\mathrm{err}_m(1 - \mathrm{err}_m)}$. With $\mathrm{err} = 0.3$ each round, $\alpha = 0.424$ and the factor is $2\sqrt{0.21} = 0.917$, so after 50 rounds the training error is at most $0.917^{50} \approx 0.013$, falling exponentially even though each learner is only a little better than chance.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The split identity.) A regression tree splits a node with $n$ targets, mean $\bar y$, into $n_L$ points with mean $\bar y_L$ and $n_R$ with mean $\bar y_R$. Prove that the drop in squared error is $\frac{n_Ln_R}{n}(\bar y_L - \bar y_R)^2$. Use it to find the best threshold on one feature in $O(n\log n)$ time, and explain why the tree prefers balanced splits for the same gap in means.</p>
+        <details><summary>Hint</summary><div><p>Within-group plus between-group sums of squares equal the total. Then write $\bar y_L - \bar y$ in terms of $\bar y_L - \bar y_R$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The total sum of squares splits as $\mathrm{SSE}_{\text{parent}} = \mathrm{SSE}_L + \mathrm{SSE}_R + n_L(\bar y_L - \bar y)^2 + n_R(\bar y_R - \bar y)^2$, because cross terms vanish within each group. Since $\bar y = (n_L\bar y_L + n_R\bar y_R)/n$, $\bar y_L - \bar y = \frac{n_R}{n}(\bar y_L - \bar y_R)$ and $\bar y_R - \bar y = -\frac{n_L}{n}(\bar y_L - \bar y_R)$. The between-group term is $\frac{n_Ln_R^2 + n_Rn_L^2}{n^2}(\bar y_L - \bar y_R)^2 = \frac{n_Ln_R}{n}(\bar y_L - \bar y_R)^2$.</p>
+          <p>Sort by the feature once ($O(n\log n)$), then sweep the threshold left to right keeping running sums of $y$; each candidate's score needs only $n_L$, the left sum and the total, so the sweep is $O(n)$. The factor $n_Ln_R/n$ is largest at $n_L = n_R$, so peeling off a single outlier with the same gap in means scores much lower than a balanced cut.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="architectures">
+    <h2>Deep architectures</h2>
+    <ol start="16">
+      <li>
+        <p><span class="tag hard">hard</span> (Receptive fields.) Show that a stack of layers with kernel sizes $k_l$ and strides $s_l$ has receptive field $1 + \sum_l(k_l - 1)\prod_{i&lt;l}s_i$. Compute it for a $7\times7$ convolution with stride 2, then a $3\times3$ max-pool with stride 2, then four $3\times3$ convolutions with stride 1. Compare the parameters and the number of nonlinearities in three $3\times3$ layers against one $7\times7$ layer, all with $C$ channels in and out.</p>
+        <details><summary>Hint</summary><div><p>Work backwards from one output unit. Layer $l$ widens the window by $k_l - 1$ of its own input positions, and each of those is $\prod_{i&lt;l}s_i$ input pixels apart.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Each layer's input positions are spaced $J_{l-1} = \prod_{i&lt;l}s_i$ pixels apart, and the layer adds $k_l - 1$ of them to the window, so the field grows by $(k_l - 1)J_{l-1}$. For the stack: $1 + 6\cdot1 + 2\cdot2 + 4\cdot(2\cdot4) = 1 + 6 + 4 + 32 = 43$ pixels. Three $3\times3$ layers see $7\times7$, as one $7\times7$ layer does, but cost $27C^2$ weights against $49C^2$, and put three nonlinearities in the same window instead of one. That trade is the design principle behind VGG and every later CNN.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Convolution is forced by symmetry.) Let $S$ be the cyclic shift on $\mathbb R^n$, $(Sx)_j = x_{j-1}$, indices mod $n$. Prove that a linear map $T$ commutes with $S$ if and only if $Tx = c\circledast x$ (circular convolution) for some $c$. Then show that the Fourier vectors $f_m = (\omega^{mj})_j$ with $\omega = e^{2\pi i/n}$ are eigenvectors of every such $T$, and deduce the convolution theorem.</p>
+        <details><summary>Hint</summary><div><p>Every basis vector is a shift of the first: $e_j = S^je_0$. So $T$ is fixed by $c = Te_0$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>If $TS = ST$, then $Te_j = TS^je_0 = S^jTe_0 = S^jc$, so $Tx = \sum_jx_jS^jc$ and $(Tx)_k = \sum_jx_jc_{k-j} = (c\circledast x)_k$. Conversely convolution commutes with shifts by reindexing. So a linear layer that must be translation-equivariant has no choice: it is a convolution, with $n$ parameters instead of $n^2$.</p>
+          <p>$(Sf_m)_j = \omega^{m(j-1)} = \omega^{-m}(f_m)_j$, so $f_m$ is an eigenvector of $S$, hence of every polynomial in $S$, and $T = \sum_jc_jS^j$ is one. Its eigenvalue is $\sum_jc_j\omega^{-mj} = \hat c_m$, the discrete Fourier transform of $c$. Expanding $x$ in the Fourier basis, $\widehat{c\circledast x} = \hat c\cdot\hat x$ entrywise. Convolution is diagonal in frequency, which is also how large convolutions are computed fast.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Why divide by $\sqrt d$.) Queries and keys have independent $N(0, 1)$ entries in dimension $d$. Show that $q^\top k$ has mean 0 and variance $d$. For $d = 64$, how much weight does softmax put on the larger of two unscaled logits one standard deviation apart, and how big is the gradient through it? Separately, prove that self-attention without positional information is permutation-equivariant: permuting the input tokens permutes the outputs the same way.</p>
+        <details><summary>Hint</summary><div><p>$q^\top k$ is a sum of $d$ independent products, each with variance 1. For two logits, softmax is a sigmoid of their difference, and its derivative is $p(1 - p)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$E[q_ik_i] = 0$ and $E[q_i^2k_i^2] = 1$, so $q^\top k$ has variance $d$ and standard deviation 8 for $d = 64$. Two logits 8 apart give weight $\sigma(8) = 0.99966$ to the larger, and the gradient factor $p(1 - p) \approx 3.4\times10^{-4}$: the softmax is saturated and learning stalls. Dividing by $\sqrt d$ restores unit variance at initialisation.</p>
+          <p>For a permutation matrix $P$, inputs $PX$ give $Q' = PQ$, $K' = PK$, $V' = PV$, so the score matrix is $PQK^\top P^\top$. Row-wise softmax commutes with permuting rows and permuting columns together, so the attention weights are $PAP^\top$ and the output is $PAP^\top PV = P(AV)$. Attention sees a set, not a sequence; positional encodings are what break the symmetry.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (When attention dominates.) Count multiply-add FLOPs (2 per multiply-add) in one transformer layer with width $d$, sequence length $n$ and an MLP of hidden width $4d$: the four $d\times d$ projections, the MLP, the scores $QK^\top$ and the weighted sum with $V$. At what $n$ does the attention part equal the rest? Evaluate it for $d = 4096$, and say what has to be stored for the backward pass that FlashAttention avoids.</p>
+        <details><summary>Hint</summary><div><p>An $n\times a$ times $a\times b$ product costs $2nab$ FLOPs.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Projections: $4\times2nd^2 = 8nd^2$. MLP: $2\times2n\cdot d\cdot4d = 16nd^2$. Together, $24nd^2$. Scores: $2n^2d$; weighted sum: $2n^2d$; together, $4n^2d$ (the split into heads does not change the totals). They are equal at $4n^2d = 24nd^2$, $n = 6d$, which is $24{,}576$ tokens for $d = 4096$. Below that, the linear layers dominate compute even for long contexts. Memory is a different story: the $n\times n$ attention matrix per head is $O(n^2)$ to store for backpropagation, and FlashAttention never writes it out, recomputing tiles in the backward pass instead.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (RoPE sees only offsets.) Rotary position embedding rotates each pair of coordinates $(2i, 2i + 1)$ of a query at position $m$ by angle $m\theta_i$, and likewise for keys, with $\theta_i = b^{-2i/d}$. Show that the score between positions $m$ and $n$ depends on them only through $n - m$. For $b = 10\,000$ and head dimension $d = 128$, what is the longest wavelength, in positions, among the rotation frequencies?</p>
+        <details><summary>Hint</summary><div><p>For a 2D rotation, $R_\alpha^\top R_\beta = R_{\beta - \alpha}$. The longest wavelength belongs to the smallest frequency, $i = d/2 - 1$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Within each pair, $(R_{m\theta}q)^\top(R_{n\theta}k) = q^\top R_{m\theta}^\top R_{n\theta}k = q^\top R_{(n-m)\theta}k$. Summing over the pairs, the score is a function of $q$, $k$ and $n - m$ only: relative position comes for free, with no learned table. The smallest frequency is $\theta = b^{-(d-2)/d}$, so the longest wavelength is $2\pi\,b^{(d-2)/d} = 2\pi\cdot10^{4\cdot126/128} \approx 54{,}400$ positions. Methods that extend context length mostly rescale these frequencies so that positions beyond training map onto angles the model has seen.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Vanishing gradients through time.) For $h_t = \tanh(Wh_{t-1} + Ux_t)$, show that $\big\|\frac{\partial h_T}{\partial h_0}\big\| \le \sigma_{\max}(W)^T$. Evaluate the bound at $\sigma_{\max} = 0.9$ and $T = 50$. In an LSTM, $c_t = f_t\odot c_{t-1} + i_t\odot g_t$; along the direct cell path, what is $\partial c_T/\partial c_0$, and what is it after 50 steps with forget gates at 0.99?</p>
+        <details><summary>Hint</summary><div><p>$\frac{\partial h_t}{\partial h_{t-1}} = \operatorname{diag}(1 - h_t^2)\,W$, and $0 \le 1 - h^2 \le 1$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The chain rule gives $\frac{\partial h_T}{\partial h_0} = \prod_t\operatorname{diag}(1 - h_t^2)W$. Each diagonal factor has norm at most 1, so the product has norm at most $\sigma_{\max}(W)^T$. At $0.9^{50} \approx 0.0052$, the signal from 50 steps back is 200 times weaker than a fresh one, and learning long dependencies fails. (If $W$ has singular values above 1 and units sit in the linear regime, the same product can explode instead, which is what gradient clipping is for.)</p>
+          <p>Holding the gates fixed, the direct path gives $\frac{\partial c_T}{\partial c_0} = \operatorname{diag}\big(\prod_tf_t\big)$: no matrix and no squashing derivative, only the gates. With $f_t = 0.99$, $0.99^{50} \approx 0.61$. The network learns to keep forget gates near 1 where it needs memory, the same additive path that residual connections give feedforward networks.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Residual networks are well-conditioned ensembles.) A residual network composes $x \mapsto x + F_l(x)$ for $l = 1, \dots, L$, with Jacobians $J_l$. (a) If every $\|J_l\| \le c/L$, show that all singular values of the network's Jacobian lie between $(1 - c/L)^L$ and $(1 + c/L)^L$, so roughly between $e^{-c}$ and $e^c$. (b) Expand $\prod_l(I + J_l)$ and show it is a sum over $2^L$ paths. If each path is counted once, how are path lengths distributed for $L = 54$?</p>
+        <details><summary>Hint</summary><div><p>$\sigma_{\min}(AB) \ge \sigma_{\min}(A)\sigma_{\min}(B)$ and $\sigma_{\min}(I + J) \ge 1 - \|J\|$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>(a) $\sigma_{\max}\big(\prod(I + J_l)\big) \le \prod(1 + \|J_l\|) \le (1 + c/L)^L \le e^c$, and $\sigma_{\min} \ge \prod(1 - \|J_l\|) \ge (1 - c/L)^L$, which tends to $e^{-c}$. Neither bound depends on depth, so gradients neither vanish nor explode however deep the network is, unlike a plain stack where they are products of $L$ arbitrary matrices.</p>
+          <p>(b) $\prod_l(I + J_l) = \sum_{S\subseteq\{1,\dots,L\}}\prod_{l\in S}J_l$ (in layer order): each path chooses, at each block, the skip or the residual branch. There are $\binom Lk$ paths through $k$ residual branches, so path length is Binomial$(L, \frac12)$: for $L = 54$, mean 27 and standard deviation $\sqrt{13.5} \approx 3.7$. Most of the gradient travels along paths of moderate length, which is why deleting a single block from a trained ResNet barely hurts it (Veit et al., 2016).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (CLIP's floor depends on the temperature.) A batch of $N$ unit embeddings is perfectly aligned: image $i$ and text $i$ share the embedding $u_i$. The image-to-text loss for row $i$ is $-\log\frac{e^{1/\tau}}{\sum_je^{u_i^\top u_j/\tau}}$. Show that the average loss is at least $\log\big(1 + (N - 1)e^{-N/((N-1)\tau)}\big)$, with equality for a regular simplex. Evaluate it for $N = 32{,}768$ at $\tau = 1, 0.1, 0.05$, and explain why CLIP learns a small $\tau$.</p>
+        <details><summary>Hint</summary><div><p>$\sum_{i\ne j}u_i^\top u_j = \|\sum_iu_i\|^2 - N \ge -N$. Then use Jensen's inequality on $e^{x/\tau}$ and on $\log(1 + e^x)$, which is convex.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Row $i$'s loss is $\log\big(1 + \sum_{j\ne i}e^{(s_{ij} - 1)/\tau}\big)$ with $s_{ij} = u_i^\top u_j$. By Jensen on the exponential, $\sum_{j\ne i}e^{(s_{ij}-1)/\tau} \ge (N - 1)e^{(\bar s_i - 1)/\tau}$, where $\bar s_i$ is row $i$'s mean off-diagonal similarity. The map $x \mapsto \log(1 + (N - 1)e^{(x - 1)/\tau})$ is convex and increasing, so averaging over rows gives at least its value at the overall mean $\bar s \ge -\frac{1}{N - 1}$, which is $\log\big(1 + (N - 1)e^{-N/((N-1)\tau)}\big)$. Equality needs all off-diagonal similarities equal to $-\frac1{N-1}$: a regular simplex, possible when $N \le d + 1$.</p>
+          <p>For $N = 32{,}768$: $\tau = 1$ gives 9.40, barely below $\log N = 10.40$ for random guessing, even with perfect embeddings; $\tau = 0.1$ gives 0.91; $\tau = 0.05$ gives $7\times10^{-5}$. Unit vectors bound the logits to $[-1/\tau, 1/\tau]$, so with a large $\tau$ the loss cannot reward a perfect match. CLIP makes $\tau$ a learned parameter and it falls to about 0.01.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="generative">
+    <h2>Generative models</h2>
+    <ol start="24">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (When the ELBO is exact.) Show that $\log p(x) - \mathrm{ELBO}(q) = \mathrm{KL}\big(q(z)\,\|\,p(z\mid x)\big)$, so maximising the ELBO over $q$ is posterior inference. Then, for probabilistic PCA, $z \sim N(0, I_k)$ and $x \mid z \sim N(Wz, \sigma^2I_d)$, find the exact posterior $p(z \mid x)$ and the marginal $p(x)$. Conclude that a Gaussian encoder can make the ELBO tight here, and give $\mathrm{KL}\big(N(\mu, \operatorname{diag}s^2)\,\|\,N(0, I)\big)$.</p>
+        <details><summary>Hint</summary><div><p>Write $\log p(x) = \log p(x, z) - \log p(z \mid x)$ and take the expectation over $q$. For PPCA, collect the terms quadratic and linear in $z$ in $\log p(z) + \log p(x \mid z)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>For any $z$, $\log p(x) = \log p(x, z) - \log p(z \mid x)$. Averaging over $q$: $\log p(x) = E_q[\log p(x, z) - \log q(z)] + E_q[\log q(z) - \log p(z \mid x)] = \mathrm{ELBO} + \mathrm{KL}$.</p>
+          <p>For PPCA, $\log p(z) + \log p(x \mid z) = -\frac12z^\top z - \frac1{2\sigma^2}\|x - Wz\|^2 + \text{const}$. The quadratic term is $-\frac12z^\top\big(I + W^\top W/\sigma^2\big)z = -\frac1{2\sigma^2}z^\top Mz$ with $M = W^\top W + \sigma^2I$, and the linear term is $z^\top W^\top x/\sigma^2$. So $p(z \mid x) = N(M^{-1}W^\top x,\ \sigma^2M^{-1})$, and $x = Wz + \varepsilon$ gives $p(x) = N(0, WW^\top + \sigma^2I)$. The true posterior is Gaussian, so a Gaussian $q$ makes the KL zero and the ELBO equals $\log p(x)$. In a VAE the decoder is non-linear and that is no longer true, which is the source of the gap. Finally, $\mathrm{KL}\big(N(\mu, \operatorname{diag}s^2)\,\|\,N(0, I)\big) = \frac12\sum_j\big(\mu_j^2 + s_j^2 - 1 - \log s_j^2\big)$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The GAN game is Jensen–Shannon.) For $V(D, G) = E_{p_d}[\log D(x)] + E_{p_g}[\log(1 - D(x))]$, show that the best discriminator is $D^* = \frac{p_d}{p_d + p_g}$ and that $V(D^*, G) = 2\,\mathrm{JSD}(p_d, p_g) - \log4$. Evaluate both for $p_d = (\frac12, \frac12, 0)$ and $p_g = (0, \frac12, \frac12)$ on three points. Then take $p_d = \delta_0$ and $p_g = \delta_\theta$: what is the JSD as a function of $\theta \ne 0$, and what does that mean for the generator's gradient?</p>
+        <details><summary>Hint</summary><div><p>Maximise $a\log y + b\log(1 - y)$ over $y \in (0, 1)$ pointwise in $x$. Then write $V(D^*, G)$ with the mixture $m = \frac12(p_d + p_g)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$a\log y + b\log(1 - y)$ has derivative $a/y - b/(1 - y)$, zero at $y = a/(a + b)$, so $D^*(x) = \frac{p_d(x)}{p_d(x) + p_g(x)}$. Substituting, $V = E_{p_d}\log\frac{p_d}{2m} + E_{p_g}\log\frac{p_g}{2m} = \mathrm{KL}(p_d\|m) + \mathrm{KL}(p_g\|m) - 2\log2 = 2\,\mathrm{JSD} - \log4$, minimised exactly when $p_g = p_d$.</p>
+          <p>In the example $m = (\frac14, \frac12, \frac14)$ and $D^* = (1, \frac12, 0)$; $\mathrm{KL}(p_d\|m) = \frac12\log2 + \frac12\log1 = 0.347$, the same for $p_g$, so $\mathrm{JSD} = \frac12\log2 = 0.347$ and $V = -0.693$. For point masses with $\theta \ne 0$ the supports are disjoint and $\mathrm{JSD} = \log2$ whatever $\theta$ is: the loss is flat, the generator gets no signal to move toward the data, and the discriminator wins perfectly. Real images and early generators live on thin, nearly disjoint sets, which is this failure. The Wasserstein distance $|\theta|$ does not have it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Diffusion's two Gaussians.) The forward process is $x_t = \sqrt{1 - \beta_t}\,x_{t-1} + \sqrt{\beta_t}\,\varepsilon_t$. With $\alpha_t = 1 - \beta_t$ and $\bar\alpha_t = \prod_{s\le t}\alpha_s$, prove that $q(x_t \mid x_0) = N(\sqrt{\bar\alpha_t}x_0, (1 - \bar\alpha_t)I)$, and that $q(x_{t-1} \mid x_t, x_0)$ is Gaussian with variance $\tilde\beta_t = \frac{1 - \bar\alpha_{t-1}}{1 - \bar\alpha_t}\beta_t$ and mean $\frac{\sqrt{\alpha_t}(1 - \bar\alpha_{t-1})}{1 - \bar\alpha_t}x_t + \frac{\sqrt{\bar\alpha_{t-1}}\beta_t}{1 - \bar\alpha_t}x_0$. For the linear schedule from $\beta_1 = 10^{-4}$ to $\beta_{1000} = 0.02$, $\bar\alpha_{1000} \approx 4.0\times10^{-5}$: how much of $x_0$ is left at the end?</p>
+        <details><summary>Hint</summary><div><p>Induction on $t$ for the marginal: independent Gaussian noises add in variance. For the posterior, multiply $q(x_t \mid x_{t-1})$ by $q(x_{t-1} \mid x_0)$ and read off the precision and the linear term in $x_{t-1}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>If $x_{t-1} = \sqrt{\bar\alpha_{t-1}}x_0 + \sqrt{1 - \bar\alpha_{t-1}}\,\varepsilon'$, then $x_t = \sqrt{\bar\alpha_t}x_0 + \text{noise}$ with variance $\alpha_t(1 - \bar\alpha_{t-1}) + \beta_t = \alpha_t - \bar\alpha_t + 1 - \alpha_t = 1 - \bar\alpha_t$.</p>
+          <p>As a function of $x_{t-1}$, $\log q(x_t \mid x_{t-1}) + \log q(x_{t-1} \mid x_0)$ has precision $\frac{\alpha_t}{\beta_t} + \frac1{1 - \bar\alpha_{t-1}} = \frac{\alpha_t(1 - \bar\alpha_{t-1}) + \beta_t}{\beta_t(1 - \bar\alpha_{t-1})} = \frac{1 - \bar\alpha_t}{\beta_t(1 - \bar\alpha_{t-1})}$, which is $1/\tilde\beta_t$. The linear term is $\frac{\sqrt{\alpha_t}}{\beta_t}x_t + \frac{\sqrt{\bar\alpha_{t-1}}}{1 - \bar\alpha_{t-1}}x_0$, and multiplying by $\tilde\beta_t$ gives the stated mean. Training a network to predict $x_0$ (or the noise) lets the reverse step use this posterior with $x_0$ replaced by the prediction.</p>
+          <p>At $t = 1000$, $\sqrt{\bar\alpha} \approx 0.0064$: 0.6% of the signal amplitude against noise of standard deviation almost exactly 1. That is why sampling may start from pure $N(0, I)$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Tweedie's formula.) If $x = x_0 + \sigma z$ with $z \sim N(0, I)$ independent of $x_0$, and $p_\sigma$ is the density of $x$, prove that $E[x_0 \mid x] = x + \sigma^2\nabla\log p_\sigma(x)$. Check it on $x_0 = \pm1$ with equal probability by computing both sides. Why does this make a denoiser and a score model the same thing?</p>
+        <details><summary>Hint</summary><div><p>$p_\sigma(x) = \int p_0(x_0)N(x; x_0, \sigma^2I)\,dx_0$. Differentiate under the integral: $\nabla_xN(x; x_0, \sigma^2I) = \frac{x_0 - x}{\sigma^2}N(x; x_0, \sigma^2I)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\nabla p_\sigma(x) = \int p_0(x_0)N(x; x_0, \sigma^2I)\frac{x_0 - x}{\sigma^2}dx_0 = p_\sigma(x)\frac{E[x_0 \mid x] - x}{\sigma^2}$, by Bayes. Divide by $p_\sigma$ and rearrange.</p>
+          <p>For $x_0 = \pm1$: $P(x_0 = 1 \mid x) \propto e^{-(x - 1)^2/2\sigma^2}$ against $e^{-(x + 1)^2/2\sigma^2}$, a ratio of $e^{2x/\sigma^2}$, so $E[x_0 \mid x] = \tanh(x/\sigma^2)$. On the other side, $p_\sigma(x) \propto e^{-x^2/2\sigma^2}\cosh(x/\sigma^2)$, so $\nabla\log p_\sigma = -x/\sigma^2 + \tanh(x/\sigma^2)/\sigma^2$ and $x + \sigma^2\nabla\log p_\sigma = \tanh(x/\sigma^2)$. The best denoiser in squared error is the posterior mean, so training a denoiser at noise level $\sigma$ learns $\nabla\log p_\sigma$, which is what the reverse diffusion needs.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (What guidance does to a Gaussian.) Classifier-free guidance samples with the score $(1 + w)\nabla\log p(x \mid c) - w\nabla\log p(x)$. Show that this is the score of a density proportional to $p(x \mid c)\,p(c \mid x)^w$. Take $p(x \mid c) = N(\mu, 1)$ and $p(x) = N(0, 2)$ (the classes' means are themselves $N(0, 1)$), and find the guided distribution. What are its mean and variance at $w = 3$?</p>
+        <details><summary>Hint</summary><div><p>Bayes: $p(c \mid x) = p(x \mid c)p(c)/p(x)$. The guided log density is a quadratic in $x$; read off its precision and its peak.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$p(x \mid c)p(c \mid x)^w \propto p(x \mid c)^{1+w}p(x)^{-w}$, whose score is the guided one. In the example, $\log$ of it is $-\frac{1 + w}{2}(x - \mu)^2 + \frac w4x^2 + \text{const}$. The coefficient of $x^2$ is $-\frac12\big(1 + w - \frac w2\big) = -\frac12\big(1 + \frac w2\big)$, so the precision is $1 + \frac w2$, and setting the derivative to zero gives the mean $\frac{(1 + w)\mu}{1 + w/2}$. At $w = 3$: mean $1.6\mu$ and variance $0.4$. Guidance pushes samples past the class mean, away from other classes, and shrinks their spread: crisper, more typical images, but less diversity, the trade-off you see when the guidance scale goes up.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Mode covering against mode seeking.) Fit $q = N(m, s^2)$ to the mixture $p = \frac12N(-3, 1) + \frac12N(3, 1)$. (a) Show that minimising $\mathrm{KL}(p\,\|\,q)$ matches moments, and give the fit. (b) Show that $q = N(3, 1)$ has $\mathrm{KL}(q\,\|\,p) &lt; \log2$. Numerically, the best $q$ centred at 0 has $\mathrm{KL}(q\|p) \approx 0.84$ (at $s \approx 2.7$). Which fit does each divergence choose, and which training objectives in this course behave like each?</p>
+        <details><summary>Hint</summary><div><p>(a) $\mathrm{KL}(p\|q) = -H(p) - E_p[\log q]$, and $-E_p\log q = \frac12\log(2\pi s^2) + \frac{E_p(x - m)^2}{2s^2}$. (b) $p(x) \ge \frac12N(x; 3, 1)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>(a) Only $-E_p\log q$ depends on $q$; minimising over $m$ gives $m = E_px = 0$, and over $s^2$ gives $s^2 = \operatorname{Var}_p(x) = 1 + 9 = 10$. So $q = N(0, 10)$: a wide blob covering both modes, with its peak where $p$ has almost no mass.</p>
+          <p>(b) With $q = N(3, 1)$, $\log\frac{q}{p} \le \log\frac{q}{q/2} = \log2$ everywhere, and strictly less where the other component contributes, so $\mathrm{KL}(q\|p) &lt; \log2 \approx 0.693$ (numerically 0.689), beating the best centred fit, 0.84. Reverse KL punishes $q$ for putting mass where $p$ has none, so it picks one mode. Maximum likelihood is forward KL from the data, so it covers modes (and blurs, as VAEs do); the variational posterior in a VAE is fitted by reverse KL, and a GAN generator dropping modes is the mode-seeking failure.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="llms">
+    <h2>Large language models</h2>
+    <ol start="30">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Six FLOPs per parameter per token.) Explain why training a dense transformer with $N$ parameters costs about $6N$ FLOPs per token: $2N$ forward and $4N$ backward. (a) How long does training a 7B model on 2T tokens take on 1000 GPUs at $989$ TFLOP/s peak and 40% utilisation? (b) Chinchilla found that for a compute budget $C = 6ND$ the best choice has about $D = 20N$ tokens. What $N$ and $D$ does that give for $C = 10^{24}$ FLOPs?</p>
+        <details><summary>Hint</summary><div><p>Each weight takes part in one multiply-add per token on the way forward. Backward, each linear layer needs a gradient with respect to its input and one with respect to its weights.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>A weight $W_{ij}$ contributes one multiply and one add per token: $2N$ forward. Backward, $\partial L/\partial x = W^\top\partial L/\partial y$ and $\partial L/\partial W = (\partial L/\partial y)x^\top$ are each another matrix product of the same size: $4N$. Attention scores add $O(n^2d)$ per layer, small next to $6N$ at moderate context.</p>
+          <p>(a) $6\times7\times10^9\times2\times10^{12} = 8.4\times10^{22}$ FLOPs, divided by $1000\times0.4\times989\times10^{12}$ FLOP/s, is $2.1\times10^5$ seconds, about 59 hours. (b) $C = 6N\cdot20N = 120N^2$, so $N = \sqrt{10^{24}/120} \approx 9.1\times10^{10}$, about 91B parameters, and $D \approx 1.8\times10^{12}$ tokens. Earlier models of that compute were several times larger and trained on several times fewer tokens.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Why generation is memory-bound.) A 7B model has 32 layers of width 4096 and stores weights and caches in 16-bit floats. (a) How large is the key–value cache per token, and for a 32k-token context? How much does grouped-query attention with 8 key–value heads (out of 32) save? (b) At batch size 1, each new token reads all 14 GB of weights and does about $2N = 14$ GFLOPs. On a GPU with 3.35 TB/s of memory bandwidth and 989 TFLOP/s, what limits the speed, and roughly what batch size makes the two limits meet?</p>
+        <details><summary>Hint</summary><div><p>Each layer caches one key and one value vector of width 4096 per token. Compare time to move the bytes with time to do the FLOPs.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>(a) $2\times32\times4096\times2$ bytes $= 524{,}288$ bytes $= 0.5$ MiB per token, and 16 GiB for 32,768 tokens, more than the weights. With 8 KV heads of 32, the cache is a quarter: 4 GiB.</p>
+          <p>(b) Reading 14 GB at 3.35 TB/s takes 4.2 ms, at most about 240 tokens per second, while 14 GFLOPs at 989 TFLOP/s would take 14 µs. Decoding is memory-bound by a factor of about 300: the arithmetic intensity is 1 FLOP per byte and the GPU balances at $989/3.35 \approx 295$. Batching $B$ sequences reuses each weight read $B$ times, so throughput grows almost linearly up to a batch of a few hundred (the KV cache then becomes the bottleneck). Speculative decoding, quantisation and GQA are all attacks on bytes moved, not FLOPs.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Temperature and entropy.) Let $p_T = \operatorname{softmax}(z/T)$. Prove that $\frac{d}{dT}H(p_T) = \frac{\operatorname{Var}_{p_T}(z)}{T^3}$, so entropy increases with temperature. What are the limits as $T \to 0$ and $T \to \infty$? A model's per-token cross-entropy is 2.0 nats on text that averages 4 characters per token: give the perplexity and the bits per character.</p>
+        <details><summary>Hint</summary><div><p>Use $\beta = 1/T$: $H = \log Z(\beta) - \beta E_\beta[z]$, and $\frac{d}{d\beta}\log Z = E_\beta[z]$, $\frac{d}{d\beta}E_\beta[z] = \operatorname{Var}_\beta(z)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\log p_k = \beta z_k - \log Z$, so $H = \log Z - \beta E[z]$. Then $\frac{dH}{d\beta} = E[z] - E[z] - \beta\operatorname{Var}(z) = -\beta\operatorname{Var}(z)$, and $\frac{dH}{dT} = \frac{dH}{d\beta}\cdot\big(-\frac1{T^2}\big) = \frac{\operatorname{Var}(z)}{T^3} \ge 0$, with equality only if all logits tie. As $T \to 0$, $p_T$ becomes uniform over the maximising logits and $H \to \log(\#\arg\max)$, which is 0 for a unique max (greedy decoding); as $T \to \infty$, $H \to \log K$. Perplexity is $e^{2.0} = 7.39$, an effective choice among about 7 tokens, and $2.0/\ln2/4 = 0.72$ bits per character.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Deriving DPO.) (a) Show that the policy maximising $E_{y\sim\pi}[r(x, y)] - \beta\,\mathrm{KL}\big(\pi(\cdot\mid x)\,\|\,\pi_{\text{ref}}(\cdot\mid x)\big)$ is $\pi^*(y\mid x) = \pi_{\text{ref}}(y\mid x)e^{r(x,y)/\beta}/Z(x)$. (b) Solve for $r$ in terms of $\pi^*$, substitute into the Bradley–Terry model $P(y_w \succ y_l) = \sigma(r(x, y_w) - r(x, y_l))$, and obtain the DPO loss. (c) Compute its gradient and explain which pairs it learns most from.</p>
+        <details><summary>Hint</summary><div><p>(a) The objective equals $-\beta\,\mathrm{KL}(\pi\,\|\,\pi^*) + \beta\log Z(x)$. (b) $Z(x)$ cancels in a difference of two rewards for the same $x$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>(a) $E_\pi[r] - \beta E_\pi\log\frac{\pi}{\pi_{\text{ref}}} = -\beta E_\pi\log\frac{\pi}{\pi_{\text{ref}}e^{r/\beta}} = -\beta\,\mathrm{KL}(\pi\,\|\,\pi^*) + \beta\log Z$, maximised exactly at $\pi = \pi^*$.</p>
+          <p>(b) $r(x, y) = \beta\log\frac{\pi^*(y\mid x)}{\pi_{\text{ref}}(y\mid x)} + \beta\log Z(x)$. In $r(x, y_w) - r(x, y_l)$ the $\log Z$ terms cancel, so with $\pi_\theta$ in place of $\pi^*$ the likelihood of the preference data gives $\mathcal L = -E\log\sigma(u)$ with $u = \beta\log\frac{\pi_\theta(y_w\mid x)}{\pi_{\text{ref}}(y_w\mid x)} - \beta\log\frac{\pi_\theta(y_l\mid x)}{\pi_{\text{ref}}(y_l\mid x)}$. No reward model and no sampling: a classification loss on pairs.</p>
+          <p>(c) $\nabla\mathcal L = -\beta E\big[\sigma(-u)\big(\nabla\log\pi_\theta(y_w\mid x) - \nabla\log\pi_\theta(y_l\mid x)\big)\big]$. It raises the preferred answer's likelihood and lowers the other's, weighted by $\sigma(-u)$: large when the implicit reward ranks the pair the wrong way, near zero once the pair is ranked correctly by a margin.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Speculative decoding is exact.) A draft model proposes $x \sim q$; the target accepts it with probability $\min(1, p(x)/q(x))$, and otherwise samples from $r(x) \propto \max(0, p(x) - q(x))$. Prove the output has distribution exactly $p$, and that the acceptance probability is $\alpha = \sum_x\min(p(x), q(x)) = 1 - \mathrm{TV}(p, q)$. If the draft proposes $\gamma$ tokens and each is accepted independently with probability $\alpha$, show that one target pass yields $\frac{1 - \alpha^{\gamma+1}}{1 - \alpha}$ tokens on average, and evaluate it at $\alpha = 0.8$, $\gamma = 4$.</p>
+        <details><summary>Hint</summary><div><p>$q(x)\min(1, p/q) = \min(p, q)$, and $\min(p, q) + \max(0, p - q) = p$. The target always produces one extra token: the correction, or a bonus token if all $\gamma$ are accepted.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$P(\text{output } x) = q(x)\min\big(1, \frac{p(x)}{q(x)}\big) + (1 - \alpha)r(x) = \min(p, q)(x) + (1 - \alpha)\frac{\max(0, p(x) - q(x))}{\sum_{x'}\max(0, p(x') - q(x'))}$. Since $\sum\max(0, p - q) = 1 - \sum\min(p, q) = 1 - \alpha$, the second term is $\max(0, p(x) - q(x))$, and the total is $p(x)$. Also $\sum\min(p, q) = 1 - \frac12\sum|p - q|$.</p>
+          <p>The number of accepted draft tokens is $k$ with probability $\alpha^k(1 - \alpha)$ for $k &lt; \gamma$ and $\alpha^\gamma$ for $k = \gamma$, plus one token from the target, so the expected count is $\sum_{k=0}^{\gamma}\alpha^k = \frac{1 - \alpha^{\gamma+1}}{1 - \alpha}$. At $\alpha = 0.8$, $\gamma = 4$ it is $(1 - 0.328)/0.2 = 3.36$ tokens per expensive pass, for the same output distribution. Since decoding is memory-bound (problem 31), checking 5 tokens costs about as much as generating 1.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (In-context learning as one gradient step.) Tokens are $z_i = (x_i, y_i)$ for $i = 1, \dots, n$ and a query $z_q = (x_q, 0)$. One layer of linear attention (no softmax) outputs $\sum_i(W_Vz_i)(W_Kz_i)^\top(W_Qz_q)$ at the query. Choose the matrices so that its $y$-coordinate equals the prediction at $x_q$ after one gradient-descent step, from $w = 0$ with step size $\eta$, on $\frac12\sum_i(y_i - w^\top x_i)^2$.</p>
+        <details><summary>Hint</summary><div><p>From $w = 0$ the gradient is $-\sum_iy_ix_i$, so $w_1 = \eta\sum_iy_ix_i$ and the prediction is $\eta\sum_iy_ix_i^\top x_q$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let $W_K$ and $W_Q$ both extract the $x$-part, so $(W_Kz_i)^\top(W_Qz_q) = x_i^\top x_q$, and let $W_V$ map $z_i$ to $(0, \eta y_i)$. The output's $y$-coordinate is $\eta\sum_iy_ix_i^\top x_q = w_1^\top x_q$, exactly the one-step prediction. A trained linear transformer on random regression tasks does find weights equivalent to this, and more layers implement more steps (von Oswald et al., 2023). The prompt plays the role of a training set, and the forward pass runs the optimiser.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="rl">
+    <h2>Reinforcement learning</h2>
+    <ol start="36">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The contraction behind RL.) Prove that the Bellman optimality operator $(TV)(s) = \max_a\big[r(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V(s')\big]$ satisfies $\|TV - TU\|_\infty \le \gamma\|V - U\|_\infty$. How many sweeps of value iteration cut the error by $10^6$ when $\gamma = 0.99$? Then show that if $\|V - V^*\|_\infty \le \varepsilon$ and $\pi$ is greedy with respect to $V$, then $\|V^\pi - V^*\|_\infty \le \frac{2\gamma\varepsilon}{1 - \gamma}$.</p>
+        <details><summary>Hint</summary><div><p>$|\max_af(a) - \max_ag(a)| \le \max_a|f(a) - g(a)|$. For the greedy bound, $T^\pi V = TV$, and use the triangle inequality on $V^\pi - V^* = (T^\pi V^\pi - T^\pi V) + (TV - TV^*)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$|(TV)(s) - (TU)(s)| \le \max_a\gamma\sum_{s'}P(s'\mid s, a)|V(s') - U(s')| \le \gamma\|V - U\|_\infty$. By Banach's theorem $T$ has one fixed point $V^*$ and $\|T^kV_0 - V^*\| \le \gamma^k\|V_0 - V^*\|$. For $\gamma = 0.99$, $k \ge \ln10^6/(-\ln0.99) \approx 1375$ sweeps: the horizon $1/(1 - \gamma) = 100$ sets the pace.</p>
+          <p>Since $\pi$ is greedy for $V$, $T^\pi V = TV$, and $V^\pi = T^\pi V^\pi$, $V^* = TV^*$. So $\|V^\pi - V^*\| \le \|T^\pi V^\pi - T^\pi V\| + \|TV - TV^*\| \le \gamma\|V^\pi - V\| + \gamma\varepsilon \le \gamma\|V^\pi - V^*\| + 2\gamma\varepsilon$, which rearranges to the bound. Good-enough values give a good-enough policy, but the factor $1/(1 - \gamma)$ shows the loss can be 200 times the value error at $\gamma = 0.99$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Baselines and their best value.) Show that $E_{a\sim\pi_\theta}\big[\nabla_\theta\log\pi_\theta(a)\,b\big] = 0$ for any $b$ not depending on $a$, so subtracting a baseline leaves the policy gradient unbiased. For a one-step problem with reward $R(a)$, find the constant $b$ that minimises the total variance of $g = \nabla\log\pi_\theta(a)(R(a) - b)$. When is it the mean reward?</p>
+        <details><summary>Hint</summary><div><p>$\sum_a\pi(a)\nabla\log\pi(a) = \nabla\sum_a\pi(a) = 0$. The mean of $g$ does not depend on $b$, so minimise $E\|g\|^2$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$E[\nabla\log\pi(a)\,b] = b\sum_a\nabla\pi(a) = b\nabla1 = 0$. Writing $G = \|\nabla\log\pi(a)\|^2$, $E\|g\|^2 = E[G(R - b)^2]$, whose $b$-derivative is $-2E[G(R - b)]$, so $b^* = \frac{E[GR]}{E[G]}$: a reward average weighted by squared score size. It equals $E[R]$ when $G$ is uncorrelated with $R$, for instance when $G$ is constant. In practice a learned value $V(s)$ is used, which also depends on the state, and $R - V(s)$ becomes the advantage.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Explore, then commit.) Two arms give $N(\mu_1, 1)$ and $N(\mu_2, 1)$ rewards with gap $\Delta = \mu_1 - \mu_2 &gt; 0$, unknown. Pull each arm $m$ times, then commit to the better-looking arm for the rest of $T$ pulls. Show that the probability of committing to the wrong arm is at most $e^{-m\Delta^2/4}$, and that the regret is at most $m\Delta + T\Delta e^{-m\Delta^2/4}$. Find the $m$ minimising this bound for $\Delta = 0.1$, $T = 10^5$, and compare its regret with pulling at random.</p>
+        <details><summary>Hint</summary><div><p>The difference of the two sample means is $N(\Delta, 2/m)$, and $P(N(0, 1) &gt; x) \le e^{-x^2/2}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\bar X_1 - \bar X_2 \sim N(\Delta, 2/m)$, so $P(\bar X_1 - \bar X_2 &lt; 0) = P(Z &gt; \Delta\sqrt{m/2}) \le e^{-m\Delta^2/4}$. Exploration costs $m\Delta$ (the $m$ pulls of the worse arm), and a wrong commitment costs at most $T\Delta$, giving the bound. Setting its derivative $\Delta - \frac{T\Delta^3}{4}e^{-m\Delta^2/4}$ to zero, $m^* = \frac{4}{\Delta^2}\ln\frac{T\Delta^2}{4} = 400\ln250 \approx 2209$. The regret bound is then $220.9 + \frac4\Delta = 261$, against $T\Delta/2 = 5000$ for random pulls. The catch is that $m^*$ needs $\Delta$, which you do not know; UCB adapts to it automatically and gets similar regret.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The deadly triad in two states.) A linear value function with one weight $w$ gives state A the value $w$ (feature 1) and state B the value $2w$ (feature 2). The transition A → B has reward 0. Off-policy, only this transition is ever updated by semi-gradient TD(0): $w \leftarrow w + \alpha\big(\gamma\hat v(B) - \hat v(A)\big)\nabla\hat v(A)$. Show that $w$ diverges when $\gamma &gt; \frac12$, from any $w \ne 0$. How much does $w$ grow in 100 updates with $\gamma = 0.9$, $\alpha = 0.1$? What would on-policy updates from B to a terminal state do?</p>
+        <details><summary>Hint</summary><div><p>$\nabla\hat v(A) = 1$, so each update multiplies $w$ by a fixed factor.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$w \leftarrow w + \alpha(2\gamma w - w) = \big(1 + \alpha(2\gamma - 1)\big)w$. The factor exceeds 1 exactly when $\gamma &gt; \frac12$, so $|w|$ grows geometrically, even though the true values (0 everywhere) are representable by $w = 0$. With $\gamma = 0.9$, $\alpha = 0.1$ the factor is 1.08 and 100 updates multiply $w$ by about 2200. On-policy, B is visited too, and its update to the terminal state, $w \leftarrow w + \alpha(0 - 2w)\cdot2 = (1 - 4\alpha)w$, pulls $w$ back hard. Function approximation, bootstrapping and off-policy updates together can diverge; remove any one and TD is stable (Sutton and Barto, §11.2). DQN's target network and replay buffer are partly defences against this.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Q-learning overestimates.) Show that for any random estimates $\hat Q(a)$, $E[\max_a\hat Q(a)] \ge \max_aE[\hat Q(a)]$. If ten actions all have true value 0 and the estimates are independent $N(0, \sigma^2)$, how biased is the max (the mean of the largest of ten standard normals is 1.539)? Show that double Q-learning's estimate $\hat Q_B(\arg\max_a\hat Q_A(a))$, with independent $\hat Q_A$ and $\hat Q_B$, is unbiased here and never overestimates on average in general.</p>
+        <details><summary>Hint</summary><div><p>$\max_a\hat Q(a) \ge \hat Q(a')$ for each fixed $a'$. For double Q, condition on the action chosen by $\hat Q_A$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>For every $a'$, $\max_a\hat Q(a) \ge \hat Q(a')$, so $E\max \ge E\hat Q(a')$ for all $a'$, hence $E\max \ge \max_{a'}E\hat Q(a')$. In the example the bias is $1.539\sigma$, and bootstrapping feeds this bias into the targets of earlier states, where it compounds. For double Q, $\hat a = \arg\max\hat Q_A$ is independent of $\hat Q_B$, so $E[\hat Q_B(\hat a)\mid\hat a] = q(\hat a) \le \max_aq(a)$, with $q$ the true values. Here every $q(a) = 0$, so the estimate is exactly unbiased; in general it can underestimate but not overestimate on average.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (GAE interpolates TD and Monte Carlo.) With $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$, define $\hat A_t = \sum_{l\ge0}(\gamma\lambda)^l\delta_{t+l}$. Show that $\lambda = 0$ gives the one-step TD error, and $\lambda = 1$ gives the Monte Carlo return minus $V(s_t)$. Then show that $\hat A_t$ is the $(1 - \lambda)\lambda^{k-1}$-weighted average of the $k$-step advantage estimates $A^{(k)}_t = \sum_{l&lt;k}\gamma^lr_{t+l} + \gamma^kV(s_{t+k}) - V(s_t)$.</p>
+        <details><summary>Hint</summary><div><p>Telescoping: $\sum_{l&lt;k}\gamma^l\delta_{t+l} = A^{(k)}_t$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\lambda = 0$ leaves only $\delta_t$. For $\lambda = 1$, the sum $\sum_l\gamma^l\delta_{t+l}$ telescopes: the $\gamma^{l+1}V(s_{t+l+1})$ in each term cancels the $-\gamma^{l+1}V(s_{t+l+1})$ in the next, leaving $\sum_l\gamma^lr_{t+l} - V(s_t)$. The same telescoping gives $A^{(k)}_t = \sum_{l&lt;k}\gamma^l\delta_{t+l}$. Then $(1 - \lambda)\sum_{k\ge1}\lambda^{k-1}A^{(k)}_t = \sum_l\gamma^l\delta_{t+l}(1 - \lambda)\sum_{k&gt;l}\lambda^{k-1} = \sum_l\gamma^l\lambda^l\delta_{t+l}$. Small $\lambda$ trusts $V$ (low variance, biased if $V$ is wrong); $\lambda \to 1$ trusts the rewards (unbiased, high variance). PPO's usual $\lambda = 0.95$ sits near the Monte Carlo end.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (What the clip does.) PPO maximises $L = E\big[\min\big(\rho A, \operatorname{clip}(\rho, 1 - \epsilon, 1 + \epsilon)A\big)\big]$ with $\rho = \pi_\theta(a\mid s)/\pi_{\text{old}}(a\mid s)$. Show that for $A &gt; 0$ the term is $A\min(\rho, 1 + \epsilon)$ and for $A &lt; 0$ it is $A\max(\rho, 1 - \epsilon)$, so a sample stops contributing gradient once its ratio has moved $\epsilon$ in the helpful direction, but never when it moved the wrong way. Show that $L$ is a lower bound on the unclipped surrogate $E[\rho A]$, and that at $\theta = \theta_{\text{old}}$ its gradient is the ordinary policy gradient.</p>
+        <details><summary>Hint</summary><div><p>For $A &gt; 0$, compare $\rho$ and $\operatorname{clip}(\rho)$ on the three ranges $\rho &lt; 1 - \epsilon$, inside, $\rho &gt; 1 + \epsilon$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>For $A &gt; 0$, $\min(\rho A, \operatorname{clip}(\rho)A) = A\min(\rho, \operatorname{clip}(\rho))$. Below $1 - \epsilon$ the clip raises $\rho$, so the min is $\rho$; inside, both agree; above $1 + \epsilon$ the min is $1 + \epsilon$. So the term is $A\min(\rho, 1 + \epsilon)$, flat (zero gradient) once $\rho &gt; 1 + \epsilon$, but still linear in $\rho$ if the action became less likely. For $A &lt; 0$ multiplying by $A$ flips min to max, giving $A\max(\rho, 1 - \epsilon)$. Each term is a min with $\rho A$, so $L \le E[\rho A]$: a pessimistic surrogate, which is why it is safe to take several epochs of steps on one batch. At $\theta = \theta_{\text{old}}$, $\rho = 1$ is inside the clip and $\nabla\rho = \nabla\log\pi_\theta$, so $\nabla L = E[A\nabla\log\pi_\theta(a\mid s)]$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag code">code</span> Check four answers by simulation with NumPy: the double-descent risk for $n = 100$ at $p = 50$ and $p = 200$ (problem 7, average over 500 draws of $X$, $w$ and noise), the output distribution and acceptance rate of speculative sampling for two random distributions over 10 tokens (problem 34), the overestimation $1.539\sigma$ (problem 40), and the explore-then-commit regret at $m = 2209$ (problem 38, which should come in well under the bound of 261). Say which estimates are noisy and why.</p>
+        <details><summary>Solution</summary><div>
+          <p>Expect about 1.02 at $p = 50$ and 1.51 at $p = 200$ for double descent (draws near $p = n$ are heavy-tailed, so avoid $p$ close to 100 or the average will not settle). Speculative sampling's empirical output frequencies should match $p$ to within $\sqrt{p(1 - p)/N}$, and the acceptance rate should match $\sum\min(p, q)$. The average maximum of ten independent normals should be close to $1.539\sigma$. For explore-then-commit, the true probability of a wrong commitment at $m = 2209$ is $\Phi(-0.1\sqrt{1104.5}) \approx 4.5\times10^{-4}$, much smaller than the bound $e^{-5.52} = 0.004$, so the regret is about $221 + 4.5 \approx 225$. It is noisy, because the rare wrong commitments each cost about 9600.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

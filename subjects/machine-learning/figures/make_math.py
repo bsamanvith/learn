@@ -164,3 +164,31 @@ p.text(xo + 0.3 * gg[0] + 0.12, yo + 0.3 * gg[1] - 0.12, "∇g", color="data", s
 p.text(p.box[0], 16, "at the optimum ∇f = −λ∇g", color="fg", size=11.5, px=True)
 print("M5 lagrange optimum", round(xo, 4), round(yo, 4), "lambda", round(lam, 4), "cos angle", round(-(gf @ gg) / np.linalg.norm(gf) / np.linalg.norm(gg), 6))
 p.save(OUT / "m5-opt.svg", "Left: a convex function lies below its chords and above its tangents. Middle: a non-convex function has a chord that dips below it and two local minima. Right: minimising f on a circle, the optimum is where a level set of f touches the circle and the two gradients are parallel")
+
+
+# ---------- M6: Monte Carlo error against n; Metropolis-Hastings traces ----------
+import contextlib, io, runpy  # noqa: E401,E402
+with contextlib.redirect_stdout(io.StringIO()):
+    ns6 = runpy.run_path(str(OUT.parent / "code" / "M6-sampling-and-monte-carlo.py"))
+p = Plot(900, 330)
+p.panel(0, 0, 400, 330, (1.8, 5.2), (-3.5, 0), margin=(40, 16, 44, 52))
+p.axes("log₁₀ n", "log₁₀ RMS error", xticks=[2, 3, 4, 5], yticks=[-3, -2, -1, 0])
+lx = np.log10(ns6["ns"])
+for d, col in [(1, "data"), (10, "accent")]:
+    ly = np.log10(ns6["mc_err"][d])
+    p.line(lx, ly, color=col, width=1.8); p.dots(lx, ly, color=col)
+p.text(2.9, -0.75, "d = 10", color="accent", size=10.5)
+p.text(2.9, -2.05, "d = 1", color="data", size=10.5)
+p.text(3.6, -3.2, "both slopes −1/2", size=10)
+p.text(p.box[0], 22, "Monte Carlo error does not depend on d", color="fg", size=12, px=True)
+p.panel(420, 0, 480, 330, (0, 5000), (-38, 9), margin=(40, 16, 44, 46))
+p.axes("step", "", xticks=[0, 1000, 2000, 3000, 4000, 5000], yticks=[], grid=False)
+for k, (w, col) in enumerate([(0.1, "data"), (2.5, "accent"), (50.0, "fg")]):
+    off = -15 * k
+    ch = ns6["chains"][w][:5000]
+    p.line([0, 5000], [off + 3, off + 3], color="muted", width=0.8, dash="3 3")
+    p.line([0, 5000], [off - 3, off - 3], color="muted", width=0.8, dash="3 3")
+    p.line(np.arange(5000)[::5], np.clip(ch[::5], -6.5, 6.5) + off, color=col, width=1.0)
+    p.text(4950, off + 7.2, f"proposal width {w:g}", color=col, size=10, anchor="end")
+p.text(p.box[0], 22, "Metropolis–Hastings on two modes at ±3", color="fg", size=12, px=True)
+p.save(OUT / "m6-sampling.svg", "Left: RMS error of plain Monte Carlo estimates of an integral against the number of samples on log-log axes, in 1 and in 10 dimensions; both lines have slope minus one half, the 10-dimensional one higher because its integrand has larger variance. Right: the first 5,000 steps of Metropolis-Hastings chains on a target with modes at plus and minus 3, for random-walk proposals of width 0.1, 2.5 and 50; the narrow chain never leaves its first mode, the middle one moves between the modes often, and the wide one rarely moves at all")

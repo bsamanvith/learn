@@ -140,7 +140,7 @@ Every lesson ends with short exercises and answers. On top of that:
 | M3 ✅ | Probability for ML: expectation, Gaussians, MLE and MAP | 04, 05, 22, 24 |
 | M4 ✅ | Information theory: entropy, cross-entropy, KL | 06, 09, 22, 23, 26 |
 | M5 ✅ | Optimisation: convexity, constraints and Lagrange multipliers | 02, 05, 07 |
-| M6 | Sampling and Monte Carlo | 07, 22, 24, 31, 35, 40 |
+| M6 ✅ | Sampling and Monte Carlo | 07, 22, 24, 31, 35, 40 |
 
 ## Sources we lean on
 

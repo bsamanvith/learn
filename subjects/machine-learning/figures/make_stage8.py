@@ -192,3 +192,30 @@ for nn, err in nstep_err.items():
     p.text(p.X(alphas[last]) + 5, p.Y(err[last]) + (-6 if nn == 512 else 4), f"n={nn}", size=10, color="accent" if nn == 4 else "muted", px=True)
 p.text(p.box[0], 22, "19-state walk: intermediate n is best", color="fg", size=12, px=True)
 p.save(OUT / "td-vs-mc.svg", "Left: root mean square error of the value estimates on the 5-state random walk against the number of episodes, averaged over 100 runs, for TD(0) with step sizes 0.05, 0.1 and 0.15 and constant-alpha Monte Carlo with step sizes 0.01 to 0.04. TD's errors fall faster and lower. Right: on the 19-state random walk, the error averaged over the first 10 episodes against the step size, for n-step TD with n from 1 to 512; n equal to 4 reaches the lowest error, about 0.26, and both one-step TD and Monte Carlo are worse")
+
+
+# ---------- 36: cliff walking online reward, and maximisation bias ----------
+ns = run("36-sarsa-and-q-learning")
+cliff, frac_q, frac_double = ns["cliff"], ns["frac_q"], ns["frac_double"]
+p = Plot(900, 360)
+p.panel(0, 0, 440, 360, (0, 500), (-100, 0), margin=(40, 16, 44, 52))
+p.axes("episodes", "reward per episode (50 runs, smoothed)", xticks=[0, 100, 200, 300, 400, 500], yticks=[-100, -75, -50, -25, 0])
+k = 10
+for name, col in [("SARSA", "data"), ("Q-learning", "accent"), ("Expected SARSA", "fg")]:
+    sm = np.convolve(cliff[name], np.ones(k) / k, mode="valid")
+    p.line(np.arange(k, 501), np.maximum(sm, -100), color=col, width=1.6)   # the first episodes, far below -100, are cut off
+p.text(495, cliff["Expected SARSA"][400:].mean() + 7, "Expected SARSA", color="fg", size=10.5, anchor="end")
+p.text(495, cliff["SARSA"][400:].mean() - 9, "SARSA", color="data", size=10.5, anchor="end")
+p.text(495, cliff["Q-learning"][400:].mean() - 9, "Q-learning", color="accent", size=10.5, anchor="end")
+p.text(p.box[0], 22, "cliff walking: what ε-greedy agents earn while learning", color="fg", size=12, px=True)
+p.panel(460, 0, 440, 360, (0, 300), (0, 1), margin=(40, 16, 44, 50))
+p.axes("episodes", "fraction choosing 'left' in A (2,000 runs)", xticks=[0, 100, 200, 300], yticks=[0, 0.25, 0.5, 0.75, 1.0])
+ep = np.arange(1, 301)
+p.line([0, 300], [0.05, 0.05], color="muted", width=1.2, dash="4 4")
+p.line(ep, frac_q, color="accent", width=1.6)
+p.line(ep, frac_double, color="data", width=1.6)
+p.text(150, 0.62, "Q-learning", color="accent", size=10.5)
+p.text(70, 0.3, "double Q-learning", color="data", size=10.5)
+p.text(298, 0.012, "optimal under ε = 0.1", size=10, anchor="end")
+p.text(p.box[0], 22, "maximisation bias", color="fg", size=12, px=True)
+p.save(OUT / "sarsa-q-learning.svg", "Left: reward per episode on the cliff-walking task, averaged over 50 runs and smoothed, for SARSA, Q-learning and Expected SARSA with epsilon 0.1 and step size 0.5. After about 100 episodes Q-learning earns about minus 49 per episode, because it walks along the cliff edge and its exploration sometimes pushes it off, while SARSA earns about minus 26 and Expected SARSA about minus 21. Right: the fraction of runs choosing the action left in state A, against episodes, for Q-learning and double Q-learning; Q-learning chooses the worse action left over 80 percent of the time for the first 50 episodes, double Q-learning drops quickly towards the optimal 5 percent")

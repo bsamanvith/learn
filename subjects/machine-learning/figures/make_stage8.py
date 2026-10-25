@@ -130,3 +130,38 @@ for k, living in enumerate([-2.0, -0.4, -0.04, -0.01, 0.1]):
     p.rect(x0 + wall[1] * cell, y0 + wall[0] * cell, cell, cell, color="muted", opacity=0.55, stroke="rule", px=True)
     p.text(x0 + 4, y0 + 3 * cell - 4, "S", size=9.5, px=True)
 p.save(OUT / "gridworld-policies.svg", "Five copies of the 4 by 3 gridworld, each showing the optimal action in every cell as an arrow and the optimal value as shading, for living rewards of minus 2, minus 0.4, minus 0.04, minus 0.01 and plus 0.1. At minus 2 the agent heads for the nearest exit, even the minus 1 square. At minus 0.04 it takes the long safe route round the top. At minus 0.01 it avoids even a small risk of slipping into minus 1. At plus 0.1 it never leaves")
+
+
+# ---------- 34: value iteration's error against the contraction bound, and Jack's optimal policy ----------
+ns = run("34-dynamic-programming")
+errs_j, V_pi, gam, acts, pi_star, n = ns["jack_errs"], ns["V_pi"], ns["gamma"], ns["actions"], ns["pi_star"], ns["n"]
+p = Plot(900, 380)
+K = len(errs_j)
+p.panel(0, 0, 500, 380, (0, 200), (-8, 3), margin=(40, 20, 44, 56))
+p.axes("sweeps k", "log₁₀ ‖V_k − V*‖∞", xticks=[0, 50, 100, 150, 200], yticks=[-8, -6, -4, -2, 0, 2])
+ks = np.arange(1, K + 1)
+p.line(ks, np.log10(gam ** ks * V_pi.max()), color="muted", width=1.3, dash="5 4")
+p.line(ks, np.log10(np.maximum(errs_j, 1e-12)), color="accent")
+grid_errs = np.array(ns["errs"])
+keep = np.log10(np.maximum(grid_errs, 1e-16)) > -8
+p.line(np.arange(1, len(grid_errs) + 1)[keep], np.log10(grid_errs[keep]), color="data")
+p.text(120, 0.2, "bound γᵏ‖V*‖, γ = 0.9", size=10.5)
+p.text(150, -3.3, "Jack's car rental", color="accent", size=10.5)
+p.text(38, -6.5, "gridworld, γ = 0.99", color="data", size=10.5)
+p.text(p.box[0], 22, "value iteration converges geometrically", color="fg", size=12, px=True)
+A = np.array([[acts[pi_star[r * n + c]] for c in range(n)] for r in range(n - 1, -1, -1)], float)
+x0, y0, size = 600, 62, 270
+image(p, A, x0, y0, size, diverging=True)
+cell = size / n
+for v in [0, 5, 10, 15, 20]:
+    p.text(x0 + (v + 0.5) * cell, y0 + size + 16, str(v), size=10, anchor="middle", px=True)
+    p.text(x0 - 8, y0 + (20 - v + 0.5) * cell + 4, str(v), size=10, anchor="end", px=True)
+p.text(x0 + size / 2, y0 + size + 34, "cars at location 2", size=10.5, anchor="middle", px=True)
+p.text(x0 - 26, y0 - 8, "cars at location 1", size=10.5, px=True)
+for r in range(n):
+    for c_ in range(n):
+        a = int(A[r, c_])
+        if a != 0 and (r % 2 == 0) and (c_ % 2 == 0):
+            p.text(x0 + (c_ + 0.5) * cell, y0 + (r + 0.5) * cell + 3.5, f"{a:+d}", color="fg", size=8, anchor="middle", px=True)
+p.text(x0 - 26, 22, "optimal moves: + from 1 to 2, − from 2 to 1", color="fg", size=12, px=True)
+p.save(OUT / "dp-convergence.svg", "Left: the error of value iteration in the sup norm, on a log scale, against the number of sweeps. For Jack's car rental the error falls in a straight line parallel to the dashed contraction bound gamma to the k times the size of V star, with gamma 0.9. For the gridworld with gamma 0.99 it falls much faster than the bound, about a factor 0.45 per sweep, because episodes end. Right: the optimal policy of Jack's car rental as a 21 by 21 grid, cars at location 1 on the vertical axis and at location 2 on the horizontal; up to 5 cars move from location 1 to 2 when location 1 is full and location 2 nearly empty, and up to 4 move back when location 1 is nearly empty")

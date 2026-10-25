@@ -128,8 +128,8 @@ Every lesson ends with short exercises and answers. On top of that:
 | A7 ✅ | A VAE and a DDPM diffusion model on 2D data and MNIST | 22–25 |
 | A8 ✅ | DPO on a toy preference dataset; LoRA fine-tuning | 28–29 |
 | A9 ✅ | Gridworld RL: policy/value iteration, Q-learning, SARSA | 31–36 |
-| A10 | DQN on CartPole and PPO on a continuous-control task | 37–39 |
-| A11 | AlphaZero for Connect Four (MCTS + self-play) | 40–41 |
+| A10 ✅ | DQN on CartPole and PPO on a continuous-control task | 37–39 |
+| A11 ✅ | AlphaZero for Connect Four (MCTS + self-play) | 40–41 |
 
 ## Math toolkit (read when a lesson sends you)
 

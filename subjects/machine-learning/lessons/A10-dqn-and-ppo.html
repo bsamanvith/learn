@@ -1,0 +1,45 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A10 · after lessons 37–39</div>
+  <h1>Deep RL from scratch: DQN on CartPole, PPO on Pendulum</h1>
+  <p class="lede">Build the two workhorses of deep reinforcement learning in NumPy, with no autograd and no RL library. First DQN: a replay buffer, Double DQN targets, the Huber loss and a Polyak-averaged target network, trained on CartPole. Then PPO for continuous actions: a Gaussian policy and its score function, generalised advantage estimation across episode boundaries, the clipped objective and its gradient, trained on the pendulum swing-up. Every piece is checked against finite differences or a brute-force computation before you train with it. Expect six to ten hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/37-function-approximation-and-dqn/">37</a>, <a href="/machine-learning/38-policy-gradients-and-actor-critic/">38</a>, <a href="/machine-learning/39-trust-regions-and-ppo/">39</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A10-dqn-and-ppo">assignments/A10-dqn-and-ppo</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A10-dqn-and-ppo
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like (under a minute once everything works)</code></pre>
+    <p>Given: <code>CartPole</code> (lesson 37's, with scaled observations) and <code>Pendulum</code> (the swing-up of Gym's Pendulum-v1: torque in $[-2, 2]$, reward $-(\theta^2 + 0.1\dot\theta^2 + 0.001u^2)$, 200 steps per episode, so a random policy scores about $-1{,}200$ and a good one about $-150$ to $-200$); an <code>MLP</code> whose <code>backward</code> takes $\partial L/\partial\text{output}$, stores the parameter gradients and returns $\partial L/\partial\text{input}$; <code>Adam</code> with optional gradient-norm clipping; and <code>GaussianPolicy</code>, an MLP for the mean with a state-independent log standard deviation. Both environments return <code>(observation, reward, terminated, truncated)</code>: the distinction matters, because a truncated episode must bootstrap from the next state's value and a terminated one must not.</p>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · DQN</td><td><code>ReplayBuffer.add</code>, <code>.sample</code>, <code>dqn_targets</code>, <code>huber_loss_grad</code>, <code>polyak_update</code>, <code>train_dqn</code></td><td>the ring buffer overwriting its oldest entries; DQN and Double DQN targets by hand; the Huber gradient against finite differences; an in-place target update; learning CartPole within 30,000 steps on two seeds</td></tr>
+        <tr><td>2 · PPO</td><td><code>gaussian_logprob</code>, <code>gaussian_logprob_grads</code>, <code>gae</code>, <code>ppo_clip_objective</code>, <code>ppo_update</code>, <code>train_ppo</code></td><td>log-densities and their gradients; GAE against a brute-force sum with a termination and a truncation in the batch; the clipped objective and its exactly-zero gradient where it is clipped; one update on a synthetic batch (surrogate up, KL small, critic error down); learning a one-step continuous task</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all ten checks pass, run the experiments below. The solution's numbers are quoted for reference; DQN in particular varies a lot between seeds, so compare shapes and orders of magnitude, not decimals.</p>
+    <ol>
+      <li><b>DQN and its instability.</b> Train <code>train_dqn</code> for 100,000 steps on seeds 0, 1 and 2, plot the return per episode (smoothed) against steps, and evaluate the final greedy policy on 20 episodes. In the solution, the mean return per 20,000-step window rises from about 60 to between 110 and 235 by the end, and the greedy policies score 206, 500 and 500. Training curves are far noisier than the greedy scores. Explain why the return during training understates the greedy policy (what does $\varepsilon = 0.05$ cost on CartPole?), and plot the largest $|Q|$ in each batch to see whether the values stay near the true $\sum_t\gamma^t\le100$.</li>
+      <li><b>Double DQN, ablated.</b> Repeat with <code>double=False</code>. In the solution the plain version's greedy policies score 132, 89 and 245, but its training curves are not clearly worse. Measure the overestimation directly instead: for states from the buffer, compare the network's $\max_aQ(s, a)$ with the discounted return actually obtained from $s$ by the greedy policy. Is the bias larger without the double estimator?</li>
+      <li><b>PPO on the pendulum.</b> Train <code>train_ppo</code> with the defaults ($\gamma = 0.9$, $\lambda = 0.95$, 2,048 steps per batch, 10 epochs of minibatches of 64, $\varepsilon = 0.2$, learning rate $10^{-3}$) for 300,000 steps on three seeds, and evaluate the deterministic policy (the mean action) on 20 episodes. In the solution, the mean return per 50,000-step window goes from about $-900$ in the first to $-230$ in the second and $-190$ to $-220$ in the third, the deterministic policies score $-209$, $-185$ and $-207$, and the standard deviation of the policy shrinks from 0.61 to about 0.2. Watch a few episodes and describe the swing-up strategy it found.</li>
+      <li><b>What each ingredient does.</b> Repeat experiment 3 with $\gamma = 0.99$, with one epoch per batch, and with no clipping ($\varepsilon = 10^9$). The solution's last-50,000-step returns: $\gamma = 0.99$ gives $-211$, $-270$, $-183$ (it learns, but takes about twice as many steps to get there); one epoch gives $-339$, $-387$, $-965$ after 300,000 steps (it is still learning: each sample is used once); no clipping gives $-1{,}434$, $-1{,}559$, $-1{,}309$, worse than random, with the policy's standard deviation collapsed to 0.012 to 0.014. Explain the last result: what do ten unclipped epochs on one batch do to $\log\sigma$, and why can the agent not recover once $\sigma$ is that small?</li>
+      <li><b>Your choice.</b> Do one of: (a) add the entropy bonus $c\,\mathbb{E}[H(\pi)]$ to PPO, derive its gradient for the Gaussian (it depends only on $\log\sigma$) and test whether it prevents the collapse of experiment 4; (b) implement a dueling network head for DQN and compare; (c) run PPO with a categorical policy on CartPole and compare its sample efficiency with your DQN.</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Ten checker passes are worth 50%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism.</p>
+  </section>
+</article>

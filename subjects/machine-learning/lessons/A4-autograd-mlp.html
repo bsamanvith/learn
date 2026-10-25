@@ -1,0 +1,53 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A4 · after lessons 12–14</div>
+  <h1>An autograd engine and an MLP on MNIST</h1>
+  <p class="lede">Turn lesson 13's scalar engine into a small tensor library: arrays that remember how they were computed, broadcasting-aware gradients, a fused softmax cross-entropy, linear layers, dropout, SGD with momentum and AdamW. Then train a multilayer perceptron on MNIST's 60,000 handwritten digits to better than 98% test accuracy, with nothing but NumPy and your own code. An autograder checks every part. Expect six to eight hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/07-stochastic-optimisation/">07</a>, <a href="/machine-learning/12-neurons-and-mlps/">12</a>, <a href="/machine-learning/13-backpropagation/">13</a>, <a href="/machine-learning/14-training-deep-networks/">14</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A4-autograd-mlp">assignments/A4-autograd-mlp</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A4-autograd-mlp
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like</code></pre>
+    <p>The checker compares every gradient your engine computes with central finite differences, on tensors of awkward shapes, including broadcasting. It checks the optimisers against properties their update rules must have (Adam's first step has size exactly the learning rate in every coordinate; decoupled weight decay shrinks a parameter with zero gradient by exactly $1 - \eta\lambda$). Then it trains a small network end to end. Floating-point warnings are errors, so an overflow in your cross-entropy is a failure.</p>
+    <div class="note">
+      <div class="label">The design</div>
+      <p>A <code>Tensor</code> holds <code>data</code> (a NumPy array), <code>grad</code>, its parent tensors, and a <code>_backward</code> closure that adds its gradient, times the local derivative, into each parent's <code>grad</code>. Addition is written for you as the worked example of the pattern. Every other operation follows it. The table in <a href="/machine-learning/13-backpropagation/">lesson 13</a> lists the backward rule for each.</p>
+    </div>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · the engine</td><td><code>unbroadcast</code>; <code>Tensor</code> methods <code>__mul__</code>, <code>__matmul__</code>, <code>sum</code>, <code>relu</code>, <code>exp</code>, <code>log</code>, <code>T</code>, <code>backward</code></td><td>every gradient against finite differences, with broadcasting; nodes used twice; a graph 5,000 operations deep (so <code>backward</code> can't be recursive)</td></tr>
+        <tr><td>2 · the loss</td><td><code>cross_entropy</code></td><td>value, gradient, no overflow at logits of 1,000, gradient rows that sum to 0</td></tr>
+        <tr><td>3 · layers</td><td><code>Linear</code>, <code>dropout</code>, <code>MLP.__call__</code></td><td>He initialisation statistics; the exact forward computation; inverted dropout's mask, scale and gradient; deterministic evaluation mode</td></tr>
+        <tr><td>4 · optimisers</td><td><code>SGD.step</code>, <code>AdamW.step</code></td><td>momentum and coupled weight decay over three steps; Adam's sign-like first step, bias correction and decoupled decay</td></tr>
+        <tr><td>5 · end to end</td><td>(uses everything)</td><td>a two-hidden-layer network learns the XOR quadrants to over 95% accuracy in 300 steps</td></tr>
+      </tbody>
+    </table></div>
+    <p>The starter also provides <code>load_mnist()</code>, which downloads the dataset once (about 11 MB) to <code>~/.cache/learn-mnist</code> and returns images as rows of 784 numbers in $[0, 1]$, and <code>evaluate(model, X, y)</code>, which switches dropout off and returns the accuracy.</p>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all twelve checks pass, write a training script that uses your library. Hold out the last 10,000 training images as a validation set and make every choice on it; touch the test set once, at the end. Write a short paragraph and include a plot or a table for each experiment.</p>
+    <ol>
+      <li><b>A baseline.</b> Train $784\to256\to256\to10$ with AdamW (learning rate $10^{-3}$, batch 128) for 5 epochs. Plot training loss per step and validation accuracy per epoch. Our solution reaches about 97.5% validation accuracy, at about 4 seconds per epoch on a laptop CPU. Then check lesson 14's recipe on your own code: is the loss at step 0 close to $\log10$? Can you drive the loss on a single batch of 32 to nearly 0?</li>
+      <li><b>Initialisation.</b> Make the network 10 hidden layers deep (width 256) and train it with He initialisation, with weights $\mathcal{N}(0, 1/\text{fan-in})$, and with $\mathcal{N}(0, 0.01^2)$, using SGD with momentum 0.9 so that Adam's rescaling doesn't hide the problem. Record the gradient norm of the first layer at step 0 and the validation accuracy after one epoch. Relate the results to lesson 14's variance recursion.</li>
+      <li><b>Optimisers.</b> Compare SGD (with and without momentum) and AdamW, each with the best learning rate from a sweep over factors of 3. Plot the validation curves. Which is fastest in the first epoch, and which ends best after 15 epochs with a cosine learning-rate schedule?</li>
+      <li><b>Regularisation and the 98% target.</b> Train $784\to512\to512\to10$ for 15 epochs with AdamW, weight decay 0.01 and a cosine schedule, with dropout 0 and 0.2. Compare the gap between training and validation accuracy. Report the test accuracy of your final choice: it should be above 98% (our solution gets 98.5% without dropout and 98.6% with it).</li>
+      <li><b>Look at the mistakes.</b> Show 20 test images your best model gets wrong, with the predicted and true labels and the predicted probability. Are the errors ones a person would make? Plot a reliability diagram (lesson 08) of the test predictions: is the network overconfident?</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Twelve checker passes are worth 50%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism behind it. If PyTorch is installed, rebuild the experiment 4 network with <code>torch.nn</code> and the same settings: its accuracy should be within a few tenths of a percent of yours, and it will be several times faster. Explain where your engine spends its time.</p>
+  </section>
+</article>

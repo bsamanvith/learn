@@ -1,0 +1,218 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P8 · Stage 8: reinforcement learning</div>
+  <h1>Problem set: stage 8</h1>
+  <p class="lede">Thirty problems on lessons 31–41, from Markov chains to AlphaZero: stationary distributions and mixing, regret and its lower bound, Bellman equations solved by hand, contraction arguments, the bias and variance of TD and Monte Carlo targets, maximisation bias, the deadly triad, policy-gradient estimators and baselines, trust regions and PPO's clip, and the bandit at every node of a search tree. Try each one on paper before opening its solution. Problems marked <span class="tag code">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/31-markov-chains/">31</a>, <a href="/machine-learning/32-bandits-and-exploration/">32</a>, <a href="/machine-learning/33-mdps-and-bellman-equations/">33</a>, <a href="/machine-learning/34-dynamic-programming/">34</a>, <a href="/machine-learning/35-monte-carlo-and-td-learning/">35</a>, <a href="/machine-learning/36-sarsa-and-q-learning/">36</a>, <a href="/machine-learning/37-function-approximation-and-dqn/">37</a>, <a href="/machine-learning/38-policy-gradients-and-actor-critic/">38</a>, <a href="/machine-learning/39-trust-regions-and-ppo/">39</a>, <a href="/machine-learning/40-model-based-rl-and-mcts/">40</a>, <a href="/machine-learning/41-alphago-alphazero-and-muzero/">41</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span> <span class="tag code">code</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="chains">
+    <h2>Markov chains and bandits</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> A two-state chain has $P = \begin{pmatrix}0.9 &amp; 0.1\\0.5 &amp; 0.5\end{pmatrix}$. Find its stationary distribution, the expected number of steps to return to state 2 starting from state 2, and the rate at which $\|\mu_t - \pi\|$ shrinks.</p>
+        <details><summary>Solution</summary><div>
+          <p>Balance of flow between the two states gives $\pi_1\cdot0.1 = \pi_2\cdot0.5$, so $\pi = (5/6, 1/6)$. By Kac's formula, the expected return time to a state is $1/\pi_i$, here 6 steps. The eigenvalues of $P$ are 1 and $\operatorname{tr}P - 1 = 0.4$, and $\mu_t - \pi = (\mu_0 - \pi)P^t$ lies in the eigenspace of 0.4, so the distance shrinks by a factor 0.4 per step.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> A random walk on a connected undirected graph moves from a vertex to a uniformly chosen neighbour. Show that $\pi(v) = \deg(v)/2|E|$ is stationary by checking detailed balance. When is it the unique stationary distribution, and when does the walk converge to it from any start?</p>
+        <details><summary>Solution</summary><div>
+          <p>For an edge $\{u, v\}$, $\pi(u)P(u, v) = \frac{\deg u}{2|E|}\cdot\frac{1}{\deg u} = \frac1{2|E|}$, which is symmetric in $u$ and $v$; for non-adjacent pairs both sides are 0. Detailed balance implies stationarity (sum over $u$). The degrees sum to $2|E|$, so $\pi$ is normalised. A connected graph gives an irreducible chain, so $\pi$ is the unique stationary distribution. Convergence from any start also needs aperiodicity: the walk is periodic exactly when the graph is bipartite (every return takes an even number of steps). Adding a self-loop, or making the walk lazy, fixes it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Metropolis–Hastings proposes $y$ from $q(y\mid x)$ and accepts with probability $\alpha(x, y) = \min\big(1, \frac{\pi(y)q(x\mid y)}{\pi(x)q(y\mid x)}\big)$. Show that the resulting chain satisfies detailed balance with respect to $\pi$, and explain why only ratios of $\pi$ are needed.</p>
+        <details><summary>Solution</summary><div>
+          <p>For $y\ne x$, the transition probability is $P(x, y) = q(y\mid x)\alpha(x, y)$. Then $\pi(x)P(x, y) = \min\big(\pi(x)q(y\mid x), \pi(y)q(x\mid y)\big)$, which is symmetric in $x$ and $y$, so $\pi(x)P(x, y) = \pi(y)P(y, x)$. The rejected mass stays at $x$ and does not affect balance between distinct states. The acceptance ratio involves $\pi(y)/\pi(x)$, so a normalising constant cancels: one can sample from a posterior known only up to its evidence.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> Show that $\varepsilon$-greedy with a fixed $\varepsilon &gt; 0$ has regret that grows linearly in $T$. What schedule of $\varepsilon_t$ fixes this, in principle?</p>
+        <details><summary>Solution</summary><div>
+          <p>At every step, with probability $\varepsilon$, the arm is chosen uniformly, which costs on average $\bar\Delta = \frac1K\sum_a\Delta_a &gt; 0$. So the expected regret is at least $\varepsilon\bar\Delta T$. A decaying schedule $\varepsilon_t = \min(1, cK/(d^2t))$, with $d$ a lower bound on the smallest gap, gives logarithmic regret (Auer et al., 2002); the catch is that it needs to know $d$, which UCB does not.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Two Bernoulli arms have means 0.5 and 0.6. Compute the Lai–Robbins constant $\Delta/D_\text{KL}(0.5\,\|\,0.6)$ that multiplies $\ln T$ in the lower bound, and compare it with the constant in lesson 32's UCB1 bound, $8/\Delta$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$D_\text{KL}(0.5\,\|\,0.6) = 0.5\ln\frac{0.5}{0.6} + 0.5\ln\frac{0.5}{0.4} = 0.5(-0.1823 + 0.2231) = 0.0204$ nats. The constant is $0.1/0.0204 = 4.90$. UCB1's bound has $8/0.1 = 80$, sixteen times larger. The bound's constant is loose, and UCB1's Hoeffding bonus ignores that the variance of a Bernoulli near 0.5 is $\tfrac14$; KL-UCB and Thompson sampling attain the Lai–Robbins constant.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag code">code</span> Run UCB1 and Thompson sampling (Beta(1, 1) priors) on the two arms of the previous problem for $T = 10{,}000$ steps, 200 runs each, and compare the mean regret with $4.90\ln T$. Does Thompson sampling beat the lower bound? Explain.</p>
+        <details><summary>Solution</summary><div>
+          <p>The reference solution gets a mean regret of 87.1 (standard error 1.4) for UCB1 and 18.7 (1.1) for Thompson sampling; $4.90\ln10^4 = 45.1$. Thompson sampling is below it, which is no contradiction: Lai and Robbins bound $\liminf_{T\to\infty}\text{regret}/\ln T$, a statement about the limit. At finite $T$ lower-order terms matter, and the bound's $\ln T$ growth only dominates eventually. UCB1, with its larger constant, is above the bound at every $T$.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="mdps">
+    <h2>MDPs and dynamic programming</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag warm-up">warm-up</span> An agent receives reward 1 at every step forever. What is its return with $\gamma = 0.9$, and with $\gamma = 0.99$? After how many steps has it collected half of the return?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\sum_t\gamma^t = 1/(1 - \gamma)$: 10 and 100. The first $k$ steps collect $1 - \gamma^k$ of it, so half needs $\gamma^k = \tfrac12$, $k = \ln2/\ln(1/\gamma)$: 6.6 steps for $\gamma = 0.9$ and 69 for $0.99$. The "effective horizon" $1/(1 - \gamma)$ is the right order of magnitude.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> A two-state MDP with $\gamma = 0.9$. In state A, "stay" pays 1 and stays in A; "go" pays 0 and moves to B. In state B, the only action pays 2 and stays in B. Solve the Bellman optimality equations by hand and give $Q^\star$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$V^\star(B) = 2 + 0.9V^\star(B)$, so $V^\star(B) = 20$. In A, staying forever is worth $1/(1 - 0.9) = 10$, going is worth $0 + 0.9\cdot20 = 18$. Check the optimality equation: $V^\star(A) = \max(1 + 0.9V^\star(A), 18)$; with $V^\star(A) = 18$, $\max(17.2, 18) = 18$, consistent. So $Q^\star(A, \text{stay}) = 17.2$, $Q^\star(A, \text{go}) = 18$, $Q^\star(B) = 20$. The immediate reward prefers "stay", the value prefers "go": one step of sacrifice buys a better stream.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Show that $V^\pi = (I - \gamma P_\pi)^{-1}\mathbf{r}_\pi$, that the matrix $(I - \gamma P_\pi)^{-1}$ has nonnegative entries, and that each of its rows sums to $1/(1 - \gamma)$. What does row $s$ of $(1 - \gamma)(I - \gamma P_\pi)^{-1}$ represent?</p>
+        <details><summary>Solution</summary><div>
+          <p>The Bellman expectation equation is $V = \mathbf{r}_\pi + \gamma P_\pi V$, and $I - \gamma P_\pi$ is invertible because $\|\gamma P_\pi\|_\infty = \gamma &lt; 1$. The Neumann series $(I - \gamma P_\pi)^{-1} = \sum_t\gamma^tP_\pi^t$ converges and every term is nonnegative. $P_\pi^t\mathbf{1} = \mathbf{1}$, so the rows sum to $\sum_t\gamma^t = 1/(1 - \gamma)$. Row $s$ of $(1 - \gamma)\sum_t\gamma^tP_\pi^t$ is the normalised discounted state-visitation distribution from $s$, the $\eta$ of lessons 38 and 39.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Potential-based reward shaping adds $F(s, s') = \gamma\Phi(s') - \Phi(s)$ to every reward, for any function $\Phi$ (with $\Phi = 0$ at terminal states). Show that $Q'^\pi(s, a) = Q^\pi(s, a) - \Phi(s)$ for every policy, and conclude that shaping does not change the optimal policy.</p>
+        <details><summary>Solution</summary><div>
+          <p>The shaped return from $s_0$ is $\sum_t\gamma^t(r_t + \gamma\Phi(s_{t+1}) - \Phi(s_t)) = G - \Phi(s_0)$, because the shaping terms telescope: $\sum_t(\gamma^{t+1}\Phi(s_{t+1}) - \gamma^t\Phi(s_t)) = -\Phi(s_0) + \lim\gamma^T\Phi(s_T) = -\Phi(s_0)$, for bounded $\Phi$ or a terminal state. Taking expectations given $s_0 = s$, $a_0 = a$ gives $Q'^\pi = Q^\pi - \Phi(s)$. Subtracting a function of $s$ alone does not change $\arg\max_aQ$, so the greedy and optimal policies are the same. (Ng, Harada and Russell, 1999, also show potential-based shaping is the only kind with this guarantee.) A good $\Phi$, close to $V^\star$, makes the shaped rewards nearly zero along optimal paths and gives early, informative feedback.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Rewards lie in $[0, 1]$, $\gamma = 0.99$ and value iteration starts from $V_0 = 0$. Use the contraction property to bound the number of iterations needed for $\|V_k - V^\star\|_\infty\le0.01$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\|V_k - V^\star\|\le\gamma^k\|V_0 - V^\star\|\le\gamma^k/(1 - \gamma) = 100\gamma^k$. Requiring $100\cdot0.99^k\le0.01$ gives $k\ge\ln(10^{-4})/\ln0.99 = 916.4$, so 917 iterations suffice. The bound is worst case; episodic tasks with terminal states converge much faster (the next problem).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag code">code</span> Run value iteration on lesson 33's 4×3 gridworld with living reward $-0.04$, for $\gamma = 0.9$ and $\gamma = 0.99$, until successive iterates differ by less than $10^{-10}$. How many sweeps does it take, what is $V^\star$ at the start, and does the optimal policy change between the two discount factors?</p>
+        <details><summary>Solution</summary><div>
+          <p>The reference solution takes 33 sweeps for $\gamma = 0.9$, with $V^\star(\text{start}) = 0.2965$, and 39 sweeps for $\gamma = 0.99$, with $0.6507$ (lesson 33's value). Far fewer than problem 11's bound, because every path ends at a terminal state within a few steps and the error stops propagating. The policies differ in one cell: in the bottom row, second from the left, the optimal action is "right" with $\gamma = 0.9$ and "left" with $\gamma = 0.99$. With heavier discounting the long safe route around the left is not worth its length, and the agent takes the shorter route past the −1 square.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Show that if $\|V_{k+1} - V_k\|_\infty\le\epsilon$ then $\|V_{k+1} - V^\star\|_\infty\le\frac{\gamma\epsilon}{1 - \gamma}$. Why is this a useful stopping rule, while the bound of problem 11 is not?</p>
+        <details><summary>Solution</summary><div>
+          <p>Write $T$ for the Bellman optimality operator. $\|V_{k+1} - V^\star\| = \|TV_k - TV^\star\|\le\gamma\|V_k - V^\star\|\le\gamma(\|V_k - V_{k+1}\| + \|V_{k+1} - V^\star\|)$. Rearranging, $(1 - \gamma)\|V_{k+1} - V^\star\|\le\gamma\epsilon$. It uses only quantities the algorithm can compute, while problem 11's bound needs $\|V_0 - V^\star\|$, which is unknown (we used a crude upper bound). Combined with the fact that a greedy policy with respect to $V$ loses at most $\frac{2\gamma}{1 - \gamma}\|V - V^\star\|$, it gives a certified stopping rule.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Prove that policy iteration terminates after finitely many iterations in a finite MDP, and that it terminates at an optimal policy.</p>
+        <details><summary>Solution</summary><div>
+          <p>By the policy improvement theorem, each greedy step gives $V^{\pi_{k+1}}\ge V^{\pi_k}$ everywhere, with strict inequality somewhere unless $\pi_k$ is already greedy with respect to its own values. So no policy repeats, and there are only $|\mathcal{A}|^{|\mathcal{S}|}$ deterministic policies, so the sequence stops. It stops when $\pi_k$ is greedy with respect to $V^{\pi_k}$, which means $V^{\pi_k}$ satisfies the Bellman optimality equation, whose unique solution is $V^\star$ (the operator is a contraction).</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="td">
+    <h2>Learning from experience</h2>
+    <ol start="15">
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> With $V(A) = 0.5$, $V(B) = 0.2$, $\alpha = 0.1$ and $\gamma = 1$, the agent sees $A\to B$ with reward 0, then $B\to$ terminal with reward 1. Give the TD(0) updates in order, and the every-visit Monte Carlo updates.</p>
+        <details><summary>Solution</summary><div>
+          <p>TD(0): $V(A)\leftarrow0.5 + 0.1(0 + 0.2 - 0.5) = 0.47$; then $V(B)\leftarrow0.2 + 0.1(1 - 0.2) = 0.28$. Monte Carlo: both returns are 1, so $V(A)\leftarrow0.5 + 0.1(1 - 0.5) = 0.55$ and $V(B)\leftarrow0.28$. TD moved $V(A)$ down, towards the current (too low) estimate of $B$; Monte Carlo moved it up, towards the actual outcome. TD will catch up once $V(B)$ has learned.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Eight episodes: one is $A, 0, B, 0$; six are $B, 1$; one is $B, 0$ (Sutton and Barto, example 6.4). Compute the batch Monte Carlo and batch TD(0) estimates of $V(A)$ and $V(B)$, and say which minimises what.</p>
+        <details><summary>Solution</summary><div>
+          <p>$V(B) = 6/8 = 0.75$ for both. Batch MC averages the returns observed from A: one episode with return 0, so $V(A) = 0$, which minimises the squared error on the training returns. Batch TD converges to the value under the maximum-likelihood model: A always goes to B with reward 0, so $V(A) = V(B) = 0.75$. The certainty-equivalence estimate is the one that will generalise better if the process really is Markov.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Show that the weights $(1 - \lambda)\lambda^{n-1}$ of the $n$-step returns in the $\lambda$-return sum to 1 in a continuing task, and show how the weights are adjusted in an episode that terminates after $T - t$ steps. What are the $\lambda$-returns for $\lambda = 0$ and $\lambda = 1$?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\sum_{n\ge1}(1 - \lambda)\lambda^{n-1} = (1 - \lambda)/(1 - \lambda) = 1$. In an episode, every $n$-step return with $n\ge T - t$ equals the full return $G_t$, so their weights are collected: $G^\lambda_t = (1 - \lambda)\sum_{n=1}^{T-t-1}\lambda^{n-1}G^{(n)}_t + \lambda^{T-t-1}G_t$. For $\lambda = 0$ only $G^{(1)}_t$ remains: TD(0). For $\lambda = 1$ only $G_t$ remains: Monte Carlo.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Prove the error-reduction property of $n$-step returns: for any $V$, $\max_s\big|\mathbb{E}_\pi[G^{(n)}_t\mid S_t = s] - v_\pi(s)\big|\le\gamma^n\max_s|V(s) - v_\pi(s)|$, where $G^{(n)}_t$ bootstraps from $V$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$G^{(n)}_t = R_{t+1} + \dots + \gamma^{n-1}R_{t+n} + \gamma^nV(S_{t+n})$, and $v_\pi(s) = \mathbb{E}_\pi[R_{t+1} + \dots + \gamma^{n-1}R_{t+n} + \gamma^nv_\pi(S_{t+n})\mid S_t = s]$, by unrolling the Bellman equation $n$ times. Subtracting, the rewards cancel and $\mathbb{E}[G^{(n)}_t\mid s] - v_\pi(s) = \gamma^n\mathbb{E}[V(S_{t+n}) - v_\pi(S_{t+n})\mid s]$, whose absolute value is at most $\gamma^n\max|V - v_\pi|$. (If the episode ends before $t + n$, the bootstrap term is absent and the error is even smaller.) This is the contraction that makes $n$-step TD converge, and it shows the trade-off: larger $n$ means less bias from $V$ but more variance from the rewards.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> With $\varepsilon = 0.1$ and four actions, compute the Expected SARSA target at a state with $Q = (1, 3, 2, 3)$ for reward $-1$ and $\gamma = 1$, breaking the greedy tie by splitting the greedy probability equally. Compare with the Q-learning target.</p>
+        <details><summary>Solution</summary><div>
+          <p>Each action gets $\varepsilon/4 = 0.025$; the two greedy actions share $0.9$, so they get $0.475$ each. The expectation is $0.025\cdot1 + 0.475\cdot3 + 0.025\cdot2 + 0.475\cdot3 = 2.925$, and the target is $1.925$. Q-learning's target is $-1 + 3 = 2$. Expected SARSA accounts for the 5% chance of exploring into worse actions.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> Let $X_1, X_2$ be independent $N(0, 1)$ estimates of two actions whose true values are both 0. Show that $\mathbb{E}[\max(X_1, X_2)] = 1/\sqrt\pi$, and explain how double Q-learning removes the bias.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\max(X_1, X_2) = \frac{X_1 + X_2}2 + \frac{|X_1 - X_2|}2$. The first term has mean 0. $X_1 - X_2\sim N(0, 2)$, and $\mathbb{E}|Z| = \sigma\sqrt{2/\pi}$ for $Z\sim N(0, \sigma^2)$, so $\mathbb{E}|X_1 - X_2| = \sqrt2\sqrt{2/\pi} = 2/\sqrt\pi$, and the expectation is $1/\sqrt\pi\approx0.564$, though $\max$ of the true values is 0. Double Q-learning picks the action with one estimate and evaluates it with an independent one: $\mathbb{E}[Y_{\arg\max X}] = \mathbb{E}[\mathbb{E}[Y_a]] = 0$ when $Y$ is independent of $X$. It can underestimate when the true values differ, but not overestimate by this mechanism.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="approx">
+    <h2>Function approximation and policy gradients</h2>
+    <ol start="21">
+      <li>
+        <p><span class="tag core">core</span> Two states have one feature each, $x(1) = 1$ and $x(2) = 2$, so $\hat v(s) = wx(s)$, and every reward is 0. Off-policy updates are made only on the transition $1\to2$. Show that semi-gradient TD multiplies $w$ by $1 + \alpha(2\gamma - 1)$ per update, and so diverges for $\gamma &gt; \tfrac12$ unless $w = 0$. Which of the three ingredients of the deadly triad are present?</p>
+        <details><summary>Solution</summary><div>
+          <p>The update is $w\leftarrow w + \alpha(0 + \gamma\cdot2w - w)\cdot x(1) = w(1 + \alpha(2\gamma - 1))$. For $\gamma &gt; \tfrac12$ the factor exceeds 1 and $|w|$ grows geometrically, although the true values are 0 and $w = 0$ represents them exactly. All three are present: function approximation (one weight shared by both states), bootstrapping (the target uses $\hat v(2)$), and off-policy updates (state 2 is never updated, so nothing corrects the increase in $\hat v(2)$). On-policy, the transitions out of state 2 would also be updated and pull $w$ back.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> DQN uses the Huber loss $\ell(\delta) = \tfrac12\delta^2$ for $|\delta|\le1$ and $|\delta| - \tfrac12$ otherwise. Give its gradient, and explain why it is equivalent to clipping the TD error in the update, and why that helps early in training.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\ell'(\delta) = \delta$ for $|\delta|\le1$ and $\operatorname{sign}(\delta)$ otherwise, which is $\operatorname{clip}(\delta, -1, 1)$. So the gradient step is the squared-error step with the TD error clipped. Early on, targets bootstrap from an untrained network and some TD errors are huge; with the squared loss these dominate the update and can blow up the weights. Clipping bounds each sample's influence, like a robust regression loss.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> For a softmax policy $\pi(a) = e^{\theta_a}/\sum_be^{\theta_b}$, show that $\nabla_\theta\log\pi(a) = \mathbf{e}_a - \boldsymbol\pi$ and that its expectation under $\pi$ is zero.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\log\pi(a) = \theta_a - \log\sum_be^{\theta_b}$, and $\partial/\partial\theta_c$ gives $[a = c] - \pi(c)$. Its expectation is $\sum_a\pi(a)(\mathbf{e}_a - \boldsymbol\pi) = \boldsymbol\pi - \boldsymbol\pi = 0$, the special case of $\mathbb{E}[\nabla\log\pi] = \nabla\sum_a\pi(a) = 0$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> For a one-dimensional parameter, the REINFORCE estimate with a constant baseline is $g = s(R - b)$, with $s = \partial_\theta\log\pi(A)$. Show that $\mathbb{E}[g]$ does not depend on $b$, and that the variance is minimised by $b^\star = \mathbb{E}[s^2R]/\mathbb{E}[s^2]$. When is $b^\star$ simply $\mathbb{E}[R]$?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\mathbb{E}[sb] = b\,\mathbb{E}[s] = 0$. $\operatorname{Var}(g) = \mathbb{E}[s^2(R - b)^2] - (\mathbb{E}[g])^2$, and the second term does not depend on $b$; the first is a quadratic in $b$ with derivative $-2\mathbb{E}[s^2(R - b)]$, zero at $b^\star$. It equals $\mathbb{E}[R]$ when $s^2$ and $R$ are uncorrelated. In practice a learned $V(s)$ is used: not the minimum-variance baseline, but close, and it adapts to the state.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> A Gaussian policy $a\sim N(\mu, \sigma^2)$ with fixed $\sigma$. Show that $\partial_\mu\log\pi(a) = (a - \mu)/\sigma^2$. For a reward $R(a) = -a^2$, compute the exact gradient $\partial_\mu\mathbb{E}[R]$ and check that REINFORCE is unbiased for it. What happens to the variance of the estimate as $\sigma\to0$?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\log\pi = -(a - \mu)^2/2\sigma^2 + \text{const}$, so the derivative is $(a - \mu)/\sigma^2$. $\mathbb{E}[R] = -(\mu^2 + \sigma^2)$, so the gradient is $-2\mu$. With $a = \mu + \sigma z$: $\mathbb{E}[-(\mu + \sigma z)^2z/\sigma] = -\mathbb{E}[(\mu^2z + 2\mu\sigma z^2 + \sigma^2z^3)/\sigma] = -2\mu$. Unbiased. But the term $\mu^2z/\sigma$ has variance $\mu^4/\sigma^2$, which blows up as $\sigma\to0$: the score-function estimator needs exploration, and a baseline (here $b = -\mu^2$) removes the worst of it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Show that the GAE advantage $\hat A_t = \sum_{l\ge0}(\gamma\lambda)^l\delta_{t+l}$, with $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$, equals $G^\lambda_t - V(s_t)$, the $\lambda$-return minus the baseline, when the $\lambda$-return bootstraps from the same $V$. Which values of $\lambda$ give the one-step TD advantage and the Monte Carlo advantage?</p>
+        <details><summary>Solution</summary><div>
+          <p>The $n$-step advantage telescopes: $\sum_{l=0}^{n-1}\gamma^l\delta_{t+l} = \sum_{l=0}^{n-1}\gamma^lr_{t+l} + \gamma^nV(s_{t+n}) - V(s_t) = G^{(n)}_t - V(s_t)$. The $\lambda$-return weights these by $(1 - \lambda)\lambda^{n-1}$: $G^\lambda_t - V(s_t) = (1 - \lambda)\sum_n\lambda^{n-1}\sum_{l&lt;n}\gamma^l\delta_{t+l}$. Exchanging the sums, $\delta_{t+l}$ appears for every $n &gt; l$, with total weight $\gamma^l(1 - \lambda)\sum_{n&gt;l}\lambda^{n-1} = \gamma^l\lambda^l$. So the two agree. $\lambda = 0$ gives $\delta_t$, the one-step TD advantage; $\lambda = 1$ gives $G_t - V(s_t)$, the Monte Carlo advantage.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> For a Bernoulli policy with probability $p$, show that $D_\text{KL}(p\,\|\,p + d) = \frac{d^2}{2p(1 - p)} + O(d^3)$. If $p = \sigma(\theta)$, what is the Fisher information in $\theta$, and what does the natural gradient do near $p = 0$ or 1?</p>
+        <details><summary>Solution</summary><div>
+          <p>Expand $D = p\ln\frac{p}{p + d} + (1 - p)\ln\frac{1 - p}{1 - p - d}$ to second order: the first-order terms are $-d + d = 0$, and the second-order terms are $\frac{d^2}{2p} + \frac{d^2}{2(1 - p)} = \frac{d^2}{2p(1 - p)}$. So the Fisher information in $p$ is $1/(p(1 - p))$. With $dp/d\theta = p(1 - p)$, the Fisher information in $\theta$ is $p(1 - p)$. The natural gradient divides the ordinary gradient by $p(1 - p)$, so near $p = 0$ or 1, where the logistic is flat and the ordinary gradient vanishes, it takes large steps in $\theta$, which correspond to reasonable steps in the policy.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> With $\varepsilon = 0.2$, compute PPO's per-sample objective $\min(r\hat A, \operatorname{clip}(r, 0.8, 1.2)\hat A)$ and say whether its gradient is zero, for $(r, \hat A) = (1.5, 2), (1.5, -2), (0.5, 2), (0.5, -2)$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$(1.5, 2)$: $\min(3, 2.4) = 2.4$, clipped, gradient zero: the action is already more likely than the clip allows. $(1.5, -2)$: $\min(-3, -2.4) = -3$, unclipped, gradient nonzero: the min keeps the pessimistic term, so a bad action that became too likely is still pushed down. $(0.5, 2)$: $\min(1, 1.6) = 1$, unclipped, gradient nonzero: a good action that became unlikely is pushed back up. $(0.5, -2)$: $\min(-1, -1.6) = -1.6$, clipped, gradient zero.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="planning">
+    <h2>Planning and search</h2>
+    <ol start="29">
+      <li>
+        <p><span class="tag core">core</span> A node has been visited 100 times. Child 1 has $N = 70$, mean reward $0.6$ and prior $0.3$; child 2 has $N = 30$, mean $0.5$ and prior $0.7$. Which child does UCT with $c = \sqrt2$ choose, and which does PUCT with $c_\text{puct} = 1.5$ choose?</p>
+        <details><summary>Solution</summary><div>
+          <p>UCT: $\ln100 = 4.605$. Child 1: $0.6 + \sqrt{2\cdot4.605/70} = 0.6 + 0.363 = 0.963$. Child 2: $0.5 + \sqrt{2\cdot4.605/30} = 0.5 + 0.554 = 1.054$. UCT chooses child 2. PUCT: $1.5\sqrt{100} = 15$. Child 1: $0.6 + 15\cdot0.3/71 = 0.663$. Child 2: $0.5 + 15\cdot0.7/31 = 0.839$. PUCT also chooses child 2, mainly because of its prior.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Compute the regularised policy $\bar\pi(a) = \lambda p(a)/(\alpha - q_a)$ of lesson 41 for $\mathbf{p} = (0.5, 0.3, 0.2)$, $\mathbf{q} = (0.1, 0.5, 0.0)$ and $\lambda = 0.2$, by solving for $\alpha$ numerically. How does $\bar\pi$ change for $\lambda = 0.05$ and $\lambda = 10$?</p>
+        <details><summary>Solution</summary><div>
+          <p>$\alpha$ must exceed 0.5 and solve $\frac{0.1}{\alpha - 0.1} + \frac{0.06}{\alpha - 0.5} + \frac{0.04}{\alpha} = 1$; bisection gives $\alpha = 0.5828$ and $\bar\pi = (0.207, 0.724, 0.069)$. The search has moved most of the probability to the action with the highest value, against the prior's preference for the first. With $\lambda = 0.05$, $\bar\pi = (0.060, 0.921, 0.019)$, nearly greedy; with $\lambda = 10$, $(0.495, 0.309, 0.196)$, nearly the prior. Since $\lambda_N$ falls as $1/\sqrt N$, more simulations move the search policy from the prior towards the greedy one.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

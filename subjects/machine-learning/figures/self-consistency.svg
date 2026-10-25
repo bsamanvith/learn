@@ -1,0 +1,115 @@
+<svg class="fig" viewBox="0 0 900 340" role="img" aria-label="Accuracy of the majority answer against the number of samples, from 1 to 41. A model right 40% of the time with wrong answers spread over 10 values climbs to nearly 100%; the same model with a single wrong answer at 60% falls towards 0; a model right 25% of the time with spread-out wrong answers also climbs towards 100%, more slowly" style="width:100%;height:auto;display:block;overflow:visible">
+  <line x1="52" y1="296" x2="680" y2="296" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="245.8" x2="680" y2="245.8" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="195.61" x2="680" y2="195.61" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="145.41" x2="680" y2="145.41" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="95.22" x2="680" y2="95.22" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="45.02" x2="680" y2="45.02" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="66.95" y1="296" x2="66.95" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="126.76" y1="296" x2="126.76" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="201.52" y1="296" x2="201.52" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="276.29" y1="296" x2="276.29" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="351.05" y1="296" x2="351.05" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="425.81" y1="296" x2="425.81" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="500.57" y1="296" x2="500.57" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="575.33" y1="296" x2="575.33" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="665.05" y1="296" x2="665.05" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="296" x2="680" y2="296" style="stroke:var(--muted);stroke-width:1"/>
+  <line x1="52" y1="40" x2="52" y2="296" style="stroke:var(--muted);stroke-width:1"/>
+  <text x="66.95" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1</text>
+  <text x="126.76" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">5</text>
+  <text x="201.52" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">10</text>
+  <text x="276.29" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">15</text>
+  <text x="351.05" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">20</text>
+  <text x="425.81" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">25</text>
+  <text x="500.57" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">30</text>
+  <text x="575.33" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">35</text>
+  <text x="665.05" y="311" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">41</text>
+  <text x="46" y="300" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0</text>
+  <text x="46" y="249.8" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.2</text>
+  <text x="46" y="199.61" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.4</text>
+  <text x="46" y="149.41" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.6</text>
+  <text x="46" y="99.22" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.8</text>
+  <text x="46" y="49.02" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">1</text>
+  <text x="680" y="325" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="end">number of sampled answers N</text>
+  <text x="56" y="36" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="start">accuracy of the majority answer</text>
+  <polyline points="52,195.61 680,195.61" style="fill:none;stroke:var(--muted);stroke-width:1.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:4 4"/>
+  <polyline points="66.95,193.41 96.86,175.8 126.76,135.82 156.67,111.51 186.57,94.98 216.48,80.84 246.38,71.07 276.29,64.03 306.19,59.45 336.1,54.81 366,52.13 395.9,50.41 425.81,48.99 455.71,46.92 485.62,46.73 515.52,46.25 545.43,46.12 575.33,45.9 605.24,45.58 635.14,45.55 665.05,45.24" style="fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <circle cx="66.95" cy="193.41" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="96.86" cy="175.8" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="126.76" cy="135.82" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="156.67" cy="111.51" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="186.57" cy="94.98" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="216.48" cy="80.84" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="246.38" cy="71.07" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="276.29" cy="64.03" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="306.19" cy="59.45" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="336.1" cy="54.81" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="366" cy="52.13" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="395.9" cy="50.41" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="425.81" cy="48.99" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="455.71" cy="46.92" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="485.62" cy="46.73" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="515.52" cy="46.25" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="545.43" cy="46.12" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="575.33" cy="45.9" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="605.24" cy="45.58" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="635.14" cy="45.55" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="665.05" cy="45.24" r="2.6" style="fill:var(--accent);opacity:1.0"/>
+  <line x1="694" y1="64" x2="716" y2="64" style="stroke:var(--accent);stroke-width:2.2"/>
+  <text x="722" y="68" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">40% right</text>
+  <text x="722" y="82" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">wrong answers spread</text>
+  <text x="722" y="96" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">over 10 values</text>
+  <polyline points="66.95,196.99 96.86,208.97 126.76,217.25 156.67,223.84 186.57,229.49 216.48,234.26 246.38,238.46 276.29,242.1 306.19,245.62 336.1,249.07 366,252.52 395.9,255.15 425.81,257.35 455.71,259.23 485.62,261.3 515.52,263.5 545.43,265.07 575.33,266.82 605.24,268.33 635.14,269.84 665.05,270.96" style="fill:none;stroke:var(--event-a);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <circle cx="66.95" cy="196.99" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="96.86" cy="208.97" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="126.76" cy="217.25" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="156.67" cy="223.84" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="186.57" cy="229.49" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="216.48" cy="234.26" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="246.38" cy="238.46" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="276.29" cy="242.1" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="306.19" cy="245.62" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="336.1" cy="249.07" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="366" cy="252.52" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="395.9" cy="255.15" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="425.81" cy="257.35" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="455.71" cy="259.23" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="485.62" cy="261.3" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="515.52" cy="263.5" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="545.43" cy="265.07" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="575.33" cy="266.82" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="605.24" cy="268.33" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="635.14" cy="269.84" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="665.05" cy="270.96" r="2.6" style="fill:var(--event-a);opacity:1.0"/>
+  <line x1="694" y1="124" x2="716" y2="124" style="stroke:var(--event-a);stroke-width:2.2"/>
+  <text x="722" y="128" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">40% right</text>
+  <text x="722" y="142" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">one wrong answer at 60%</text>
+  <polyline points="66.95,231.69 96.86,224.7 126.76,203.47 156.67,190.56 186.57,176.55 216.48,163.39 246.38,152.03 276.29,141.31 306.19,131.23 336.1,121.16 366,113.01 395.9,110.63 425.81,104 455.71,98.88 485.62,93.72 515.52,87.86 545.43,83.73 575.33,80.22 605.24,77.18 635.14,73.29 665.05,70.61" style="fill:none;stroke:var(--fg);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <circle cx="66.95" cy="231.69" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="96.86" cy="224.7" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="126.76" cy="203.47" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="156.67" cy="190.56" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="186.57" cy="176.55" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="216.48" cy="163.39" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="246.38" cy="152.03" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="276.29" cy="141.31" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="306.19" cy="131.23" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="336.1" cy="121.16" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="366" cy="113.01" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="395.9" cy="110.63" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="425.81" cy="104" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="455.71" cy="98.88" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="485.62" cy="93.72" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="515.52" cy="87.86" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="545.43" cy="83.73" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="575.33" cy="80.22" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="605.24" cy="77.18" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="635.14" cy="73.29" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <circle cx="665.05" cy="70.61" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <line x1="694" y1="184" x2="716" y2="184" style="stroke:var(--fg);stroke-width:2.2"/>
+  <text x="722" y="188" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">25% right</text>
+  <text x="722" y="202" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">wrong answers spread</text>
+  <text x="722" y="216" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">over 10 values</text>
+  <text x="52" y="22" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">self-consistency works when the right answer is the most likely single answer</text>
+</svg>

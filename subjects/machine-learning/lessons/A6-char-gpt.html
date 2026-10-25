@@ -1,0 +1,53 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A6 · after lessons 19, 20 and 26</div>
+  <h1>A character-level GPT</h1>
+  <p class="lede">Build a GPT from scratch in NumPy, every forward and backward pass by hand: layer normalisation, GELU, multi-head causal self-attention, pre-norm residual blocks, and the full model. Then add what turns a network into a working language model: batching, a warm-up and cosine learning-rate schedule, gradient clipping, AdamW with weight decay applied only where it belongs, and generation with a KV cache, temperature and top-$k$. Train it on Shakespeare, compare it with the n-gram and MLP models of lessons 26 and 27, and take it apart with ablations. An autograder checks every part. Expect eight to ten hours, plus training time.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/19-attention/">19</a>, <a href="/machine-learning/20-transformer/">20</a>, <a href="/machine-learning/26-language-modelling-and-tokenisation/">26</a>, <a href="/machine-learning/A4-autograd-mlp/">A4</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A6-char-gpt">assignments/A6-char-gpt</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A6-char-gpt
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like (about 10 seconds)</code></pre>
+    <p>Lesson 20's code contains a GPT, and you may read it, but the starter is organised differently (parameters live in dictionaries, attention has a cached single-step path, the feed-forward layer uses GELU) and the checker tests each piece on its own. Passing means the following, in order of the parts. Every gradient matches central finite differences in float64. Attention matches a slow loop over heads and positions, and changing a later token never changes an earlier output. The cached single-step path gives exactly the logits of the full forward pass. The optimiser matches a reference implementation over several steps. Greedy generation matches the argmax of repeated full forward passes, and sampled tokens follow the tempered softmax. A small model learns a repeating text.</p>
+    <div class="note">
+      <div class="label">Conventions</div>
+      <p>Activations have shape $(B, T, d)$. Each layer keeps its parameters in <code>self.params</code>, a dictionary, and its backward pass stores the matching gradients in <code>self.grads</code> and returns the gradient with respect to its input. <code>Linear</code> and <code>Embedding</code> are given as worked examples. The model computes in float32 for speed; the checker converts it to float64.</p>
+    </div>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · the pieces</td><td><code>softmax</code>, <code>cross_entropy</code>, <code>LayerNorm</code>, <code>GELU</code></td><td>stability at logits of 1,000; the output statistics of layer norm; every gradient</td></tr>
+        <tr><td>2 · attention</td><td><code>CausalSelfAttention.forward</code>, <code>.backward</code>, <code>.step</code></td><td>agreement with a loop over heads; causality; gradients; the KV-cached step equals the full pass</td></tr>
+        <tr><td>3 · the model</td><td><code>Block</code> and <code>GPT</code>: <code>forward</code>, <code>backward</code>, <code>step</code></td><td>gradients through every parameter, including both embeddings; cached generation equals the full pass</td></tr>
+        <tr><td>4 · training</td><td><code>get_batch</code>, <code>lr_schedule</code>, <code>clip_grad_norm</code>, <code>AdamW</code></td><td>shifted targets; the schedule's values; the global norm; decoupled weight decay on matrices only</td></tr>
+        <tr><td>5 · generation</td><td><code>generate</code></td><td>greedy and top-1 decoding against full passes; sampled frequencies against $\operatorname{softmax}(\mathbf{z}/\tau)$; a model that learns</td></tr>
+      </tbody>
+    </table></div>
+    <p>Two details matter more than they look. Weight decay is applied to weight matrices and embeddings but not to biases or layer-norm gains: decaying a gain towards zero fights the normalisation it is there to undo. And the output projections of attention and of the feed-forward layer, which add into the residual stream, are initialised with standard deviation $0.02/\sqrt{2n_\text{layer}}$ as in GPT-2, so that the residual stream's variance does not grow with depth at initialisation; the constructor already does this.</p>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all seventeen checks pass, write a training script. Use the first 90% of Tiny Shakespeare (<code>load_shakespeare()</code> downloads it) for training and the rest for validation, and evaluate the validation loss on a fixed set of 200 windows. Write a short paragraph and include a plot or a table for each experiment.</p>
+    <ol>
+      <li><b>The baseline.</b> Train <code>GPT(65, 64, d=64, heads=4, n_layer=4)</code> with batches of 32 windows of 64 characters for 3,000 steps, with AdamW (weight decay 0.1, $\beta_2 = 0.95$), learning rate warming up over 200 steps to $3\times10^{-3}$ and decaying to $3\times10^{-4}$, and gradients clipped at norm 1. Plot the training and validation loss. For reference, the solution's model has 212,545 parameters. Its validation loss falls from 4.16 at the start to 1.97 after 500 steps, 1.73 after 1,500 and 1.61 after 3,000, with the training loss on the last batches around 1.4; the run took about 23 minutes on two CPU cores. A sample at temperature 0.8 begins <code>ROMEO: After me; for the reason? PAULINA: I thought thou borrow</code>: real words, names and the play's layout, little sense. With other seeds, expect a final validation loss near 1.6. Convert the final loss to bits per character, and compare it with the 8-gram model of lesson 26 trained on the same text (fit one) and with lesson 27's best MLP, 1.816 nats. Generate 200 characters at temperatures 0.5, 0.8 and 1.0 from the prompt "ROMEO:" and describe the differences.</li>
+      <li><b>Ablations.</b> Retrain three variants with everything else fixed: no position embeddings (set them to zero and skip their update), a single layer, and a context of 16 characters. Report the validation losses in a table. Which matters most, and why? What does a model without position embeddings know about word order? (Think about which functions of a set of tokens a causal mask still lets attention compute.)</li>
+      <li><b>What the heads do.</b> Plot the attention weights of every head in the first layer on one line of text, as $T\times T$ heat maps. Find at least two heads with an interpretable pattern, for instance one that attends to the previous character, or one that attends to the most recent space or newline, and test your description on other lines.</li>
+      <li><b>The KV cache.</b> Time the generation of 60 characters with <code>generate</code>, and with a version that calls <code>model.forward</code> on the whole sequence for every new token. Explain the ratio with the operation counts of lesson 29. How would it change with a context of 1,024?</li>
+      <li><b>A small scaling study.</b> Train models with $d = 32$, 64 and 128 (4 layers, everything else as in the baseline, and the learning rate lowered for the largest if it is unstable) and plot the final validation loss against the number of non-embedding parameters on log–log axes. Is it consistent with lesson 27's power laws? What would you need to change to measure a compute-optimal frontier?</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Seventeen checker passes are worth 50%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism. A stretch goal: replace the character vocabulary with your own byte-level BPE tokeniser of 512 tokens (lesson 26 and problem set P7), retrain, and compare the models in bits per character, not per token.</p>
+  </section>
+</article>

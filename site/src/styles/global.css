@@ -210,7 +210,7 @@ a.chip:hover { color: var(--fg); background: color-mix(in srgb, var(--panel) 70%
 .part-label .n { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .part-label h2 { font-family: var(--serif); font-size: 1.5rem; line-height: 1.2; margin: .2em 0 .4em; letter-spacing: -0.01em; font-weight: 600; }
 .part-label p { font-size: 14px; color: var(--muted); margin: 0; line-height: 1.5; }
-.chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; align-content: start; }
+.chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 14px; align-content: start; }
 .chapter-card { display: flex; flex-direction: column; gap: 6px; padding: 18px 18px 16px; border: 1px solid var(--rule); border-radius: 10px; text-decoration: none; color: var(--fg); background: var(--card); transition: border-color .15s, transform .15s; }
 .chapter-card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .chapter-card .num { font: 500 12.5px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; display: flex; justify-content: space-between; gap: 8px; }
@@ -332,14 +332,48 @@ a.crumb { color: var(--fg); }
 .chapter-card.is-started .state { color: var(--accent); }
 .upcoming-list li { display: flex; flex-direction: column; padding: 8px 0; border-bottom: 1px solid var(--rule); }
 .upcoming-list li b { color: var(--fg); font-weight: 600; }
+@media (max-width: 760px) { .subject-page .part { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 960px) {
-  .subject-layout { grid-template-columns: 1fr; gap: 0; }
+  .subject-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .subject-side { position: static; margin-top: 48px; }
 }
 
 /* Hand-written lessons sit in the reading column, a little wider than prose for their figures. */
-.ml-main { width: 100%; max-width: 780px; margin: 0 auto; padding: 40px 0 0; min-width: 0; display: grid; gap: 48px; align-content: start; }
+.ml-main { width: 100%; max-width: 780px; margin: 0 auto; padding: 40px 0 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; align-content: start; }
 .ml-main > .pager { margin-top: 0; }
 .ml-main > .mobile-nav { margin: 0; }
 .ml-page { max-width: 1080px; margin: 0 auto; padding: 48px 24px 0; display: grid; gap: 56px; }
 @media (max-width: 760px) { .ml-page { padding: 32px 16px 0; } }
+
+/* ---------- problem book: hard problems, assignments, key books ---------- */
+.pb-section { margin: 72px 0 0; display: grid; gap: 24px; }
+.pb-section .part-label p { max-width: 70ch; }
+.pb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.pb-card { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); font-family: var(--sans); font-size: 14.5px; line-height: 1.5; }
+.pb-card h3 { margin: 0; font: 600 1.18rem/1.25 var(--serif); }
+.pb-card h3 a { color: var(--fg); text-decoration: none; }
+.pb-card h3 a:hover { color: var(--accent); }
+.pb-card p { margin: 0; color: var(--soft); }
+.pb-card.written { border-color: color-mix(in srgb, var(--accent) 60%, var(--rule)); box-shadow: 0 10px 28px -20px color-mix(in srgb, var(--accent) 60%, transparent); }
+.pb-card.locked { background: transparent; }
+.pb-card.locked h3, .pb-card.locked p { color: var(--muted); }
+.pb-card.is-cleared { background: var(--tint-good); border-color: color-mix(in srgb, var(--good) 50%, var(--rule)); }
+.pb-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+.stars { color: var(--accent); letter-spacing: .08em; font-size: 15px; }
+.chip.stars { letter-spacing: .04em; color: color-mix(in srgb, var(--accent) 80%, var(--fg)); }
+.cleared { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none; }
+.cleared input { accent-color: var(--good); }
+.cleared.big { font: 550 15px var(--sans); padding: 10px 16px; border: 1px solid var(--rule); border-radius: 10px; }
+.clear-row { margin: 3em 0 0; }
+.pb-visual { font-size: 13.5px; }
+.pb-visual span { color: var(--event-a); }
+.pb-check b { color: var(--fg); font-weight: 600; }
+.pb-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; padding-top: 6px; font-size: 12.5px; }
+.pb-source { color: var(--muted); font-size: 12px; flex-basis: 100%; }
+.pb-books { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-family: var(--sans); font-size: 15px; }
+.pb-books li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--rule); color: var(--soft); }
+.pb-books li b { color: var(--fg); font: 600 1.08rem var(--serif); }
+.pb-books .pb-by { flex-basis: 100%; color: var(--muted); font-size: 13.5px; }
+.reader-single { grid-template-columns: minmax(0, 1fr); }
+.problem-entry { padding-bottom: 0; }
+@media (max-width: 760px) { .pb-grid { grid-template-columns: 1fr; } .pb-section { margin-top: 48px; } }

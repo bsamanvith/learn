@@ -1,0 +1,197 @@
+<header class="lesson-head">
+  <div class="eyebrow">Math toolkit M1 · read when a lesson sends you</div>
+  <h1>Linear algebra for ML: eigenvectors, SVD and PCA</h1>
+  <p class="lede">Three facts do most of the linear-algebra work in machine learning. A symmetric matrix is a stretch along perpendicular axes (the spectral theorem). Any matrix is a rotation, a stretch and another rotation (the SVD). And the directions in which data vary most are eigenvectors of its covariance (PCA). This page proves each one and shows where the curriculum uses it.</p>
+  <div class="meta"><span><b>Used by:</b> <a href="/machine-learning/02-gradient-descent/">02</a>, <a href="/machine-learning/05-regularisation/">05</a>, 14, 18, 29</span><span><b>Assumes:</b> matrix multiplication, transpose, inverse, dot products</span></div>
+</header>
+
+<article class="lesson">
+  <section id="maps">
+    <h2>Matrices are linear maps</h2>
+    <p>A matrix $A\in\mathbb{R}^{m\times n}$ is a function from $\mathbb{R}^n$ to $\mathbb{R}^m$ that respects addition and scaling: $A(a\mathbf{x} + b\mathbf{y}) = aA\mathbf{x} + bA\mathbf{y}$. Column $j$ of $A$ is where the $j$-th basis vector goes, and $A\mathbf{x} = \sum_j x_j\mathbf{a}_j$ is a weighted sum of columns. Four subspaces describe what the map does:</p>
+    <ul>
+      <li>the <b>column space</b> (range) $\{A\mathbf{x}\}$: every output it can reach. Its dimension is the <b>rank</b> $r$.</li>
+      <li>the <b>null space</b> $\{\mathbf{x} : A\mathbf{x} = \mathbf{0}\}$: inputs it destroys. Its dimension is $n - r$ (rank–nullity).</li>
+      <li>the <b>row space</b>, the column space of $A^\top$, which is the orthogonal complement of the null space in $\mathbb{R}^n$; and the null space of $A^\top$, the orthogonal complement of the column space in $\mathbb{R}^m$.</li>
+    </ul>
+    <p>Least squares (lesson 01) projects $\mathbf{y}$ onto the column space of $X$. When the null space of $X$ is nonzero (redundant features, or $p &gt; n$), the weights are not unique, and the SVD below says which one to choose.</p>
+  </section>
+
+  <section id="spectral">
+    <h2>Symmetric matrices: the spectral theorem</h2>
+    <p>An <b>eigenvector</b> of a square matrix $A$ is a nonzero $\mathbf{v}$ with $A\mathbf{v} = \lambda\mathbf{v}$: the map only stretches it, by the <b>eigenvalue</b> $\lambda$. General matrices can have complex eigenvalues or too few eigenvectors. Symmetric ones ($A = A^\top$), which is what Hessians and covariance matrices are, behave perfectly.</p>
+    <p><b>Eigenvalues are real.</b> Let $A\mathbf{v} = \lambda\mathbf{v}$ with possibly complex $\mathbf{v}$ and $\lambda$, and write $\bar{\mathbf{v}}$ for the complex conjugate. Then $\bar{\mathbf{v}}^\top A\mathbf{v} = \lambda\,\bar{\mathbf{v}}^\top\mathbf{v}$. Taking the conjugate transpose of the same number and using $A = A^\top$ real gives $\bar{\mathbf{v}}^\top A\mathbf{v} = \bar\lambda\,\bar{\mathbf{v}}^\top\mathbf{v}$. Since $\bar{\mathbf{v}}^\top\mathbf{v} = \sum|v_i|^2 &gt; 0$, $\lambda = \bar\lambda$.</p>
+    <p><b>Eigenvectors of different eigenvalues are orthogonal.</b> If $A\mathbf{u} = \lambda\mathbf{u}$ and $A\mathbf{v} = \mu\mathbf{v}$, then $\lambda\,\mathbf{u}^\top\mathbf{v} = (A\mathbf{u})^\top\mathbf{v} = \mathbf{u}^\top A\mathbf{v} = \mu\,\mathbf{u}^\top\mathbf{v}$, so $(\lambda - \mu)\,\mathbf{u}^\top\mathbf{v} = 0$, and $\lambda\ne\mu$ forces $\mathbf{u}^\top\mathbf{v} = 0$.</p>
+    <p>With a little more work (induction on the dimension, using that $A$ maps the orthogonal complement of an eigenvector into itself) one gets a full orthonormal set of eigenvectors even when eigenvalues repeat:</p>
+    <div class="result">
+      <div class="label">Spectral theorem</div>
+      <div class="eq">$$A = A^\top \;\Longrightarrow\; A = Q\Lambda Q^\top = \sum_{i=1}^n \lambda_i\,\mathbf{q}_i\mathbf{q}_i^\top, \qquad Q^\top Q = I,\ \ \Lambda = \operatorname{diag}(\lambda_1,\dots,\lambda_n).$$</div>
+    </div>
+    <p>Read right to left: rotate into the eigenbasis ($Q^\top$), stretch each axis by $\lambda_i$, rotate back ($Q$). This is what made lesson 02 work: in the eigenbasis of the Hessian, gradient descent splits into independent one-dimensional problems.</p>
+    <p><b>Quadratic forms and definiteness.</b> In the eigenbasis, $\mathbf{x}^\top A\mathbf{x} = \sum_i\lambda_i c_i^2$ with $\mathbf{c} = Q^\top\mathbf{x}$. So $A$ is <b>positive semidefinite</b> ($\mathbf{x}^\top A\mathbf{x}\ge0$ for all $\mathbf{x}$) exactly when every $\lambda_i \ge 0$, and positive definite when every $\lambda_i &gt; 0$. Any $X^\top X$ is PSD, since $\mathbf{x}^\top X^\top X\mathbf{x} = \lVert X\mathbf{x}\rVert^2$. And since $\sum_i c_i^2 = \lVert\mathbf{x}\rVert^2$,</p>
+    <div class="eq">$$\lambda_{\min} \le \frac{\mathbf{x}^\top A\mathbf{x}}{\mathbf{x}^\top\mathbf{x}} \le \lambda_{\max},$$</div>
+    <p>with equality at the corresponding eigenvectors. This ratio, the <b>Rayleigh quotient</b>, is the curvature of a quadratic loss in direction $\mathbf{x}$, and its maximum is the $\lambda_{\max}$ that limits the learning rate in lesson 02.</p>
+  </section>
+
+  <section id="svd">
+    <h2>The singular value decomposition</h2>
+    <p>Rectangular matrices have no eigenvectors, but every matrix has a decomposition just as clean. Take $A\in\mathbb{R}^{m\times n}$ of rank $r$. The matrix $A^\top A$ is symmetric and PSD, so by the spectral theorem it has orthonormal eigenvectors $\mathbf{v}_1,\dots,\mathbf{v}_n$ with eigenvalues $\sigma_1^2\ge\dots\ge\sigma_r^2 &gt; 0 = \sigma_{r+1}^2 = \dots$. Define, for $i\le r$,</p>
+    <div class="eq">$$\mathbf{u}_i = \frac{A\mathbf{v}_i}{\sigma_i} .$$</div>
+    <p>These are orthonormal too: $\mathbf{u}_i^\top\mathbf{u}_j = \mathbf{v}_i^\top A^\top A\mathbf{v}_j/(\sigma_i\sigma_j) = \sigma_j^2\,\mathbf{v}_i^\top\mathbf{v}_j/(\sigma_i\sigma_j) = \delta_{ij}$. By construction $A\mathbf{v}_i = \sigma_i\mathbf{u}_i$, and $A\mathbf{v}_i = \mathbf{0}$ for $i &gt; r$. Since the $\mathbf{v}_i$ form a basis, that determines $A$:</p>
+    <div class="result">
+      <div class="label">Singular value decomposition</div>
+      <div class="eq">$$A = U\Sigma V^\top = \sum_{i=1}^r\sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top, \qquad \sigma_1\ge\sigma_2\ge\dots\ge\sigma_r &gt; 0 .$$</div>
+    </div>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: m1-svd --></div>
+    </figure>
+    <p class="muted">Left and middle: a $2\times2$ matrix $A$ sends the orthonormal pair $\mathbf{v}_1,\mathbf{v}_2$ to the orthogonal pair $\sigma_1\mathbf{u}_1,\sigma_2\mathbf{u}_2$ (here $\sigma_1 = 2.03$, $\sigma_2 = 0.73$), so it maps the unit circle to an ellipse with those semi-axes. Right: the principal components of a cloud of points (see PCA below), drawn with length two standard deviations.</p>
+    <p>Every matrix is: rotate ($V^\top$), scale each axis by $\sigma_i$ and drop or add dimensions ($\Sigma$), rotate ($U$). Several quantities you will meet are read straight off it:</p>
+    <ul>
+      <li><b>Rank</b> = the number of nonzero $\sigma_i$. The first $r$ columns of $U$ span the column space; the last $n - r$ columns of $V$ span the null space.</li>
+      <li><b>Spectral norm</b> $\lVert A\rVert_2 = \max_{\lVert\mathbf{x}\rVert=1}\lVert A\mathbf{x}\rVert = \sigma_1$: the most any vector is stretched. <b>Frobenius norm</b> $\lVert A\rVert_F = \sqrt{\sum_{ij}A_{ij}^2} = \sqrt{\sum_i\sigma_i^2}$.</li>
+      <li><b>Condition number</b> $\kappa(A) = \sigma_1/\sigma_r$. Note $\kappa(X^\top X) = \kappa(X)^2$: forming the normal equations squares the conditioning, which is why least-squares solvers use QR or the SVD instead.</li>
+    </ul>
+    <p><b>The pseudo-inverse.</b> Define $A^+ = \sum_{i=1}^r\sigma_i^{-1}\mathbf{v}_i\mathbf{u}_i^\top$. Then $\hat{\mathbf{w}} = X^+\mathbf{y}$ solves least squares, and when the solution isn't unique it is the one with the smallest norm: it lies in the row space, with no component in the null space (any null-space component would add length without changing $X\mathbf{w}$). Ridge regression (lesson 05) replaces each $1/\sigma_i$ with $\sigma_i/(\sigma_i^2 + \lambda)$, which is the pseudo-inverse with the small singular values tamed.</p>
+    <figure class="plate wide" data-scene="matrix">
+      <div class="stage">
+        <canvas aria-label="A 2 by 2 matrix acting on the plane: the image of the grid, the unit circle's image ellipse, eigenvector lines and singular axes"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="mx-a">a <input id="mx-a" type="range" data-k="a" min="-2" max="2" step="0.01"><output data-out="a"></output></label>
+            <label for="mx-b">b <input id="mx-b" type="range" data-k="b" min="-2" max="2" step="0.01"><output data-out="b"></output></label>
+            <label for="mx-c">c <input id="mx-c" type="range" data-k="c" min="-2" max="2" step="0.01"><output data-out="c"></output></label>
+            <label for="mx-d">d <input id="mx-d" type="range" data-k="d" min="-2" max="2" step="0.01"><output data-out="d"></output></label>
+            <button type="button" data-act="rotation">Rotation</button>
+            <button type="button" data-act="shear">Shear</button>
+            <button type="button" data-act="symmetric">Symmetric</button>
+            <button type="button" data-act="singular">Singular</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The matrix is $\begin{pmatrix}a&b\\c&d\end{pmatrix}$. Blue lines are the image of the square grid; the orange ellipse is the image of the unit circle, and its semi-axes (dotted) are the singular values times the left singular vectors. Black dashed lines are eigenvector directions, which the matrix only stretches. Try the presets: a rotation has no real eigenvectors but both singular values are 1; a shear has one eigenvector direction and an ellipse; a symmetric matrix's eigenvectors coincide with the ellipse's axes, the spectral theorem; a singular matrix squashes everything onto a line, and its determinant, the shaded area, is zero.</p>
+  </section>
+
+  <section id="low-rank">
+    <h2>Low-rank approximation</h2>
+    <p>Truncate the SVD after $k$ terms: $A_k = \sum_{i=1}^k\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$. It has rank $k$, and by orthogonality $\lVert A - A_k\rVert_F^2 = \sum_{i&gt;k}\sigma_i^2$ and $\lVert A - A_k\rVert_2 = \sigma_{k+1}$.</p>
+    <div class="result">
+      <div class="label">Eckart–Young theorem</div>
+      <p>For every matrix $B$ of rank at most $k$, $\lVert A - B\rVert \ge \lVert A - A_k\rVert$ in both the spectral and the Frobenius norm. The truncated SVD is the best rank-$k$ approximation.</p>
+    </div>
+    <p><b>Proof (spectral norm).</b> $B$ has rank $\le k$, so its null space has dimension $\ge n - k$. The span of $\mathbf{v}_1,\dots,\mathbf{v}_{k+1}$ has dimension $k+1$. Two subspaces of $\mathbb{R}^n$ whose dimensions add to more than $n$ must share a nonzero vector, so pick a unit vector $\mathbf{x} = \sum_{i\le k+1}c_i\mathbf{v}_i$ with $B\mathbf{x} = \mathbf{0}$. Then</p>
+    <div class="eq">$$\lVert A - B\rVert_2^2 \ge \lVert(A - B)\mathbf{x}\rVert^2 = \lVert A\mathbf{x}\rVert^2 = \sum_{i\le k+1}\sigma_i^2c_i^2 \ge \sigma_{k+1}^2 = \lVert A - A_k\rVert_2^2 .$$</div>
+    <p>If the singular values decay quickly, a small $k$ captures almost everything and a huge matrix is stored as $k(m + n)$ numbers instead of $mn$. That is the idea behind word embeddings as matrix factorisation (lesson 18) and LoRA fine-tuning, which learns a low-rank weight update $\Delta W = BA$ (lesson 29).</p>
+  </section>
+
+  <section id="pca">
+    <h2>Principal component analysis</h2>
+    <p>Given centred data $\mathbf{x}_1,\dots,\mathbf{x}_n\in\mathbb{R}^d$ (mean subtracted), with covariance $S = \frac1n\sum_i\mathbf{x}_i\mathbf{x}_i^\top = \frac1nX^\top X$: in which unit direction $\mathbf{w}$ does the data vary most? The projections $\mathbf{w}^\top\mathbf{x}_i$ have variance $\mathbf{w}^\top S\mathbf{w}$, so we want</p>
+    <div class="eq">$$\max_{\mathbf{w}}\ \mathbf{w}^\top S\mathbf{w}\quad\text{subject to}\quad\mathbf{w}^\top\mathbf{w} = 1 .$$</div>
+    <p>Introduce a Lagrange multiplier (<a href="/machine-learning/M5-optimisation/">M5</a>): $\mathcal{L} = \mathbf{w}^\top S\mathbf{w} - \lambda(\mathbf{w}^\top\mathbf{w} - 1)$. Setting $\nabla_{\mathbf{w}}\mathcal{L} = 2S\mathbf{w} - 2\lambda\mathbf{w} = \mathbf{0}$ gives $S\mathbf{w} = \lambda\mathbf{w}$: the optimum is an eigenvector, and its variance is $\mathbf{w}^\top S\mathbf{w} = \lambda$. So the best direction is the eigenvector with the largest eigenvalue, as the Rayleigh quotient bound already said. The next best direction orthogonal to it is the second eigenvector, and so on.</p>
+    <div class="result">
+      <div class="label">PCA</div>
+      <p>The principal directions are the eigenvectors of the covariance $S$, ordered by eigenvalue; eigenvalue $\lambda_j$ is the variance along direction $j$. Equivalently, with the SVD of the centred data matrix $X = U\Sigma V^\top$: the directions are the columns of $V$, the variances are $\sigma_j^2/n$, and the coordinates of the data in the new basis are $U\Sigma$.</p>
+    </div>
+    <p>The second form follows from $S = \frac1nX^\top X = V\frac{\Sigma^2}{n}V^\top$, and it is how PCA is computed in practice, since it never forms $X^\top X$. There is a second characterisation: projecting onto the top $k$ directions gives the smallest possible squared reconstruction error, $\sum_i\lVert\mathbf{x}_i - V_kV_k^\top\mathbf{x}_i\rVert^2$ (with $V_k$ the first $k$ columns of $V$) is minimal over all $k$-dimensional subspaces. That is Eckart–Young applied to $X$. The fraction of variance kept is $\sum_{j\le k}\sigma_j^2/\sum_j\sigma_j^2$.</p>
+    <p>Two cautions. PCA depends on units, so standardise features measured on different scales. And the directions of largest variance need not be the ones that matter for predicting $y$; PCA ignores the labels entirely.</p>
+  </section>
+
+  <section id="power">
+    <h2>Computing eigenvectors: power iteration</h2>
+    <p>For a large matrix you rarely need every eigenvector, only the top few. Start from a random $\mathbf{v}_0$ and repeat $\mathbf{v}\leftarrow A\mathbf{v}/\lVert A\mathbf{v}\rVert$. Writing $\mathbf{v}_0 = \sum_ic_i\mathbf{q}_i$,</p>
+    <div class="eq">$$A^t\mathbf{v}_0 = \sum_ic_i\lambda_i^t\mathbf{q}_i = c_1\lambda_1^t\Big(\mathbf{q}_1 + \sum_{i&gt;1}\frac{c_i}{c_1}\Big(\frac{\lambda_i}{\lambda_1}\Big)^t\mathbf{q}_i\Big),$$</div>
+    <p>so every other component shrinks like $|\lambda_2/\lambda_1|^t$ and the iterate lines up with $\mathbf{q}_1$ (assuming $|\lambda_1| &gt; |\lambda_2|$ and $c_1\ne0$, which a random start guarantees with probability 1). The same idea, with repeated orthogonalisation, gives the top $k$ (subspace iteration and the Lanczos method). PageRank is power iteration on the web's link matrix, and lesson 14's spectral normalisation estimates $\sigma_1$ of each weight matrix with one power step per training step.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. Power iteration: repeatedly apply A and renormalise -&gt; top eigenvector of a symmetric matrix
+A = rng.standard_normal((5, 5)); A = A @ A.T       # symmetric positive semidefinite
+v = rng.standard_normal(5)
+for _ in range(200):
+    v = A @ v; v /= np.linalg.norm(v)
+lam, Q = np.linalg.eigh(A)                         # eigenvalues in ascending order
+print("power iteration eigenvalue", round(v @ A @ v, 6), "  eigh:", round(lam[-1], 6))
+print("eigenvalue ratio lam2/lam1 =", round(lam[-2] / lam[-1], 3), "(sets the convergence speed)")
+
+# 2. PCA two ways: eigenvectors of the covariance, or the SVD of the centred data
+n = 500
+Z = rng.standard_normal((n, 3)) * [3.0, 1.0, 0.2]  # variances 9, 1, 0.04 along hidden axes
+R = np.linalg.qr(rng.standard_normal((3, 3)))[0]   # a random rotation
+X = Z @ R.T + [5.0, -2.0, 1.0]
+Xc = X - X.mean(0)
+evals, evecs = np.linalg.eigh(Xc.T @ Xc / n)
+U, s, Vt = np.linalg.svd(Xc, full_matrices=False)
+print("covariance eigenvalues   ", np.round(evals[::-1], 3))
+print("singular values^2 / n    ", np.round(s**2 / n, 3))
+print("explained variance ratio ", np.round(s**2 / np.sum(s**2), 4))
+print("same first direction (up to sign):", np.allclose(abs(Vt[0]), abs(evecs[:, -1])))
+
+# 3. Eckart-Young: the best rank-k approximation keeps the top k singular values
+M = rng.standard_normal((40, 30)) @ np.diag(0.8 ** np.arange(30)) @ rng.standard_normal((30, 30))
+U, s, Vt = np.linalg.svd(M, full_matrices=False)
+for k in [1, 5, 10]:
+    Mk = U[:, :k] * s[:k] @ Vt[:k]
+    print(f"rank {k:2d}: error {np.linalg.norm(M - Mk):8.4f}   sqrt(sum of dropped s^2) {np.sqrt(np.sum(s[k:]**2)):8.4f}")
+
+# 4. The pseudo-inverse solves least squares, even when X^T X is singular
+X2 = rng.standard_normal((6, 4)); X2[:, 3] = X2[:, 0] + X2[:, 1]   # rank 3
+y2 = rng.standard_normal(6)
+w = np.linalg.pinv(X2) @ y2
+print("rank", np.linalg.matrix_rank(X2), "| normal equations hold:", np.allclose(X2.T @ X2 @ w, X2.T @ y2),
+      "| min-norm solution has w orthogonal to null space:", np.isclose(w @ [1, 1, 0, -1], 0))
+
+# power iteration eigenvalue 8.079323   eigh: 8.079323
+# eigenvalue ratio lam2/lam1 = 0.819 (sets the convergence speed)
+# covariance eigenvalues    [8.606 0.918 0.042]
+# singular values^2 / n     [8.606 0.918 0.042]
+# explained variance ratio  [0.8997 0.0959 0.0044]
+# same first direction (up to sign): True
+# rank  1: error  38.3931   sqrt(sum of dropped s^2)  38.3931
+# rank  5: error  15.2187   sqrt(sum of dropped s^2)  15.2187
+# rank 10: error   4.4866   sqrt(sum of dropped s^2)   4.4866
+# rank 3 | normal equations hold: True | min-norm solution has w orthogonal to null space: True</code></pre>
+    <p class="muted">Power iteration matches the exact top eigenvalue. The two routes to PCA agree to every printed digit: the data were built with variances 9, 1 and 0.04 along hidden axes, and PCA recovers about 8.6, 0.92 and 0.04 from 500 samples. The truncated SVD's error equals the root of the dropped squared singular values exactly, as Eckart–Young says. The pseudo-inverse returns a solution of the normal equations with no component along the null-space direction $(1, 1, 0, -1)$.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show that the eigenvalues of $A + cI$ are $\lambda_i + c$ with the same eigenvectors. Use this to explain, in one line, why ridge regression makes $X^\top X + \lambda I$ invertible.</li>
+      <li>Show that $\operatorname{tr}(A) = \sum_i\lambda_i$ and $\det(A) = \prod_i\lambda_i$ for symmetric $A$.</li>
+      <li>Find the SVD of $A = \begin{bmatrix}3 &amp; 0\\ 4 &amp; 5\end{bmatrix}$ by hand: compute $A^\top A$, its eigenvalues and eigenvectors, then the $\mathbf{u}_i$.</li>
+      <li>Prove $\lVert A\rVert_2 = \sigma_1$.</li>
+      <li>For centred data, show that the total variance $\frac1n\sum_i\lVert\mathbf{x}_i\rVert^2$ equals $\operatorname{tr}(S) = \sum_j\lambda_j$.</li>
+      <li>If the top two eigenvalues are 10 and 9.9, roughly how many power iterations are needed to shrink the second component by a factor of 1,000?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $(A + cI)\mathbf{q}_i = \lambda_i\mathbf{q}_i + c\mathbf{q}_i$. The eigenvalues of $X^\top X$ are $\ge 0$, so those of $X^\top X + \lambda I$ are $\ge\lambda &gt; 0$, and a symmetric matrix with no zero eigenvalue is invertible.</p>
+        <p><b>2.</b> $\operatorname{tr}(Q\Lambda Q^\top) = \operatorname{tr}(\Lambda Q^\top Q) = \operatorname{tr}(\Lambda)$ by the cyclic property; $\det(Q\Lambda Q^\top) = \det(Q)^2\det\Lambda = \det\Lambda$ since $\det Q = \pm1$.</p>
+        <p><b>3.</b> $A^\top A = \begin{bmatrix}25 &amp; 20\\ 20 &amp; 25\end{bmatrix}$, eigenvalues 45 and 5 with eigenvectors $\tfrac1{\sqrt2}(1,1)$ and $\tfrac1{\sqrt2}(1,-1)$. So $\sigma_1 = 3\sqrt5$, $\sigma_2 = \sqrt5$. Then $\mathbf{u}_1 = A\mathbf{v}_1/\sigma_1 = \tfrac{1}{\sqrt2\cdot3\sqrt5}(3, 9) = \tfrac{1}{\sqrt{10}}(1, 3)$ and $\mathbf{u}_2 = A\mathbf{v}_2/\sigma_2 = \tfrac{1}{\sqrt2\sqrt5}(3, -1) = \tfrac1{\sqrt{10}}(3, -1)$.</p>
+        <p><b>4.</b> $\lVert A\mathbf{x}\rVert^2 = \mathbf{x}^\top A^\top A\mathbf{x}$, a Rayleigh quotient of $A^\top A$ when $\lVert\mathbf{x}\rVert = 1$, so its maximum is $\lambda_{\max}(A^\top A) = \sigma_1^2$.</p>
+        <p><b>5.</b> $\frac1n\sum_i\mathbf{x}_i^\top\mathbf{x}_i = \frac1n\sum_i\operatorname{tr}(\mathbf{x}_i\mathbf{x}_i^\top) = \operatorname{tr}(S)$, which is $\sum_j\lambda_j$ by exercise 2. PCA redistributes the total variance among orthogonal directions without changing it.</p>
+        <p><b>6.</b> Need $0.99^t \le 10^{-3}$: $t \ge \ln 1000/(-\ln 0.99) \approx 687$. Close eigenvalues make power iteration slow; Lanczos does much better.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Strang, <i>Linear Algebra and Learning from Data</i></b> (2019), part I. The four subspaces, the SVD, low-rank approximation and PCA, aimed squarely at ML.</li>
+      <li><b>Strang, <i>Introduction to Linear Algebra</i></b>, and his MIT 18.06 lectures (free online). The best first course.</li>
+      <li><b>Deisenroth, Faisal, Ong, <i>Mathematics for Machine Learning</i></b> (2020), chapters 2–4 and 10 (free online).</li>
+      <li><b>Trefethen &amp; Bau, <i>Numerical Linear Algebra</i></b>. How the SVD and eigenvalues are actually computed, and conditioning.</li>
+      <li><b>Bishop, <i>Pattern Recognition and Machine Learning</i></b>, section 12.1. PCA as maximum variance and as minimum error.</li>
+    </ul>
+  </section>
+</article>

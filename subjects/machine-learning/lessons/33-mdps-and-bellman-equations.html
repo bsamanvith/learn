@@ -1,0 +1,295 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 33 · Stage 8: reinforcement learning</div>
+  <h1>Markov decision processes and the Bellman equations</h1>
+  <p class="lede">A Markov chain (lesson 31) moves by itself. A bandit (lesson 32) lets you act, but has no state, so nothing you do now affects what you can do later. A Markov decision process has both: actions change the state, and the state decides what rewards are available next. This lesson sets up the language every later RL lesson uses: returns and discounting, policies, the value functions $V^\pi$ and $Q^\pi$, and the Bellman equations that tie each state's value to its successors'. It shows that evaluating a policy is solving a linear system, and proves that one deterministic policy is best in every state at once, which is what makes "the optimal policy" a meaningful phrase. The code checks all of this on a small gridworld by brute force over all 262,144 deterministic policies.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/31-markov-chains/">31</a>, <a href="/machine-learning/32-bandits-and-exploration/">32</a>, <a href="/machine-learning/M1-linear-algebra/">M1</a></span><span><b>Math pulled in:</b> conditional expectation and the tower rule, geometric series, matrix inverses and Neumann series, monotone operators, fixed points</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>An <b>agent</b> interacts with an <b>environment</b> in discrete steps. At step $t$ it observes a state $S_t$, chooses an action $A_t$, and the environment returns a reward $R_{t+1}$ and a next state $S_{t+1}$. The agent's goal is to make the rewards large, not just the next one, but the whole stream. The difficulty, compared with lesson 32, is that an action has two effects: the reward it earns now, and the state it leads to, which decides what can be earned later. A move that pays nothing now can be the best move because of where it leads.</p>
+    <p>The central quantity is the <b>value</b> of a state: how much reward the agent can expect from there on. The central fact is that values satisfy a recursion, the <b>Bellman equation</b>: the value of a state is the expected reward of the next step plus the discounted value of the state that follows. Almost every algorithm in this stage, from dynamic programming to Q-learning, DQN, actor–critic and AlphaZero's value network, is a way of solving that recursion, exactly or approximately, with or without a model of the environment.</p>
+  </section>
+
+  <section id="mdp">
+    <h2>Markov decision processes</h2>
+    <p>A finite <b>Markov decision process</b> (MDP) is a tuple $(\mathcal{S}, \mathcal{A}, P, R, \gamma)$:</p>
+    <ul>
+      <li>a finite set of states $\mathcal{S}$ and a finite set of actions $\mathcal{A}$;</li>
+      <li>transition probabilities $P(s'\mid s, a)$, the probability that action $a$ in state $s$ leads to $s'$;</li>
+      <li>an expected reward $R(s, a) = \mathbb{E}[R_{t+1}\mid S_t = s, A_t = a]$;</li>
+      <li>a discount factor $\gamma\in[0, 1)$.</li>
+    </ul>
+    <p>The <b>Markov property</b> is the assumption that $(S_{t+1}, R_{t+1})$ depends on the history only through $(S_t, A_t)$. As in lesson 31, it is a statement about the choice of state: if the past matters, put the relevant part of it into the state. A chess position is Markov; a single frame of a video game in which objects move usually is not, which is why DQN (lesson 37) stacks the last four frames.</p>
+    <p>For each action, $P_a$ is a stochastic matrix with entries $(P_a)_{ss'} = P(s'\mid s, a)$, and $R_a$ is a vector with entries $R(s, a)$. Only expected rewards matter for everything in this lesson, because values are expectations and expectation is linear. Rewards that depend on $s'$ as well, $r(s, a, s')$, are folded in as $R(s, a) = \sum_{s'}P(s'\mid s, a)\,r(s, a, s')$.</p>
+    <p><b>Example.</b> The gridworld used throughout comes from Russell and Norvig. It has 4 columns and 3 rows, a wall in the middle, an exit worth $+1$ at the top right and an exit worth $-1$ below it. The agent starts at the bottom left. Each move goes in the intended direction with probability 0.8 and at right angles to it with probability 0.1 each way; a move into the wall or the edge leaves the agent where it is. Every step costs a small <b>living reward</b> $r$, by default $-0.04$. Taking an exit pays $\pm1$ and moves to an absorbing end state that pays nothing forever. The slips are what make it interesting: the shortest route to $+1$ passes next to $-1$, and a 10% slip there is costly.</p>
+  </section>
+
+  <section id="returns">
+    <h2>Returns and discounting</h2>
+    <p>The <b>return</b> from step $t$ is the discounted sum of future rewards:</p>
+    <div class="eq">$$G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2R_{t+3} + \dots = \sum_{k=0}^\infty\gamma^kR_{t+k+1} = R_{t+1} + \gamma G_{t+1}.$$</div>
+    <p>The last identity, a return is one reward plus the discounted return from the next step, is the seed of every Bellman equation. Three reasons to discount:</p>
+    <ul>
+      <li><b>Finiteness.</b> If rewards are bounded by $R_\text{max}$, then $|G_t|\le R_\text{max}/(1 - \gamma)$, so returns are well defined even for tasks that never end. With $\gamma = 1$, a task that can run forever has returns that diverge or oscillate.</li>
+      <li><b>A horizon.</b> A reward $k$ steps away is weighted by $\gamma^k$. Since $\sum_k\gamma^k = 1/(1 - \gamma)$, the <b>effective horizon</b> is about $1/(1 - \gamma)$ steps: 100 for $\gamma = 0.99$. Equivalently, discounting is the same as an undiscounted task that ends at each step with probability $1 - \gamma$ (exercise 1).</li>
+      <li><b>Mathematics.</b> Discounting makes the Bellman operators contractions (lesson 34), which is what guarantees that the algorithms converge.</li>
+    </ul>
+    <p>In <b>episodic</b> tasks, which end in a terminal state, $\gamma = 1$ is allowed as long as every policy eventually terminates; the end state is then absorbing with zero reward, as in the gridworld. This lesson uses $\gamma = 0.99$ throughout, even for the gridworld (Russell and Norvig use $\gamma = 1$, which changes some values slightly).</p>
+    <p>That a goal can be written as the expected value of a sum of scalar rewards is called the <b>reward hypothesis</b>. It is a modelling choice with real content: preferences such as "win, and among wins prefer short games" are easy to encode, but objectives about the whole distribution of outcomes, like "avoid any chance of ruin", are not sums of per-step rewards.</p>
+  </section>
+
+  <section id="values">
+    <h2>Policies and value functions</h2>
+    <p>A <b>policy</b> $\pi(a\mid s)$ gives the probability of choosing action $a$ in state $s$. It is <b>deterministic</b> if it puts all its probability on one action, written $\pi(s)$. (A policy could depend on the whole history, or change over time; for MDPs this never helps, as the optimality section shows, so this lesson's policies are <b>stationary</b> and <b>Markov</b>.) Once a policy is fixed, the states visited form a Markov chain with transition matrix and expected reward</p>
+    <div class="eq">$$(P_\pi)_{ss'} = \sum_a\pi(a\mid s)P(s'\mid s, a),\qquad r_\pi(s) = \sum_a\pi(a\mid s)R(s, a).$$</div>
+    <p>The <b>state-value function</b> of $\pi$ is the expected return from each state, and the <b>action-value function</b> is the expected return after taking a given action first and following $\pi$ afterwards:</p>
+    <div class="eq">$$V^\pi(s) = \mathbb{E}_\pi[G_t\mid S_t = s],\qquad Q^\pi(s, a) = \mathbb{E}_\pi[G_t\mid S_t = s, A_t = a].$$</div>
+    <p>They determine each other. Averaging $Q^\pi$ over the policy's own choice gives $V^\pi$; and the value of an action is its expected reward plus the discounted value of where it leads:</p>
+    <div class="eq">$$V^\pi(s) = \sum_a\pi(a\mid s)\,Q^\pi(s, a),\qquad Q^\pi(s, a) = R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)\,V^\pi(s').$$</div>
+    <p>$Q$ is the more useful of the two for control: comparing $Q^\pi(s, a)$ across actions says which action is better in $s$ without needing the model $P$, which is why model-free methods (lessons 35–37) learn $Q$. The difference $A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s)$ is the <b>advantage</b> of $a$ over the policy's average behaviour in $s$; it is what policy-gradient methods push on (lesson 38).</p>
+  </section>
+
+  <section id="bellman">
+    <h2>The Bellman expectation equation</h2>
+    <p>Substitute $G_t = R_{t+1} + \gamma G_{t+1}$ into the definition of $V^\pi$ and condition on the first action and next state. By the tower rule and the Markov property, $\mathbb{E}_\pi[G_{t+1}\mid S_t = s, A_t = a, S_{t+1} = s'] = V^\pi(s')$: once you are at $s'$, how you got there does not matter. So</p>
+    <div class="result">
+      <div class="label">Bellman expectation equation</div>
+      <p>$$V^\pi(s) = \sum_a\pi(a\mid s)\Big[R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V^\pi(s')\Big],\qquad\text{or}\qquad V^\pi = r_\pi + \gamma P_\pi V^\pi.$$</p>
+      <p>In matrix form it is a linear system with the unique solution</p>
+      <p>$$V^\pi = (I - \gamma P_\pi)^{-1}r_\pi = \sum_{t=0}^\infty\gamma^tP_\pi^t\,r_\pi .$$</p>
+    </div>
+    <p>Why $I - \gamma P_\pi$ is invertible: every eigenvalue of a stochastic matrix has $|\lambda|\le1$ (lesson 31, exercise 3), so every eigenvalue of $\gamma P_\pi$ has modulus at most $\gamma &lt; 1$, and 1 is not an eigenvalue of $\gamma P_\pi$. The Neumann series on the right converges for the same reason, and reads exactly as the definition: $(P_\pi^t r_\pi)(s)$ is the expected reward at step $t$ from $s$, and the sum discounts them. With $n$ states, evaluating a policy exactly costs one linear solve, $O(n^3)$. Lesson 34 gives iterative methods that are cheaper for large $n$, and lesson 35 estimates $V^\pi$ from experience when $P$ is unknown.</p>
+    <p>For the gridworld under the uniformly random policy, the solve gives $V(\text{start}) = -1.254$. The code checks this against the average return of 20,000 simulated episodes, $-1.250\pm0.006$. Wandering at random usually ends at the nearer, worse exit.</p>
+  </section>
+
+  <section id="occupancy">
+    <h2>The occupancy measure</h2>
+    <p>The same inverse has a second reading. The entry $\big[(I - \gamma P_\pi)^{-1}\big]_{ss'} = \sum_t\gamma^tP(S_t = s'\mid S_0 = s)$ is the discounted expected number of visits to $s'$ starting from $s$. For a start distribution $\boldsymbol{\mu}_0$, the <b>discounted occupancy measure</b></p>
+    <div class="eq">$$d^\pi = (1 - \gamma)\,\boldsymbol{\mu}_0(I - \gamma P_\pi)^{-1}$$</div>
+    <p>is a probability distribution over states (its entries sum to $(1 - \gamma)\sum_t\gamma^t = 1$), and the expected return is an average of rewards under it:</p>
+    <div class="eq">$$J(\pi) = \boldsymbol{\mu}_0V^\pi = \frac{1}{1 - \gamma}\sum_sd^\pi(s)\,r_\pi(s) = \frac{1}{1 - \gamma}\,\mathbb{E}_{s\sim d^\pi,\,a\sim\pi(\cdot\mid s)}[R(s, a)].$$</div>
+    <p>This identity turns RL into an expectation over states the policy itself visits, and it is the starting point of the policy gradient theorem (lesson 38) and of the performance difference lemma behind TRPO and PPO (lesson 39). It also exposes the main difficulty of RL compared with supervised learning: changing the policy changes $d^\pi$, the distribution of the data.</p>
+  </section>
+
+  <section id="optimality">
+    <h2>Optimal policies and the Bellman optimality equation</h2>
+    <p>Policies are compared state by state: $\pi\ge\pi'$ if $V^\pi(s)\ge V^{\pi'}(s)$ for every $s$. This is only a partial order; a priori, one policy could be better in some states and another in others, and there might be no single best one. The theorem below says there always is. Define the optimal values</p>
+    <div class="eq">$$V^*(s) = \max_\pi V^\pi(s),\qquad Q^*(s, a) = \max_\pi Q^\pi(s, a) = R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V^*(s').$$</div>
+    <div class="result">
+      <div class="label">Bellman optimality equation and the existence of an optimal policy</div>
+      <p>$V^*$ is the unique solution of</p>
+      <p>$$V^*(s) = \max_a\Big[R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V^*(s')\Big],\qquad Q^*(s, a) = R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)\max_{a'}Q^*(s', a'),$$</p>
+      <p>and any policy that is greedy with respect to $Q^*$, $\pi^*(s)\in\arg\max_aQ^*(s, a)$, is optimal in every state simultaneously. In particular, a deterministic, stationary optimal policy exists.</p>
+    </div>
+    <p><b>Proof.</b> Write the two Bellman operators on value vectors as</p>
+    <div class="eq">$$(\mathcal{T}^\pi V) = r_\pi + \gamma P_\pi V,\qquad(\mathcal{T}V)(s) = \max_a\Big[R(s, a) + \gamma(P_aV)(s)\Big].$$</div>
+    <p>Both are <b>monotone</b>: if $V\le W$ entrywise then $\mathcal{T}^\pi V\le\mathcal{T}^\pi W$ and $\mathcal{T}V\le\mathcal{T}W$, because $P_\pi$ and $P_a$ have non-negative entries. Lesson 34 proves that $\mathcal{T}$ has exactly one fixed point $\bar V = \mathcal{T}\bar V$ (it is a contraction). Take that fixed point.</p>
+    <ul>
+      <li><b>$\bar V$ is an upper bound.</b> For any policy $\pi$, $\mathcal{T}^\pi\bar V\le\mathcal{T}\bar V = \bar V$, since an average over actions is at most the maximum. Apply $\mathcal{T}^\pi$ repeatedly and use monotonicity: $\bar V\ge\mathcal{T}^\pi\bar V\ge(\mathcal{T}^\pi)^2\bar V\ge\dots\ge(\mathcal{T}^\pi)^k\bar V = \sum_{t&lt;k}\gamma^tP_\pi^tr_\pi + \gamma^kP_\pi^k\bar V$. As $k\to\infty$ the last term vanishes and the sum tends to $V^\pi$. So $\bar V\ge V^\pi$ in every state, for every $\pi$.</li>
+      <li><b>The greedy policy attains it.</b> Let $\pi_g$ choose, in each state, an action that achieves the maximum in $\mathcal{T}\bar V$. Then $\mathcal{T}^{\pi_g}\bar V = \mathcal{T}\bar V = \bar V$, so $\bar V$ solves $\pi_g$'s Bellman expectation equation, whose solution is unique: $\bar V = V^{\pi_g}$.</li>
+    </ul>
+    <p>Together, $V^{\pi_g} = \bar V\ge V^\pi$ for every $\pi$ and every state: $\pi_g$ is optimal everywhere at once, and $V^* = \bar V$ satisfies the optimality equation. The $Q^*$ form follows by substituting $V^*(s') = \max_{a'}Q^*(s', a')$. $\square$</p>
+    <p>Three remarks. First, the maximum makes the optimality equation <b>nonlinear</b>, so it cannot be solved by one linear solve; lesson 34 solves it by iteration. Second, the theorem only needs $Q^*$ to act: knowing $Q^*$, the optimal action is $\arg\max_aQ^*(s, a)$, with no model and no lookahead. That is the target of Q-learning (lesson 36). Third, the same argument goes through for history-dependent and randomised policies (the averaging step is unchanged), so in an MDP nothing is gained by remembering the past or by randomising. Randomisation does help when the state is not fully observed, and in games against an adversary.</p>
+    <p>The code checks the theorem by brute force. With 9 non-terminal cells and 4 actions, the gridworld has $4^9 = 262{,}144$ deterministic policies, few enough to evaluate them all with a linear solve each. The policy with the best value from the start, $0.6507$, is not automatically optimal: one such policy never visits the bottom-right cell, so it can do anything there, and it gets $-0.875$ there, while the best possible value there is $0.338$. But exactly one policy reaches the best value in every state at once, as the theorem promises, and its values satisfy the optimality equation to $10^{-16}$.</p>
+  </section>
+
+  <section id="rewards">
+    <h2>What the reward says</h2>
+    <p>The optimal policy depends on the whole reward function, and small changes can change behaviour qualitatively. The figure shows the gridworld's optimal policy for five living rewards.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: gridworld-policies --></div>
+    </figure>
+    <p class="muted">Optimal actions (arrows) and optimal values (shading, darker is better) for five living rewards, from the code's brute-force search; S marks the start.</p>
+    <ul>
+      <li>At $r = -2$, living is so expensive that the $-1$ exit is attractive: from the cell next to it the agent walks straight in, and the bottom row heads right and up into it.</li>
+      <li>At $r = -0.4$ and $r = -0.04$, the agent heads for $+1$. At $-0.04$ it goes the long way round, up the left side and along the top, away from the $-1$ square.</li>
+      <li>At $r = -0.01$, steps are so cheap that the agent avoids even the 10% chance of slipping into $-1$: next to it, the agent walks into the wall, which can only slip it up or down, never right; in the bottom-right corner it walks into the edge.</li>
+      <li>At $r = +0.1$, every step pays, and the best thing is never to leave: $V^* = 0.1/(1 - 0.99) = 10$ everywhere. Many policies tie; the figure shows one.</li>
+    </ul>
+    <p>The last case is the simplest example of <b>reward hacking</b>: the agent optimises what the reward says, not what the designer meant. Lesson 28's over-optimised reward model is the same phenomenon at scale. A related subtlety: adding a constant $c$ to every reward does not change the optimal policy in a task that never ends (all values shift by $c/(1 - \gamma)$), but it does in an episodic task, because it changes how attractive ending is (exercise 3).</p>
+    <p>There is one transformation that is always safe. Ng, Harada and Russell (1999) showed that adding a <b>potential-based shaping</b> reward $F(s, s') = \gamma\Phi(s') - \Phi(s)$, for any function $\Phi$ of the state, leaves the optimal policies unchanged. Summed along a trajectory, the shaping terms telescope:</p>
+    <div class="eq">$$\sum_{k=0}^{K-1}\gamma^k\big(\gamma\Phi(S_{t+k+1}) - \Phi(S_{t+k})\big) = \gamma^K\Phi(S_{t+K}) - \Phi(S_t)\ \xrightarrow{K\to\infty}\ -\Phi(S_t)$$</div>
+    <p>for bounded $\Phi$ (with $\Phi = 0$ at the end state in an episodic task). So every shaped return is the original return minus $\Phi(S_t)$, and $Q'^\pi(s, a) = Q^\pi(s, a) - \Phi(s)$ for every policy: within each state, every action's value shifts by the same amount, and the ordering of actions is unchanged. Shaping that is not of this form can create loops that pay forever; the classic example is a simulated bicycle rewarded for progress towards a goal but not penalised for moving away, which learned to ride in small circles, collecting the progress reward on every lap.</p>
+  </section>
+
+  <section id="variants">
+    <h2>Variants</h2>
+    <p><b>Finite horizon.</b> With a fixed number of steps $H$ left, the optimal policy depends on the time remaining, and $V^*_h(s) = \max_a[R(s, a) + \sum_{s'}P(s'\mid s, a)V^*_{h-1}(s')]$ with $V^*_0 = 0$ is solved backwards in $H$ steps. This is backward induction, the same recursion as the Viterbi algorithm and as a chess engine's search to a fixed depth.</p>
+    <p><b>Average reward.</b> For tasks that never end and where no discounting is natural, the objective is the long-run reward per step, $\lim_T\frac1T\mathbb{E}\sum_{t\le T}R_t = \sum_s\pi_\infty(s)r_\pi(s)$, the reward under the stationary distribution of lesson 31. It has its own Bellman equation with a "bias" function in place of $V$.</p>
+    <p><b>Partial observability.</b> If the agent sees only an observation $O_t$ that depends on the state, the problem is a <b>POMDP</b>. Its optimal policy acts on the belief, the posterior distribution over states given the history, which is Markov but continuous. Recurrent policies (lesson 17) and frame stacking are practical approximations to keeping a belief.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>The code builds the gridworld's transition tensor $P[a, s, s']$ and reward $R[a, s]$. Part 1 evaluates the random policy with one linear solve and checks it by simulation. Part 2 evaluates all $4^9$ deterministic policies with batched linear solves, finds the one that is best in every state, and checks that its values satisfy the Bellman optimality equation. Part 3 repeats the search for five living rewards. Part 4 computes the discounted occupancy measure, checks $J = \frac{1}{1 - \gamma}\,d^\pi\cdot r_\pi$, and uses the fundamental matrix of lesson 31 for the expected episode length under $\pi^*$.</p>
+<pre><code>import itertools
+import numpy as np
+
+# The 4 x 3 gridworld of Russell and Norvig. Row 0 is the top. The agent starts bottom-left;
+# (1, 1) is a wall; entering (0, 3) pays +1 and entering (1, 3) pays -1, and both end the episode.
+# A move goes the intended way with probability 0.8 and sideways with 0.1 each; bumping into
+# the wall or the edge leaves the agent where it is. Every step costs a "living reward" r.
+rows, cols, wall = 3, 4, (1, 1)
+cells = [(i, j) for i in range(rows) for j in range(cols) if (i, j) != wall]
+S = len(cells) + 1                                     # 11 cells plus one absorbing "end" state
+END = S - 1
+idx = {c: k for k, c in enumerate(cells)}
+terminal = {(0, 3): 1.0, (1, 3): -1.0}
+moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]             # up, right, down, left
+arrows = "^&gt;v&lt;"
+start = idx[(2, 0)]
+
+def mdp(living):
+    """P[a, s, s'] and expected reward R[a, s] for the gridworld with the given living reward."""
+    P = np.zeros((4, S, S)); R = np.zeros((4, S))
+    for c in cells:
+        s = idx[c]
+        for a in range(4):
+            if c in terminal:                          # the exit: collect the payoff and stop
+                P[a, s, END] = 1; R[a, s] = terminal[c]; continue
+            for d, p in [(a, 0.8), ((a + 1) % 4, 0.1), ((a + 3) % 4, 0.1)]:
+                n = (c[0] + moves[d][0], c[1] + moves[d][1])
+                n = n if n in idx else c               # off the grid or into the wall: stay
+                P[a, s, idx[n]] += p
+            R[a, s] = living
+    P[:, END, END] = 1                                 # the end state loops with reward 0
+    return P, R
+
+def evaluate(P, R, pi, gamma):
+    """V^pi from the Bellman expectation equation, (I - gamma P_pi) V = r_pi. pi is (S, 4)."""
+    P_pi = np.einsum("sa,ast-&gt;st", pi, P); r_pi = np.einsum("sa,as-&gt;s", pi, R)
+    return np.linalg.solve(np.eye(S) - gamma * P_pi, r_pi)
+
+def q_from_v(P, R, V, gamma):
+    return R + gamma * P @ V                           # Q[a, s] = R(s, a) + gamma sum_s' P V(s')
+
+gamma = 0.99
+P, R = mdp(-0.04)
+show = lambda V: "\n".join("  " + " ".join("  wall " if (i, j) == wall else f"{V[idx[(i, j)]]:+.3f}" for j in range(cols)) for i in range(rows))
+
+# 1. The uniformly random policy: solve the linear system, and check it against Monte Carlo.
+uniform = np.full((S, 4), 0.25)
+V_rand = evaluate(P, R, uniform, gamma)
+print("V of the random policy (gamma = 0.99, living reward -0.04):"); print(show(V_rand))
+rng = np.random.default_rng(0)
+returns = []
+for _ in range(20_000):
+    s, G, disc = start, 0.0, 1.0
+    while s != END:
+        a = rng.integers(4)
+        G += disc * R[a, s]; disc *= gamma
+        s = rng.choice(S, p=P[a, s])
+    returns.append(G)
+returns = np.array(returns)
+print(f"from the start: linear solve {V_rand[start]:+.4f}, Monte Carlo over 20,000 episodes"
+      f" {returns.mean():+.4f} +- {returns.std() / np.sqrt(len(returns)):.4f}")
+
+# 2. Every deterministic policy: 4^9 = 262,144 choices on the 9 non-terminal cells.
+free = [idx[c] for c in cells if c not in terminal]
+def all_values(P, R, gamma, chunk=16384):
+    """V^pi for every deterministic policy, by batched linear solves."""
+    out = []
+    combos = np.array(list(itertools.product(range(4), repeat=len(free))), dtype=np.int8)
+    for k in range(0, len(combos), chunk):
+        acts = np.zeros((len(combos[k:k + chunk]), S), dtype=int); acts[:, free] = combos[k:k + chunk]
+        P_pi = P[acts, np.arange(S)]                   # (n, S, S): row s is P[pi(s), s]
+        r_pi = R[acts, np.arange(S)]
+        out.append(np.linalg.solve(np.eye(S) - gamma * P_pi, r_pi[..., None])[..., 0])
+    return combos, np.concatenate(out)
+
+combos, Vs = all_values(P, R, gamma)
+print(f"{len(Vs):,} deterministic policies evaluated")
+b0 = np.argmax(Vs[:, start])                           # the best policy judged from the start alone
+V_max = Vs.max(0)                                      # the best value of each state, over all policies
+dominant = np.flatnonzero(np.all(Vs &gt;= V_max - 1e-10, axis=1))
+V_star = Vs[dominant[0]]
+print(f"best from the start: {Vs[b0, start]:+.4f}; but at the bottom-right cell it gets {Vs[b0, idx[(2, 3)]]:+.4f}"
+      f" while some policy gets {V_max[idx[(2, 3)]]:+.4f} there")
+print(f"policies that are best in every state at once: {len(dominant)}; their value from the start {V_star[start]:+.4f}")
+Q_star = q_from_v(P, R, V_star, gamma)
+print(f"Bellman optimality residual max_s |V*(s) - max_a Q*(s, a)|: {np.max(np.abs(V_star - Q_star.max(0))):.2e}")
+print("V*:"); print(show(V_star))
+
+def policy_string(Q):
+    a = Q.argmax(0)
+    return " | ".join("".join("#" if (i, j) == wall else ("+" if terminal.get((i, j), 0) &gt; 0 else "-") if (i, j) in terminal
+                              else arrows[a[idx[(i, j)]]] for j in range(cols)) for i in range(rows))
+print("optimal policy (rows top to bottom):", policy_string(Q_star))
+
+# 3. The living reward changes what is optimal.
+for living in [-2.0, -0.4, -0.04, -0.01, 0.1]:
+    Pl, Rl = mdp(living)
+    _, V = all_values(Pl, Rl, gamma)
+    Vb = V[np.flatnonzero(np.all(V &gt;= V.max(0) - 1e-10, axis=1))[0]]   # the policy best everywhere
+    print(f"living reward {living:+.2f}: V*(start) {Vb[start]:+7.3f}   policy {policy_string(q_from_v(Pl, Rl, Vb, gamma))}")
+
+# 4. The discounted occupancy measure, and the objective written with it.
+P_pi = np.einsum("sa,ast-&gt;st", np.eye(4)[Q_star.argmax(0)], P)
+mu0 = np.eye(S)[start]
+d = (1 - gamma) * mu0 @ np.linalg.inv(np.eye(S) - gamma * P_pi)
+r_pi = R[Q_star.argmax(0), np.arange(S)]
+print(f"occupancy sums to {d.sum():.6f}; d . r / (1 - gamma) = {d @ r_pi / (1 - gamma):+.4f} = V*(start) {V_star[start]:+.4f}")
+N = np.linalg.inv(np.eye(END) - P_pi[:END, :END])     # fundamental matrix of the absorbing chain (lesson 31)
+print(f"expected steps from the start under pi*, counting the exit: {N[start].sum():.2f}")
+
+# V of the random policy (gamma = 0.99, living reward -0.04):
+#   -0.977 -0.659 -0.206 +1.000
+#   -1.172   wall  -0.806 -1.000
+#   -1.254 -1.224 -1.083 -1.100
+# from the start: linear solve -1.2539, Monte Carlo over 20,000 episodes -1.2501 +- 0.0063
+# 262,144 deterministic policies evaluated
+# best from the start: +0.6507; but at the bottom-right cell it gets -0.8751 while some policy gets +0.3380 there
+# policies that are best in every state at once: 1; their value from the start +0.6507
+# Bellman optimality residual max_s |V*(s) - max_a Q*(s, a)|: 1.11e-16
+# V*:
+#   +0.776 +0.844 +0.905 +1.000
+#   +0.717   wall  +0.641 -1.000
+#   +0.651 +0.593 +0.560 +0.338
+# optimal policy (rows top to bottom): &gt;&gt;&gt;+ | ^#^- | ^&lt;^&lt;
+# living reward -2.00: V*(start) -10.564   policy &gt;&gt;&gt;+ | ^#&gt;- | &gt;&gt;&gt;^
+# living reward -0.40: V*(start)  -1.587   policy &gt;&gt;&gt;+ | ^#^- | ^&gt;^&lt;
+# living reward -0.04: V*(start)  +0.651   policy &gt;&gt;&gt;+ | ^#^- | ^&lt;^&lt;
+# living reward -0.01: V*(start)  +0.853   policy &gt;&gt;&gt;+ | ^#&lt;- | ^&lt;&lt;v
+# living reward +0.10: V*(start) +10.000   policy &gt;^&lt;+ | ^#&lt;- | ^&gt;^v
+# occupancy sums to 1.000000; d . r / (1 - gamma) = +0.6507 = V*(start) +0.6507
+# expected steps from the start under pi*, counting the exit: 7.68</code></pre>
+    <p><b>Reading the output.</b> The random policy's values are negative everywhere except the exits: wandering costs $-0.04$ a step, and from most cells a random walk is more likely to stumble into $-1$, which can be entered from two cells, than to reach $+1$, which can be entered from only one. The brute-force search confirms the theorem: of 262,144 policies, exactly one is best in every state, and its values satisfy the optimality equation to machine precision. The value of the start, 0.651, is the $+1$ discounted over an expected 7.7 steps, minus the living cost, minus the risk of slipping into $-1$. The optimal route at $r = -0.04$ goes up the left side and along the top, even though the bottom route is about as short, because the top route never passes next to $-1$ while moving towards it. The occupancy identity holds exactly, and the policy sweep shows the qualitative changes discussed above.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>An undiscounted task ends at each step with probability $1 - \gamma$, independently of everything else. Show that its expected total reward equals the discounted return $\mathbb{E}\sum_k\gamma^kR_{t+k+1}$ of the task without random termination. What is the expected number of steps?</li>
+      <li>Derive the Bellman expectation equation for $Q^\pi$ in terms of $Q^\pi$ alone, and write it in matrix form for a vector $\mathbf{q}$ of length $|\mathcal{S}||\mathcal{A}|$. Which matrix replaces $P_\pi$?</li>
+      <li>(a) Show that adding $c$ to every reward of a task that never ends adds $c/(1 - \gamma)$ to every $V^\pi$ and leaves the optimal policy unchanged. (b) Explain, with the gridworld, why the same change can change the optimal policy in an episodic task. (c) What would make it safe there?</li>
+      <li>A two-state MDP: in state A, action "stay" pays 1 and stays in A; action "go" pays 0 and moves to B. In B, the only action pays 2 and stays in B. For which $\gamma$ is "go" optimal? Write the Bellman optimality equation and solve it.</li>
+      <li>Show that $\pi_1\ge\pi_2$ (state by state) implies $J(\pi_1)\ge J(\pi_2)$ for every start distribution, but not the converse: give two policies of the gridworld with $J(\pi_1) &gt; J(\pi_2)$ for the start state and $V^{\pi_1}(s) &lt; V^{\pi_2}(s)$ somewhere. (The code's output contains the ingredients.)</li>
+      <li>Let $\Phi(s) = V^*(s)$ and shape the rewards with $F(s, s') = \gamma\Phi(s') - \Phi(s)$. What is the optimal value function of the shaped problem, and what does that say about how hard the shaped problem is to learn?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Let $K$ be the step at which the task ends, so the total reward is $\sum_{k=0}^{K-1}R_{t+k+1}$ and $P(K &gt; k) = \gamma^k$. Then $\mathbb{E}\sum_k\mathbf{1}[K &gt; k]R_{t+k+1} = \sum_kP(K &gt; k)\mathbb{E}R_{t+k+1} = \sum_k\gamma^k\mathbb{E}R_{t+k+1}$, by independence. $K$ is geometric, with $\mathbb{E}K = 1/(1 - \gamma)$: the effective horizon.</p>
+        <p><b>2.</b> $Q^\pi(s, a) = R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)\sum_{a'}\pi(a'\mid s')Q^\pi(s', a')$. In matrix form $\mathbf{q} = \mathbf{R} + \gamma P\Pi\,\mathbf{q}$, where $P$ is the $|\mathcal{S}||\mathcal{A}|\times|\mathcal{S}|$ matrix of rows $P(\cdot\mid s, a)$ and $\Pi$ is the $|\mathcal{S}|\times|\mathcal{S}||\mathcal{A}|$ matrix with $\Pi_{s',(s', a')} = \pi(a'\mid s')$. The stochastic matrix $P\Pi$ is the chain on state–action pairs.</p>
+        <p><b>3.</b> (a) $V'^\pi = (I - \gamma P_\pi)^{-1}(r_\pi + c\mathbf{1}) = V^\pi + c\sum_t\gamma^tP_\pi^t\mathbf{1} = V^\pi + \frac{c}{1 - \gamma}\mathbf{1}$, since $P_\pi\mathbf{1} = \mathbf{1}$. Every policy shifts by the same vector, so the ordering is unchanged. (b) In an episodic task the constant is collected only until the episode ends, so it changes the value of ending: raising $r = -0.04$ by $0.14$ to $+0.1$ turns "reach $+1$ quickly" into "never leave". (c) Pay the constant in the end state too, forever: then every trajectory collects $c$ at every step, and (a) applies.</p>
+        <p><b>4.</b> $V^*(B) = 2/(1 - \gamma)$. $V^*(A) = \max\big(1 + \gamma V^*(A),\ 0 + \gamma V^*(B)\big)$. Staying forever is worth $1/(1 - \gamma)$, going $2\gamma/(1 - \gamma)$, so "go" is optimal when $\gamma &gt; \frac12$ (and both are when $\gamma = \frac12$). A short horizon prefers the reward now; a long one pays to reach the better state.</p>
+        <p><b>5.</b> $J(\pi) = \boldsymbol{\mu}_0V^\pi$ with $\boldsymbol{\mu}_0\ge0$, so state-by-state domination gives domination of $J$. Not conversely. Let $\pi_1$ be the policy the code first finds as best from the start: $J(\pi_1) = 0.651$, but $V^{\pi_1} = -0.875$ in the bottom-right cell, which it never visits from the start. Let $\pi_2$ be $\pi^*$ with the start cell's action changed to "down": it bumps into the edge, slips at most one cell right, and is sent back, so it never leaves, and $J(\pi_2) = -0.04/(1 - 0.99) = -4$. Yet from the bottom-right cell, $\pi_2$ is worth $-0.100$, more than $\pi_1$'s $-0.875$. Maximising $J$ for one start distribution only constrains the states that distribution reaches.</p>
+        <p><b>6.</b> By the shaping result, $Q'^*(s, a) = Q^*(s, a) - V^*(s)$, so $V'^* = 0$ everywhere and $Q'^*(s, a) = -(\text{the regret of } a)$, the negative of the optimal advantage. Every optimal action has $Q' = 0$ and every other action is negative <i>immediately</i>: the shaped reward of a single step already says whether it was optimal. The problem becomes a bandit in each state, with no long-horizon credit assignment. This is why a good value estimate is such a strong learning signal, and why $\Phi\approx V^*$ is the ideal potential.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Sutton &amp; Barto, <i>Reinforcement Learning: An Introduction</i></b> (2nd edition, 2018), chapter 3. The standard first account of MDPs, returns and Bellman equations; free online.</li>
+      <li><b>Russell &amp; Norvig, <i>Artificial Intelligence: A Modern Approach</i></b> (4th edition, 2020), chapter 17. The source of the 4 × 3 gridworld and its living-reward discussion.</li>
+      <li><b>Puterman, <i>Markov Decision Processes</i></b> (1994), chapters 4–6. The rigorous treatment, including why history-dependent and randomised policies do not help.</li>
+      <li><b>Bertsekas, <i>Dynamic Programming and Optimal Control</i></b>, volume 1, chapter 1. Finite-horizon problems and backward induction.</li>
+      <li><b>Ng, Harada &amp; Russell, "Policy invariance under reward transformations"</b> (1999). Potential-based shaping, with the bicycle example.</li>
+      <li><b>Agarwal, Jiang, Kakade &amp; Sun, <i>Reinforcement Learning: Theory and Algorithms</i></b> (2022), chapter 1. A concise modern treatment with the occupancy-measure view; free online.</li>
+    </ul>
+  </section>
+</article>

@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { liveSubjects, chaptersOf, meta, widgetsOf, pagesOf, partTitle, partLabel, SUBJECTS, chapterUrl, u } from "../../subjects";
+import { liveSubjects, chaptersOf, meta, widgetsOf, pagesOf, problemBookOf, partTitle, partLabel, partName, SUBJECTS, chapterUrl, u, problemSets } from "../../subjects";
 
 export async function getStaticPaths() {
   return (await liveSubjects()).map((s) => ({ params: { subject: s.slug } }));
@@ -15,9 +15,12 @@ const chapters = await chaptersOf(subject);
 const exercises = await getCollection("exercises");
 const widgets = widgetsOf(subject);
 const pages = pagesOf(subject);
+const book = problemBookOf(subject);
 const written = [...new Set(chapters.map((c) => c.part))];
 const upcoming = Object.keys(m?.parts ?? {}).map(Number).filter((p) => !written.includes(p));
 const first = chapters[0];
+const sets = await problemSets(subject);
+const problemCount = sets.reduce((n, s) => n + s.problems.length, 0);
 ---
 <Base title={title} subject={{ slug: subject, title }} description={m?.tagline}>
   <main class="home subject-page">
@@ -33,6 +36,7 @@ const first = chapters[0];
       <div class="actions">
         {first && <a class="btn primary" href={chapterUrl(first.id)} data-resume={subject}>Start reading · {first.chapter}</a>}
         {(widgets.length + pages.length) > 0 && <a class="btn" href={u(`/animations/#${subject}`)}>{widgets.length + pages.length} animations</a>}
+        {(sets.length > 0 || book) && <a class="btn" href={u(`/${subject}/problems/`)}>Problem book · {sets.length ? `${problemCount} problems` : `${book!.hard.length} hard problems`}</a>}
       </div>
     </section>
 
@@ -41,7 +45,7 @@ const first = chapters[0];
         {written.map((p) => (
           <section class="part">
             <div class="part-label">
-              <div class="n">{label} {p}</div>
+              <div class="n">{partName(subject, p)}</div>
               <h2>{partTitle(subject, p)}</h2>
               <p>{m?.parts[String(p)]?.blurb}</p>
             </div>
@@ -65,7 +69,7 @@ const first = chapters[0];
         {upcoming.length > 0 && (
           <section class="part upcoming">
             <div class="part-label"><div class="n">Coming next</div><h2>{label}s {upcoming[0]}–{upcoming.at(-1)}</h2></div>
-            <ul class="upcoming-list">{upcoming.map((p) => <li><b>{label} {p} · {partTitle(subject, p)}</b>{m?.parts[String(p)]?.blurb && <span>{m.parts[String(p)].blurb}</span>}</li>)}</ul>
+            <ul class="upcoming-list">{upcoming.map((p) => <li><b>{partName(subject, p)} · {partTitle(subject, p)}</b>{m?.parts[String(p)]?.blurb && <span>{m.parts[String(p)].blurb}</span>}</li>)}</ul>
           </section>
         )}
       </div>

@@ -1,0 +1,47 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A11 · after lessons 40 and 41</div>
+  <h1>AlphaZero for Connect Four</h1>
+  <p class="lede">Build AlphaZero end to end for Connect Four: the rules, PUCT search guided by a policy-value network, the AlphaZero loss, self-play with symmetry augmentation, and the training loop. Then measure what you built against opponents that do not learn: a random player, a hand-written tactician that wins, blocks and avoids blunders, and plain Monte Carlo tree search with random rollouts. On a laptop and in NumPy this will not play Connect Four perfectly (that takes far more compute), but within an hour of self-play a search guided by your network should beat a rollout search given four times as many simulations. Expect eight to twelve hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/40-model-based-rl-and-mcts/">40</a>, <a href="/machine-learning/41-alphago-alphazero-and-muzero/">41</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A11-alphazero-connect-four">assignments/A11-alphazero-connect-four</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A11-alphazero-connect-four
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like (a few seconds)</code></pre>
+    <p>The board is a $6\times7$ array with 0 for empty and $\pm1$ for the two players' pieces; row 0 is the top. An <b>evaluate</b> function maps a position and the player to move to a prior over the seven columns and a value in $[-1, 1]$ for that player; the search only ever sees the game through it and through the rules. Given: <code>PolicyValueNet</code> (an MLP trunk of two ReLU layers of 128 with a policy head and a tanh value head, its backward pass, and an <code>evaluate</code> method), <code>Adam</code> with weight decay, <code>rollout_evaluate</code> (a uniform prior and the result of one random playout, which turns your PUCT search into plain MCTS), and two fixed opponents, <code>random_player</code> and <code>tactician</code>.</p>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · the game</td><td><code>legal_moves</code>, <code>play</code>, <code>wins</code>, <code>encode</code></td><td>pieces falling to the lowest empty row; fours in all four directions, and threes, gaps and edges that are not fours; the input planes from the mover's point of view</td></tr>
+        <tr><td>2 · search</td><td><code>puct_search</code></td><td>visit counts and the sign of every backed-up value; priors masked to legal columns; finding a forced win and a forced block with a uniform prior; Dirichlet noise at the root</td></tr>
+        <tr><td>3 · learning</td><td><code>az_loss</code>, <code>self_play_game</code>, <code>train</code>, <code>match</code></td><td>the loss and its gradients with illegal columns masked; examples with their mirror images, results that alternate in sign; alternating first move in matches; a training loop that runs</td></tr>
+      </tbody>
+    </table></div>
+    <p>Two details decide whether the search works. First, every value must be from the point of view of the player to move at the node that stores it, so the backup negates once per ply; get one sign wrong and the search will choose the opponent's best moves. Second, a move that wins must be recognised when its child is created, not left for the network to judge: the child is terminal, and its value for the player to move there is $-1$.</p>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>The reference numbers come from the solution, trained with <code>train(net, 80, 50, 50, rng)</code>: 80 iterations of 50 self-play games at 50 simulations per move, a buffer of the last 500 games, 200 Adam steps of 128 positions per iteration, learning rate $10^{-3}$. That run takes about seven minutes on one core. Matches are 40 games with alternating first move.</p>
+    <ol>
+      <li><b>Search before learning.</b> With the untrained network, measure PUCT with 100 simulations against <code>tactician</code>, and plain MCTS (<code>rollout_evaluate</code>) with 100 simulations against <code>tactician</code>. The solution's untrained search scores 17 wins, 3 draws and 20 losses; MCTS scores 33, 2, 5. Why is the untrained network's search so much worse than random rollouts, although it does recognise wins and losses at terminal nodes? (Look at what its value head returns.)</li>
+      <li><b>Learning curves.</b> Train, and every 10 iterations record the raw policy network (argmax of the prior, no search) and the search (100 simulations) against <code>tactician</code>. In the solution, the search's wins rise from 17 untrained to 26 after one iteration and 33 to 39 from iteration 10 on; the raw policy's wins rise from 2 after one iteration to 22 at iteration 40, then fall back to 8 to 16. Plot both, and the loss per iteration (it fell from 2.44 to 1.32 by iteration 41 and then rose to 1.86).</li>
+      <li><b>The learned evaluator against random rollouts.</b> Play your trained network with 100 simulations against plain MCTS with 100 and with 400 simulations. The solution's network at iteration 80 beat MCTS with 100 simulations 27 games to 11 (2 draws), and MCTS with 400 simulations 24 games to 13 (3 draws). At iteration 40 it beat MCTS-100 27 to 10. Count the evaluations each side makes per move, and explain where the network's advantage comes from.</li>
+      <li><b>Why did the raw policy get worse?</b> The solution's raw policy and loss got worse after iteration 40 while the search stayed strong. Find out why. Candidate causes: the learning rate (try $3\times10^{-4}$ after iteration 40), the size of the buffer, too few simulations to give policy targets that are better than the prior (try 100 or 200), or the temperature (moves sampled for the first 8 plies). Run at least two of these and report what changes.</li>
+      <li><b>Your choice.</b> Do one of: (a) replace the MLP by a small convolutional network (lesson 15) and compare; (b) implement a depth-limited minimax player with a hand-written heuristic (count open threes and twos) and measure your agent against it at several depths; (c) give MuZero's idea a first try: train a network to predict the next encoded board from (board, move) and measure how many plies ahead its predictions stay correct.</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Ten checker passes are worth 50%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism.</p>
+  </section>
+</article>

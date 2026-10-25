@@ -1,0 +1,195 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 19 · Stage 5: deep architectures</div>
+  <h1>Attention</h1>
+  <p class="lede">A recurrent network has to squeeze everything it has read into one state vector. Attention lets a model instead look back at all of its inputs and decide, for each output, which of them to use. Mechanically it is a soft dictionary lookup: compare a query with every key, turn the similarities into weights with a softmax, and return the weighted average of the values. This lesson defines scaled dot-product attention, derives why the scores are divided by $\sqrt d$, works out its symmetries, cost and gradient, and trains one attention head to solve a memory task that a much larger network without attention can't.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/06-softmax-regression/">lesson 06</a>, <a href="/machine-learning/17-recurrent-networks/">lesson 17</a>, <a href="/machine-learning/18-word-embeddings/">lesson 18</a></span><span><b>Math pulled in:</b> softmax as a soft argmax, the variance of a dot product, the softmax Jacobian, permutation equivariance, kernel smoothing</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>A Python dictionary maps a query to the value whose key equals it exactly. Make that soft: give every stored item a key vector $\mathbf{k}_i$ and a value vector $\mathbf{v}_i$; given a query $\mathbf{q}$, score each key by similarity, normalise the scores into weights, and return the weighted average of the values:</p>
+    <div class="eq">$$a_i = \frac{\exp(s_i)}{\sum_j\exp(s_j)}, \quad s_i = \frac{\mathbf{q}^\top\mathbf{k}_i}{\sqrt d}, \qquad \operatorname{attn}(\mathbf{q}) = \sum_ia_i\mathbf{v}_i .$$</div>
+    <p>If one key matches much better than the rest, the softmax puts nearly all the weight on it, and attention behaves like an exact lookup. If several match, it blends them. Everything is differentiable, so the network can <i>learn</i> what to put in the queries, keys and values: in practice they are linear projections of the inputs, $\mathbf{q} = W_Q\mathbf{x}$, $\mathbf{k}_i = W_K\mathbf{x}_i$, $\mathbf{v}_i = W_V\mathbf{x}_i$.</p>
+    <p>Attention entered deep learning to fix the bottleneck of lesson 17's sequence-to-sequence models. Bahdanau, Cho and Bengio (2014) let the translation decoder, at each output word, attend over all the encoder's hidden states instead of only the last one. Translation of long sentences improved dramatically, and the attention weights turned out to be interpretable alignments between source and target words. Three years later, the Transformer (lesson 20) kept the attention and dropped the recurrence.</p>
+  </section>
+
+  <section id="matrix">
+    <h2>Scaled dot-product attention</h2>
+    <p>Stack $m$ queries as rows of $Q\in\mathbb{R}^{m\times d}$, and $n$ keys and values as rows of $K\in\mathbb{R}^{n\times d}$ and $V\in\mathbb{R}^{n\times d_v}$. All queries are answered at once with two matrix products and a row-wise softmax:</p>
+    <div class="result">
+      <div class="label">Scaled dot-product attention (Vaswani et al., 2017)</div>
+      <div class="eq">$$\operatorname{Attention}(Q, K, V) = \operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt d}\right)V, \qquad A = \operatorname{softmax}(\cdot)\in\mathbb{R}^{m\times n}, \text{ rows summing to 1}.$$</div>
+    </div>
+    <p>When the queries, keys and values all come from the same sequence it is <b>self-attention</b>: each position looks at every position of its own sequence. When queries come from one sequence and keys and values from another it is <b>cross-attention</b> (the decoder looking at the encoder). A <b>mask</b> forbids some query–key pairs by setting their scores to $-\infty$ before the softmax, which makes their weights exactly 0. The <b>causal</b> mask, $s_{ij} = -\infty$ for $j &gt; i$, stops each position from seeing the future, which is what a language model that predicts the next token needs (lesson 26).</p>
+    <p><b>Cost.</b> $QK^\top$ is $m\times n$, so attention over a sequence of length $n$ costs $O(n^2d)$ time and $O(n^2)$ memory for the weights. That quadratic cost is the price of letting every position see every other one in a single step, and a lot of later work (FlashAttention in lesson 29, sparse and linear attention) is about paying it more cheaply.</p>
+  </section>
+
+  <section id="scaling">
+    <h2>Why divide by $\sqrt d$</h2>
+    <p>Suppose the entries of $\mathbf{q}$ and $\mathbf{k}$ are independent with mean 0 and variance 1, as they roughly are at initialisation. Then $\mathbf{q}^\top\mathbf{k} = \sum_{j=1}^dq_jk_j$ is a sum of $d$ uncorrelated terms, each of variance $\mathbb{E}[q_j^2]\mathbb{E}[k_j^2] = 1$ (lesson 14's argument), so</p>
+    <div class="eq">$$\operatorname{Var}(\mathbf{q}^\top\mathbf{k}) = d, \qquad \operatorname{Var}\!\left(\frac{\mathbf{q}^\top\mathbf{k}}{\sqrt d}\right) = 1 .$$</div>
+    <p>Without the scaling, scores with $d = 1024$ have a standard deviation of 32, and a softmax of numbers that far apart is essentially a one-hot vector on the largest. That kills learning. The Jacobian of the softmax is $\partial\mathbf{a}/\partial\mathbf{s} = \operatorname{diag}(\mathbf{a}) - \mathbf{a}\mathbf{a}^\top$, which is the zero matrix when $\mathbf{a}$ is one-hot: no gradient flows to the queries and keys, so the model can't learn to change where it attends. Dividing by $\sqrt d$ keeps the score scale at 1 whatever the dimension, so the initial attention is spread out and trainable. The code measures it: with $d = 1024$ and 16 keys, unscaled attention puts 96% of its weight on one key on average (entropy 0.10 nats), while scaled attention stays near uniform (entropy 2.36 nats, against 2.77 for exactly uniform).</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: attention --></div>
+    </figure>
+    <p class="muted">Left: the entropy of attention weights over 16 random keys as the dimension grows, with and without the $1/\sqrt d$ scaling (log scale on the horizontal axis). Without it, attention collapses onto a single key. Right: the trained attention head from the code on 12 test examples. Each row is an example, each column one of its 8 (key, value) pairs; the ring marks the pair whose key matches the query. The head puts most of its weight there.</p>
+    <figure class="plate wide" data-scene="attention">
+      <div class="stage">
+        <canvas aria-label="A query vector and six unit-length keys, with the softmax attention weights as bars"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="at-ang">query angle° <input id="at-ang" type="range" data-k="ang" min="0" max="360" step="1"><output data-out="ang"></output></label>
+            <label for="at-mag">query length <input id="at-mag" type="range" data-k="mag" min="0" max="10" step="0.1"><output data-out="mag"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Rotate the query and the weight moves to the keys it points at. Now lengthen it. Scores grow in proportion, so the softmax sharpens towards one-hot; at length 0 attention is a plain average. In $d$ dimensions, dot products of random unit-variance vectors have standard deviation $\sqrt d$, which is exactly a long query: dividing by $\sqrt d$ keeps the scores, and the gradients, in a usable range.</p>
+  </section>
+
+  <section id="properties">
+    <h2>Symmetries, and attention as smoothing</h2>
+    <p><b>Attention ignores order.</b> Permute the (key, value) pairs: the scores and weights are permuted the same way, and the weighted sum $\sum_ia_i\mathbf{v}_i$ doesn't change. So the output for a query is <i>invariant</i> to the order of the items, and self-attention, where each item is also a query, is <i>equivariant</i>: permuting the input sequence permutes the output rows. Attention treats its input as a set. For sequences, where order matters, position must be added to the inputs explicitly (positional encodings, lesson 20). This is the opposite design from convolution, which has locality and position built in.</p>
+    <p><b>Attention as a kernel smoother.</b> The Nadaraya–Watson estimator of classical statistics predicts $\hat y(\mathbf{x}) = \sum_iK(\mathbf{x}, \mathbf{x}_i)y_i/\sum_jK(\mathbf{x}, \mathbf{x}_j)$: a weighted average of the training labels, weighted by a kernel similarity. Attention is exactly this with the kernel $K = \exp(\mathbf{q}^\top\mathbf{k}/\sqrt d)$ and with learned maps from inputs to queries, keys and values. With unit-norm vectors, $\exp(\mathbf{q}^\top\mathbf{k}/\tau) \propto \exp(-\lVert\mathbf{q} - \mathbf{k}\rVert^2/2\tau)$, a Gaussian kernel.</p>
+    <p><b>The backward pass</b> follows from lesson 13's rules and the softmax VJP of problem set P4 (problem 7). With $S = QK^\top/\sqrt d$, $A = \operatorname{softmax}(S)$, $O = AV$ and output gradient $\bar O$:</p>
+    <div class="eq">$$\bar V = A^\top\bar O, \quad \bar A = \bar OV^\top, \quad \bar S = A\odot\big(\bar A - \operatorname{rowsum}(\bar A\odot A)\big), \quad \bar Q = \tfrac{1}{\sqrt d}\bar SK, \quad \bar K = \tfrac{1}{\sqrt d}\bar S^\top Q .$$</div>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 measures how the score scale and the sharpness of attention depend on $d$. Part 2 is <b>associative recall</b>: each example shows 8 (key, value) pairs of random tokens from a vocabulary of 16, encoded as one vector per pair, followed by a query key; the answer is the value stored with that key. One attention head with $d = 32$ and a linear readout learns it, with the backward pass written out by hand (and checked against finite differences). Part 3 gives the same data to a network without attention: it averages the pair vectors, concatenates the query and applies an MLP with 256 hidden units.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+def softmax(z):
+    z = z - z.max(-1, keepdims=True); e = np.exp(z)
+    return e / e.sum(-1, keepdims=True)
+
+# 1. Why divide by sqrt(d)? Dot products of random d-dimensional vectors have variance d.
+for d in [4, 64, 1024]:
+    q, k = rng.standard_normal((1000, d)), rng.standard_normal((1000, 16, d))
+    s = np.einsum("nd,ntd-&gt;nt", q, k)
+    for name, sc in [("unscaled", s), ("scaled  ", s / np.sqrt(d))]:
+        a = softmax(sc)
+        print(f"d = {d:4d} {name}: score std {sc.std():6.2f}   mean max weight {a.max(1).mean():.2f}"
+              f"   mean entropy {-(a * np.log(a + 1e-30)).sum(1).mean():.2f} nats (uniform: {np.log(16):.2f})")
+
+# 2. Associative recall: 8 (key, value) pairs, then a query key; answer with its value.
+V, P = 16, 8
+def make(n):
+    keys = np.array([rng.choice(V, P, replace=False) for _ in range(n)])
+    vals = rng.integers(0, V, (n, P))
+    which = rng.integers(0, P, n)
+    X = np.concatenate([np.eye(V)[keys], np.eye(V)[vals]], -1)        # (n, P, 2V): each pair as one vector
+    return X, np.eye(V)[keys[np.arange(n), which]], vals[np.arange(n), which]
+
+def attend(Wq, Wk, Wv, Wo, X, Q):
+    """One attention head: query from Q, keys and values from the pairs, then a linear readout."""
+    d = Wq.shape[0]
+    q, k, v = Q @ Wq.T, X @ Wk.T, X @ Wv.T                            # (n,d), (n,P,d), (n,P,d)
+    a = softmax(np.einsum("nd,npd-&gt;np", q, k) / np.sqrt(d))           # attention weights over the pairs
+    o = np.einsum("np,npd-&gt;nd", a, v)
+    return o @ Wo.T, (q, k, v, a, o)
+
+def grads(W, X, Q, y):
+    Wq, Wk, Wv, Wo = W; d = Wq.shape[0]
+    F, (q, k, v, a, o) = attend(*W, X, Q)
+    p = softmax(F); loss = -np.log(p[np.arange(len(y)), y]).mean()
+    dF = p; dF[np.arange(len(y)), y] -= 1; dF /= len(y)
+    dWo = dF.T @ o; do = dF @ Wo
+    da = np.einsum("nd,npd-&gt;np", do, v); dv = np.einsum("np,nd-&gt;npd", a, do)
+    ds = a * (da - (da * a).sum(1, keepdims=True)) / np.sqrt(d)      # backward through the softmax
+    dq = np.einsum("np,npd-&gt;nd", ds, k); dk = np.einsum("np,nd-&gt;npd", ds, q)
+    return loss, [dq.T @ Q, np.einsum("npd,npe-&gt;de", dk, X), np.einsum("npd,npe-&gt;de", dv, X), dWo]
+
+d = 32
+W = [rng.standard_normal((d, V)) / 4, rng.standard_normal((d, 2 * V)) / 6, rng.standard_normal((d, 2 * V)) / 6, rng.standard_normal((V, d)) / 6]
+X, Q, y = make(4)                                                     # finite-difference check first
+_, g = grads(W, X, Q, y)
+num = np.zeros_like(W[1])
+for i in np.ndindex(W[1].shape):
+    W[1][i] += 1e-6; up = grads(W, X, Q, y)[0]; W[1][i] -= 2e-6; dn = grads(W, X, Q, y)[0]; W[1][i] += 1e-6
+    num[i] = (up - dn) / 2e-6
+print(f"gradient check (key projection): max relative error {np.abs(num - g[1]).max() / np.abs(num).max():.1e}")
+
+m = [np.zeros_like(w) for w in W]; v2 = [np.zeros_like(w) for w in W]
+for t in range(1, 3001):
+    X, Q, y = make(128)
+    loss, g = grads(W, X, Q, y)
+    for i in range(4):
+        m[i] = 0.9 * m[i] + 0.1 * g[i]; v2[i] = 0.999 * v2[i] + 0.001 * g[i] ** 2
+        W[i] -= 3e-3 * (m[i] / (1 - 0.9 ** t)) / (np.sqrt(v2[i] / (1 - 0.999 ** t)) + 1e-8)
+    if t in (1, 500, 1000, 3000):
+        Xt, Qt, yt = make(2000); Ft, (_, _, _, at, _) = attend(*W, Xt, Qt)
+        right = np.argmax(np.einsum("npv,nv-&gt;np", Xt[:, :, :V], Qt), 1)  # which pair holds the queried key
+        print(f"step {t:4d}: loss {loss:.3f}   test acc {np.mean(Ft.argmax(1) == yt):.3f}"
+              f"   mean attention on the right pair {at[np.arange(2000), right].mean():.2f}")
+
+# 3. The same task without attention: average the pairs, then an MLP on [average, query]
+H = 256
+A1 = rng.standard_normal((H, 3 * V)) * np.sqrt(2 / (3 * V)); A2 = rng.standard_normal((V, H)) * np.sqrt(2 / H)
+mm = [0, 0]; vv = [0, 0]
+for t in range(1, 3001):
+    X, Q, y = make(128); Z = np.c_[X.mean(1), Q]
+    h = np.maximum(Z @ A1.T, 0); p = softmax(h @ A2.T)
+    dF = p; dF[np.arange(128), y] -= 1; dF /= 128
+    gs = [((dF @ A2) * (h &gt; 0)).T @ Z, dF.T @ h]
+    for i, Wm in enumerate([A1, A2]):
+        mm[i] = 0.9 * mm[i] + 0.1 * gs[i]; vv[i] = 0.999 * vv[i] + 0.001 * gs[i] ** 2
+        Wm -= 3e-3 * (mm[i] / (1 - 0.9 ** t)) / (np.sqrt(vv[i] / (1 - 0.999 ** t)) + 1e-8)
+Xt, Qt, yt = make(2000)
+acc = np.mean((np.maximum(np.c_[Xt.mean(1), Qt] @ A1.T, 0) @ A2.T).argmax(1) == yt)
+print(f"average-then-MLP baseline ({A1.size + A2.size} parameters): test acc {acc:.3f}   (chance {1 / V:.3f})")
+
+# d =    4 unscaled: score std   2.01   mean max weight 0.42   mean entropy 1.76 nats (uniform: 2.77)
+# d =    4 scaled  : score std   1.01   mean max weight 0.23   mean entropy 2.38 nats (uniform: 2.77)
+# d =   64 unscaled: score std   8.05   mean max weight 0.84   mean entropy 0.42 nats (uniform: 2.77)
+# d =   64 scaled  : score std   1.01   mean max weight 0.25   mean entropy 2.35 nats (uniform: 2.77)
+# d = 1024 unscaled: score std  32.03   mean max weight 0.96   mean entropy 0.10 nats (uniform: 2.77)
+# d = 1024 scaled  : score std   1.00   mean max weight 0.24   mean entropy 2.36 nats (uniform: 2.77)
+# gradient check (key projection): max relative error 1.8e-07
+# step    1: loss 2.786   test acc 0.058   mean attention on the right pair 0.12
+# step  500: loss 0.003   test acc 1.000   mean attention on the right pair 0.83
+# step 1000: loss 0.001   test acc 1.000   mean attention on the right pair 0.86
+# step 3000: loss 0.000   test acc 1.000   mean attention on the right pair 0.89
+# average-then-MLP baseline (16384 parameters): test acc 0.258   (chance 0.062)</code></pre>
+    <p class="muted">The attention head is perfect after 500 steps, and on average it puts 89% of its weight on the one pair that holds the answer. The baseline has more than five times as many parameters (16,384 against 3,072) but reaches only 26%. Averaging the pairs mixes all keys and all values together, so it can tell which values are present but not which key each belongs to; it can do no better than guess among the values it sees. The binding between a key and its value survives only if the model can select one item, which is exactly what attention does.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Self-attention over a sequence of $n = 4{,}096$ tokens with $d = 128$: how many entries does the attention matrix have, and how many multiply-adds do $QK^\top$ and $AV$ cost? How do both scale if the sequence doubles?</li>
+      <li>Show that the softmax Jacobian $\operatorname{diag}(\mathbf{a}) - \mathbf{a}\mathbf{a}^\top$ is zero when $\mathbf{a}$ is one-hot, and that its largest eigenvalue is at most $\tfrac12$ in general. (Hint: it is the covariance matrix of a one-hot random vector with probabilities $\mathbf{a}$.)</li>
+      <li>Prove that self-attention without positional information is permutation equivariant: if $P$ is a permutation matrix, $\operatorname{Attention}(PX W_Q, PXW_K, PXW_V) = P\operatorname{Attention}(XW_Q, XW_K, XW_V)$.</li>
+      <li>With a causal mask, what is the first row of the attention matrix, whatever the scores? What is the output at the first position?</li>
+      <li>Attention with a temperature: $\operatorname{softmax}(\mathbf{s}/\tau)$. What does the output become as $\tau\to0$ and as $\tau\to\infty$?</li>
+      <li>For unit vectors, show that $\exp(\mathbf{q}^\top\mathbf{k}/\tau) = c\,\exp(-\lVert\mathbf{q} - \mathbf{k}\rVert^2/2\tau)$ with $c$ independent of $\mathbf{k}$, so dot-product attention over unit keys is Gaussian-kernel smoothing.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $4096^2 = 16.8$ million entries per head. $QK^\top$: $n^2d = 2.1\times10^9$ multiply-adds; $AV$ the same. Doubling $n$ multiplies time and attention memory by 4.</p>
+        <p><b>2.</b> If $\mathbf{a} = \mathbf{e}_j$, then $\operatorname{diag}(\mathbf{a}) = \mathbf{e}_j\mathbf{e}_j^\top = \mathbf{a}\mathbf{a}^\top$. For a one-hot random vector $\mathbf{z}$ with $P(\mathbf{z} = \mathbf{e}_i) = a_i$: $\mathbb{E}[\mathbf{z}\mathbf{z}^\top] = \operatorname{diag}(\mathbf{a})$ and $\mathbb{E}\mathbf{z} = \mathbf{a}$, so the Jacobian is $\operatorname{Cov}(\mathbf{z})$. For a unit vector $\mathbf{u}$, $\mathbf{u}^\top\operatorname{Cov}(\mathbf{z})\mathbf{u} = \operatorname{Var}(\mathbf{u}^\top\mathbf{z})$; $\mathbf{u}^\top\mathbf{z}$ takes values $u_i$, and a variable whose values lie in an interval of length $L$ has variance at most $L^2/4$. Here $L\le|u_i| + |u_j|\le\sqrt2$, so the variance is at most $\tfrac12$.</p>
+        <p><b>3.</b> The scores become $PXW_Q(PXW_K)^\top = PSP^\top$; a row-wise softmax commutes with permuting rows and permuting columns, so $A' = PAP^\top$; then $A'PXW_V = PAP^\top PXW_V = PAXW_V$, since $P^\top P = I$.</p>
+        <p><b>4.</b> Row 1 has only one unmasked entry, so it is $(1, 0, \dots, 0)$ and the first output is $\mathbf{v}_1$: the first token can only attend to itself.</p>
+        <p><b>5.</b> $\tau\to0$: all weight on the highest-scoring key (a hard argmax lookup, ties split evenly). $\tau\to\infty$: uniform weights, and the output is the plain average of the values.</p>
+        <p><b>6.</b> $\lVert\mathbf{q} - \mathbf{k}\rVert^2 = 2 - 2\mathbf{q}^\top\mathbf{k}$ for unit vectors, so $\exp(-\lVert\mathbf{q} - \mathbf{k}\rVert^2/2\tau) = e^{-1/\tau}\exp(\mathbf{q}^\top\mathbf{k}/\tau)$. The constant cancels in the softmax normalisation.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Bahdanau, Cho &amp; Bengio, "Neural machine translation by jointly learning to align and translate"</b> (2014). Attention for translation.</li>
+      <li><b>Vaswani et al., "Attention is all you need"</b> (NeurIPS 2017), section 3.2: scaled dot-product and multi-head attention.</li>
+      <li><b>Lilian Weng, "Attention? Attention!"</b> (blog post, 2018). A survey of the variants.</li>
+      <li><b>Zhang, Lipton, Li &amp; Smola, <i>Dive into Deep Learning</i></b>, chapter 11: attention as kernel regression, with code.</li>
+      <li><b>Graves, Wayne &amp; Danihelka, "Neural Turing machines"</b> (2014). Attention as differentiable memory addressing, the idea behind associative recall.</li>
+    </ul>
+  </section>
+</article>

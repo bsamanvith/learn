@@ -1,0 +1,197 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 42 · Stage 9: reading the papers</div>
+  <h1>A guided tour of landmark papers</h1>
+  <p class="lede">Every lesson in this course rests on a handful of papers. This last lesson is about reading them: how to get through a research paper efficiently, what to check before believing its claims, and how to turn a paper into code. It then maps about seventy landmark papers onto the stages of the course, each with what it contributed and the lesson that explains it, so that you can go to the source for any idea you have learned here. A short list of papers to read first, and exercises that practise reading critically, close the course.</p>
+  <div class="meta"><span><b>Prerequisites:</b> whichever lessons the papers you read belong to</span><span><b>Math pulled in:</b> none new; the point is to use what you have</span></div>
+</header>
+
+<article class="lesson">
+  <section id="how">
+    <h2>How to read a paper</h2>
+    <p>A paper is an argument that some idea works, written by people who want you to believe it. Reading it well means extracting the idea quickly and then checking the argument. Keshav's three-pass method is a good default.</p>
+    <ol>
+      <li><b>First pass, ten minutes.</b> Read the title, abstract and introduction, the section headings, the conclusion, and glance at the figures and tables. Answer: what problem is this, what is the claimed contribution, what kind of evidence (a theorem, an experiment, both), and does it matter to you? Most papers stop here.</li>
+      <li><b>Second pass, an hour.</b> Read the whole paper but skip proofs and implementation details. Look hard at the main figure and the main results table. Write down the method in your own notation: the model, the objective, the algorithm. Mark the terms you do not understand and the references you would need.</li>
+      <li><b>Third pass, as long as it takes.</b> Re-derive the main equations and, if it matters, re-implement the method. Assume nothing: every step that the paper calls "straightforward" is a step you should be able to do. This is where you find the hidden assumptions, and it is how every lesson in this course was built.</li>
+    </ol>
+    <p>Machine learning papers have a typical skeleton: a problem, a method section with one central equation (the objective or the update rule), experiments on standard benchmarks with a results table against baselines, ablations that remove one ingredient at a time, and a related-work section. The central equation and the ablation table are usually the most informative parts. If you can write the central equation and say which ablation hurts most, you understand the paper.</p>
+  </section>
+
+  <section id="critical">
+    <h2>Reading critically</h2>
+    <p>Before believing an empirical claim, check:</p>
+    <ul>
+      <li><b>Baselines.</b> Are the baselines tuned as carefully as the proposed method? A new optimiser compared with an untuned SGD proves little. Henderson et al. (2018) showed that in deep RL, results changed sign with random seeds and implementation details; Engstrom et al. (2020) found that much of PPO's advantage over TRPO came from code-level choices rather than the clipped objective (lesson 39).</li>
+      <li><b>Variance.</b> How many seeds, and are there error bars? A difference smaller than the spread across seeds is noise. Lessons 37 and 39 show how much a deep RL result moves between three seeds.</li>
+      <li><b>The evaluation.</b> Is the test set really held out? Were hyperparameters tuned on it (lesson 04)? Is the metric the one that matters, and is the comparison at equal compute, equal data and equal parameter count?</li>
+      <li><b>Ablations.</b> Does each claimed ingredient have an experiment that removes it? An ingredient without an ablation may not matter.</li>
+      <li><b>Scope.</b> Results on one dataset or one model size do not always transfer. Scaling papers (lesson 27) exist because many conclusions change with scale.</li>
+      <li><b>Theory.</b> For a theorem, read the assumptions first. Convergence guarantees often assume convexity, bounded gradients, tabular states or infinite data; lesson 37's deadly triad is what happens when the assumptions of tabular convergence proofs are dropped.</li>
+    </ul>
+  </section>
+
+  <section id="implement">
+    <h2>From paper to code</h2>
+    <p>Implementing a paper is the only way to be sure you understand it. Start with the smallest version that can be checked: a toy problem where the answer is known, as every assignment in this course does. Check every gradient against finite differences. Reproduce one number from the paper before changing anything. When the result does not match, the cause is usually one of: a detail in the appendix (initialisation, a normalisation, a learning-rate schedule), a difference in data preprocessing, or a bug that a small test would catch. Code released with the paper is the final authority on details the text leaves out, and it often contains details the text never mentions.</p>
+  </section>
+
+  <section id="map">
+    <h2>The map</h2>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: paper-timeline --></div>
+    </figure>
+    <p class="muted">The papers in the tables below, one dot per year cited, on a row for their stage. Of the 87 dates, 56 are from 2010 or later: learning theory, optimisation and the RL foundations are old, while architectures, generative models and language models are compressed into the last fifteen years.</p>
+
+    <h3>Stages 1–2: learning from data and making models honest</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>paper</th><th>what it contributed</th><th>lesson</th></tr></thead>
+      <tbody>
+        <tr><td>Robbins &amp; Monro, "A stochastic approximation method" (1951)</td><td>Step-size conditions $\sum\alpha_t = \infty$, $\sum\alpha_t^2 &lt; \infty$ for converging on noisy gradients</td><td><a href="/machine-learning/07-stochastic-optimisation/">07</a>, <a href="/machine-learning/35-monte-carlo-and-td-learning/">35</a></td></tr>
+        <tr><td>Rosenblatt, "The perceptron" (1958)</td><td>A learning rule for a linear threshold unit</td><td><a href="/machine-learning/12-neurons-and-mlps/">12</a></td></tr>
+        <tr><td>Widrow &amp; Hoff, "Adaptive switching circuits" (1960)</td><td>The delta rule (LMS), gradient descent on squared error one example at a time</td><td><a href="/machine-learning/02-gradient-descent/">02</a></td></tr>
+        <tr><td>Hoerl &amp; Kennard, "Ridge regression" (1970); Tibshirani, "Regression shrinkage and selection via the lasso" (1996)</td><td>L2 and L1 penalties, shrinkage and sparsity</td><td><a href="/machine-learning/05-regularisation/">05</a></td></tr>
+        <tr><td>Vapnik &amp; Chervonenkis (1971); Valiant, "A theory of the learnable" (1984)</td><td>Uniform convergence and PAC learning: when training error predicts test error</td><td><a href="/machine-learning/04-generalisation/">04</a></td></tr>
+        <tr><td>Cortes &amp; Vapnik, "Support-vector networks" (1995)</td><td>Maximum-margin classifiers and the kernel trick</td><td><a href="/machine-learning/05-regularisation/">05</a></td></tr>
+        <tr><td>Kingma &amp; Ba, "Adam" (2015)</td><td>Adaptive moments with bias correction</td><td><a href="/machine-learning/07-stochastic-optimisation/">07</a></td></tr>
+        <tr><td>Loshchilov &amp; Hutter, "SGDR" (2017) and "Decoupled weight decay regularization" (2019)</td><td>Cosine schedules with restarts; AdamW</td><td><a href="/machine-learning/07-stochastic-optimisation/">07</a></td></tr>
+        <tr><td>Guo et al., "On calibration of modern neural networks" (2017)</td><td>Deep networks are overconfident; temperature scaling fixes much of it</td><td><a href="/machine-learning/08-evaluating-classifiers/">08</a></td></tr>
+        <tr><td>Zhang et al., "Understanding deep learning requires rethinking generalization" (2017); Belkin et al., "Reconciling modern machine learning practice and the bias–variance trade-off" (2019)</td><td>Networks can memorise random labels; double descent</td><td><a href="/machine-learning/04-generalisation/">04</a></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Stage 3: trees and boosting</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>paper</th><th>what it contributed</th><th>lesson</th></tr></thead>
+      <tbody>
+        <tr><td>Breiman, Friedman, Olshen &amp; Stone, <i>Classification and Regression Trees</i> (1984)</td><td>CART: greedy splits, impurity, cost-complexity pruning</td><td><a href="/machine-learning/09-decision-trees/">09</a></td></tr>
+        <tr><td>Breiman, "Bagging predictors" (1996) and "Random forests" (2001)</td><td>Averaging decorrelated trees to cut variance</td><td><a href="/machine-learning/10-random-forests/">10</a></td></tr>
+        <tr><td>Freund &amp; Schapire, "A decision-theoretic generalization of on-line learning and an application to boosting" (1997)</td><td>AdaBoost</td><td><a href="/machine-learning/11-gradient-boosting/">11</a></td></tr>
+        <tr><td>Friedman, "Greedy function approximation: a gradient boosting machine" (2001)</td><td>Boosting as gradient descent in function space</td><td><a href="/machine-learning/11-gradient-boosting/">11</a></td></tr>
+        <tr><td>Chen &amp; Guestrin, "XGBoost" (2016)</td><td>Second-order boosting with regularised leaves, at scale</td><td><a href="/machine-learning/11-gradient-boosting/">11</a></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Stage 4: neural networks</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>paper</th><th>what it contributed</th><th>lesson</th></tr></thead>
+      <tbody>
+        <tr><td>Rumelhart, Hinton &amp; Williams, "Learning representations by back-propagating errors" (1986)</td><td>Backpropagation made famous: hidden layers learn features</td><td><a href="/machine-learning/13-backpropagation/">13</a></td></tr>
+        <tr><td>Cybenko (1989); Hornik, Stinchcombe &amp; White (1989)</td><td>Universal approximation by one hidden layer</td><td><a href="/machine-learning/12-neurons-and-mlps/">12</a></td></tr>
+        <tr><td>Glorot &amp; Bengio (2010); He et al., "Delving deep into rectifiers" (2015)</td><td>Variance-preserving initialisation, for tanh and for ReLU</td><td><a href="/machine-learning/14-training-deep-networks/">14</a></td></tr>
+        <tr><td>Srivastava et al., "Dropout" (2014)</td><td>Randomly dropping units as regularisation</td><td><a href="/machine-learning/14-training-deep-networks/">14</a></td></tr>
+        <tr><td>Ioffe &amp; Szegedy, "Batch normalization" (2015); Ba, Kiros &amp; Hinton, "Layer normalization" (2016)</td><td>Normalising activations to make deep networks trainable</td><td><a href="/machine-learning/14-training-deep-networks/">14</a></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Stage 5: deep architectures</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>paper</th><th>what it contributed</th><th>lesson</th></tr></thead>
+      <tbody>
+        <tr><td>LeCun et al., "Gradient-based learning applied to document recognition" (1998)</td><td>LeNet: convolution, pooling and end-to-end training</td><td><a href="/machine-learning/15-convolutional-networks/">15</a></td></tr>
+        <tr><td>Krizhevsky, Sutskever &amp; Hinton, "ImageNet classification with deep convolutional neural networks" (2012)</td><td>AlexNet: GPUs, ReLU and dropout win ImageNet by a wide margin</td><td><a href="/machine-learning/16-modern-cnns/">16</a></td></tr>
+        <tr><td>He, Zhang, Ren &amp; Sun, "Deep residual learning for image recognition" (2016)</td><td>Residual connections make 100+ layers trainable</td><td><a href="/machine-learning/16-modern-cnns/">16</a></td></tr>
+        <tr><td>Hochreiter &amp; Schmidhuber, "Long short-term memory" (1997)</td><td>Gated memory cells against vanishing gradients</td><td><a href="/machine-learning/17-recurrent-networks/">17</a></td></tr>
+        <tr><td>Mikolov et al., "Distributed representations of words and phrases" (2013)</td><td>word2vec: skip-gram with negative sampling</td><td><a href="/machine-learning/18-word-embeddings/">18</a></td></tr>
+        <tr><td>Bahdanau, Cho &amp; Bengio, "Neural machine translation by jointly learning to align and translate" (2015)</td><td>Attention over the source sentence</td><td><a href="/machine-learning/19-attention/">19</a></td></tr>
+        <tr><td>Vaswani et al., "Attention is all you need" (2017)</td><td>The Transformer: self-attention, multi-head, positional encodings</td><td><a href="/machine-learning/20-transformer/">20</a></td></tr>
+        <tr><td>Dosovitskiy et al., "An image is worth 16×16 words" (2021); Radford et al., "Learning transferable visual models from natural language supervision" (2021)</td><td>Vision transformers; CLIP's contrastive image–text training</td><td><a href="/machine-learning/21-vision-transformers-and-clip/">21</a></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Stage 6: generative models</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>paper</th><th>what it contributed</th><th>lesson</th></tr></thead>
+      <tbody>
+        <tr><td>Kingma &amp; Welling, "Auto-encoding variational Bayes" (2014); Rezende, Mohamed &amp; Wierstra (2014)</td><td>The VAE: the ELBO and the reparameterisation trick</td><td><a href="/machine-learning/22-autoencoders-and-vaes/">22</a></td></tr>
+        <tr><td>Goodfellow et al., "Generative adversarial nets" (2014)</td><td>A generator trained against a discriminator</td><td><a href="/machine-learning/23-gans/">23</a></td></tr>
+        <tr><td>Arjovsky, Chintala &amp; Bottou, "Wasserstein GAN" (2017)</td><td>A smoother distance between distributions for GAN training</td><td><a href="/machine-learning/23-gans/">23</a></td></tr>
+        <tr><td>Sohl-Dickstein et al., "Deep unsupervised learning using nonequilibrium thermodynamics" (2015); Ho, Jain &amp; Abbeel, "Denoising diffusion probabilistic models" (2020)</td><td>Diffusion: learn to reverse gradual noising; the simple noise-prediction loss</td><td><a href="/machine-learning/24-diffusion-models/">24</a></td></tr>
+        <tr><td>Song &amp; Ermon (2019); Song et al., "Score-based generative modeling through stochastic differential equations" (2021)</td><td>Score matching, Langevin sampling, the SDE and probability-flow ODE view</td><td><a href="/machine-learning/25-score-guidance-latent-diffusion/">25</a></td></tr>
+        <tr><td>Ho &amp; Salimans, "Classifier-free diffusion guidance" (2022); Rombach et al., "High-resolution image synthesis with latent diffusion models" (2022)</td><td>Guidance without a classifier; diffusion in an autoencoder's latent space</td><td><a href="/machine-learning/25-score-guidance-latent-diffusion/">25</a></td></tr>
+        <tr><td>Lipman et al., "Flow matching for generative modeling" (2023)</td><td>Regressing a velocity field along simple paths from noise to data</td><td><a href="/machine-learning/25-score-guidance-latent-diffusion/">25</a></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Stage 7: large language models</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>paper</th><th>what it contributed</th><th>lesson</th></tr></thead>
+      <tbody>
+        <tr><td>Sennrich, Haddow &amp; Birch, "Neural machine translation of rare words with subword units" (2016)</td><td>Byte-pair encoding for tokenisation</td><td><a href="/machine-learning/26-language-modelling-and-tokenisation/">26</a></td></tr>
+        <tr><td>Radford et al., GPT (2018) and GPT-2 (2019); Devlin et al., "BERT" (2019)</td><td>Generative and masked pretraining of transformers</td><td><a href="/machine-learning/27-pretraining-and-scaling-laws/">27</a></td></tr>
+        <tr><td>Brown et al., "Language models are few-shot learners" (2020)</td><td>GPT-3 and in-context learning</td><td><a href="/machine-learning/30-in-context-learning-and-reasoning/">30</a></td></tr>
+        <tr><td>Kaplan et al., "Scaling laws for neural language models" (2020); Hoffmann et al., "Training compute-optimal large language models" (2022)</td><td>Power laws in parameters, data and compute; Chinchilla's 20 tokens per parameter</td><td><a href="/machine-learning/27-pretraining-and-scaling-laws/">27</a></td></tr>
+        <tr><td>Christiano et al., "Deep reinforcement learning from human preferences" (2017); Ouyang et al., "Training language models to follow instructions with human feedback" (2022)</td><td>Reward models from comparisons; RLHF with PPO (InstructGPT)</td><td><a href="/machine-learning/28-fine-tuning-and-alignment/">28</a></td></tr>
+        <tr><td>Rafailov et al., "Direct preference optimization" (2023)</td><td>Preference tuning without a reward model or RL</td><td><a href="/machine-learning/28-fine-tuning-and-alignment/">28</a></td></tr>
+        <tr><td>Hu et al., "LoRA" (2022); Dao et al., "FlashAttention" (2022); Shazeer et al., "Outrageously large neural networks" (2017)</td><td>Low-rank adapters; IO-aware exact attention; sparse mixture of experts</td><td><a href="/machine-learning/29-making-llms-efficient/">29</a></td></tr>
+        <tr><td>Wei et al., "Chain-of-thought prompting" (2022); Wang et al., "Self-consistency" (2023)</td><td>Reasoning step by step; majority vote over sampled chains</td><td><a href="/machine-learning/30-in-context-learning-and-reasoning/">30</a></td></tr>
+        <tr><td>Shao et al., "DeepSeekMath" (2024); DeepSeek-AI, "DeepSeek-R1" (2025)</td><td>GRPO; reasoning learned by RL against verifiable rewards</td><td><a href="/machine-learning/30-in-context-learning-and-reasoning/">30</a>, <a href="/machine-learning/39-trust-regions-and-ppo/">39</a></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Stage 8: reinforcement learning</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>paper</th><th>what it contributed</th><th>lesson</th></tr></thead>
+      <tbody>
+        <tr><td>Bellman, <i>Dynamic Programming</i> (1957); Howard, <i>Dynamic Programming and Markov Processes</i> (1960)</td><td>The Bellman equation; policy iteration</td><td><a href="/machine-learning/33-mdps-and-bellman-equations/">33</a>, <a href="/machine-learning/34-dynamic-programming/">34</a></td></tr>
+        <tr><td>Lai &amp; Robbins (1985); Auer, Cesa-Bianchi &amp; Fischer (2002)</td><td>The regret lower bound; UCB1</td><td><a href="/machine-learning/32-bandits-and-exploration/">32</a></td></tr>
+        <tr><td>Sutton, "Learning to predict by the methods of temporal differences" (1988)</td><td>TD learning and TD(λ)</td><td><a href="/machine-learning/35-monte-carlo-and-td-learning/">35</a></td></tr>
+        <tr><td>Watkins &amp; Dayan, "Q-learning" (1992); van Hasselt, "Double Q-learning" (2010)</td><td>Off-policy control and its convergence; removing maximisation bias</td><td><a href="/machine-learning/36-sarsa-and-q-learning/">36</a></td></tr>
+        <tr><td>Tsitsiklis &amp; Van Roy (1997); Baird (1995)</td><td>Linear TD's fixed point and error bound; divergence off-policy</td><td><a href="/machine-learning/37-function-approximation-and-dqn/">37</a></td></tr>
+        <tr><td>Mnih et al., "Human-level control through deep reinforcement learning" (2015)</td><td>DQN: replay and target networks on Atari</td><td><a href="/machine-learning/37-function-approximation-and-dqn/">37</a></td></tr>
+        <tr><td>Williams, "Simple statistical gradient-following algorithms" (1992); Sutton et al., "Policy gradient methods for RL with function approximation" (2000)</td><td>REINFORCE; the policy gradient theorem</td><td><a href="/machine-learning/38-policy-gradients-and-actor-critic/">38</a></td></tr>
+        <tr><td>Kakade &amp; Langford (2002); Schulman et al., "TRPO" (2015), "GAE" (2016), "PPO" (2017)</td><td>The performance difference lemma; trust regions; generalised advantage estimation; the clipped objective</td><td><a href="/machine-learning/38-policy-gradients-and-actor-critic/">38</a>, <a href="/machine-learning/39-trust-regions-and-ppo/">39</a></td></tr>
+        <tr><td>Sutton, "Dyna" (1990); Kocsis &amp; Szepesvári, "Bandit based Monte-Carlo planning" (2006)</td><td>Learning and planning together; UCT</td><td><a href="/machine-learning/40-model-based-rl-and-mcts/">40</a></td></tr>
+        <tr><td>Silver et al., AlphaGo (2016), AlphaGo Zero (2017), AlphaZero (2018); Schrittwieser et al., MuZero (2020)</td><td>Search plus learned policy and value; self-play from scratch; planning with a learned model</td><td><a href="/machine-learning/41-alphago-alphazero-and-muzero/">41</a></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="first">
+    <h2>Ten to read first</h2>
+    <p>If you read only ten papers in full, read these: each is short enough, clear enough and central enough to repay a third pass.</p>
+    <ol>
+      <li>Rumelhart, Hinton &amp; Williams (1986): four pages that made backpropagation standard.</li>
+      <li>He et al. (2016), ResNet: one idea, a clean ablation, and the reason networks got deep.</li>
+      <li>Kingma &amp; Welling (2014), VAE: a derivation you can follow line by line with lesson 22.</li>
+      <li>Vaswani et al. (2017): read it with lesson 20 and A6 open, and check every dimension.</li>
+      <li>Ho, Jain &amp; Abbeel (2020), DDPM: the loss in its section 3.4 is the result of pages of algebra in lesson 24.</li>
+      <li>Kaplan et al. (2020) and Hoffmann et al. (2022) together: how an empirical law is measured, and how a second paper revised the first.</li>
+      <li>Rafailov et al. (2023), DPO: a short derivation that removed a whole pipeline.</li>
+      <li>Mnih et al. (2015), DQN: its methods section is a complete recipe; compare it with lesson 37's code.</li>
+      <li>Schulman et al. (2017), PPO: eight pages; then read Engstrom et al. (2020) to see what the paper leaves out.</li>
+      <li>Silver et al. (2017), AlphaGo Zero: the cleanest statement of search as policy improvement.</li>
+    </ol>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Do a first pass of the PPO paper in ten minutes, and write three sentences: the problem, the contribution, the evidence. Then compare them with lesson 39.</li>
+      <li>In the ResNet paper, find the experiment that shows residual connections help optimisation rather than generalisation. What would you expect to see in training error, and what do they report?</li>
+      <li>The Chinchilla paper revised Kaplan et al.'s compute-optimal allocation. Find the main methodological difference that the Chinchilla authors identify, and explain it with lesson 27's notation.</li>
+      <li>Pick one table of results from any paper in the map. For each row, write what would have to be true for the comparison to be fair (equal compute, equal tuning, same data). Which conditions can you verify from the paper?</li>
+      <li>Choose a paper from the map whose lesson does not reproduce its main result, and write the smallest experiment that would check its central claim, in the style of this course's code sections: a toy problem with a known answer and a number to compare.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Problem: policy-gradient methods are sample-inefficient because each batch supports only one gradient step, and TRPO, which allows larger steps, is complicated (second-order, a constrained problem per update) and hard to combine with shared policy–value networks. Contribution: a clipped surrogate objective that removes the incentive to move the probability ratio outside $[1 - \varepsilon, 1 + \varepsilon]$, allowing several epochs of first-order minibatch updates per batch. Evidence: continuous-control benchmarks and Atari, against TRPO, A2C and others, plus a comparison of surrogate variants (no clipping, clipping, adaptive KL penalty).</p>
+        <p><b>2.</b> They compare plain and residual networks of 18 and 34 layers on ImageNet. The plain 34-layer network has <i>higher training error</i> than the plain 18-layer one, so its problem is optimisation, not overfitting; with residual connections, the 34-layer network has lower training and validation error than the 18-layer one.</p>
+        <p><b>3.</b> Kaplan et al. trained models with a fixed learning-rate schedule length regardless of the number of tokens, so models trained for fewer tokens than the schedule assumed were stopped early in an un-annealed state, which underestimates the benefit of more data. Chinchilla matched the cosine schedule to each run's length, and fitted $L(N, D)$ with three methods that agree on $N_\text{opt}\propto C^{0.5}$, $D_\text{opt}\propto C^{0.5}$, roughly 20 tokens per parameter, against Kaplan's $N_\text{opt}\propto C^{0.73}$.</p>
+        <p><b>4.</b> An open-ended exercise. Typical findings: compute is often not reported for baselines; baselines are often taken from earlier papers, with different preprocessing or tuning budgets; the number of seeds is often one. Note what is verifiable from the text, the appendix and the released code.</p>
+        <p><b>5.</b> An open-ended exercise. For example, for double Q-learning: the maximisation-bias MDP of lesson 36, comparing the fraction of left actions; for batch normalisation's claimed reduction of "internal covariate shift": train with and without it and measure both the shift in each layer's input distribution and the training speed, as Santurkar et al. (2018) did, finding that the speed-up remains even when the shift does not shrink.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Keshav, "How to read a paper"</b> (ACM SIGCOMM Computer Communication Review, 2007). The three-pass method.</li>
+      <li><b>Lipton &amp; Steinhardt, "Troubling trends in machine learning scholarship"</b> (2018). What to watch for in papers, and in your own writing.</li>
+      <li><b>Henderson et al., "Deep reinforcement learning that matters"</b> (AAAI, 2018). Seeds, baselines and reporting in deep RL.</li>
+      <li><b>Engstrom et al., "Implementation matters in deep policy gradients"</b> (ICLR, 2020).</li>
+      <li><b>Santurkar et al., "How does batch normalization help optimization?"</b> (NeurIPS, 2018). A paper that tested another paper's explanation.</li>
+    </ul>
+  </section>
+</article>

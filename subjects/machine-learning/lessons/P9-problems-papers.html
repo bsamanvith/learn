@@ -1,0 +1,146 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P9 · Stage 9: reading the papers</div>
+  <h1>Problem set: reading the papers</h1>
+  <p class="lede">Eighteen problems, each built on a landmark paper from lesson 42's map. Some ask you to re-derive the central equation, the step a third pass should be able to do; others give you a claim, a table or a fitted law and ask whether it holds up. Try each one with the paper open before looking at the solution. Problems marked <span class="tag code">code</span> take a few lines of NumPy; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/42-landmark-papers/">42</a>, with the lessons each paper belongs to</span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span> <span class="tag code">code</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="training">
+    <h2>Training deep networks</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Kingma &amp; Ba, 2015.) Adam's first moment is $m_t = \beta_1m_{t-1} + (1 - \beta_1)g_t$ with $m_0 = 0$. Show that if the gradients have a constant mean $E[g_t] = \bar g$, then $E[m_t] = (1 - \beta_1^t)\bar g$, and explain what goes wrong in the first steps without the correction. How large is the effect for the second moment at step 10, with $\beta_2 = 0.999$?</p>
+        <details><summary>Solution</summary><div>
+          <p>Unrolling, $m_t = (1 - \beta_1)\sum_{i=1}^t\beta_1^{t-i}g_i$, so $E[m_t] = (1 - \beta_1)\bar g\sum_{i=0}^{t-1}\beta_1^i = (1 - \beta_1^t)\bar g$. Dividing by $1 - \beta_1^t$ removes the bias towards the zero initialisation. Without correction, the second moment is the bigger problem: at $t = 10$, $1 - 0.999^{10} = 0.00995$, so $v_t$ is about 100 times too small, $\sqrt{v_t}$ about 10 times too small, and, since $m_t$ is itself too small by the factor $1 - 0.9^{10} = 0.65$, the uncorrected step would be about $0.65/\sqrt{0.00995} \approx 6.5$ times larger than intended, just when the estimates are least reliable.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (He et al., "Identity mappings in deep residual networks", 2016.) With pre-activation blocks, $x_{l+1} = x_l + F(x_l)$. Show that $x_L = x_l + \sum_{i=l}^{L-1}F(x_i)$ and derive $\partial E/\partial x_l$. Why can the gradient at layer $l$ not vanish however deep the network is, and what breaks if the shortcut is scaled by $\lambda \neq 1$?</p>
+        <details><summary>Solution</summary><div>
+          <p>Summing $x_{i+1} - x_i = F(x_i)$ from $i = l$ to $L - 1$ gives the first identity. By the chain rule, $\frac{\partial E}{\partial x_l} = \frac{\partial E}{\partial x_L}\Big(I + \frac{\partial}{\partial x_l}\sum_{i=l}^{L-1}F(x_i)\Big)$. The identity term passes $\partial E/\partial x_L$ to every layer directly; for the gradient to vanish, the second term would have to cancel it exactly, which is unlikely for a minibatch. With $x_{i+1} = \lambda x_i + F(x_i)$, the direct term becomes $\lambda^{L-l}$, which vanishes for $\lambda &lt; 1$ and explodes for $\lambda &gt; 1$ over many layers: the paper's experiments with scaled and gated shortcuts trained worse for this reason.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Srivastava et al., 2014; Wager, Wang &amp; Liang, 2013.) In linear regression, keep each input feature with probability $p$ and scale it by $1/p$: $\tilde x_j = m_jx_j/p$, $m_j \sim \text{Bernoulli}(p)$. Show that the expected squared error is the ridge-like objective $\|y - Xw\|^2 + \frac{1 - p}{p}\sum_jw_j^2\|X_{:,j}\|^2$.</p>
+        <details><summary>Solution</summary><div>
+          <p>For one example, $E[\tilde x^\top w] = x^\top w$ and $\operatorname{Var}(\tilde x^\top w) = \sum_jw_j^2x_j^2\operatorname{Var}(m_j/p) = \frac{1 - p}{p}\sum_jw_j^2x_j^2$. Then $E(y - \tilde x^\top w)^2 = (y - x^\top w)^2 + \operatorname{Var}(\tilde x^\top w)$. Summing over examples gives the stated objective. Dropout here is L2 regularisation with a per-feature weight proportional to that feature's scale, stronger as $p$ falls; for deep networks the penalty is data-dependent and not exactly L2, but the intuition carries over.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Vaswani et al., 2017.) If the components of $q, k \in \mathbb R^{d}$ are independent with mean 0 and variance 1, find the variance of $q^\top k$. What happens to the softmax over $n$ such scores for $d = 512$ without the $1/\sqrt d$ scaling?</p>
+        <details><summary>Solution</summary><div>
+          <p>$q^\top k = \sum_iq_ik_i$ is a sum of $d$ independent terms of variance 1, so its variance is $d$ and its standard deviation $\sqrt{512} \approx 22.6$. Score gaps of tens of units make the softmax nearly one-hot, and the softmax Jacobian $\operatorname{diag}(p) - pp^\top$ is then nearly zero (problem 9 of <a href="/machine-learning/PM-problems-math-toolkit/">PM</a>), so the attention weights stop learning. Dividing by $\sqrt d$ restores unit variance.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="representations">
+    <h2>Representations and generative models</h2>
+    <ol start="5">
+      <li>
+        <p><span class="tag hard">hard</span> (Levy &amp; Goldberg, 2014.) Skip-gram with $k$ negative samples maximises, for each word–context pair, $\#(w, c)\log\sigma(s) + k\,\#(w)\frac{\#(c)}{|D|}\log\sigma(-s)$, where $s = w\cdot c$ and $|D|$ is the number of pairs. Show that the optimum is $s = \mathrm{PMI}(w, c) - \log k$, if the dot products can be set freely.</p>
+        <details><summary>Solution</summary><div>
+          <p>Differentiate in $s$, using $\frac{d}{ds}\log\sigma(s) = \sigma(-s)$ and $\frac{d}{ds}\log\sigma(-s) = -\sigma(s)$: $\#(w, c)\sigma(-s) = k\frac{\#(w)\#(c)}{|D|}\sigma(s)$. Since $\sigma(s)/\sigma(-s) = e^s$, $e^s = \frac{\#(w, c)|D|}{k\,\#(w)\#(c)}$, so $s = \log\frac{P(w, c)}{P(w)P(c)} - \log k$. word2vec implicitly factorises a shifted PMI matrix, which links it to the count-based methods of lesson 18.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Goodfellow et al., 2014.) For a fixed generator with density $p_g$, find the discriminator that maximises $E_{p_\text{data}}\log D(x) + E_{p_g}\log(1 - D(x))$, and show that the generator's objective at that discriminator is $2\,\mathrm{JSD}(p_\text{data}\,\|\,p_g) - \log4$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Pointwise, $a\log D + b\log(1 - D)$ is maximised at $D = a/(a + b)$, so $D^\star(x) = \frac{p_\text{data}(x)}{p_\text{data}(x) + p_g(x)}$. Substitute and write $m = \frac12(p_\text{data} + p_g)$: $E_{p_\text{data}}\log\frac{p_\text{data}}{2m} + E_{p_g}\log\frac{p_g}{2m} = \mathrm{KL}(p_\text{data}\,\|\,m) + \mathrm{KL}(p_g\,\|\,m) - 2\log2 = 2\,\mathrm{JSD} - \log4$. The minimum $-\log4$ is reached only at $p_g = p_\text{data}$. When the two distributions have disjoint supports, the JSD is stuck at $\log2$ and gives no gradient, the problem the Wasserstein GAN addressed (lesson 23).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Ho, Jain &amp; Abbeel, 2020.) The forward process is $q(x_t\mid x_{t-1}) = N(\sqrt{1 - \beta_t}\,x_{t-1}, \beta_tI)$. Show by induction that $q(x_t\mid x_0) = N(\sqrt{\bar\alpha_t}\,x_0, (1 - \bar\alpha_t)I)$ with $\bar\alpha_t = \prod_{s\le t}(1 - \beta_s)$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Suppose $x_{t-1} = \sqrt{\bar\alpha_{t-1}}x_0 + \sqrt{1 - \bar\alpha_{t-1}}\,\epsilon$. Then $x_t = \sqrt{\alpha_t}x_{t-1} + \sqrt{1 - \alpha_t}\,\epsilon'$ with $\alpha_t = 1 - \beta_t$, so $x_t = \sqrt{\bar\alpha_t}x_0 + \sqrt{\alpha_t(1 - \bar\alpha_{t-1})}\,\epsilon + \sqrt{1 - \alpha_t}\,\epsilon'$. The two independent noise terms add to a Gaussian with variance $\alpha_t - \bar\alpha_t + 1 - \alpha_t = 1 - \bar\alpha_t$. The base case $t = 1$ is the definition. This closed form is what lets DDPM train on a random $t$ per example without simulating the chain.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Dosovitskiy et al., 2021.) A ViT splits a $224\times224$ RGB image into $16\times16$ patches. How many tokens are there, how many numbers does each patch hold, and how does the cost of self-attention change if the patch size is halved?</p>
+        <details><summary>Solution</summary><div>
+          <p>$(224/16)^2 = 196$ patches, plus a class token if one is used: 197 tokens. Each patch holds $16\cdot16\cdot3 = 768$ numbers, which a linear layer maps to the model width. With $8\times8$ patches there are $28^2 = 784$ tokens, 4 times as many, and the attention matrix has 16 times as many entries. This is why ViTs use large patches, and why lesson 21 calls the patch size a compute–resolution trade-off.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="llms">
+    <h2>Language models</h2>
+    <ol start="9">
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Kaplan et al., 2020.) Justify the estimate $C \approx 6ND$ for the training compute of a transformer with $N$ parameters on $D$ tokens. Which part of the model does it ignore?</p>
+        <details><summary>Solution</summary><div>
+          <p>In the forward pass every parameter takes part in one multiply-add per token: $2N$ FLOPs per token. The backward pass computes gradients with respect to both activations and weights, about twice the forward cost: $4N$. Total $6N$ per token, $6ND$ overall. It ignores the attention scores and weighted sums, which cost about $2n_\text{layer}n_\text{ctx}d_\text{model}$ per token in the forward pass and depend on the context length rather than on $N$; for large models with moderate contexts they are a small fraction.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Hoffmann et al., 2022.) Minimise $L(N, D) = E + A/N^\alpha + B/D^\beta$ subject to $6ND = C$. Show that $N_\text{opt} \propto C^{\beta/(\alpha + \beta)}$ and $D_\text{opt} \propto C^{\alpha/(\alpha + \beta)}$, and evaluate the exponents for the paper's fit $\alpha = 0.34$, $\beta = 0.28$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Substitute $D = C/(6N)$: $L = E + AN^{-\alpha} + B(6N/C)^\beta$. Setting $dL/dN = 0$ gives $\alpha AN^{-\alpha - 1} = \beta B6^\beta C^{-\beta}N^{\beta - 1}$, so $N^{\alpha + \beta} \propto C^\beta$ and $N_\text{opt} \propto C^{\beta/(\alpha + \beta)}$; then $D_\text{opt} = C/(6N_\text{opt}) \propto C^{\alpha/(\alpha + \beta)}$. With the fitted values the exponents are $0.28/0.62 = 0.45$ and $0.55$: parameters and data should grow at nearly the same rate, unlike Kaplan et al.'s 0.73 for parameters.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag code">code</span> Take the paper's fitted constants $E = 1.69$, $A = 406.4$, $B = 410.7$, $\alpha = 0.34$, $\beta = 0.28$ and find the compute-optimal $N$, $D$ and tokens per parameter numerically for $C = 10^{21}$, $5.76\times10^{23}$ (Gopher's budget) and $10^{25}$ FLOPs. Compare with the "20 tokens per parameter" rule and with Chinchilla itself, 70B parameters on 1.4T tokens. What do you conclude?</p>
+        <details><summary>Solution</summary><div>
+          <p>A grid search over $N$ gives $1.8\times10^9$ parameters and 50 tokens per parameter at $10^{21}$; $3.2\times10^{10}$ and 93 at $5.76\times10^{23}$; and $1.2\times10^{11}$ and 122 at $10^{25}$. The fit implies far more than 20 tokens per parameter, and a ratio that grows with compute, while Chinchilla was trained at 20. So the parametric fit, as printed, does not agree with the paper's other two methods or with the model it justified. Besiroglu et al. ("Chinchilla scaling: a replication attempt", 2024) reconstructed the data from the paper's figure, found this inconsistency, and obtained a refit consistent with about 20 tokens per parameter. The lesson: recompute a paper's headline numbers from its own fitted equations; it takes a few minutes and occasionally finds something.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Rafailov et al., 2023.) Show that the maximiser of $E_{y\sim\pi}[r(x, y)] - \beta\,\mathrm{KL}(\pi(\cdot\mid x)\,\|\,\pi_\text{ref}(\cdot\mid x))$ is $\pi^\star(y\mid x) = \pi_\text{ref}(y\mid x)e^{r(x, y)/\beta}/Z(x)$. Invert this to express $r$ in terms of $\pi^\star$, and show that the partition function cancels in the Bradley–Terry probability that $y_w$ is preferred to $y_l$.</p>
+        <details><summary>Solution</summary><div>
+          <p>The objective equals $-\beta\,E_\pi\big[\log\frac{\pi(y\mid x)}{\pi_\text{ref}(y\mid x)e^{r/\beta}}\big] = -\beta\,\mathrm{KL}(\pi\,\|\,\pi^\star) + \beta\log Z(x)$, which is maximised when the KL is zero, at $\pi = \pi^\star$. Taking logs, $r(x, y) = \beta\log\frac{\pi^\star(y\mid x)}{\pi_\text{ref}(y\mid x)} + \beta\log Z(x)$. Bradley–Terry gives $P(y_w \succ y_l) = \sigma(r(x, y_w) - r(x, y_l))$, and $\beta\log Z(x)$ appears in both terms and cancels: $P = \sigma\big(\beta\log\frac{\pi^\star(y_w\mid x)}{\pi_\text{ref}(y_w\mid x)} - \beta\log\frac{\pi^\star(y_l\mid x)}{\pi_\text{ref}(y_l\mid x)}\big)$. Maximising the likelihood of the preferences over a parametric $\pi_\theta$ in place of $\pi^\star$ is the DPO loss: no reward model and no sampling.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Hu et al., 2022.) LoRA replaces the update of a $d\times d$ weight matrix by $BA$ with $B \in \mathbb R^{d\times r}$, $A \in \mathbb R^{r\times d}$. For $d = 4096$ and $r = 8$, how many trainable parameters does one matrix have, as a fraction of the full matrix? Why is $B$ initialised to zero?</p>
+        <details><summary>Solution</summary><div>
+          <p>$2dr = 65{,}536$ against $d^2 = 16{,}777{,}216$: 0.39%. With $B = 0$ the product $BA$ is zero at the start, so the adapted model begins exactly at the pretrained one, and $A$'s random initialisation still gives $B$ non-zero gradients. (If both were zero, neither would ever receive a gradient.)</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="rl">
+    <h2>Reinforcement learning</h2>
+    <ol start="14">
+      <li>
+        <p><span class="tag code">code</span> (van Hasselt, 2010.) $k$ actions all have true value 0, and each estimate is the true value plus $N(0, 1)$ noise. Estimate $E[\max_a\hat Q(a)]$ for $k = 2, 10, 100$ by simulation, and compare with the double estimator that picks $\arg\max$ with one set of estimates and evaluates it with an independent second set. Check $k = 2$ against the exact value.</p>
+        <details><summary>Solution</summary><div>
+          <p>With a million trials, the single estimator gives 0.565, 1.538 and 2.509 for $k = 2, 10, 100$; the exact value for $k = 2$ is $E\max(Z_1, Z_2) = 1/\sqrt\pi = 0.564$. The double estimator gives values within $\pm0.002$ of 0, the true maximum. Q-learning's target $\max_a Q(s', a)$ is the single estimator applied at every step, and the bias grows with the number of actions; the double estimator is unbiased here because the second set of estimates is independent of the choice (it can underestimate when the true values differ).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Mnih et al., 2015.) Name the two changes DQN makes to Q-learning with a neural network, and for each, say which of the deadly triad's problems (lesson 37) it addresses and which it does not.</p>
+        <details><summary>Solution</summary><div>
+          <p>Experience replay samples past transitions uniformly from a large buffer, which breaks the correlation between consecutive updates and reuses data; it does not remove off-policy learning (it makes it more off-policy). The target network computes $r + \gamma\max_aQ_{\theta^-}(s', a)$ with parameters frozen for thousands of steps, so the regression target does not move with every update; this damps the feedback loop of bootstrapping with function approximation but does not remove bootstrapping. Neither guarantees convergence: the triad is still present, only tamed. The maximisation bias of problem 14 also remains, which Double DQN addresses.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Silver et al., 2017.) AlphaGo Zero trains its policy towards the visit counts of MCTS, $\pi(a) \propto N(a)^{1/\tau}$. Explain why this is a policy-improvement step, and why training the policy on the network's own raw outputs would not be.</p>
+        <details><summary>Solution</summary><div>
+          <p>The search uses the network's prior and value as a starting point but corrects them with look-ahead: visits concentrate on moves whose backed-up values are high, so the visit distribution is a better policy than the prior (lesson 41 measured 93.8% optimal moves for the raw policy against 98.7% for the search). Training on it distils the improvement into the network, and the next search starts from a better prior, as in policy iteration. Training the policy on its own outputs is a fixed point of the loss with no signal to improve; the improvement has to come from somewhere, and here it comes from search.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="judging">
+    <h2>Judging evidence</h2>
+    <ol start="17">
+      <li>
+        <p><span class="tag core">core</span> A paper reports: "Our optimiser reaches 76.9% top-1 accuracy, against 76.3 ± 0.4% for AdamW (mean ± std over 5 seeds)." The appendix says the new optimiser's learning rate was the best of 6 values chosen on the validation set, with one seed, and AdamW used the hyperparameters of an earlier paper. List the problems, and say what experiment would settle the claim.</p>
+        <details><summary>Solution</summary><div>
+          <p>The new method has one run, so there is no estimate of its spread; 76.9 is 1.5 standard deviations above AdamW's mean, which a single lucky seed could produce. Choosing the best of 6 learning rates on validation and reporting that run adds an optimistic selection bias, while AdamW got no tuning at all on this set-up. The evaluation would need: the same tuning budget for both (a sweep over learning rate and weight decay), several seeds per method at the chosen settings, a held-out test set evaluated once, and equal compute. A difference that survives that, with confidence intervals that do not overlap much, is a result. Assignment <a href="/machine-learning/A2-optimiser-zoo/">A2</a>'s third experiment is this exercise at small scale.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> A paper fits a power law $L = aC^{-b}$ to five models spanning compute $10^{18}$ to $10^{20}$ FLOPs and extrapolates it to $10^{24}$. Name three ways the extrapolation can fail, and for each, say what evidence in the paper would make you trust it more.</p>
+        <details><summary>Solution</summary><div>
+          <p>(1) The irreducible loss: a pure power law goes to zero, but real losses approach a floor $E$; over two decades the curvature from $E$ may be invisible and become dominant over six. Evidence: a fit with an explicit constant, and residuals with no trend. (2) Settings that were tuned for small models (learning rate, schedule length, batch size, the data mix) may be wrong at scale, as Chinchilla found for Kaplan's schedule. Evidence: per-size tuning and held-out points at larger scale that the fit did not see. (3) The data runs out or repeats: the law assumes fresh data from the same distribution. Evidence: an estimate of the tokens needed at the target scale and a check that they exist. In general, an extrapolation over four decades from two is a hypothesis, and the best evidence is a prediction made before a larger run and then checked.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

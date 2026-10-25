@@ -1,0 +1,276 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 27 · Stage 7: large language models</div>
+  <h1>Pretraining and scaling laws</h1>
+  <p class="lede">Pretraining is lesson 26's next-token loss, applied by a transformer to trillions of tokens of text. This lesson covers what goes into it: the data and how it is cleaned, the recipe that keeps training stable, and the arithmetic of its cost, which comes down to the formula $C\approx6ND$. Then it turns to the empirical fact that made the field plan its models years ahead. Test loss falls as a smooth power law in parameters, data and compute, so small runs predict large ones. From the fitted law we derive how to split a compute budget between model size and data, the Chinchilla result. The code measures a scaling law for itself, on Shakespeare, and finds out how much such a fit can be trusted.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/26-language-modelling-and-tokenisation/">lesson 26</a>, <a href="/machine-learning/20-transformer/">lesson 20</a>, <a href="/machine-learning/07-stochastic-optimisation/">lesson 07</a></span><span><b>Math pulled in:</b> counting FLOPs in matrix products, power laws and log–log plots, constrained minimisation by substitution, least squares with nonlinear parameters</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Lesson 26 defined the object, a next-token distribution, and its loss. Pretraining is the decision to make the model large and the data enormous, and to do nothing cleverer. GPT-2 (2019) had 1.5 billion parameters trained on 40 GB of web text; GPT-3 (2020) had 175 billion parameters and 300 billion tokens; Llama 3 (2024) trained an 8-billion-parameter model on 15 trillion tokens. Along the way the models learned to translate, summarise, write code and answer questions, without any of these being trained for separately. They are all ways to predict the next token well.</p>
+    <p>Spending tens of millions of dollars on one training run calls for a way to predict the outcome before paying for it. The striking empirical finding of Kaplan et al. (2020) is that this is possible: the test loss of a language model is a smooth, simple function of the number of parameters $N$, the number of training tokens $D$ and the compute $C$, over many orders of magnitude. Researchers fit that function on cheap small runs and extrapolate.</p>
+  </section>
+
+  <section id="data">
+    <h2>The data</h2>
+    <p>Most pretraining text comes from Common Crawl, a public scrape of billions of web pages, and most of the work goes into throwing most of it away. A typical pipeline:</p>
+    <ol>
+      <li><b>Extraction</b>: strip HTML, menus and boilerplate to get the main text of each page.</li>
+      <li><b>Language and quality filtering</b>: keep the languages wanted; drop pages that are too short, mostly symbols, or spam. Many pipelines train a small classifier to tell "looks like Wikipedia or a textbook" from random web text, and keep the pages it scores highly.</li>
+      <li><b>Deduplication</b>: the web is full of copies. Exact duplicates are found by hashing; near-duplicates by MinHash, which estimates the Jaccard similarity of two documents' sets of word n-grams from a few hash minima. Duplicated text wastes compute and encourages memorisation.</li>
+      <li><b>Mixing</b>: combine the filtered web with smaller, higher-quality sources such as books, Wikipedia, scientific papers and code, each weighted up or down.</li>
+    </ol>
+    <p>FineWeb (Penedo et al., 2024) documents a complete pipeline, with ablations showing how much each step matters: the same model trained on better-filtered data of the same size reaches a lower loss and does better on benchmarks. The test set must also be cleaned out of the training data, or benchmark scores measure memory rather than ability.</p>
+  </section>
+
+  <section id="recipe">
+    <h2>The training recipe</h2>
+    <p>The architecture is the decoder-only transformer of lesson 20, with a few changes that have become standard: normalisation before each sublayer (pre-norm, often RMSNorm), rotary position embeddings, and a gated feed-forward layer (SwiGLU). The optimiser is AdamW (lesson 07) with a short linear warm-up of the learning rate followed by a cosine decay to about a tenth of its peak, gradient clipping at norm 1, and weight decay 0.1. Weights and activations are kept in 16-bit floating point (bfloat16) with a 32-bit master copy of the weights, which halves memory and doubles throughput. Large runs still suffer occasional loss spikes, sudden jumps in the loss that usually recover; the common remedy is to restart from an earlier checkpoint and skip the batches that caused it.</p>
+    <p>None of this changes what is being optimised. It is the cross-entropy of lesson 26 on documents packed into sequences of 2,048 to 8,192 tokens, with batches of millions of tokens.</p>
+  </section>
+
+  <section id="compute">
+    <h2>Counting compute: $C\approx6ND$</h2>
+    <p>Almost all of a transformer's arithmetic is matrix multiplication with its weights. Multiplying an input vector by a $d_\text{in}\times d_\text{out}$ weight matrix takes $d_\text{in}d_\text{out}$ multiplications and as many additions, 2 floating-point operations (FLOPs) per weight. Every weight is used once per token, so the forward pass costs about $2N$ FLOPs per token.</p>
+    <p>The backward pass costs twice as much. For a layer $\mathbf{y} = W\mathbf{x}$, it computes the gradient with respect to the input, $W^\top\mathbf{g}$, and the gradient with respect to the weights, $\mathbf{g}\mathbf{x}^\top$; each is a product of the same size as the forward one (lesson 13). That is $4N$ FLOPs per token, so</p>
+    <div class="result">
+      <div class="label">Training compute</div>
+      <p>$$C\approx6ND\ \text{FLOPs}$$ for a model with $N$ parameters trained on $D$ tokens.</p>
+    </div>
+    <p>What this leaves out is attention's comparison of every token with every earlier one, which adds about $2n_\text{layer}n_\text{ctx}d_\text{model}$ FLOPs per token to the forward pass, where $n_\text{ctx}$ is the context length (Kaplan et al., 2020). Since $N\approx12n_\text{layer}d_\text{model}^2$, this is small relative to $2N$ when $d_\text{model}$ is much larger than $n_\text{ctx}/12$, which holds for large models at moderate context lengths. Embedding lookups cost nothing, so scaling-law papers usually count only the non-embedding parameters.</p>
+    <p><b>An example.</b> GPT-3 is $6\times175\times10^9\times300\times10^9 = 3.15\times10^{23}$ FLOPs. An A100 GPU does $3.12\times10^{14}$ bfloat16 FLOP/s at its peak, and a well-run training job keeps about 40% of that busy (the "model FLOPs utilisation"). That is $2.5\times10^9$ GPU-seconds, about 29,000 GPU-days: a thousand GPUs for a month.</p>
+  </section>
+
+  <section id="laws">
+    <h2>Scaling laws</h2>
+    <p>Kaplan et al. trained hundreds of transformers, from 768 to 1.5 billion non-embedding parameters, and found that when one resource is the bottleneck the test loss follows a power law in it:</p>
+    <div class="eq">$$L(N) = \Big(\frac{N_c}{N}\Big)^{\alpha_N},\qquad L(D) = \Big(\frac{D_c}{D}\Big)^{\alpha_D},\qquad L(C) = \Big(\frac{C_c}{C}\Big)^{\alpha_C},$$</div>
+    <p>with $\alpha_N\approx0.076$, $\alpha_D\approx0.095$ and $\alpha_C\approx0.050$. A power law is a straight line on log–log axes, since $\log L = \alpha(\log N_c - \log N)$. The exponents are small, so progress is expensive: with $\alpha_N = 0.076$, halving the loss needs a model $2^{1/0.076}\approx9{,}000$ times larger. But it is predictable, and the shape of the model (depth against width, number of heads) mattered much less than its size.</p>
+    <p>The loss cannot fall to zero, because text has an entropy (lesson 26). Hoffmann et al. (2022), the "Chinchilla" paper, fitted a form with a floor and both resources together:</p>
+    <div class="result">
+      <div class="label">The Chinchilla form</div>
+      <p>$$L(N, D) = E + \frac{A}{N^\alpha} + \frac{B}{D^\beta}.$$</p>
+    </div>
+    <p>$E$ is the irreducible loss, the entropy of the text plus whatever no model of this kind can capture. $A/N^\alpha$ is the loss of a model with finite capacity trained on infinite data, and $B/D^\beta$ is the loss of training an infinitely large model on finite data. Their fit was $E = 1.69$, $A = 406.4$, $B = 410.7$, $\alpha = 0.34$, $\beta = 0.28$, in nats per token.</p>
+  </section>
+
+  <section id="optimal">
+    <h2>Compute-optimal models</h2>
+    <p>Given a budget $C$, how should it be split between a bigger model and more data? Substitute $D = C/(6N)$, so that $B/D^\beta = B(C/6)^{-\beta}N^\beta$, and set the derivative with respect to $N$ to zero:</p>
+    <div class="eq">$$-\alpha AN^{-\alpha-1} + \beta B\Big(\frac{C}{6}\Big)^{-\beta}N^{\beta-1} = 0\quad\Longrightarrow\quad N^{\alpha+\beta} = \frac{\alpha A}{\beta B}\Big(\frac{C}{6}\Big)^\beta .$$</div>
+    <div class="result">
+      <div class="label">The optimal allocation</div>
+      <p>$$N_\text{opt} = G\Big(\frac{C}{6}\Big)^{\frac{\beta}{\alpha+\beta}},\qquad D_\text{opt} = G^{-1}\Big(\frac{C}{6}\Big)^{\frac{\alpha}{\alpha+\beta}},\qquad G = \Big(\frac{\alpha A}{\beta B}\Big)^{\frac{1}{\alpha+\beta}}.$$</p>
+    </div>
+    <p>Two consequences. First, both grow as powers of the budget, and the exponents add to 1. If $\alpha\approx\beta$, model size and data should grow equally, each as $\sqrt{C}$. Second, at the optimum $\alpha A/N^\alpha = \beta B/D^\beta$: the two reducible terms of the loss are in the fixed ratio $\beta:\alpha$.</p>
+    <p>Hoffmann et al. estimated the exponents three ways. Two methods, which take the lowest-loss model at each budget directly from the runs, gave $N_\text{opt}\propto C^{0.50}$ and $C^{0.49}$, and about 20 training tokens per parameter. Kaplan et al. had concluded $N_\text{opt}\propto C^{0.73}$: make models much bigger and train them on relatively little data. GPT-3 and Gopher (280B parameters, 300B tokens) were built on that advice, with about 1 token per parameter. Chinchilla tested the claim: with Gopher's compute it trained a 70B model on 1.4T tokens, and beat Gopher on nearly every benchmark. Much of the disagreement has since been traced to choices in Kaplan's set-up: a learning-rate schedule whose length did not match each run's length, which handicaps short runs, and the counting of non-embedding parameters in small models (Pearce and Song, 2024).</p>
+    <p>A cautionary footnote. Besiroglu et al. (2024) refitted the third method from Chinchilla's own figures and found that the published constants above do not fit the data well. Plug them into the formula and Gopher's compute gives a 32B model at 93 tokens per parameter. Their refit, $E = 1.82$, $A = 482$, $B = 2085$, $\alpha = 0.348$, $\beta = 0.366$, gives 72B at 18 tokens per parameter, agreeing with the other two methods. Scaling laws are fitted curves, and fits with five parameters can go wrong in ways that are invisible until you check them.</p>
+    <p><b>Beyond Chinchilla.</b> "Compute-optimal" minimises the cost of training only. A model that will answer billions of queries costs $2N$ FLOPs per generated token forever after, so it pays to train a smaller model for longer than Chinchilla prescribes, accepting a little more training compute for a cheaper model to run (Sardana and Frankle, 2023). Llama 3 8B saw about 1,900 tokens per parameter. The other limit is data: there are only so many tokens of good text, and Muennighoff et al. (2023) found that repeating data for up to about four epochs is nearly as good as fresh data, with fast-diminishing returns after that.</p>
+    <figure class="plate wide" data-scene="scaling">
+      <div class="stage">
+        <canvas aria-label="Predicted loss against model size for fixed training compute, with the compute-optimal point"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sl-c">log₁₀ compute (FLOPs) <input id="sl-c" type="range" data-k="c" min="18" max="26" step="0.1"><output data-out="c"></output></label>
+            <div class="seg" data-opt="fit" role="group"><button type="button" data-v="hoffmann">published fit</button><button type="button" data-v="besiroglu">Besiroglu refit</button></div>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each grey curve is one compute budget $C$: spend it on a bigger model and you can afford fewer tokens, $D = C/6N$. Every curve has a minimum, and the dashed line joins them. With the published constants, $L = 1.69 + 406.4/N^{0.34} + 410.7/D^{0.28}$, the best ratio drifts from about 30 to 150 tokens per parameter as you slide the budget from $10^{19}$ to $10^{26}$ FLOPs: the poor fit described above. Switch to the Besiroglu refit and it stays between 16 and 25, in line with Chinchilla's other two methods and its 70B, 1.4T-token model.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>The code measures a scaling law on Tiny Shakespeare, 1.1 million characters of plays (downloaded once and cached). The models are the oldest neural language model, Bengio et al.'s MLP: the embeddings of the previous 16 characters are concatenated and passed through two tanh layers of width $H$ and a softmax. Six widths, from 16 to 512, give $N$ from 5,392 to 426,496 parameters that are used in matrix products. Each model makes one pass over 896,000 training characters, so no example is seen twice, and its held-out loss is recorded at 14 points along the way. The result is a grid of $L(N, D)$, to which part 4 fits the Chinchilla form. For fixed exponents the form is linear in $E$, $A$ and $B$, so the code searches a grid of exponents and solves a least-squares problem for each. Part 5 asks the compute-allocation question twice: of the runs, which width reached the lowest loss for each budget $C = 6ND$, and what does the fitted formula say?</p>
+<pre><code>import os
+import time
+import urllib.request
+import numpy as np
+
+# 1. Data: Tiny Shakespeare (1.1 MB of plays), as characters. The last 10% is held out.
+path = os.path.expanduser("~/.cache/learn-text/shakespeare.txt")
+if not os.path.exists(path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/karpathy/char-rnn/master/data/"
+                               "tinyshakespeare/input.txt", path)
+text = open(path).read()
+chars = sorted(set(text)); V = len(chars)
+ids = np.array([chars.index(ch) for ch in text], dtype=np.int64)
+split = int(0.9 * len(ids)); train, val = ids[:split], ids[split:]
+K, E = 16, 16                                    # context of 16 characters, 16-dim embeddings
+print(f"{len(text):,} characters, vocabulary {V}; {len(train):,} for training")
+
+# 2. A family of models: Bengio-style MLP language models, embeddings -&gt; H -&gt; H -&gt; softmax,
+# that differ only in their width H. N counts the weights used in matrix multiplies (not the
+# embedding table, which is a lookup), so training costs about 6N FLOPs per token.
+def init(H, rng):
+    s = lambda a: np.sqrt(1 / a)
+    return {"emb": rng.standard_normal((V, E)) * 0.5,
+            "W1": rng.standard_normal((K * E, H)) * s(K * E), "b1": np.zeros(H),
+            "W2": rng.standard_normal((H, H)) * s(H), "b2": np.zeros(H),
+            "W3": rng.standard_normal((H, V)) * s(H) * 0.1, "b3": np.zeros(V)}
+
+def n_params(H):
+    return K * E * H + H * H + H * V
+
+def loss_and_grads(P, idx, data, grad=True):
+    X = data[idx[:, None] + np.arange(K)]          # (B, K) contexts
+    y = data[idx + K]                              # the next character
+    e = P["emb"][X].reshape(len(idx), K * E)
+    h1 = np.tanh(e @ P["W1"] + P["b1"])
+    h2 = np.tanh(h1 @ P["W2"] + P["b2"])
+    z = h2 @ P["W3"] + P["b3"]
+    z = z - z.max(1, keepdims=True)
+    logp = z - np.log(np.exp(z).sum(1, keepdims=True))
+    loss = -logp[np.arange(len(y)), y].mean()
+    if not grad:
+        return loss
+    B = len(y)
+    g = np.exp(logp); g[np.arange(B), y] -= 1; g /= B
+    G = {"W3": h2.T @ g, "b3": g.sum(0)}
+    g = (g @ P["W3"].T) * (1 - h2 ** 2)
+    G["W2"], G["b2"] = h1.T @ g, g.sum(0)
+    g = (g @ P["W2"].T) * (1 - h1 ** 2)
+    G["W1"], G["b1"] = e.T @ g, g.sum(0)
+    ge = (g @ P["W1"].T).reshape(B, K, E)
+    G["emb"] = np.zeros_like(P["emb"]); np.add.at(G["emb"], X, ge)
+    return loss, G
+
+# Gradient check on a tiny model.
+r = np.random.default_rng(0)
+P = init(8, r); idx = r.integers(0, len(train) - K, 4)
+_, G = loss_and_grads(P, idx, train)
+num = []
+for k, i in [("W1", (3, 2)), ("W2", (1, 5)), ("W3", (4, 0)), ("emb", tuple(train[idx[0]:idx[0] + 1]) + (2,))]:
+    P[k][i] += 1e-5; lp = loss_and_grads(P, idx, train, False)
+    P[k][i] -= 2e-5; lm = loss_and_grads(P, idx, train, False); P[k][i] += 1e-5
+    num.append(abs((lp - lm) / 2e-5 - G[k][i]))
+print(f"gradient check: max error {max(num):.1e}")
+
+# 3. Train each width once, single pass over the data (no example is seen twice), with Adam at a
+# constant learning rate, and record the held-out loss at log-spaced numbers of tokens D.
+val_idx = np.random.default_rng(1).integers(0, len(val) - K, 20000)
+widths = [16, 32, 64, 128, 256, 512]
+B, steps = 128, 7000
+checkpoints = np.unique(np.geomspace(25, steps, 14).astype(int))
+results = {}                                       # (N, D) -&gt; held-out loss in nats
+t0 = time.time()
+for H in widths:
+    rng = np.random.default_rng(2)
+    P = init(H, rng)
+    m = {k: np.zeros_like(v) for k, v in P.items()}; v2 = {k: np.zeros_like(v) for k, v in P.items()}
+    order = rng.permutation(len(train) - K)
+    lr = 3e-3 if H &lt;= 64 else 2e-3 if H &lt;= 256 else 1e-3
+    for t in range(1, steps + 1):
+        _, G = loss_and_grads(P, order[(t - 1) * B:t * B], train)
+        for k in P:
+            m[k] = 0.9 * m[k] + 0.1 * G[k]; v2[k] = 0.999 * v2[k] + 0.001 * G[k] ** 2
+            P[k] -= lr * (m[k] / (1 - 0.9 ** t)) / (np.sqrt(v2[k] / (1 - 0.999 ** t)) + 1e-8)
+        if t in checkpoints:
+            results[(n_params(H), t * B)] = loss_and_grads(P, val_idx, val, False)
+    print(f"H = {H:3d}: N = {n_params(H):7,}, held-out loss after {steps * B:,} tokens:"
+          f" {results[(n_params(H), steps * B)]:.3f} nats ({results[(n_params(H), steps * B)] / np.log(2):.3f} bits) per character")
+print(f"(trained in {time.time() - t0:.0f} s)")
+
+# 4. Fit the Chinchilla form L(N, D) = E + A / N^alpha + B / D^beta to the checkpoints after
+# 100,000 tokens (earlier ones are dominated by the start-up of training). For fixed exponents
+# the loss is linear in (E, A, B), so grid-search the exponents and solve least squares inside.
+keys = [k for k in results if k[1] &gt;= 100_000]
+Ns, Ds = np.array([k[0] for k in keys], float), np.array([k[1] for k in keys], float)
+Ls = np.array([results[k] for k in keys])
+best = None
+for a in np.arange(0.05, 1.5, 0.01):
+    for b in np.arange(0.05, 1.5, 0.01):
+        M = np.stack([np.ones_like(Ns), Ns ** -a, Ds ** -b], 1)
+        coef, *_ = np.linalg.lstsq(M, Ls, rcond=None)
+        if (coef &lt; 0).any():
+            continue
+        err = np.mean((M @ coef - Ls) ** 2)
+        if best is None or err &lt; best[0]:
+            best = (err, a, b, coef)
+err, alpha, beta, (E0, A, Bc) = best
+print(f"fit: L = {E0:.3f} + {A:.3g} / N^{alpha:.2f} + {Bc:.3g} / D^{beta:.2f}"
+      f"  (rms error {np.sqrt(err):.4f} nats over {len(Ls)} checkpoints)")
+
+# 5. Compute-optimal allocation. With C = 6ND, minimising the fitted L over N gives
+# N_opt = G (C/6)^(beta/(alpha+beta)), G = (alpha A / (beta B))^(1/(alpha+beta)).
+# Compare with the runs themselves: at each budget C, which width did best?
+a_exp = beta / (alpha + beta)
+Gc = (alpha * A / (beta * Bc)) ** (1 / (alpha + beta))
+Dgrid = sorted({k[1] for k in results})
+for C in [1e10, 3e10, 1e11, 3e11]:
+    runs = [(np.interp(np.log(C / (6 * n_params(H))), np.log(Dgrid), [results[(n_params(H), d)] for d in Dgrid]), H)
+            for H in widths if Dgrid[0] &lt;= C / (6 * n_params(H)) &lt;= Dgrid[-1]]   # runs that reached C
+    best = min(runs)
+    N_opt = Gc * (C / 6) ** a_exp
+    print(f"C = {C:.0e} FLOPs: best of {len(runs)} runs H = {best[1]} (N = {n_params(best[1]):,}, loss {best[0]:.3f});"
+          f" the fit's N_opt = {N_opt:,.0f}, D_opt = {C / (6 * N_opt):,.0f}")
+print(f"according to the fit, N_opt grows as C^{a_exp:.2f} and D_opt as C^{1 - a_exp:.2f}")
+
+# 1,115,394 characters, vocabulary 65; 1,003,854 for training
+# gradient check: max error 2.9e-11
+# H =  16: N =   5,392, held-out loss after 896,000 tokens: 2.169 nats (3.130 bits) per character
+# H =  32: N =  11,296, held-out loss after 896,000 tokens: 2.075 nats (2.994 bits) per character
+# H =  64: N =  24,640, held-out loss after 896,000 tokens: 1.982 nats (2.859 bits) per character
+# H = 128: N =  57,472, held-out loss after 896,000 tokens: 1.881 nats (2.713 bits) per character
+# H = 256: N = 147,712, held-out loss after 896,000 tokens: 1.851 nats (2.670 bits) per character
+# H = 512: N = 426,496, held-out loss after 896,000 tokens: 1.816 nats (2.620 bits) per character
+# (trained in 187 s)
+# fit: L = 1.609 + 134 / N^0.70 + 63 / D^0.41  (rms error 0.0186 nats over 36 checkpoints)
+# C = 1e+10 FLOPs: best of 6 runs H = 32 (N = 11,296, loss 2.258); the fit's N_opt = 8,123, D_opt = 205,182
+# C = 3e+10 FLOPs: best of 5 runs H = 32 (N = 11,296, loss 2.113); the fit's N_opt = 12,188, D_opt = 410,228
+# C = 1e+11 FLOPs: best of 4 runs H = 64 (N = 24,640, loss 2.001); the fit's N_opt = 19,014, D_opt = 876,534
+# C = 3e+11 FLOPs: best of 3 runs H = 128 (N = 57,472, loss 1.885); the fit's N_opt = 28,531, D_opt = 1,752,492
+# according to the fit, N_opt grows as C^0.37 and D_opt as C^0.63</code></pre>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: scaling-law --></div>
+    </figure>
+    <p class="muted">The measured held-out loss of the six widths at 14 points during training (dots) and the fitted law (lines, drawn where it was fitted). On a log scale of tokens the curves are smooth and nearly parallel, and the wider models pull ahead as data grows.</p>
+    <p><b>Reading the output.</b> By the end of the pass over the data, wider is better, with diminishing returns: going from $H = 16$ to $H = 512$, 79 times more parameters, lowers the final loss from 2.169 to 1.816 nats per character. Early in training it is not so: the widest model, given a smaller learning rate to keep it stable, lags behind narrower ones for the first 100,000 tokens, one reason the fit leaves out the early checkpoints. The fitted law matches the 36 checkpoints to 0.019 nats. Its floor, $E = 1.61$ nats (2.32 bits) per character, is not the entropy of Shakespeare: it is the floor for this family of models, which sees only 16 characters of context, so even infinite width and data could not get below it. The compute question gets a clear qualitative answer. At $10^{10}$ FLOPs the best run is $H = 32$, and as the budget grows thirtyfold the best width grows to $H = 128$: bigger budgets want bigger models, and neither a fixed model nor a fixed dataset is right. Quantitatively, it is less clear. The best run's $N$ grows fivefold over a factor of 30 in compute, roughly $C^{0.48}$, while the fit says $C^{0.37}$, and exercise 6 shows the fitted exponent moving between 0.28 and 0.37 depending on which checkpoints are included. With less than two decades of $N$, a single seed per width, and a learning rate that was tuned by hand per width, that is about as precise as such a fit gets. The fit also recommends, at $3\times10^{11}$ FLOPs, 1.75 million tokens of training data, more than the corpus has: the data constraint of the previous section, in miniature.</p>
+  </section>
+
+  <section id="emergence">
+    <h2>Smooth loss, sudden abilities?</h2>
+    <p>The loss falls smoothly, but some abilities seem to appear suddenly: on three-digit addition or some multi-step benchmarks, small models score near zero and models past some size score well. Wei et al. (2022) called these "emergent abilities". Schaeffer, Miranda and Koyejo (2023) argued that much of the suddenness comes from the metric. Exact-match accuracy on a five-token answer is roughly the per-token accuracy to the fifth power, a smooth function that looks like a jump on a linear plot. Scored by a continuous measure, such as the log-probability of the right answer, the same abilities improve smoothly. The loss is the quantity that scales predictably; how a given downstream skill depends on it is harder to predict.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Count the FLOPs of the backward pass for $\mathbf{y} = W\mathbf{x}$ with $W$ of size $d_\text{out}\times d_\text{in}$, and confirm the factor of 2. How much does training Chinchilla (70B parameters, 1.4T tokens) cost? How does that compare with Gopher (280B, 300B)?</li>
+      <li>Show that at the compute-optimal point $\alpha A/N^\alpha = \beta B/D^\beta$, and that the optimal loss is itself a power law in $C$ plus the constant $E$. What is its exponent?</li>
+      <li>With Chinchilla's published constants, at a budget of $10^{21}$ FLOPs, compute $N_\text{opt}$, $D_\text{opt}$ and the predicted loss.</li>
+      <li>Kaplan's $\alpha_N\approx0.076$: by how much must $N$ grow to reduce $L(N)$ by 10%? By 50%?</li>
+      <li>A model will be trained once and then generate $I$ tokens in service, at $2N$ FLOPs each. Write the total cost and argue, without solving, why the loss-minimising $N$ for a fixed total cost is smaller than $N_\text{opt}$ when $I$ is large.</li>
+      <li>In the code, change the cut-off for the fit from 100,000 tokens to 43,000. What happens to the fitted exponents and to the exponent of $N_\text{opt}$? What does this say about extrapolating such fits?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> The forward product takes $2d_\text{in}d_\text{out}$ FLOPs. The backward pass computes $W^\top\mathbf{g}$ ($2d_\text{in}d_\text{out}$) and $\mathbf{g}\mathbf{x}^\top$ ($2d_\text{in}d_\text{out}$), twice the forward cost. Chinchilla: $6\times7\times10^{10}\times1.4\times10^{12} = 5.9\times10^{23}$ FLOPs; Gopher: $6\times2.8\times10^{11}\times3\times10^{11} = 5.0\times10^{23}$, about the same budget spent very differently.</p>
+        <p><b>2.</b> The condition is the derivative set to zero, rearranged: $\alpha AN^{-\alpha} = \beta B(C/6)^{-\beta}N^\beta = \beta BD^{-\beta}$. Substituting $N_\text{opt}\propto C^{\beta/(\alpha+\beta)}$, both reducible terms scale as $C^{-\alpha\beta/(\alpha+\beta)}$, so $L_\text{opt}(C) = E + KC^{-\alpha\beta/(\alpha+\beta)}$ for a constant $K$. With $\alpha = 0.34$ and $\beta = 0.28$ the exponent is 0.154.</p>
+        <p><b>3.</b> $G = (0.34\times406.4/(0.28\times410.7))^{1/0.62} = 1.38$, and $C/6 = 1.67\times10^{20}$, so $N_\text{opt} = 1.38\times(1.67\times10^{20})^{0.452} = 1.8\times10^9$, $D_\text{opt} = 9.1\times10^{10}$ (50 tokens per parameter), and $L = 1.69 + 406.4/N^{0.34} + 410.7/D^{0.28} = 2.33$ nats per token. (With the refitted constants of Besiroglu et al., $N_\text{opt} = 2.8\times10^9$ and 22 tokens per parameter.)</p>
+        <p><b>4.</b> $L\propto N^{-0.076}$, so a factor $f$ reduction needs $N$ to grow by $f^{1/0.076}$: $(1/0.9)^{13.2} = 4.0$ times for 10%, and $2^{13.2}\approx9{,}000$ times for 50%.</p>
+        <p><b>5.</b> Total cost $6ND + 2NI$. At the training-optimal point, shrinking $N$ a little and raising $D$ to keep $6ND$ fixed changes the loss only to second order (it is a minimum), but saves $2I\,\delta N$ FLOPs of inference, a first-order saving. So the optimum of the total moves to smaller $N$ and larger $D$, further the larger $I$ is.</p>
+        <p><b>6.</b> We ran it: with the checkpoints from 43,000 tokens included, the fit gives $\alpha = 0.99$, $\beta = 0.38$ and $N_\text{opt}\propto C^{0.28}$, compared with $\alpha = 0.70$, $\beta = 0.41$ and $C^{0.37}$ from the default cut-off; with 66,000 tokens it gives $C^{0.34}$. The exponents depend on which points are included, because the runs span less than two decades of $N$ and $D$, and early checkpoints are still in the transient at the start of training. Real scaling studies span six or more decades and still disagree in the second decimal place. Extrapolating a fit far beyond the range of the runs multiplies these errors.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Kaplan et al., "Scaling laws for neural language models"</b> (2020).</li>
+      <li><b>Hoffmann et al., "Training compute-optimal large language models"</b> (NeurIPS 2022). Chinchilla.</li>
+      <li><b>Besiroglu, Erdil, Barnett &amp; You, "Chinchilla scaling: a replication attempt"</b> (2024).</li>
+      <li><b>Penedo et al., "The FineWeb datasets"</b> (NeurIPS 2024). A pretraining data pipeline, with ablations.</li>
+      <li><b>Muennighoff et al., "Scaling data-constrained language models"</b> (NeurIPS 2023).</li>
+      <li><b>Schaeffer, Miranda &amp; Koyejo, "Are emergent abilities of large language models a mirage?"</b> (NeurIPS 2023).</li>
+      <li><b>Bengio, Ducharme, Vincent &amp; Jauvin, "A neural probabilistic language model"</b> (JMLR 2003). The model in the code.</li>
+      <li><b>Stanford CS336, "Language modeling from scratch"</b> (course, 2024–25). Lectures on data, scaling laws and the systems side of pretraining.</li>
+    </ul>
+  </section>
+</article>

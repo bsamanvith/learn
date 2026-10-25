@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ménage</title>
+<link rel="stylesheet" href="../../../tools/widgets/base.css">
+<style>
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
+  h4 { margin: 8px 0 0; font-size: 14px; }
+  #table { max-width: 420px; display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<!-- Problem book: the ménage problem. Question: "Seat couples alternately at random: how often is nobody next to their partner, and why is the limit e^-2 approached so slowly?" -->
+<h3>The ménage problem</h3>
+<p class="question"><i>n</i> couples sit round a table, alternating women and men. The women are seated; the men then sit at random in the gaps.
+How likely is it that <b>nobody</b> sits next to their partner?</p>
+
+<div class="controls">
+  <label>couples n <input id="n" type="range" min="3" max="12" step="1" value="6"> <b id="n-value"></b></label>
+  <button id="seat">Seat the men again</button>
+  <button id="sim">Simulate 20,000 dinners</button>
+</div>
+
+<svg id="table" viewBox="0 0 420 420" role="img" aria-label="Round table with couples; partners sitting together are joined in red"></svg>
+<div class="stats" id="stats"></div>
+
+<div class="two">
+  <div><h4>P(nobody next to their partner) against n</h4>
+    <svg id="conv" viewBox="0 0 340 220" role="img" aria-label="Probability against n, approaching e to the minus 2"></svg></div>
+  <div><h4>Distance from the limit (log scale): ménage vs hat-check</h4>
+    <svg id="gap" viewBox="0 0 340 220" role="img" aria-label="Gap to the limit on a log scale for the ménage and hat-check problems"></svg></div>
+</div>
+<p class="caption">Circles are women, squares are men, and the number is the couple. A red link marks a couple sitting together.
+Each man has two forbidden seats, so the limit is e<sup>−2</sup> ≈ 0.1353, against e<sup>−1</sup> for the hat-check problem, where each person has one forbidden hat.
+But the hat-check answer closes in on its limit like 1/n!, and the ménage answer only like 1/n: P ≈ e<sup>−2</sup>(1 − 1/n). The forbidden seats of neighbouring men overlap, and that overlap fades slowly.</p>
+
+<script src="../../../tools/widgets/lib.js"></script>
+<script>
+  const state = { n: 6, perm: null, sim: null, seed: 3 };
+
+  // P(ménage) = Σ (-1)^k · [2n/(2n-k)·C(2n-k, k)] · (n-k)!/n!, computed in floating point.
+  function choose(a, b) { let r = 1; for (let i = 1; i <= b; i++) r *= (a - b + i) / i; return r; }
+  function pMenage(n) {
+    let s = 0, fallFact = 1; // n(n-1)...(n-k+1)
+    for (let k = 0; k <= n; k++) {
+      if (k > 0) fallFact *= n - k + 1;
+      const circ = k === 0 ? 1 : (2 * n / (2 * n - k)) * choose(2 * n - k, k);
+      s += (k % 2 ? -1 : 1) * circ / fallFact;
+    }
+    return s;
+  }
+  function pHat(n) { let s = 0, f = 1; for (let k = 0; k <= n; k++) { if (k) f *= k; s += (k % 2 ? -1 : 1) / f; } return s; }
+  const bad = (p, n) => p.map((m, j) => m === j || m === (j + 1) % n);
+
+  function newPerm() { state.perm = Learn.shuffle([...Array(state.n).keys()], Learn.rng(state.seed++)); }
+
+  function draw(s) {
+    const c = Learn.palette();
+    if (!s.perm || s.perm.length !== s.n) newPerm();
+    const n = s.n, svg = document.getElementById("table"); svg.innerHTML = "";
+    const R = 150, cx = 210, cy = 210, ang = (seat) => -Math.PI / 2 + (2 * Math.PI * seat) / (2 * n);
+    const pos = (seat, r = R) => [cx + r * Math.cos(ang(seat)), cy + r * Math.sin(ang(seat))];
+    Learn.el("circle", { cx, cy, r: R - 34, fill: c.panel, stroke: c.muted, "stroke-width": 1 }, svg);
+    const flags = bad(s.perm, n);
+    // Couples sitting together: man in slot j (seat 2j+1) next to woman j (seat 2j) or woman j+1 (seat 2j+2).
+    flags.forEach((f, j) => {
+      if (!f) return;
+      const w = s.perm[j] === j ? 2 * j : (2 * j + 2) % (2 * n);
+      const [x1, y1] = pos(2 * j + 1), [x2, y2] = pos(w);
+      Learn.el("line", { x1, y1, x2, y2, stroke: c.bad, "stroke-width": 9, "stroke-linecap": "round", opacity: 0.85 }, svg);
+    });
+    for (let i = 0; i < n; i++) {
+      const [wx, wy] = pos(2 * i), [mx, my] = pos(2 * i + 1);
+      Learn.el("circle", { cx: wx, cy: wy, r: 15, fill: c.a }, svg);
+      Learn.el("text", { x: wx, y: wy + 4.5, "text-anchor": "middle", fill: "#fff", "font-size": 13, "font-weight": 600, text: i + 1 }, svg);
+      Learn.el("rect", { x: mx - 14, y: my - 14, width: 28, height: 28, rx: 4, fill: flags[i] ? c.bad : c.b }, svg);
+      Learn.el("text", { x: mx, y: my + 4.5, "text-anchor": "middle", fill: "#fff", "font-size": 13, "font-weight": 600, text: s.perm[i] + 1 }, svg);
+    }
+    const together = flags.filter(Boolean).length;
+    const [l1, l2] = together ? [`${together} ${together === 1 ? "couple" : "couples"}`, "side by side"] : ["Nobody beside", "their partner"];
+    [l1, l2].forEach((t, i) => Learn.el("text", { x: cx, y: cy - 10 + 22 * i, "text-anchor": "middle", fill: together ? c.bad : c.good,
+      "font-size": 18, "font-weight": 700, text: t }, svg));
+    Learn.el("text", { x: cx, y: cy + 38, "text-anchor": "middle", fill: c.muted, "font-size": 12, text: `${n} couples` }, svg);
+
+    document.getElementById("stats").innerHTML = `
+      <div class="stat"><div class="label">exact P (Touchard)</div><div class="value a">${pMenage(n).toFixed(4)}</div></div>
+      <div class="stat"><div class="label">e<sup>−2</sup></div><div class="value">${Math.exp(-2).toFixed(4)}</div></div>
+      <div class="stat"><div class="label">e<sup>−2</sup>(1 − 1/n)</div><div class="value">${(Math.exp(-2) * (1 - 1 / n)).toFixed(4)}</div></div>
+      <div class="stat"><div class="label">simulated</div><div class="value">${s.sim && s.sim.n === n ? s.sim.p.toFixed(4) : "—"}</div></div>`;
+
+    // P against n, with the limit and the 1/n approximation.
+    const NMAX = 30;
+    const cv = document.getElementById("conv"); cv.innerHTML = "";
+    let g = Learn.el("g", {}, cv);
+    let ax = Learn.axes(g, { x: [3, NMAX], y: [0, 0.2], W: 340, H: 220, xTicks: [3, 10, 20, 30], yTicks: [0, 0.1, 0.135, 0.2],
+      fmtY: (t) => (t === 0.135 ? "e⁻²" : t.toFixed(1)), xLabel: "couples n" });
+    Learn.el("line", { x1: ax.sx(3), x2: ax.sx(NMAX), y1: ax.sy(Math.exp(-2)), y2: ax.sy(Math.exp(-2)), stroke: c.b, "stroke-dasharray": "5 4" }, g);
+    const approx = [];
+    for (let k = 3; k <= NMAX; k++) approx.push(`${ax.sx(k)},${ax.sy(Math.exp(-2) * (1 - 1 / k))}`);
+    Learn.el("polyline", { points: approx.join(" "), fill: "none", stroke: c.muted, "stroke-width": 1, "stroke-dasharray": "2 3" }, g);
+    Learn.el("polyline", { points: Array.from({ length: NMAX - 2 }, (_, i) => `${ax.sx(i + 3)},${ax.sy(pMenage(i + 3))}`).join(" "), fill: "none", stroke: c.a, "stroke-width": 1.5 }, g);
+    for (let k = 3; k <= NMAX; k++) Learn.el("circle", { cx: ax.sx(k), cy: ax.sy(pMenage(k)), r: k === n ? 5 : 2.5, fill: c.a }, g);
+    Learn.el("text", { x: ax.sx(NMAX), y: ax.sy(0.2) + 12, "text-anchor": "end", fill: c.muted, "font-size": 11, text: "dotted: e⁻²(1 − 1/n)" }, g);
+
+    // Gap to the limit, log scale: ménage ~ e^-2/n, hat-check ~ 1/(n+1)!.
+    const gp = document.getElementById("gap"); gp.innerHTML = "";
+    g = Learn.el("g", {}, gp);
+    const L = (v) => Math.log10(v);
+    ax = Learn.axes(g, { x: [3, 13], y: [-12, 0], W: 340, H: 220, xTicks: [3, 5, 7, 9, 11, 13], yTicks: [0, -3, -6, -9, -12],
+      fmtY: (t) => (t === 0 ? "1" : `1e${t}`), xLabel: "n", M: { l: 48 } });
+    // Label each curve next to one of its points: (dx, dy) shifts it off the line.
+    const line = (f, col, label, at, dx, dy, anchor) => {
+      const pts = [];
+      for (let k = 3; k <= 13; k++) pts.push([ax.sx(k), ax.sy(Math.max(L(Math.abs(f(k))), -12))]);
+      Learn.el("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: "none", stroke: col, "stroke-width": 1.5 }, g);
+      pts.forEach(([x, y]) => Learn.el("circle", { cx: x, cy: y, r: 2.5, fill: col }, g));
+      const [lx, ly] = pts[at - 3];
+      Learn.el("text", { x: lx + dx, y: ly + dy, "text-anchor": anchor, fill: col, "font-size": 12, text: label }, g);
+    };
+    line((k) => pMenage(k) - Math.exp(-2), c.a, "ménage: shrinks like 1/n", 13, 0, -10, "end");
+    line((k) => pHat(k) - Math.exp(-1), c.b, "hat-check: like 1/n!", 9, 8, -2, "start");
+  }
+
+  function simulate() {
+    const n = state.n, rand = Learn.rng(state.seed++), N = 20000;
+    let hits = 0;
+    for (let t = 0; t < N; t++) {
+      const p = Learn.shuffle([...Array(n).keys()], rand);
+      if (!bad(p, n).some(Boolean)) hits++;
+    }
+    state.sim = { n, p: hits / N };
+    draw(state);
+  }
+
+  Learn.slider("n", state, "n", draw);
+  document.getElementById("seat").onclick = () => { newPerm(); draw(state); };
+  document.getElementById("sim").onclick = simulate;
+  Learn.onThemeChange(() => draw(state));
+</script>
+</body>
+</html>

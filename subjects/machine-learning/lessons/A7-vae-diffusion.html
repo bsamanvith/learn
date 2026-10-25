@@ -1,0 +1,58 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A7 · after lessons 22–25</div>
+  <h1>A VAE and a diffusion model</h1>
+  <p class="lede">Implement the probabilistic core of the two generative models of stage 6: the VAE's KL term, Bernoulli likelihood, reparameterised gradient, ELBO and importance-weighted bound; and the diffusion model's schedule, forward marginals, reverse posterior, training loss, and ancestral and DDIM samplers. The networks and the optimiser are given, so the work is in the mathematics. Then train both on MNIST, measure how tight the ELBO is, look at the latent space, and generate digits from noise. An autograder checks every part. Expect six to eight hours, plus training time.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/22-autoencoders-and-vaes/">22</a>, <a href="/machine-learning/24-diffusion-models/">24</a>, <a href="/machine-learning/25-score-guidance-latent-diffusion/">25</a>, <a href="/machine-learning/A4-autograd-mlp/">A4</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A7-vae-diffusion">assignments/A7-vae-diffusion</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A7-vae-diffusion
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like (about 5 seconds)</code></pre>
+    <p>The checker is built so that passing means the mathematics is right. It compares the KL divergence with a Monte Carlo estimate, the importance-weighted bound with $\log p(\mathbf{x})$ computed by numerical integration over a 1-D latent, the forward marginal with a simulation of the chain, and the reverse posterior with Bayes' rule evaluated on a grid. Every gradient is compared with finite differences. The samplers are run with an <i>oracle</i> noise predictor for data consisting of a single point, whose noise estimates are exact. With it, ancestral sampling and DDIM must both return exactly that point, with exactly $T$ and exactly <code>ddim_steps</code> network calls. Two end-to-end checks train a diffusion model on two moons and a VAE on noisy binary prototypes.</p>
+    <div class="note">
+      <div class="label">Conventions</div>
+      <p>Steps are numbered $t = 1, \dots, T$ as in the lessons, and the schedule arrays are indexed from 0, so step $t$ is at index <code>t - 1</code>. Every function that returns a gradient returns the gradient of the quantity it computes, averaged over the batch the same way. The VAE is trained by <i>ascending</i> the ELBO, with <code>Adam.step(sign=-1)</code>.</p>
+    </div>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · the VAE</td><td><code>gaussian_kl</code>, <code>bernoulli_loglik</code>, <code>reparameterise</code>, <code>vae_elbo</code>, <code>iwae_bound</code></td><td>closed-form KL against Monte Carlo; a likelihood that is stable at logits of 1,000; every gradient, including through the sample $\mathbf{z}$; that $\mathcal{L}_1 &lt; \log p(\mathbf{x})$ and $\mathcal{L}_{3000}\approx\log p(\mathbf{x})$</td></tr>
+        <tr><td>2 · the forward process</td><td><code>make_schedule</code>, <code>q_sample</code>, <code>q_posterior</code></td><td>$\bar\alpha_t$; the closed-form marginal against the simulated chain; the posterior mean and variance against Bayes' rule</td></tr>
+        <tr><td>3 · learning and sampling</td><td><code>ddpm_loss</code>, <code>p_sample_step</code>, <code>ddim_step</code>, <code>sample</code></td><td>the loss and its gradient; that each reverse step matches the posterior when the noise is known; that both samplers recover a single data point exactly; a model that learns two moons</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all fourteen checks pass, write training scripts that use your functions. For the VAE, binarise MNIST afresh in every batch by sampling each pixel as a Bernoulli with the grey level as its probability ("dynamic binarisation"). Write a short paragraph and include a plot or a table for each experiment.</p>
+    <ol>
+      <li><b>A VAE on MNIST.</b> Encoder $784\to512\to2k$ and decoder $k\to512\to784$, Adam with learning rate $10^{-3}$, batch 128, 10 epochs, with latent sizes $k = 2$ and $k = 16$. Report the test ELBO and its two terms after each epoch, and the importance-weighted estimate with $K = 200$ at the end. For reference, the solution's run (seed 0, about 15 seconds an epoch) ends at:
+      <div class="tablewrap"><table>
+        <thead><tr><th>$k$</th><th>test ELBO</th><th>reconstruction</th><th>KL</th><th>$\mathcal{L}_{200}$</th></tr></thead>
+        <tbody>
+          <tr><td>2</td><td>−156.65</td><td>−150.92</td><td>5.73</td><td>−152.07</td></tr>
+          <tr><td>16</td><td>−104.21</td><td>−79.80</td><td>24.40</td><td>−99.47</td></tr>
+        </tbody>
+      </table></div>
+      <p class="muted">Nats per image; the ELBO is on all 10,000 test images and $\mathcal{L}_{200}$ on the first 2,000. Both models are still improving after 10 epochs (the $k = 16$ ELBO went from −113.08 at epoch 2 to −104.21), so yours may land a little lower or higher.</p> How big is the gap between the ELBO and the $K = 200$ estimate, and what does it measure?</li>
+      <li><b>The latent space.</b> For $k = 2$, plot the encoder means of 5,000 test images coloured by digit, and decode a $20\times20$ grid of codes spaced evenly in probability, $\mathbf{z} = \Phi^{-1}(\mathbf{u})$ for $\mathbf{u}$ on a grid in $(0, 1)^2$. Which digits are neighbours? Where are the blurry images, and why there? For $k = 16$, sample 64 codes from the prior and decode them: are they better or worse looking than $k = 2$'s, and is that what the ELBO predicts?</li>
+      <li><b>A diffusion model on two moons.</b> Train the network <code>MLP([18, 128, 128, 2])</code> with $T = 50$ and $\beta$ from $10^{-4}$ to 0.25, as in the end-to-end check, then compare ancestral sampling with DDIM using 50, 10, 5 and 2 steps, by the median distance of samples to the data (as in lesson 24) and by a scatter plot. Repeat with $T = 10$ ($\beta$ up to 0.8) and ancestral sampling. Relate what you see to lesson 25's discussion of few-step sampling.</li>
+      <li><b>A diffusion model on MNIST.</b> Scale pixels to $[-1, 1]$ and train <code>MLP([784 + 16, 1024, 1024, 784])</code> with $T = 200$, $\beta$ from $10^{-4}$ to 0.05, Adam with learning rate $3\times10^{-4}$ and batch 128, for 20,000 steps. Show 64 samples. Initialise the output layer's weights to zero: in the solution's first attempt, with the default initialisation, the hidden ReLUs died within a few hundred steps, the network predicted zero noise for everything, and the loss sat at 784, which is $\mathbb{E}\|\boldsymbol{\epsilon}\|^2$. With that fixed, the solution's loss falls from about 250 per image after 1,000 steps to 130–200 (it is noisy) at 20,000, roughly 0.2 per pixel; the run took about 30 minutes on two CPU cores. Its samples are honest but rough: recognisable 0s, 2s, 3s, 7s, 8s and 9s under heavy salt-and-pepper speckle, with about half the pixels outside $[-1, 1]$. Clipping the implied $\hat{\mathbf{x}}_0$ to $[-1, 1]$ at every step and sampling from the posterior mean keeps the values in range but does not remove the speckle. Where does the speckle come from? Look at the network's error at small $t$, where predicting $\boldsymbol{\epsilon}$ requires knowing $\mathbf{x}_0$ almost exactly, and at how $\frac{\beta_t}{\sqrt{1 - \bar\alpha_t}}$ scales it. An MLP has no idea that pixels are arranged in a grid: what would you change first, and why (lesson 15)?</li>
+      <li><b>Guidance.</b> Add the digit label as a one-hot input with an extra "no label" value, drop the label 10% of the time during training (lesson 25), and sample each digit with guidance weights 0, 1 and 3. Train a quick classifier (A4's MLP will do) and report how often it agrees with the requested digit for each weight. Show what the samples lose as $w$ grows.</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Fourteen checker passes are worth 50%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism. A stretch goal, for those who have done A5: replace the diffusion MLP with a small convolutional U-Net (two downsampling and two upsampling stages, with skip connections and the time features added to every block) built from your A5 layers, and compare the samples after the same number of steps.</p>
+  </section>
+</article>

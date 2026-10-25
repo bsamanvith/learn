@@ -1,0 +1,182 @@
+<header class="lesson-head">
+  <div class="eyebrow">Math toolkit M5 · read when a lesson sends you</div>
+  <h1>Optimisation: convexity, constraints and Lagrange multipliers</h1>
+  <p class="lede">Training is optimisation. This page explains when an optimisation problem is easy (convexity), proves how fast gradient descent solves the easy ones, and shows how to optimise under constraints with Lagrange multipliers and the KKT conditions. One worked example derives the softmax distribution from nothing but "maximise entropy subject to a known average".</p>
+  <div class="meta"><span><b>Used by:</b> <a href="/machine-learning/02-gradient-descent/">02</a>, <a href="/machine-learning/05-regularisation/">05</a>, <a href="/machine-learning/07-stochastic-optimisation/">07</a>, <a href="/machine-learning/M1-linear-algebra/">M1</a> (PCA), 28, 39</span><span><b>Assumes:</b> gradients and Hessians (lesson 02), <a href="/machine-learning/M1-linear-algebra/">M1</a> (positive semidefinite matrices)</span></div>
+</header>
+
+<article class="lesson">
+  <section id="convexity">
+    <h2>Convex sets and convex functions</h2>
+    <p>A set $C$ is <b>convex</b> if the segment between any two of its points stays inside it. A function $f$ on a convex set is <b>convex</b> if every chord lies on or above the graph:</p>
+    <div class="eq">$$f\big(\theta\mathbf{x} + (1-\theta)\mathbf{y}\big) \le \theta f(\mathbf{x}) + (1-\theta)f(\mathbf{y}) \qquad\text{for all } \mathbf{x},\mathbf{y},\ \theta\in[0,1].$$</div>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: m5-opt --></div>
+    </figure>
+    <p class="muted">Left: a convex function lies below its chords and above its tangent lines. Middle: a non-convex one has a chord that dips below it and two separate local minima. Right: minimising $f(x,y) = (x-2)^2 + 2(y-1.5)^2$ on the unit circle. The best point, $(0.664, 0.748)$, is where a level set of $f$ just touches the circle, and there $-\nabla f$ points along $\nabla g$.</p>
+    <p>For differentiable $f$ there are two equivalent tests:</p>
+    <ul>
+      <li><b>First order:</b> $f(\mathbf{y}) \ge f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x})$ for all $\mathbf{x},\mathbf{y}$. The tangent plane is a global under-estimator.</li>
+      <li><b>Second order:</b> the Hessian $\nabla^2f(\mathbf{x})$ is positive semidefinite everywhere: the function curves upward in every direction.</li>
+    </ul>
+    <p><b>Proof of the first-order test (convex ⇒ tangent below).</b> Rearrange the definition with $\mathbf{x}_\theta = \mathbf{x} + \theta(\mathbf{y} - \mathbf{x})$: $f(\mathbf{y}) - f(\mathbf{x}) \ge \big(f(\mathbf{x}_\theta) - f(\mathbf{x})\big)/\theta$. Let $\theta\to0$; the right side tends to the directional derivative $\nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x})$. $\square$</p>
+    <div class="result">
+      <div class="label">Why convexity matters</div>
+      <p>For a convex function, any point with $\nabla f(\mathbf{x}^*) = \mathbf{0}$ is a global minimum, and every local minimum is global.</p>
+    </div>
+    <p>The first claim is the first-order test with $\nabla f(\mathbf{x}^*) = \mathbf{0}$: $f(\mathbf{y})\ge f(\mathbf{x}^*)$ for every $\mathbf{y}$. So for convex problems, "find where the gradient is zero" is the whole job, and gradient descent can't get stuck. Building blocks: norms, $-\log$ of a sigmoid, log-sum-exp, and any NLL of a linear model in its parameters (lessons 01, 03, 06); sums of convex functions and convex functions of linear maps are convex. Neural network losses are not convex in the weights, and the last section says what survives.</p>
+  </section>
+
+  <section id="rates">
+    <h2>How fast gradient descent converges</h2>
+    <p>Two constants control the speed. $f$ is <b>$L$-smooth</b> if its gradient doesn't change too fast, $\lVert\nabla f(\mathbf{x}) - \nabla f(\mathbf{y})\rVert\le L\lVert\mathbf{x} - \mathbf{y}\rVert$ (for twice-differentiable $f$: Hessian eigenvalues $\le L$). It is <b>$\mu$-strongly convex</b> if it curves up at least as much as a quadratic of curvature $\mu &gt; 0$ (Hessian eigenvalues $\ge\mu$). Their ratio $\kappa = L/\mu$ is the condition number from lesson 02.</p>
+    <p><b>Step 1, the descent lemma.</b> Smoothness gives a quadratic upper bound, $f(\mathbf{y})\le f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x}) + \frac L2\lVert\mathbf{y}-\mathbf{x}\rVert^2$. Put in the gradient step $\mathbf{y} = \mathbf{x} - \frac1L\nabla f(\mathbf{x})$:</p>
+    <div class="eq">$$f\Big(\mathbf{x} - \tfrac1L\nabla f(\mathbf{x})\Big)\le f(\mathbf{x}) - \frac{1}{2L}\lVert\nabla f(\mathbf{x})\rVert^2 .$$</div>
+    <p>Each step lowers $f$ by at least $\lVert\nabla f\rVert^2/2L$.</p>
+    <p><b>Step 2, a big gradient when far from the optimum.</b> Strong convexity gives a quadratic lower bound, $f(\mathbf{y})\ge f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x}) + \frac\mu2\lVert\mathbf{y}-\mathbf{x}\rVert^2$. Minimise both sides over $\mathbf{y}$: the left gives $f^*$, the right is minimised at $\mathbf{y} = \mathbf{x} - \nabla f/\mu$, so</p>
+    <div class="eq">$$f^* \ge f(\mathbf{x}) - \frac{1}{2\mu}\lVert\nabla f(\mathbf{x})\rVert^2 \quad\Longleftrightarrow\quad \lVert\nabla f(\mathbf{x})\rVert^2\ge 2\mu\big(f(\mathbf{x}) - f^*\big).$$</div>
+    <p><b>Step 3, combine.</b> Subtract $f^*$ from step 1 and use step 2:</p>
+    <div class="result">
+      <div class="label">Linear convergence of gradient descent (step size 1/L)</div>
+      <div class="eq">$$f(\mathbf{x}_{t+1}) - f^* \le \Big(1 - \frac{\mu}{L}\Big)\big(f(\mathbf{x}_t) - f^*\big) \quad\Longrightarrow\quad f(\mathbf{x}_t) - f^*\le\Big(1 - \frac1\kappa\Big)^t\big(f(\mathbf{x}_0) - f^*\big).$$</div>
+    </div>
+    <p>The gap shrinks by a constant factor every step ("linear" convergence), and reaching accuracy $\epsilon$ takes about $\kappa\log(1/\epsilon)$ steps. The inequality in step 2 is called the <b>Polyak–Łojasiewicz</b> condition, and it is all the proof needs, which matters because some non-convex problems (including wide neural networks near their minima) satisfy it. Without strong convexity ($\mu = 0$) the rate drops to $f(\mathbf{x}_t) - f^* = O(1/t)$, and momentum improves $\kappa$ to $\sqrt\kappa$ (lesson 07).</p>
+  </section>
+
+  <section id="lagrange">
+    <h2>Equality constraints: Lagrange multipliers</h2>
+    <p>Minimise $f(\mathbf{x})$ subject to $g(\mathbf{x}) = 0$. You may only move along the constraint surface. At a constrained minimum $\mathbf{x}^*$, moving along the surface can't decrease $f$ to first order, so $\nabla f(\mathbf{x}^*)$ must have no component along the surface. The directions along the surface are exactly those perpendicular to $\nabla g(\mathbf{x}^*)$. So $\nabla f$ must be parallel to $\nabla g$:</p>
+    <div class="eq">$$\nabla f(\mathbf{x}^*) + \lambda\,\nabla g(\mathbf{x}^*) = \mathbf{0}\quad\text{for some } \lambda\in\mathbb{R}.$$</div>
+    <p>That is the right panel of the figure. A clean way to write it is the <b>Lagrangian</b> $\mathcal{L}(\mathbf{x},\lambda) = f(\mathbf{x}) + \lambda g(\mathbf{x})$: setting $\nabla_{\mathbf{x}}\mathcal{L} = \mathbf{0}$ gives the parallel-gradient condition and $\partial\mathcal{L}/\partial\lambda = 0$ gives back the constraint. With several constraints $g_j = 0$, add one multiplier for each. The multiplier has a meaning: $\lambda^* = -\,df^*/dc$ when the constraint is relaxed to $g = c$, the price of the constraint. In the figure, $\lambda = 2.01$.</p>
+    <p>PCA (<a href="/machine-learning/M1-linear-algebra/">M1</a>) was one example: maximise $\mathbf{w}^\top S\mathbf{w}$ subject to $\mathbf{w}^\top\mathbf{w} = 1$ gave $S\mathbf{w} = \lambda\mathbf{w}$. Here is another that the curriculum leans on.</p>
+  </section>
+
+  <section id="maxent">
+    <h2>Worked example: maximum entropy gives softmax</h2>
+    <p>A die has faces $k = 1,\dots,6$. All you know is that its average roll is 4.5. Which distribution should you assume? The least committal one, with the largest entropy (<a href="/machine-learning/M4-information-theory/">M4</a>), subject to what you know:</p>
+    <div class="eq">$$\max_{\mathbf{p}}\; -\sum_kp_k\log p_k\quad\text{subject to}\quad\sum_kp_k = 1,\quad\sum_kk\,p_k = 4.5 .$$</div>
+    <p>Lagrangian, with one multiplier per constraint:</p>
+    <div class="eq">$$\mathcal{L} = -\sum_kp_k\log p_k + \alpha\Big(\sum_kp_k - 1\Big) + \beta\Big(\sum_kk\,p_k - 4.5\Big).$$</div>
+    <p>$\partial\mathcal{L}/\partial p_k = -\log p_k - 1 + \alpha + \beta k = 0$ gives $p_k = e^{\alpha - 1}e^{\beta k}$. The normalisation constraint fixes $e^{\alpha-1} = 1/\sum_je^{\beta j}$:</p>
+    <div class="result">
+      <div class="label">The maximum-entropy distribution with a known mean is a softmax</div>
+      <div class="eq">$$p_k = \frac{e^{\beta k}}{\sum_je^{\beta j}},$$</div>
+      <p>with $\beta$ chosen to hit the mean. For mean 4.5, $\beta = 0.371$.</p>
+    </div>
+    <p>Replace "$k$" by any feature $\phi(k)$ and the answer is $p_k\propto e^{\beta\phi(k)}$: the Gibbs (Boltzmann) distribution of statistical physics, with $\beta$ an inverse temperature. That is a second reason softmax is the natural output layer (lesson 06): it is the least-assuming distribution consistent with given expected scores. The code checks that perturbing the solution while keeping both constraints always lowers the entropy.</p>
+  </section>
+
+  <section id="kkt">
+    <h2>Inequality constraints: the KKT conditions</h2>
+    <p>Now minimise $f(\mathbf{x})$ subject to $h_i(\mathbf{x})\le0$. At the optimum each constraint is either <b>inactive</b> ($h_i &lt; 0$: you're not touching the wall, so it behaves as if absent) or <b>active</b> ($h_i = 0$: you're pressed against it, and it can only push you one way). This gives the <b>Karush–Kuhn–Tucker</b> conditions. With $\mathcal{L} = f + \sum_i\lambda_ih_i$:</p>
+    <div class="result">
+      <div class="label">KKT conditions</div>
+      <div class="eq">$$\begin{aligned}&amp;\nabla f(\mathbf{x}^*) + \sum_i\lambda_i\nabla h_i(\mathbf{x}^*) = \mathbf{0} &amp;&amp;\text{(stationarity)}\\ &amp;h_i(\mathbf{x}^*)\le0,\quad \lambda_i\ge0 &amp;&amp;\text{(primal and dual feasibility)}\\ &amp;\lambda_i\,h_i(\mathbf{x}^*) = 0 &amp;&amp;\text{(complementary slackness)}\end{aligned}$$</div>
+    </div>
+    <p>Complementary slackness encodes "inactive constraints have zero multiplier". $\lambda_i\ge0$ says a wall can only push, never pull. For convex $f$ and $h_i$ (and a mild regularity condition, such as a strictly feasible point existing), the KKT conditions are both necessary and sufficient for a global optimum.</p>
+    <p><b>Example: penalty = constraint.</b> Lesson 05 claimed that ridge regression, $\min\lVert\mathbf{y} - X\mathbf{w}\rVert^2 + \lambda\lVert\mathbf{w}\rVert^2$, is the same as $\min\lVert\mathbf{y} - X\mathbf{w}\rVert^2$ subject to $\lVert\mathbf{w}\rVert^2\le t$. The Lagrangian of the constrained problem is $\lVert\mathbf{y} - X\mathbf{w}\rVert^2 + \lambda(\lVert\mathbf{w}\rVert^2 - t)$, whose stationarity condition in $\mathbf{w}$ is exactly that of the penalised problem. If the budget binds, $t = \lVert\hat{\mathbf{w}}_\lambda\rVert^2$; each $\lambda$ corresponds to a $t$ and vice versa. The same argument covers the lasso, and the KL-constrained policy updates of TRPO (lesson 39) and RLHF (lesson 28).</p>
+    <p><b>Duality, briefly.</b> Minimising $\mathcal{L}$ over $\mathbf{x}$ for fixed multipliers gives the <b>dual function</b> $d(\boldsymbol\lambda)$, which is always a lower bound on the optimal value ("weak duality"). For convex problems that satisfy the regularity condition, the best lower bound is tight ("strong duality"), and solving the dual can be easier. Support vector machines are the classic example.</p>
+  </section>
+
+  <section id="nonconvex">
+    <h2>What survives without convexity</h2>
+    <p>Neural network losses are not convex: permuting the hidden units of a layer gives the same function, so there are always many separate minima. What still holds:</p>
+    <ul>
+      <li>Gradient descent with a small enough step size still decreases the loss every step (the descent lemma only needs smoothness) and converges to a point where $\nabla f = \mathbf{0}$.</li>
+      <li>Such a point can be a minimum, a maximum or a <b>saddle</b>, according to whether the Hessian's eigenvalues are all positive, all negative, or mixed. In high dimensions, saddles vastly outnumber bad local minima, and gradient noise (lesson 07) pushes iterates off them along the negative-curvature directions.</li>
+      <li>Empirically, for large networks most local minima found by SGD have similar, low loss. Why that happens is still an open research question.</li>
+    </ul>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. Gradient descent on a mu-strongly convex, L-smooth quadratic meets the (1 - mu/L)^t bound
+A = rng.standard_normal((30, 10)); H = A.T @ A / 30 + 0.1 * np.eye(10)
+b = rng.standard_normal(10)
+f = lambda x: 0.5 * x @ H @ x - b @ x
+x_star = np.linalg.solve(H, b)
+mu, L = np.linalg.eigvalsh(H)[[0, -1]]
+x = np.zeros(10); gap0 = f(x) - f(x_star)
+for t in range(1, 101):
+    x = x - (1 / L) * (H @ x - b)
+    if t in (10, 50, 100):
+        print(f"t={t:3d}: f - f* = {f(x) - f(x_star):.3e}   bound (1 - mu/L)^t (f0 - f*) = {(1 - mu / L) ** t * gap0:.3e}")
+
+# 2. Lagrange multipliers: the maximum-entropy die with mean 4.5 (Jaynes' dice problem)
+faces = np.arange(1, 7)
+def gibbs(beta):                                   # stationarity of the Lagrangian gives p_k ∝ exp(beta * k)
+    w = np.exp(beta * faces); return w / w.sum()
+lo, hi = -5.0, 5.0                                 # solve mean(beta) = 4.5 by bisection (mean is increasing in beta)
+for _ in range(100):
+    mid = (lo + hi) / 2
+    lo, hi = (mid, hi) if gibbs(mid) @ faces &lt; 4.5 else (lo, mid)
+p = gibbs(lo)
+H_p = -np.sum(p * np.log(p))
+print("max-entropy die:", np.round(p, 4), " mean", round(p @ faces, 4), " beta", round(lo, 4), " entropy", round(H_p, 4))
+for _ in range(3):                                 # any other distribution with mean 4.5 has lower entropy
+    q = p + 0.02 * rng.standard_normal(6)
+    # project q back onto {sum = 1, mean = 4.5}: subtract the component in span{1, faces}
+    C = np.stack([np.ones(6), faces]); q = q - C.T @ np.linalg.solve(C @ C.T, C @ q - [1, 4.5])
+    print("  perturbed: mean", round(q @ faces, 4), " entropy", round(-np.sum(q * np.log(q)), 4))
+
+# 3. KKT: minimise ||x - c||^2 subject to x &gt;= 0, by projected gradient descent
+c = np.array([1.5, -0.7, 0.3, -2.0])
+x = np.zeros(4)
+for _ in range(200):
+    x = np.maximum(x - 0.1 * 2 * (x - c), 0)      # gradient step, then project onto x &gt;= 0
+lam = 2 * (x - c)                                  # multipliers from stationarity: 2(x - c) - lam = 0
+clean = lambda v: np.round(v, 6) + 0.0             # tidy -0.0 and 1e-16 noise for printing
+print("x* =", clean(x), "  multipliers =", clean(lam))
+print("complementary slackness lam * x =", clean(lam * x), "  all lam &gt;= 0:", np.all(lam &gt; -1e-9))
+
+# t= 10: f - f* = 4.374e-01   bound (1 - mu/L)^t (f0 - f*) = 3.192e+00
+# t= 50: f - f* = 3.144e-06   bound (1 - mu/L)^t (f0 - f*) = 8.763e-03
+# t=100: f - f* = 1.249e-12   bound (1 - mu/L)^t (f0 - f*) = 5.508e-06
+# max-entropy die: [0.0544 0.0788 0.1142 0.1654 0.2398 0.3475]  mean 4.5  beta 0.371  entropy 1.6136
+#   perturbed: mean 4.5  entropy 1.6083
+#   perturbed: mean 4.5  entropy 1.6115
+#   perturbed: mean 4.5  entropy 1.6078
+# x* = [1.5 0.  0.3 0. ]   multipliers = [0.  1.4 0.  4. ]
+# complementary slackness lam * x = [0. 0. 0. 0.]   all lam &gt;= 0: True</code></pre>
+    <p class="muted">Gradient descent with step $1/L$ always stays below the proved bound, usually far below it, because the bound assumes the worst direction everywhere. The maximum-entropy die is a softmax in the face value with $\beta = 0.371$, and every perturbation that keeps both constraints has lower entropy. For the box-constrained problem, projected gradient descent finds $x^*$; the coordinates where $c_i &lt; 0$ press against the wall $x_i\ge0$ and get positive multipliers, the others get zero, exactly as complementary slackness requires.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show from the definition that the sum of two convex functions is convex, and that $f(A\mathbf{x} + \mathbf{b})$ is convex if $f$ is.</li>
+      <li>Prove that the set of minimisers of a convex function is convex.</li>
+      <li>For $f(\mathbf{x}) = \tfrac12\mathbf{x}^\top H\mathbf{x}$ with $H$ having eigenvalues between $\mu$ and $L$, how many steps of gradient descent with step $1/L$ guarantee $f(\mathbf{x}_t)\le10^{-6}f(\mathbf{x}_0)$ when $\kappa = 100$?</li>
+      <li>Maximise $x + y$ subject to $x^2 + y^2 = 1$ with a Lagrange multiplier.</li>
+      <li>Find the maximum-entropy distribution on $\{1,\dots,K\}$ with no constraint except normalisation.</li>
+      <li>Write the KKT conditions for $\min_x(x - c)^2$ subject to $x\ge0$, and solve them for $c &gt; 0$ and $c &lt; 0$.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Add the two chord inequalities. For the second: $A(\theta\mathbf{x} + (1-\theta)\mathbf{y}) + \mathbf{b} = \theta(A\mathbf{x} + \mathbf{b}) + (1-\theta)(A\mathbf{y} + \mathbf{b})$, then apply the convexity of $f$.</p>
+        <p><b>2.</b> If $\mathbf{x}$ and $\mathbf{y}$ both attain the minimum $f^*$, then $f(\theta\mathbf{x} + (1-\theta)\mathbf{y})\le\theta f^* + (1-\theta)f^* = f^*$, so every point between them is a minimiser too.</p>
+        <p><b>3.</b> Need $(1 - 1/100)^t\le10^{-6}$: $t\ge\ln10^6/(-\ln0.99)\approx1{,}375$ steps.</p>
+        <p><b>4.</b> $\nabla(x + y) = (1, 1)$ must be parallel to $\nabla(x^2 + y^2) = (2x, 2y)$, so $x = y$, and the constraint gives $x = y = \pm1/\sqrt2$. The maximum is $\sqrt2$ at $(1/\sqrt2, 1/\sqrt2)$.</p>
+        <p><b>5.</b> Stationarity gives $-\log p_k - 1 + \alpha = 0$, so every $p_k$ is the same constant: the uniform distribution, with entropy $\log K$ (the $\beta = 0$ case of the softmax result).</p>
+        <p><b>6.</b> With $h(x) = -x$: $2(x - c) - \lambda = 0$, $x\ge0$, $\lambda\ge0$, $\lambda x = 0$. If $c &gt; 0$: $\lambda = 0$, $x = c$ (inactive). If $c &lt; 0$: $x = c$ is infeasible, so $x = 0$ and $\lambda = -2c &gt; 0$ (active). This is $x^* = \max(c, 0)$, the projection the code uses.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Boyd &amp; Vandenberghe, <i>Convex Optimization</i></b> (free online), chapters 2–5 and 9. Convex sets and functions, duality and KKT, gradient methods. The standard reference.</li>
+      <li><b>Nocedal &amp; Wright, <i>Numerical Optimization</i></b>, chapter 12. Constrained optimisation theory.</li>
+      <li><b>Bubeck, "Convex optimization: algorithms and complexity"</b> (2015). Short, rigorous proofs of the convergence rates.</li>
+      <li><b>Karimi, Nutini, Schmidt, "Linear convergence of gradient and proximal-gradient methods under the Polyak–Łojasiewicz condition"</b> (2016).</li>
+      <li><b>Jaynes, "Information theory and statistical mechanics"</b> (Physical Review, 1957). The maximum entropy principle, including the dice example.</li>
+      <li><b>Deisenroth, Faisal, Ong, <i>Mathematics for Machine Learning</i></b>, chapter 7.</li>
+    </ul>
+  </section>
+</article>

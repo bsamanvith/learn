@@ -1,0 +1,195 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 06 · Stage 2: making models honest</div>
+  <h1>Softmax regression and cross-entropy</h1>
+  <p class="lede">Logistic regression separates two classes. Most problems have more: ten digits, a thousand ImageNet classes, fifty thousand possible next tokens. Softmax regression handles any number of classes with one linear score per class, turns the scores into a probability distribution, and trains them with cross-entropy. Its gradient is still "prediction minus target". Every classifier in the rest of this curriculum ends with this layer, including the output of a large language model.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/03-logistic-regression/">lesson 03</a></span><span><b>Math pulled in:</b> the categorical distribution, the softmax Jacobian, entropy and KL divergence, log-sum-exp</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Give each class $k = 1, \dots, K$ its own linear score, called a <b>logit</b>:</p>
+    <div class="eq">$$z_k = \mathbf{w}_k^\top\mathbf{x} + b_k, \qquad \text{or all at once,}\quad \mathbf{z} = W\mathbf{x} + \mathbf{b},\ \ W\in\mathbb{R}^{K\times d}.$$</div>
+    <p>Predict the class with the highest score. To get probabilities, exponentiate (making every score positive) and normalise (making them sum to one):</p>
+    <div class="result">
+      <div class="label">Softmax</div>
+      <div class="eq">$$p_k = \operatorname{softmax}(\mathbf{z})_k = \frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}} .$$</div>
+    </div>
+    <p>The name says what it does: it is a soft, differentiable version of "arg max". A logit that is larger than the rest by a few units takes almost all of the probability.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: softmax --></div>
+    </figure>
+    <p class="muted">Left: 300 points from three classes and the regions where each class has the largest logit, after training with the code below. Every boundary is a straight line. Right: one logit vector passed through softmax at three temperatures (see the temperature section). Lower temperature sharpens the distribution toward the arg max; higher temperature flattens it.</p>
+  </section>
+
+  <section id="properties">
+    <h2>Three properties of softmax</h2>
+    <p><b>1. Only differences between logits matter.</b> Adding the same constant $c$ to every logit multiplies the numerator and denominator by $e^{c}$:</p>
+    <div class="eq">$$\operatorname{softmax}(\mathbf{z} + c\mathbf{1}) = \operatorname{softmax}(\mathbf{z}).$$</div>
+    <p>So the parameters are not unique: adding the same vector to every $\mathbf{w}_k$ (and the same number to every $b_k$) changes nothing. A model with $K$ classes really has $(K-1)(d+1)$ free parameters. Regularisation (lesson 05) picks one representative.</p>
+    <p><b>2. Two classes give back logistic regression.</b> With $K = 2$,</p>
+    <div class="eq">$$p_1 = \frac{e^{z_1}}{e^{z_1} + e^{z_2}} = \frac{1}{1 + e^{-(z_1 - z_2)}} = \sigma(z_1 - z_2),$$</div>
+    <p>which is lesson 03's model with weight vector $\mathbf{w}_1 - \mathbf{w}_2$.</p>
+    <p><b>3. The boundaries are linear.</b> The log-odds between any two classes is</p>
+    <div class="eq">$$\log\frac{p_i}{p_j} = z_i - z_j = (\mathbf{w}_i - \mathbf{w}_j)^\top\mathbf{x} + (b_i - b_j),$$</div>
+    <p>a linear function of $\mathbf{x}$. The boundary between $i$ and $j$ is the hyperplane where it is zero. The region where class $k$ wins is $\{\mathbf{x} : z_k \ge z_j \text{ for all } j\}$, an intersection of half-spaces, which is always convex. That is why the regions in the figure are convex polygons. Lesson 12 gets curved boundaries by feeding softmax features computed by a neural network instead of the raw $\mathbf{x}$.</p>
+  </section>
+
+  <section id="likelihood">
+    <h2>The likelihood: cross-entropy</h2>
+    <p>Encode the label as a <b>one-hot</b> vector $\mathbf{y}\in\{0,1\}^K$ with a single 1 at the true class $c$. The model says $y$ follows a <b>categorical distribution</b> with probabilities $\mathbf{p}$:</p>
+    <div class="eq">$$P(y = c \mid \mathbf{x}) = p_c = \prod_{k=1}^K p_k^{\,y_k}.$$</div>
+    <p>For $n$ independent examples, the negative log-likelihood, averaged, is</p>
+    <div class="result">
+      <div class="label">Cross-entropy loss</div>
+      <div class="eq">$$L(W, \mathbf{b}) = -\frac1n\sum_{i=1}^n\sum_{k=1}^K y_{ik}\log p_{ik} = -\frac1n\sum_{i=1}^n \log p_{i,c_i}.$$</div>
+    </div>
+    <p>Only the probability given to the correct class counts. Predicting it with probability 1 costs nothing; predicting it with probability $0.01$ costs $\log 100 \approx 4.6$. A model that knows nothing and outputs the uniform distribution pays $\log K$ on every example, which is why the code's loss starts at $\log 3 = 1.0986$.</p>
+    <div class="detour">
+      <div class="label">Math detour · entropy, cross-entropy and KL divergence</div>
+      <p>For distributions $\mathbf{p}$ and $\mathbf{q}$ over $K$ outcomes:</p>
+      <div class="eq">$$H(\mathbf{p}) = -\sum_k p_k\log p_k, \qquad H(\mathbf{p}, \mathbf{q}) = -\sum_k p_k\log q_k, \qquad \operatorname{KL}(\mathbf{p}\,\Vert\,\mathbf{q}) = \sum_k p_k\log\frac{p_k}{q_k}.$$</div>
+      <p>The <b>entropy</b> $H(\mathbf{p})$ is the average surprise $-\log p_k$ of outcomes drawn from $\mathbf{p}$, the irreducible uncertainty. The <b>cross-entropy</b> $H(\mathbf{p},\mathbf{q})$ is the average surprise when outcomes come from $\mathbf{p}$ but you expected $\mathbf{q}$. Their difference is the <b>KL divergence</b>: $H(\mathbf{p},\mathbf{q}) = H(\mathbf{p}) + \operatorname{KL}(\mathbf{p}\Vert\mathbf{q})$.</p>
+      <p>KL is never negative (Gibbs' inequality). Since $\log$ is concave, Jensen's inequality gives</p>
+      <div class="eq">$$-\operatorname{KL}(\mathbf{p}\Vert\mathbf{q}) = \sum_k p_k\log\frac{q_k}{p_k} \le \log\sum_k p_k\frac{q_k}{p_k} = \log\sum_k q_k = 0,$$</div>
+      <p>with equality only when $\mathbf{q} = \mathbf{p}$. So for fixed $\mathbf{p}$, cross-entropy is minimised exactly by $\mathbf{q} = \mathbf{p}$. Applied to our loss: if the true label distribution at $\mathbf{x}$ is $\mathbf{p}^*(\mathbf{x})$, the expected loss is $\mathbb{E}_{\mathbf{x}}\big[H(\mathbf{p}^*) + \operatorname{KL}(\mathbf{p}^*\Vert\mathbf{p})\big]$, and the best possible model outputs the true conditional probabilities. Cross-entropy rewards honest probabilities, not just correct arg maxes. The <a href="/machine-learning/M4-information-theory/">math toolkit, M4</a>, explains why these quantities are measured in bits.</p>
+    </div>
+  </section>
+
+  <section id="gradient">
+    <h2>The gradient: prediction minus target</h2>
+    <p>Take one example with true class $c$. Its loss, written in the logits, is</p>
+    <div class="eq">$$\ell(\mathbf{z}) = -\log p_c = -z_c + \log\sum_{j=1}^K e^{z_j}.$$</div>
+    <p>Differentiate with respect to $z_k$. The first term gives $-1$ if $k = c$ and $0$ otherwise, which is $-y_k$. The second gives $e^{z_k}/\sum_j e^{z_j} = p_k$. So</p>
+    <div class="result">
+      <div class="label">Gradient of softmax + cross-entropy with respect to the logits</div>
+      <div class="eq">$$\frac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y}.$$</div>
+    </div>
+    <p>This is the same form as linear regression ($\hat y - y$) and logistic regression ($\sigma(z) - y$). Push the correct logit up by $1 - p_c$, push every wrong logit down by its probability. Every model whose last step is softmax + cross-entropy starts its backward pass with this vector.</p>
+    <p>It is worth seeing how the clean answer arises, because the softmax on its own has a messier derivative. Differentiate $p_i = e^{z_i}/S$ with $S = \sum_j e^{z_j}$ using the quotient rule:</p>
+    <div class="eq">$$\frac{\partial p_i}{\partial z_j} = \frac{\delta_{ij}e^{z_i}S - e^{z_i}e^{z_j}}{S^2} = p_i(\delta_{ij} - p_j), \qquad\text{that is,}\quad J = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top.$$</div>
+    <p>The chain rule through $\ell = -\sum_i y_i\log p_i$ then gives $\partial\ell/\partial z_j = -\sum_i \frac{y_i}{p_i}\,p_i(\delta_{ij} - p_j) = -y_j + p_j\sum_i y_i = p_j - y_j$, since $\sum_i y_i = 1$. The $1/p_i$ from the log cancels the $p_i$ from the softmax. That cancellation is why the two are always used together: a squared-error loss on top of softmax keeps the Jacobian's small factors, and its gradient vanishes exactly when the model is confidently wrong (exercise 5).</p>
+    <p><b>Gradient with respect to the weights.</b> Since $z_k = \mathbf{w}_k^\top\mathbf{x} + b_k$, the chain rule gives $\partial\ell/\partial\mathbf{w}_k = (p_k - y_k)\,\mathbf{x}$. Stacking rows and averaging over the data,</p>
+    <div class="eq">$$\nabla_W L = \frac1n(P - Y)^\top X, \qquad \nabla_{\mathbf{b}}L = \frac1n(P - Y)^\top\mathbf{1},$$</div>
+    <p>where row $i$ of $P$ and $Y$ holds $\mathbf{p}_i$ and $\mathbf{y}_i$. That is two lines of NumPy in the code below.</p>
+  </section>
+
+  <section id="convexity">
+    <h2>The loss is convex</h2>
+    <p>The Hessian of $\ell$ in the logits is the derivative of $\mathbf{p} - \mathbf{y}$, which is the softmax Jacobian $J = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$. For any vector $\mathbf{v}$,</p>
+    <div class="eq">$$\mathbf{v}^\top J\mathbf{v} = \sum_k p_k v_k^2 - \Big(\sum_k p_k v_k\Big)^2 = \operatorname{Var}_{k\sim\mathbf{p}}(v_k) \ge 0.$$</div>
+    <p>It is the variance of $v_k$ when $k$ is drawn from $\mathbf{p}$, so it can't be negative: $J$ is positive semidefinite. The logits are linear in the parameters, and a convex function of a linear map is convex, so $L(W,\mathbf{b})$ is convex and gradient descent finds a global minimum. It is not <i>strictly</i> convex: $\mathbf{v} = \mathbf{1}$ has zero variance, which is the shift invariance from property 1 showing up as a flat direction. As in lesson 03, if the classes are linearly separable the logits can grow forever and the minimum is not attained; weight decay fixes both problems.</p>
+  </section>
+
+  <section id="stability">
+    <h2>Computing it without overflow</h2>
+    <p>$e^{1000}$ overflows a 64-bit float. Logits that large are rare in a linear model but routine in a deep network. The fix uses property 1: subtract $m = \max_j z_j$ before exponentiating. For the loss we need</p>
+    <div class="eq">$$\log\sum_j e^{z_j} = m + \log\sum_j e^{z_j - m},$$</div>
+    <p>and now every exponent is $\le 0$, with at least one equal to $0$, so the sum lies in $[1, K]$ and nothing overflows or underflows to $\log 0$. This function, $\operatorname{LSE}(\mathbf{z}) = \log\sum_j e^{z_j}$, is called <b>log-sum-exp</b>. It satisfies</p>
+    <div class="eq">$$\max_j z_j \le \operatorname{LSE}(\mathbf{z}) \le \max_j z_j + \log K, \qquad \nabla\operatorname{LSE}(\mathbf{z}) = \operatorname{softmax}(\mathbf{z}),$$</div>
+    <p>so it is a smooth upper bound on the max, and softmax is its gradient: the "soft arg max" of a "soft max". In practice, always compute $\log\mathbf{p} = \mathbf{z} - \operatorname{LSE}(\mathbf{z})$ directly (log-softmax) and never take the log of a computed probability. Deep learning libraries fuse softmax and cross-entropy into one function for exactly this reason.</p>
+  </section>
+
+  <section id="temperature">
+    <h2>Temperature and label smoothing</h2>
+    <p>Dividing the logits by a <b>temperature</b> $T &gt; 0$ before the softmax, $\mathbf{p} = \operatorname{softmax}(\mathbf{z}/T)$, changes how peaked the distribution is without changing its order. As $T \to 0$ it becomes one-hot on the largest logit; as $T \to \infty$ it becomes uniform (exercise 6). The right panel of the figure shows logits $(2, 1, 0.2, -1)$: the top class gets 0.86 at $T = 0.5$, 0.63 at $T = 1$ and 0.38 at $T = 3$. You will meet temperature again when sampling text from a language model (lessons 26 and 30), in knowledge distillation (lesson 29), and in contrastive learning (lesson 21).</p>
+    <p><b>Label smoothing</b> replaces the one-hot target with $(1-\epsilon)\mathbf{y} + \epsilon/K$. The best achievable logits are then finite, so they stop growing once the training data are fitted, and the model's confidence stays closer to its accuracy. It is a standard regulariser for large image classifiers and transformers ($\epsilon = 0.1$ is typical).</p>
+    <figure class="plate wide" data-scene="softmax">
+      <div class="stage">
+        <canvas aria-label="Four logits as bars and their softmax probabilities at an adjustable temperature"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sm-z0">z cat <input id="sm-z0" type="range" data-k="z0" min="-4" max="4" step="0.1"><output data-out="z0"></output></label>
+            <label for="sm-z1">z dog <input id="sm-z1" type="range" data-k="z1" min="-4" max="4" step="0.1"><output data-out="z1"></output></label>
+            <label for="sm-z2">z fox <input id="sm-z2" type="range" data-k="z2" min="-4" max="4" step="0.1"><output data-out="z2"></output></label>
+            <label for="sm-z3">z owl <input id="sm-z3" type="range" data-k="z3" min="-4" max="4" step="0.1"><output data-out="z3"></output></label>
+            <label for="sm-T">log₁₀ T <input id="sm-T" type="range" data-k="T" min="-1.3" max="1" step="0.01"><output data-out="T"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Raise all four logits together and nothing changes: softmax only sees differences. Slide the temperature down and the largest logit takes everything (argmax); slide it up and the distribution flattens towards uniform, with entropy approaching 2 bits. The ranking of the classes never changes at any temperature.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(1)
+K, n_per = 3, 100
+centres = np.array([[-2.0, 0.0], [2.0, 0.5], [0.0, 2.5]])
+X = np.vstack([c + rng.standard_normal((n_per, 2)) for c in centres])
+y = np.repeat(np.arange(K), n_per)
+Y = np.eye(K)[y]                                   # one-hot targets, shape (n, K)
+n = len(y)
+
+def log_softmax(Z):                                # stable: subtract the row max first
+    Z = Z - Z.max(axis=1, keepdims=True)
+    return Z - np.log(np.exp(Z).sum(axis=1, keepdims=True))
+
+def loss_and_grad(W, b):
+    logp = log_softmax(X @ W.T + b)                # (n, K) log-probabilities
+    loss = -(Y * logp).sum() / n                   # mean cross-entropy
+    G = (np.exp(logp) - Y) / n                     # dL/dz = p - y, per example
+    return loss, G.T @ X, G.sum(axis=0)            # dL/dW (K x d), dL/db (K)
+
+W, b = np.zeros((K, 2)), np.zeros(K)
+for t in range(501):
+    loss, gW, gb = loss_and_grad(W, b)
+    if t in (0, 10, 100, 500):
+        acc = np.mean((X @ W.T + b).argmax(1) == y)
+        print(f"step {t:3d}: loss {loss:.4f}  accuracy {acc:.3f}")
+    W -= 0.5 * gW; b -= 0.5 * gb
+
+# check one gradient entry against a finite difference
+E = np.zeros_like(W); E[1, 0] = 1e-6
+num = (loss_and_grad(W + E, b)[0] - loss_and_grad(W - E, b)[0]) / 2e-6
+print("dL/dW[1,0]: analytic", round(loss_and_grad(W, b)[1][1, 0], 8), " numeric", round(num, 8))
+print("naive softmax of [1000, 0]:", np.exp([1000.0, 0]) / np.exp([1000.0, 0]).sum())
+print("stable log-softmax:        ", log_softmax(np.array([[1000.0, 0.0]])))
+
+# step   0: loss 1.0986  accuracy 0.333
+# step  10: loss 0.2982  accuracy 0.927
+# step 100: loss 0.2183  accuracy 0.917
+# step 500: loss 0.2130  accuracy 0.913
+# dL/dW[1,0]: analytic -0.00035108  numeric -0.00035108
+# naive softmax of [1000, 0]: [nan  0.]         (with an overflow warning)
+# stable log-softmax:         [[    0. -1000.]]</code></pre>
+    <p class="muted">The loss starts at $\log 3$ and falls steadily, but accuracy peaks at step 10 and then drops slightly. Cross-entropy and accuracy are different objectives: the optimiser trades a few borderline points for better-calibrated probabilities on the rest. Lesson 08 is about choosing what to measure. The finite-difference check is the habit to keep: whenever you derive a gradient by hand, compare it with $\big(L(\theta+h) - L(\theta-h)\big)/2h$.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>A linear classifier for MNIST has $d = 784$ inputs and $K = 10$ classes. How many parameters does softmax regression have, and how many are identifiable?</li>
+      <li>Show that $J = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$ satisfies $J\mathbf{1} = \mathbf{0}$. What does that say about how the probabilities change when all logits move together?</li>
+      <li>Prove $\max_j z_j \le \operatorname{LSE}(\mathbf{z}) \le \max_j z_j + \log K$, and that $\nabla\operatorname{LSE} = \operatorname{softmax}$.</li>
+      <li>A 10-class model outputs probability $0.5$ on the correct class and spreads the rest uniformly. What is the cross-entropy? What is it for a model that is uniform over all classes?</li>
+      <li>Binary case, true label $y = 1$, logit $z = -5$ (confidently wrong). Compute $\partial\ell/\partial z$ for cross-entropy, $\ell = -\log\sigma(z)$, and for squared error, $\ell = (\sigma(z) - 1)^2$. Which one learns from this mistake?</li>
+      <li>Show that as $T\to 0^+$, $\operatorname{softmax}(\mathbf{z}/T)$ tends to the one-hot vector of the largest logit (assume it is unique), and as $T\to\infty$ it tends to the uniform distribution.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $W$ is $10\times784$ and $\mathbf{b}$ has 10 entries: $7{,}850$ parameters. One class's row can be fixed to zero without loss of generality, leaving $9 \times 785 = 7{,}065$ identifiable ones.</p>
+        <p><b>2.</b> $(J\mathbf{1})_i = p_i - p_i\sum_j p_j = 0$. Moving every logit by the same amount $\delta$ changes $\mathbf{p}$ by $J(\delta\mathbf{1}) = \mathbf{0}$ to first order (and exactly, by property 1).</p>
+        <p><b>3.</b> With $m = \max_j z_j$: $e^m \le \sum_j e^{z_j} \le Ke^m$; take logs. The gradient: $\partial\operatorname{LSE}/\partial z_k = e^{z_k}/\sum_j e^{z_j} = p_k$.</p>
+        <p><b>4.</b> $-\log 0.5 = \log 2 \approx 0.693$. The uniform model pays $\log 10 \approx 2.303$ whatever the label.</p>
+        <p><b>5.</b> $\sigma(-5) \approx 0.00669$. Cross-entropy: $\sigma(z) - 1 \approx -0.993$. Squared error: $2(\sigma(z) - 1)\,\sigma(z)(1-\sigma(z)) \approx 2(-0.993)(0.00665) \approx -0.0132$, about 75 times smaller. With squared error the sigmoid's flat tail swallows the signal, so a confidently wrong model barely moves. Cross-entropy's log cancels that factor.</p>
+        <p><b>6.</b> Divide numerator and denominator by $e^{z_{\max}/T}$: $p_k = e^{(z_k - z_{\max})/T}\big/\sum_j e^{(z_j - z_{\max})/T}$. As $T\to0^+$, every exponent with $z_k &lt; z_{\max}$ tends to $-\infty$, so those terms vanish and the arg max gets probability 1. As $T\to\infty$, every exponent tends to 0, every term to 1, and $p_k \to 1/K$.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Bishop, <i>Pattern Recognition and Machine Learning</i></b>, sections 4.3.4 (multiclass logistic regression) and 1.6 (information theory).</li>
+      <li><b>Murphy, <i>Probabilistic Machine Learning: An Introduction</i></b>, sections 2.5 (categorical and softmax), 6.1–6.2 (entropy, KL) and 10.3 (multinomial logistic regression).</li>
+      <li><b>Goodfellow, Bengio, Courville, <i>Deep Learning</i></b>, section 6.2.2.3. Softmax output units and why the log matters.</li>
+      <li><b>Cover &amp; Thomas, <i>Elements of Information Theory</i></b>, chapter 2. Entropy, relative entropy and Jensen's inequality, properly.</li>
+      <li><b>Szegedy et al., "Rethinking the Inception architecture for computer vision"</b> (2016), section 7: label smoothing. <b>Hinton, Vinyals, Dean, "Distilling the knowledge in a neural network"</b> (2015): softmax temperature.</li>
+    </ul>
+  </section>
+</article>

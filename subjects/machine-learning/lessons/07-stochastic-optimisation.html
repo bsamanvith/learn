@@ -1,0 +1,221 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 07 · Stage 2: making models honest</div>
+  <h1>Stochastic optimisation</h1>
+  <p class="lede">Gradient descent from lesson 02 reads the whole dataset for every step. With a million examples that is hopeless. Stochastic gradient descent uses a small random batch instead: the gradient becomes noisy but stays right on average. This lesson works out exactly how noisy, what that noise does to the final answer, and the three ideas every deep learning optimiser is built from: momentum, per-coordinate step sizes (Adam), and learning-rate schedules.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/02-gradient-descent/">lesson 02</a>, <a href="/machine-learning/05-regularisation/">lesson 05</a></span><span><b>Math pulled in:</b> unbiased estimators, the variance of a mean, linear recurrences, exponential moving averages</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Almost every training loss is an average over examples:</p>
+    <div class="eq">$$L(\mathbf{w}) = \frac1n\sum_{i=1}^n \ell_i(\mathbf{w}), \qquad \nabla L(\mathbf{w}) = \frac1n\sum_{i=1}^n \nabla\ell_i(\mathbf{w}).$$</div>
+    <p>The full gradient is a mean of $n$ per-example gradients. You don't need all $n$ terms to estimate a mean well: a random sample of 32 gives a decent estimate at a tiny fraction of the cost. <b>Stochastic gradient descent</b> (SGD) draws a random minibatch $\mathcal{B}$ of size $B$ and steps along</p>
+    <div class="eq">$$\mathbf{g}_{\mathcal{B}} = \frac1B\sum_{i\in\mathcal{B}}\nabla\ell_i(\mathbf{w}), \qquad \mathbf{w} \leftarrow \mathbf{w} - \eta\,\mathbf{g}_{\mathcal{B}} .$$</div>
+    <p>One pass through the data in batches is an <b>epoch</b>. In one epoch, full-batch gradient descent takes one step; SGD with $B = 32$ on 2,000 examples takes 62. Early in training, when every example points the same way, those 62 cheap steps are worth far more than one exact one.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: sgd --></div>
+    </figure>
+    <p class="muted">Left: the linear regression problem from the code below (2,000 examples, 20 features on very different scales). With a constant step size, SGD drops quickly and then stops improving at a <i>noise floor</i>; the dashed lines are the floors predicted in the noise-floor section. Shrinking the step size over time (cosine decay) gets below both. Right: deterministic gradients on a two-dimensional quadratic whose curvatures differ by a factor of 25. Gradient descent zigzags across the valley, momentum cuts along it, and Adam takes steps of roughly fixed size in each coordinate.</p>
+  </section>
+
+  <section id="noise">
+    <h2>How noisy is a minibatch gradient?</h2>
+    <p>Write $\mathbf{g}_i = \nabla\ell_i(\mathbf{w})$ and $\bar{\mathbf{g}} = \nabla L(\mathbf{w})$. Suppose each of the $B$ indices in the batch is drawn uniformly from $\{1,\dots,n\}$, independently. Each draw has mean $\frac1n\sum_i\mathbf{g}_i = \bar{\mathbf{g}}$, so by linearity of expectation</p>
+    <div class="eq">$$\mathbb{E}[\mathbf{g}_{\mathcal{B}}] = \bar{\mathbf{g}} .$$</div>
+    <p>The minibatch gradient is an <b>unbiased estimator</b> of the full gradient. Its spread comes from the covariance of a single draw,</p>
+    <div class="eq">$$\Sigma(\mathbf{w}) = \frac1n\sum_{i=1}^n(\mathbf{g}_i - \bar{\mathbf{g}})(\mathbf{g}_i - \bar{\mathbf{g}})^\top .$$</div>
+    <p>The covariance of a sum of independent vectors is the sum of their covariances, and scaling by $1/B$ scales covariance by $1/B^2$, so</p>
+    <div class="result">
+      <div class="label">Variance of a minibatch gradient</div>
+      <div class="eq">$$\operatorname{Cov}(\mathbf{g}_{\mathcal{B}}) = \frac{1}{B^2}\cdot B\,\Sigma = \frac{\Sigma}{B}.$$</div>
+    </div>
+    <p>The standard deviation of the estimate falls like $1/\sqrt B$. Going from $B = 32$ to $B = 128$ costs four times as much compute per step and only halves the noise. That diminishing return is why moderate batch sizes are so efficient. (Sampling without replacement, as in the shuffled epochs of the code, multiplies the covariance by $(n - B)/(n - 1)$, slightly less noise; the full batch $B = n$ has none.)</p>
+  </section>
+
+  <section id="floor">
+    <h2>What the noise costs: the noise floor</h2>
+    <p>Near a minimum $\mathbf{w}^*$ the loss is close to quadratic, $L(\mathbf{w}) \approx L(\mathbf{w}^*) + \tfrac12\mathbf{e}^\top H\mathbf{e}$ with $\mathbf{e} = \mathbf{w} - \mathbf{w}^*$. Lesson 02 showed that in the eigenbasis of the Hessian $H$ each direction evolves on its own. Take one direction with curvature $h$ and write the minibatch gradient as the true gradient plus noise, $h e_t + \xi_t$, with $\mathbb{E}[\xi_t] = 0$ and $\operatorname{Var}(\xi_t) = s/B$:</p>
+    <div class="eq">$$e_{t+1} = (1 - \eta h)\,e_t - \eta\,\xi_t .$$</div>
+    <p>The noise $\xi_t$ is fresh at each step, so it is independent of $e_t$, and the variances add:</p>
+    <div class="eq">$$\operatorname{Var}(e_{t+1}) = (1 - \eta h)^2\operatorname{Var}(e_t) + \eta^2\frac{s}{B}.$$</div>
+    <p>If $0 &lt; \eta h &lt; 2$ (lesson 02's stability condition) the factor $(1-\eta h)^2$ is below 1, and the variance settles where $V = (1-\eta h)^2V + \eta^2 s/B$:</p>
+    <div class="eq">$$V = \frac{\eta^2 s/B}{1 - (1 - \eta h)^2} = \frac{\eta\, s}{B\,h\,(2 - \eta h)} .$$</div>
+    <p>The iterate never settles at the minimum. It keeps jittering around it, and that jitter costs $\tfrac12 hV$ in expected loss for this direction. For least squares with noise variance $\sigma^2$, the per-example gradient noise near the optimum is $s_j \approx \sigma^2 h_j$ in direction $j$. Summing over directions:</p>
+    <div class="result">
+      <div class="label">SGD noise floor on a quadratic (constant step size)</div>
+      <div class="eq">$$\mathbb{E}\big[L(\mathbf{w}_t)\big] - L(\mathbf{w}^*) \;\longrightarrow\; \frac{\eta\,\sigma^2}{2B}\sum_j\frac{h_j}{2 - \eta h_j} \;\approx\; \frac{\eta}{B}\cdot\frac{\sigma^2\operatorname{tr}(H)}{4}\quad\text{for small }\eta h_j .$$</div>
+    </div>
+    <p>The code below checks this: the predicted floors are $1.9\times10^{-2}$ for $\eta = 0.1$ and $1.3\times10^{-3}$ for $\eta = 0.01$, and the measured values are $1.8\times10^{-2}$ and $1.4\times10^{-3}$. Three lessons fall out of the formula:</p>
+    <ul>
+      <li><b>A big step size learns fast but ends noisy.</b> The floor is proportional to $\eta$. That is the trade-off on the left of the figure.</li>
+      <li><b>Only $\eta/B$ matters for the noise.</b> Doubling the batch and doubling the step size leaves the floor unchanged while halving the number of steps. This is the <b>linear scaling rule</b> used to train ImageNet in an hour (Goyal et al., 2017). It breaks down once $\eta$ gets near the stability limit $2/h_{\max}$.</li>
+      <li><b>To converge, the step size must shrink.</b> Robbins and Monro (1951) showed that SGD converges to the minimum if $\sum_t\eta_t = \infty$ (you can still travel any distance) and $\sum_t\eta_t^2 &lt; \infty$ (the accumulated noise is finite); $\eta_t \propto 1/t$ satisfies both.</li>
+    </ul>
+    <p>The noise is not only a nuisance. In non-convex deep learning it helps SGD escape saddle points and sharp minima, and lesson 14 returns to that.</p>
+  </section>
+
+  <section id="momentum">
+    <h2>Momentum</h2>
+    <p>Lesson 02 showed that gradient descent on an ill-conditioned problem zigzags: the step size has to be small enough for the steepest direction ($\eta &lt; 2/h_{\max}$), so progress along the flattest direction is painfully slow. The number of steps grows with the <b>condition number</b> $\kappa = h_{\max}/h_{\min}$. <b>Heavy-ball momentum</b> (Polyak, 1964) keeps a running sum of past gradients:</p>
+    <div class="eq">$$\mathbf{v}_t = \beta\,\mathbf{v}_{t-1} + \mathbf{g}_t, \qquad \mathbf{w}_{t+1} = \mathbf{w}_t - \eta\,\mathbf{v}_t, \qquad 0 \le \beta &lt; 1 .$$</div>
+    <p>Across the valley the gradient flips sign every step, so those components cancel in $\mathbf{v}$. Along the valley it keeps pointing the same way, so they add up: with a constant gradient, $\mathbf{v}$ grows to $\mathbf{g}/(1 - \beta)$, a tenfold longer step for the usual $\beta = 0.9$.</p>
+    <p><b>How much faster, exactly.</b> Eliminate $\mathbf{v}$: $\mathbf{w}_{t+1} - \mathbf{w}_t = -\eta(\beta\mathbf{v}_{t-1} + \mathbf{g}_t) = \beta(\mathbf{w}_t - \mathbf{w}_{t-1}) - \eta\mathbf{g}_t$. On a quadratic, in a direction with curvature $h$, the error obeys</p>
+    <div class="eq">$$e_{t+1} = (1 + \beta - \eta h)\,e_t - \beta\,e_{t-1}.$$</div>
+    <p>A linear recurrence like this is solved by $e_t = r^t$, which gives the characteristic equation $r^2 - (1 + \beta - \eta h)\,r + \beta = 0$. The product of its two roots is $\beta$. When the roots are complex they are conjugates with equal size, so $|r| = \sqrt\beta$, and the error shrinks by $\sqrt\beta$ per step <i>regardless of $h$</i>. The roots are complex when $(1 + \beta - \eta h)^2 &lt; 4\beta$, which rearranges to</p>
+    <div class="eq">$$(1 - \sqrt\beta)^2 &lt; \eta h &lt; (1 + \sqrt\beta)^2 .$$</div>
+    <p>Choose $\eta$ and $\beta$ so that the whole range $[h_{\min}, h_{\max}]$ fits in this window: $\eta h_{\min} = (1-\sqrt\beta)^2$ and $\eta h_{\max} = (1+\sqrt\beta)^2$. Dividing the two gives $\kappa = \big((1+\sqrt\beta)/(1-\sqrt\beta)\big)^2$, and solving for $\sqrt\beta$:</p>
+    <div class="result">
+      <div class="label">Convergence rate per step on a quadratic with condition number κ</div>
+      <div class="eq">$$\text{gradient descent: } \frac{\kappa - 1}{\kappa + 1}, \qquad \text{heavy-ball momentum: } \frac{\sqrt\kappa - 1}{\sqrt\kappa + 1}.$$</div>
+    </div>
+    <p>Momentum replaces $\kappa$ by $\sqrt\kappa$. For $\kappa = 100$, plain descent needs about 50 steps to shrink the error by a factor of $e$; momentum needs about 5. On the right of the figure ($\kappa = 25$, both methods tuned optimally) gradient descent takes 44 steps to reduce the loss a thousandfold and momentum takes 15.</p>
+    <p>With noisy gradients the same $\mathbf{g}/(1-\beta)$ amplification applies to the noise, so momentum with step $\eta$ has roughly the noise floor of SGD with step $\eta/(1-\beta)$. In the code, momentum with $\eta = 0.01$, $\beta = 0.9$ ends near SGD with $\eta = 0.1$. The <b>Nesterov</b> variant evaluates the gradient at the look-ahead point $\mathbf{w}_t - \eta\beta\mathbf{v}_{t-1}$, which is slightly more stable and achieves the $\sqrt\kappa$ rate on all smooth convex functions, not just quadratics.</p>
+    <figure class="plate wide" data-scene="sgd">
+      <div class="stage">
+        <canvas aria-label="Minibatch SGD path on the contours of a stretched least-squares bowl, and its loss over 150 steps"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sg-lr">η <input id="sg-lr" type="range" data-k="lr" min="0.02" max="1.2" step="0.01"><output data-out="lr"></output></label>
+            <label for="sg-bs">log₂ batch <input id="sg-bs" type="range" data-k="bs" min="0" max="8" step="1"><output data-out="bs"></output></label>
+            <label for="sg-mom">momentum β <input id="sg-mom" type="range" data-k="mom" min="0" max="0.95" step="0.01"><output data-out="mom"></output></label>
+            <button type="button" data-act="rerun">Rerun with new batches</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> This is real minibatch SGD on a 2-parameter least-squares problem with 256 points and correlated features. With batch 1 the path rattles around the minimum and the loss stalls at a noise floor; each doubling of the batch lowers the floor. Push η past about 1.1 with β = 0 and it diverges along the steep direction. Add momentum and the path accelerates down the long valley, but at large β it overshoots and circles.</p>
+  </section>
+
+  <section id="adam">
+    <h2>Adaptive step sizes: Adam</h2>
+    <p>Momentum fixes the zigzag but still uses one step size for every coordinate. If one weight's gradients are typically 100 times larger than another's, no single $\eta$ suits both. <b>Adam</b> (Kingma &amp; Ba, 2015) divides each coordinate by a running estimate of its typical gradient size.</p>
+    <div class="detour">
+      <div class="label">Math detour · exponential moving averages and bias correction</div>
+      <p>An <b>exponential moving average</b> (EMA) of a sequence $\mathbf{g}_1, \mathbf{g}_2, \dots$ is $\mathbf{m}_t = \beta\mathbf{m}_{t-1} + (1-\beta)\mathbf{g}_t$ with $\mathbf{m}_0 = \mathbf{0}$. Unrolling,</p>
+      <div class="eq">$$\mathbf{m}_t = (1-\beta)\sum_{s=1}^t\beta^{t-s}\mathbf{g}_s .$$</div>
+      <p>Older values are discounted geometrically, and the weights look back over roughly $1/(1-\beta)$ steps: 10 for $\beta = 0.9$, 1,000 for $\beta = 0.999$. Because $\mathbf{m}_0 = \mathbf{0}$, early averages are pulled toward zero. If every $\mathbf{g}_s$ has mean $\boldsymbol\mu$, then $\mathbb{E}[\mathbf{m}_t] = (1-\beta)\sum_{s=1}^t\beta^{t-s}\boldsymbol\mu = (1-\beta^t)\,\boldsymbol\mu$. Dividing by $1 - \beta^t$ removes the bias exactly.</p>
+    </div>
+    <p>Adam keeps two EMAs, of the gradient and of its elementwise square, and corrects both:</p>
+    <div class="result">
+      <div class="label">Adam (all operations elementwise)</div>
+      <div class="eq">$$\begin{aligned}\mathbf{m}_t &amp;= \beta_1\mathbf{m}_{t-1} + (1-\beta_1)\,\mathbf{g}_t, &amp; \hat{\mathbf{m}}_t &amp;= \mathbf{m}_t/(1-\beta_1^t),\\ \mathbf{v}_t &amp;= \beta_2\mathbf{v}_{t-1} + (1-\beta_2)\,\mathbf{g}_t^2, &amp; \hat{\mathbf{v}}_t &amp;= \mathbf{v}_t/(1-\beta_2^t),\\ \mathbf{w}_{t+1} &amp;= \mathbf{w}_t - \eta\,\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}. &amp;&amp;\end{aligned}$$</div>
+    </div>
+    <p>Defaults: $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$. What the update does:</p>
+    <ul>
+      <li>$\hat{\mathbf{m}}$ is momentum. $\sqrt{\hat{\mathbf{v}}}$ is the root-mean-square gradient size of each coordinate over the last thousand or so steps.</li>
+      <li>The ratio $\hat m_j/\sqrt{\hat v_j}$ is roughly between $-1$ and $1$. When gradients in coordinate $j$ are consistent it is near $\pm1$ and the step is about $\eta$; when they are noise around zero it is small. So $\eta$ sets the step size <i>in parameter units</i>, the same for every coordinate.</li>
+      <li>Multiplying the loss by any constant leaves the update unchanged (apart from $\epsilon$). Adam does not care how the loss or the features are scaled, which is why it is the default for transformers, whose layers have gradients on wildly different scales.</li>
+    </ul>
+    <p>The price is the same noise floor as before: on the right of the figure Adam reaches the bottom of the quadratic quickly but then rattles around at a distance set by $\eta$. A schedule (next section) takes care of that.</p>
+    <p><b>AdamW.</b> Adding the ridge penalty $\tfrac\lambda2\lVert\mathbf{w}\rVert^2$ to the loss puts $\lambda\mathbf{w}$ into $\mathbf{g}$, and Adam then divides it by $\sqrt{\hat{\mathbf{v}}}$: weights with large gradients are barely decayed at all. Loshchilov and Hutter (2019) <i>decoupled</i> the two, applying the decay directly to the weights:</p>
+    <div class="eq">$$\mathbf{w}_{t+1} = \mathbf{w}_t - \eta\Big(\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t}+\epsilon} + \lambda\,\mathbf{w}_t\Big).$$</div>
+    <p>This is lesson 05's weight decay restored to its original meaning, and AdamW is the standard optimiser for training large language models (lesson 27).</p>
+  </section>
+
+  <section id="schedules">
+    <h2>Learning-rate schedules</h2>
+    <p>The noise floor says: large steps early to make progress, small steps late to settle. Modern training does both with a schedule. The most common one is <b>linear warm-up then cosine decay</b>. For total steps $T$ and $T_w$ warm-up steps,</p>
+    <div class="eq">$$\eta_t = \begin{cases}\eta_{\max}\,\dfrac{t}{T_w}, &amp; t &lt; T_w,\\[2mm] \eta_{\min} + \tfrac12(\eta_{\max} - \eta_{\min})\Big(1 + \cos\dfrac{\pi(t - T_w)}{T - T_w}\Big), &amp; t \ge T_w .\end{cases}$$</div>
+    <p>The cosine half spends a long time near $\eta_{\max}$, then glides to $\eta_{\min}$. In the figure, cosine decay from $\eta = 0.1$ tracks the fast constant-step run for most of training, then ends two to three orders of magnitude below the constant runs, as the floor formula predicts once $\eta$ shrinks.</p>
+    <p><b>Why warm-up?</b> At step 1 Adam's $\hat{\mathbf{v}}$ is an average of a single squared gradient, a very noisy denominator, and the network's initial gradients can be large and unrepresentative. A few hundred to a few thousand steps of gradually increasing $\eta$ prevent early updates from throwing the weights somewhere bad. Transformers are notoriously unstable without it.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+n, d, sigma = 2000, 20, 0.5
+X = rng.standard_normal((n, d)) * np.linspace(0.2, 3.0, d)   # features on very different scales
+y = X @ rng.standard_normal(d) + sigma * rng.standard_normal(n)
+w_best = np.linalg.lstsq(X, y, rcond=None)[0]
+L = lambda w: 0.5 * np.mean((X @ w - y) ** 2)
+excess = lambda w: L(w) - L(w_best)                # how far above the best possible loss
+h = np.linalg.eigvalsh(X.T @ X / n)                # curvatures (Hessian eigenvalues)
+
+def train(update, epochs=30, B=32, seed=1):
+    rng = np.random.default_rng(seed)
+    w, state, t = np.zeros(d), {}, 0
+    for epoch in range(epochs):
+        for idx in np.array_split(rng.permutation(n), n // B):
+            g = X[idx].T @ (X[idx] @ w - y[idx]) / len(idx)   # minibatch gradient
+            t += 1
+            w = update(w, g, state, t)
+    return excess(w)
+
+def sgd(lr):
+    return lambda w, g, s, t: w - lr * g
+
+def sgd_cosine(lr0, T):                            # learning rate decays from lr0 to 0 over T steps
+    return lambda w, g, s, t: w - lr0 * 0.5 * (1 + np.cos(np.pi * t / T)) * g
+
+def momentum(lr, beta=0.9):
+    def update(w, g, s, t):
+        s["v"] = beta * s.get("v", 0) + g
+        return w - lr * s["v"]
+    return update
+
+def adam(lr, b1=0.9, b2=0.999, eps=1e-8):
+    def update(w, g, s, t):
+        s["m"] = b1 * s.get("m", 0) + (1 - b1) * g
+        s["v"] = b2 * s.get("v", 0) + (1 - b2) * g * g
+        m_hat, v_hat = s["m"] / (1 - b1**t), s["v"] / (1 - b2**t)   # bias correction
+        return w - lr * m_hat / (np.sqrt(v_hat) + eps)
+    return update
+
+print(f"curvatures from {h[0]:.3f} to {h[-1]:.2f}: condition number {h[-1] / h[0]:.0f}")
+for lr in [0.1, 0.03, 0.01]:
+    floor = lr * sigma**2 / (2 * 32) * np.sum(h / (2 - lr * h))     # predicted noise floor
+    print(f"SGD lr={lr:&lt;5} excess {train(sgd(lr)):.1e}   predicted floor {floor:.1e}")
+T = 30 * (n // 32)
+print(f"SGD cosine from 0.1   excess {train(sgd_cosine(0.1, T)):.1e}")
+print(f"momentum lr=0.01      excess {train(momentum(0.01)):.1e}")
+print(f"Adam lr=0.003         excess {train(adam(0.003)):.1e}")
+
+# curvatures from 0.041 to 9.48: condition number 231
+# SGD lr=0.1   excess 1.8e-02   predicted floor 1.9e-02
+# SGD lr=0.03  excess 7.0e-03   predicted floor 4.3e-03
+# SGD lr=0.01  excess 1.4e-03   predicted floor 1.3e-03
+# SGD cosine from 0.1   excess 6.2e-06
+# momentum lr=0.01      excess 2.9e-02
+# Adam lr=0.003         excess 2.2e-04</code></pre>
+    <p class="muted">Each line is a single run, so each excess loss is one random draw from the stationary jitter; the prediction is its average (the figure averages 8 runs). The floor scales with $\eta$; momentum with $\eta = 0.01$ lands near SGD with $\eta = 0.1$, as the $1/(1-\beta)$ argument says; and the decayed schedule beats every constant step by orders of magnitude.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Sampling a batch of $B$ distinct indices <i>without</i> replacement: show the minibatch gradient is still unbiased.</li>
+      <li>Using the noise-floor formula, by what factor does the floor change if you multiply the batch size by 4 and keep $\eta$ fixed? If you multiply both $B$ and $\eta$ by 4?</li>
+      <li>Check that $\eta_t = c/t$ satisfies the Robbins–Monro conditions but $\eta_t = c/t^2$ does not. What goes wrong with $c/t^2$?</li>
+      <li>For heavy-ball momentum with a constant gradient $\mathbf{g}$, show $\mathbf{v}_t \to \mathbf{g}/(1-\beta)$. With $\beta = 0.99$, how much longer is the steady-state step than plain SGD's?</li>
+      <li>Suppose every gradient coordinate is a constant, $g_j = c_j \ne 0$. What is Adam's step in coordinate $j$ (after bias correction, ignoring $\epsilon$)? What does that say about Adam on a function like $f(w) = |w|$ near its minimum?</li>
+      <li>With plain Adam and an L2 penalty in the loss, the decay term in coordinate $j$ is effectively $\eta\lambda w_j/(\sqrt{\hat v_j} + \epsilon)$. Explain which weights end up decayed least, and why AdamW's version is closer to a Gaussian prior.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> By symmetry each index $i$ appears in the batch with probability $B/n$. So $\mathbb{E}[\mathbf{g}_{\mathcal{B}}] = \frac1B\sum_i\frac{B}{n}\mathbf{g}_i = \bar{\mathbf{g}}$.</p>
+        <p><b>2.</b> The floor depends on $\eta/B$ (apart from the small $\eta h$ correction). $B\times4$ alone: floor $\div4$. Both $\times4$: floor unchanged, but each epoch has a quarter as many steps, which is the linear scaling rule.</p>
+        <p><b>3.</b> $\sum 1/t$ diverges and $\sum 1/t^2 = \pi^2/6$ converges, so $c/t$ satisfies both. With $c/t^2$, $\sum\eta_t$ is finite: the total distance the iterate can travel is bounded, so if it starts far from the minimum it can stall before it gets there.</p>
+        <p><b>4.</b> $\mathbf{v}_t = \mathbf{g}(1 + \beta + \dots + \beta^{t-1}) = \mathbf{g}(1-\beta^t)/(1-\beta) \to \mathbf{g}/(1-\beta)$. With $\beta = 0.99$, 100 times longer.</p>
+        <p><b>5.</b> $\hat m_j = c_j$ and $\hat v_j = c_j^2$, so the step is $-\eta\operatorname{sign}(c_j)$: a fixed step of size $\eta$ whatever the gradient's magnitude. On $|w|$ the gradient is $\pm1$ everywhere, so Adam (like sign descent) bounces around the minimum at distance about $\eta$ until $\eta$ is decayed.</p>
+        <p><b>6.</b> Weights with large or noisy gradients have large $\hat v_j$, so their decay is divided by a large number and they are barely regularised; rarely-updated weights with tiny gradients get decayed a lot. That ties the strength of the "prior" to the gradient history. AdamW shrinks every weight by the same factor $1 - \eta\lambda$ per step, which is the gradient of a fixed isotropic Gaussian prior, independent of the optimiser's preconditioning.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Goodfellow, Bengio, Courville, <i>Deep Learning</i></b>, chapter 8. SGD, momentum, Nesterov, AdaGrad, RMSProp and Adam, with practical advice.</li>
+      <li><b>Bottou, Curtis, Nocedal, "Optimization methods for large-scale machine learning"</b> (SIAM Review, 2018). The theory of SGD: noise floors, step-size conditions, and why SGD beats batch methods on large data.</li>
+      <li><b>Goh, "Why momentum really works"</b> (Distill, 2017). Interactive, with the same eigenvalue analysis as above.</li>
+      <li><b>Kingma &amp; Ba, "Adam: a method for stochastic optimization"</b> (ICLR 2015). <b>Loshchilov &amp; Hutter, "Decoupled weight decay regularization"</b> (ICLR 2019) and "SGDR: stochastic gradient descent with warm restarts" (ICLR 2017), the cosine schedule.</li>
+      <li><b>Goyal et al., "Accurate, large minibatch SGD: training ImageNet in 1 hour"</b> (2017). The linear scaling rule and warm-up. <b>McCandlish et al., "An empirical model of large-batch training"</b> (2018): the critical batch size.</li>
+      <li><b>Robbins &amp; Monro, "A stochastic approximation method"</b> (Annals of Math. Statistics, 1951). Where it all started.</li>
+    </ul>
+  </section>
+</article>

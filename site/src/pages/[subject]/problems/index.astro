@@ -1,0 +1,388 @@
+---
+// The problem book. Two sources feed it, and a subject may have either or both:
+//  - problem-set chapters (lessons with <article class="lesson problems">): gathered into volumes and one
+//    filterable index, with key problems and this browser's solved / revisit marks;
+//  - subjects/<slug>/problems/index.json: named hard problems with star grades, one-evening assignments,
+//    and key books (see principles/problem-books.md).
+import Base from "../../../layouts/Base.astro";
+import HandWritten from "../../../components/HandWritten.astro";
+import { liveSubjects, problemSets, problemBookOf, isWritten, chaptersOf, subjectTitle, partTitle, chapterUrl, u, type ProblemSet } from "../../../subjects";
+
+export async function getStaticPaths() {
+  const out = [];
+  for (const s of await liveSubjects()) if ((await problemSets(s.slug)).length || problemBookOf(s.slug)) out.push({ params: { subject: s.slug } });
+  return out;
+}
+const { subject } = Astro.params;
+const title = subjectTitle(subject);
+const sets = await problemSets(subject);
+const book = problemBookOf(subject);
+const chapters = await chaptersOf(subject);
+const assignments = chapters.filter((c) => /^A\d/.test(c.chapter));
+
+const volumeOf = (s: ProblemSet) => s.chapter.startsWith("H") ? "hard" : s.chapter === "PM" ? "toolkit" : "stage";
+const VOLUMES = [
+  { key: "stage", n: "I", title: "Stage by stage", blurb: "One set per stage of the course, from warm-ups to hard proofs, each with worked solutions. Do a stage's set after its lessons." },
+  { key: "toolkit", n: "II", title: "The math toolkit", blurb: "Linear algebra, matrix calculus, probability, information theory, optimisation and sampling, the tools every stage leans on." },
+  { key: "hard", n: "III", title: "Hard problems", blurb: "Longer problems that take an evening each: proofs, constructions and derivations from the research literature. Each has a hint and a full solution. For a second pass." },
+].filter((v) => sets.some((s) => volumeOf(s) === v.key));
+
+const all = sets.flatMap((s) => s.problems.map((p) => ({ set: s, p })));
+const count = (t: string) => all.filter(({ p }) => p.tags.includes(t)).length;
+const TAGS = [
+  { t: "key", label: "Key", hint: "the shortest path through each set" },
+  { t: "warm-up", label: "Warm-up", hint: "a minute or two, checks the definitions" },
+  { t: "core", label: "Core", hint: "the heart of each set" },
+  { t: "hard", label: "Hard", hint: "proofs and long derivations" },
+  { t: "code", label: "Code", hint: "a few lines of NumPy" },
+];
+const short = (s: ProblemSet) => s.chapter;
+const covers = (s: ProblemSet) => {
+  const stage = s.chapter.match(/^P(\d+)$/);
+  if (stage) return partTitle(subject, Number(stage[1]));
+  const t = s.title.replace(/^Problem set: |^Hard problems: /, "");
+  return t[0].toUpperCase() + t.slice(1);
+};
+const pid = (s: ProblemSet, n: number) => `${s.id}#${n}`;
+
+// Problem-book shelves. "1.5" or "02" unlocks once that chapter is written; a bare part number ("4") once any chapter of it is.
+const chapterOf = (id: string) => chapters.find((c) => c.chapter === id) ?? (/^\d+$/.test(id) ? chapters.find((c) => c.part === Number(id)) : undefined);
+const stars = (n: number) => "★".repeat(n) + "☆".repeat(4 - n);
+const level = ["", "Warm", "Needs care", "Needs an idea", "Boss problem"];
+const entryHref = (id: string) => u(`/${subject}/problems/${id}/`);
+// "where" points into a problem-set chapter ("H2#7") or names a chapter ("A4").
+const whereOf = (w?: string) => {
+  if (!w) return undefined;
+  const [ch, n] = w.split("#");
+  const c = chapters.find((x) => x.chapter === ch);
+  return c && { href: chapterUrl(c.id) + (n ? `#p-${n}` : ""), label: n ? `${ch} · problem ${n}` : `assignment ${ch}` };
+};
+const hard = (book?.hard ?? []).map((p) => ({ ...p, ch: chapterOf(p.unlocks), page: isWritten(p.status), at: whereOf(p.where) }));
+const builds = (book?.assignments ?? []).map((a) => ({ ...a, ch: chapterOf(a.after), page: isWritten(a.status), at: whereOf(a.where) }));
+const ready = hard.filter((p) => p.page || p.at).length;
+const evenings = builds.filter((a) => a.page).length;
+---
+<Base title={`Problem book · ${title}`} subject={{ slug: subject, title }} crumb="Problem book" description={book?.intro ?? "Every problem set in one place: key problems, difficulty filters and your progress."}>
+  {sets.length > 0 && <Fragment slot="head"><link rel="stylesheet" href={u(`/subjects/${subject}/assets/ml.css`)} /></Fragment>}
+  <main class:list={sets.length ? ["ml", "ml-page", "pb"] : ["home", "problem-book"]} data-pb={subject}>
+    {sets.length > 0 ? (
+      <>
+        <header class="pb-cover">
+          <div class="pb-cover-text">
+            <p class="kicker">{title} · Practice</p>
+            <h1>The problem book</h1>
+            <p class="lede">{all.length} problems in {sets.length} sets, every one with a worked solution{book && <>, plus {hard.length} named classics, {evenings} one-evening assignments and {book.books.length} key books</>}. Read a stage, then come here and test it. Mark what you solve, flag what you want to revisit, and the book keeps count in this browser.</p>
+            <div class="pb-progress" data-total={all.length}>
+              <div class="pb-bar"><span class="solved"></span><span class="revisit"></span></div>
+              <span class="mono" data-progress-text>Nothing marked yet</span>
+            </div>
+          </div>
+          <dl class="pb-stats">
+            {TAGS.map(({ t, label }) => <div><dt><span class={`tag ${t}`}>{t}</span></dt><dd>{count(t)}</dd><dd class="sr">{label}</dd></div>)}
+          </dl>
+        </header>
+
+        <section class="pb-paths">
+          <h2>Ways through</h2>
+          <div class="pb-path-grid">
+            <button type="button" class="pb-path" data-go-tag="key">
+              <span class="pb-path-n">{count("key")}</span>
+              <b>Key problems</b>
+              <span>The shortest path: four to six per set. If you can do these, you have the stage.</span>
+            </button>
+            <a class="pb-path" href="#volumes">
+              <span class="pb-path-n">{sets.filter((s) => volumeOf(s) !== "hard").length}</span>
+              <b>Stage by stage</b>
+              <span>Work through a whole set after its lessons, warm-ups first.</span>
+            </a>
+            <button type="button" class="pb-path" data-go-tag="hard">
+              <span class="pb-path-n">{count("hard")}</span>
+              <b>Hard problems</b>
+              <span>Proofs and derivations for a second pass, across every set and the hard volumes.</span>
+            </button>
+            {hard.length > 0 && (
+              <a class="pb-path" href="#hard">
+                <span class="pb-path-n">{hard.length}</span>
+                <b>Named classics</b>
+                <span>The famous ones, graded ★ to ★★★★, each linked to where it's solved.</span>
+              </a>
+            )}
+          </div>
+          {(assignments.length + evenings) > 0 && (
+            <p class="pb-more">Want to build something instead? {evenings > 0 && <>Try the <a href="#assignments">{evenings} one-evening assignments</a>{assignments.length > 0 ? ", or the " : "."}</>}{assignments.length > 0 && <><a href={chapterUrl(assignments[0].id)}>{assignments.length} autograded assignments</a> (an afternoon each).</>}</p>
+          )}
+        </section>
+
+        <section class="pb-volumes" id="volumes">
+          {VOLUMES.map((v) => (
+            <div class="pb-volume">
+              <div class="pb-volume-head">
+                <span class="pb-volume-n">Volume {v.n}</span>
+                <h2>{v.title}</h2>
+                <p>{v.blurb}</p>
+              </div>
+              <div class="pb-sets">
+                {sets.filter((s) => volumeOf(s) === v.key).map((s) => {
+                  const tally = TAGS.slice(1).map(({ t }) => ({ t, k: s.problems.filter((p) => p.tags.includes(t)).length }));
+                  return (
+                    <a class="pb-set" href={chapterUrl(s.id)} data-set={s.id} data-count={s.problems.length}>
+                      <span class="pb-set-code">{short(s)}</span>
+                      <b>{covers(s)}</b>
+                      {s.blurb && <span class="pb-set-blurb">{s.blurb}</span>}
+                      <span class="pb-mix" aria-label={tally.map(({ t, k }) => `${k} ${t}`).join(", ")}>
+                        {tally.filter(({ k }) => k).map(({ t, k }) => <i class={t} style={`flex:${k}`}></i>)}
+                      </span>
+                      <span class="pb-set-foot"><span>{s.problems.length} problems · {s.problems.filter((p) => p.tags.includes("key")).length} key</span><span data-set-progress></span></span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </section>
+      </>
+    ) : (
+      <section class="hero">
+        <p class="kicker">Problem book</p>
+        <h1>{title}, <em>the hard way</em></h1>
+        {book?.intro && <p>{book.intro}</p>}
+        <div class="progress-line">
+          <div class="bar"><span data-cleared-bar></span></div>
+          <span class="mono"><span data-cleared>0</span> of {hard.length} hard problems cleared · {ready} written so far</span>
+        </div>
+        <nav class="actions">
+          <a class="btn primary" href="#hard">{hard.length} hard problems</a>
+          <a class="btn" href="#assignments">{builds.length} assignments</a>
+          <a class="btn" href="#books">{book!.books.length} key books</a>
+        </nav>
+      </section>
+    )}
+
+    {book && (
+      <>
+        <section class="pb-section" id="hard">
+          <div class="part-label">
+            <div class="n">{sets.length ? "Named classics" : "Hard problems"}</div>
+            <h2>Problems that need an idea</h2>
+            <p>★ warm · ★★ needs care · ★★★ needs an idea · ★★★★ boss problem. Each names the chapter that unlocks it and the picture that goes with it.{sets.length > 0 && " Most are already solved in a problem set; the card takes you there."} Tick one off when you've cleared it (only this browser remembers).</p>
+          </div>
+          <div class="pb-grid">
+            {hard.map((p) => {
+              const href = p.page ? entryHref(p.id) : p.at?.href;
+              return (
+                <article class:list={["pb-card", { written: href, locked: !p.ch }]} data-key={`${subject}/${p.id}`}>
+                  <div class="pb-top">
+                    <span class="stars" title={level[p.stars]} aria-label={`${p.stars} of 4 stars: ${level[p.stars]}`}>{stars(p.stars)}</span>
+                    <label class="cleared"><input type="checkbox" data-clear={`${subject}/${p.id}`} /> cleared</label>
+                  </div>
+                  <h3>{href ? <a href={href}>{p.title}</a> : p.title}</h3>
+                  <p>{p.idea}</p>
+                  <p class="pb-visual"><span aria-hidden="true">◐</span> {p.visual}</p>
+                  <div class="pb-meta">
+                    {p.page ? <a class="chip status" href={href}>Written · open it →</a> : p.at ? <a class="chip status" href={href}>Solved in {p.at.label} →</a> : <span class="chip">Planned</span>}
+                    {p.ch ? <a class="chip" href={chapterUrl(p.ch.id)}>after {p.unlocks}</a> : <span class="chip" title="That chapter isn't written yet">🔒 unlocks at {p.unlocks}</span>}
+                    <span class="pb-source">{p.source}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section class="pb-section" id="assignments">
+          <div class="part-label">
+            <div class="n">Assignments</div>
+            <h2>Build it, break it, watch it work</h2>
+            <p>One sitting each. You end with something you made: a script, a plot, a measured number. "You should see" checkpoints tell you you're on track without opening the solution.</p>
+          </div>
+          <div class="pb-grid">
+            {builds.map((a) => {
+              const href = a.page ? entryHref(a.id) : a.at?.href;
+              return (
+                <article class:list={["pb-card", "assignment", { written: href, locked: !a.ch }]}>
+                  <div class="pb-top"><span class="mono">{a.time}</span><label class="cleared"><input type="checkbox" data-clear={`${subject}/${a.id}`} /> done</label></div>
+                  <h3>{href ? <a href={href}>{a.title}</a> : a.title}</h3>
+                  <p>{a.build}</p>
+                  <p class="pb-check"><b>You'll see:</b> {a.check}</p>
+                  <p class="pb-visual"><span aria-hidden="true">◐</span> {a.visual}</p>
+                  <div class="pb-meta">
+                    {a.page ? <a class="chip status" href={href}>Written · start it →</a> : a.at ? <a class="chip status" href={href}>Do it as {a.at.label} →</a> : <span class="chip">Planned</span>}
+                    {a.ch ? <a class="chip" href={chapterUrl(a.ch.id)}>after {a.after}</a> : <span class="chip" title="That chapter isn't written yet">🔒 after {a.after}</span>}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section class="pb-section" id="books">
+          <div class="part-label">
+            <div class="n">Key books</div>
+            <h2>Problem books worth owning</h2>
+            <p>The classic collections, and when to pick each one up. We point to them and never copy them.</p>
+          </div>
+          <ul class="pb-books">
+            {book.books.map((b) => (
+              <li>
+                <b>{b.title}</b>{b.free && <span class="chip status">free online</span>}
+                <span class="pb-by">{b.author} · {b.level}</span>
+                <span>{b.when}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </>
+    )}
+
+    {sets.length > 0 && (
+      <section class="pb-index" id="index">
+        <div class="pb-index-head">
+          <h2>Every problem</h2>
+          <div class="pb-filters" role="group" aria-label="Filter problems">
+            <div class="seg" role="group" aria-label="Difficulty">
+              <button type="button" data-tag="" aria-pressed="true">All</button>
+              {TAGS.map(({ t, label, hint }) => <button type="button" data-tag={t} aria-pressed="false" title={hint}>{label}</button>)}
+            </div>
+            <select data-filter-set aria-label="Problem set">
+              <option value="">All sets</option>
+              {sets.map((s) => <option value={s.id}>{short(s)} · {covers(s)}</option>)}
+            </select>
+            <select data-filter-status aria-label="Your marks">
+              <option value="">Any status</option>
+              <option value="open">Not solved yet</option>
+              <option value="solved">Solved</option>
+              <option value="revisit">Flagged to revisit</option>
+            </select>
+            <input type="search" data-filter-text placeholder="Search: Bellman, softmax, KL…" aria-label="Search problems" />
+          </div>
+          <p class="pb-showing mono" data-showing>{all.length} problems</p>
+        </div>
+
+        {sets.map((s) => (
+          <div class="pb-group" data-group={s.id}>
+            <h3><a href={chapterUrl(s.id)}><span class="mono">{short(s)}</span> {covers(s)}</a></h3>
+            {s.problems.map((p) => (
+              <article class="pb-row" data-id={pid(s, p.n)} data-set={s.id} data-tags={p.tags.join(" ")} data-text={`${p.section} ${p.text}`.toLowerCase()}>
+                <a class="pb-num mono" href={`${chapterUrl(s.id)}#p-${p.n}`} title="Open with its solution">{p.n}</a>
+                <div class="pb-body">
+                  <div class="pb-tags">{p.tags.map((t) => <span class={`tag ${t}`}>{t}</span>)}<span class="pb-where">{p.section}</span></div>
+                  <div class="pb-stmt" set:html={p.html} />
+                  <a class="pb-open" href={`${chapterUrl(s.id)}#p-${p.n}`}>Solve it, then check the solution →</a>
+                </div>
+                <div class="pb-marks">
+                  <button type="button" class="pb-mark" data-mark="solved" aria-pressed="false" title="Mark solved">✓</button>
+                  <button type="button" class="pb-mark" data-mark="revisit" aria-pressed="false" title="Flag to revisit">⚑</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ))}
+        <p class="pb-empty" data-empty hidden>No problems match. Clear a filter to see more.</p>
+      </section>
+    )}
+  </main>
+  {sets.length > 0 && <HandWritten subject={subject} />}
+</Base>
+
+<script>
+  // The index's marks live in this browser only: { "<set id>#<n>": "solved" | "revisit" }.
+  const KEY = "learn-problems";
+  let marks: Record<string, string> = {};
+  try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch {} };
+
+  const rows = [...document.querySelectorAll<HTMLElement>(".pb-row")];
+  const groups = [...document.querySelectorAll<HTMLElement>(".pb-group")];
+  const state = { tag: "", set: "", status: "", text: "" };
+
+  function paintMarks() {
+    for (const r of rows) {
+      const m = marks[r.dataset.id!];
+      r.dataset.status = m ?? "open";
+      for (const b of r.querySelectorAll<HTMLButtonElement>("[data-mark]")) b.setAttribute("aria-pressed", String(b.dataset.mark === m));
+    }
+    const total = rows.length;
+    const solved = rows.filter((r) => marks[r.dataset.id!] === "solved").length;
+    const revisit = rows.filter((r) => marks[r.dataset.id!] === "revisit").length;
+    const bar = document.querySelector<HTMLElement>(".pb-bar")!;
+    bar.querySelector<HTMLElement>(".solved")!.style.width = `${(100 * solved) / total}%`;
+    bar.querySelector<HTMLElement>(".revisit")!.style.width = `${(100 * revisit) / total}%`;
+    document.querySelector("[data-progress-text]")!.textContent = solved || revisit
+      ? `${solved} of ${total} solved${revisit ? ` · ${revisit} flagged to revisit` : ""}`
+      : "Nothing marked yet";
+    for (const card of document.querySelectorAll<HTMLElement>(".pb-set")) {
+      const id = card.dataset.set!, n = Number(card.dataset.count);
+      const k = Object.entries(marks).filter(([key, v]) => v === "solved" && key.startsWith(id + "#")).length;
+      card.querySelector("[data-set-progress]")!.textContent = k ? `${k} / ${n} solved` : "";
+      card.style.setProperty("--done", `${(100 * k) / n}%`);
+    }
+  }
+
+  function filter() {
+    let shown = 0;
+    for (const r of rows) {
+      const ok = (!state.tag || r.dataset.tags!.split(" ").includes(state.tag))
+        && (!state.set || r.dataset.set === state.set)
+        && (!state.status || r.dataset.status === state.status)
+        && (!state.text || r.dataset.text!.includes(state.text));
+      r.hidden = !ok; if (ok) shown++;
+    }
+    for (const g of groups) g.hidden = !g.querySelector(".pb-row:not([hidden])");
+    document.querySelector("[data-showing]")!.textContent = `${shown} of ${rows.length} problems`;
+    document.querySelector<HTMLElement>("[data-empty]")!.hidden = shown > 0;
+  }
+
+  function setTag(t: string) {
+    state.tag = t;
+    for (const x of document.querySelectorAll<HTMLButtonElement>("[data-tag]")) x.setAttribute("aria-pressed", String(x.dataset.tag === t));
+    filter();
+  }
+
+  if (rows.length) {
+    for (const b of document.querySelectorAll<HTMLButtonElement>("[data-tag]")) b.addEventListener("click", () => setTag(b.dataset.tag!));
+    for (const b of document.querySelectorAll<HTMLButtonElement>("[data-go-tag]")) b.addEventListener("click", () => {
+      setTag(b.dataset.goTag!);
+      document.getElementById("index")!.scrollIntoView({ behavior: "smooth" });
+    });
+    document.querySelector<HTMLSelectElement>("[data-filter-set]")!.addEventListener("change", (e) => { state.set = (e.target as HTMLSelectElement).value; filter(); });
+    document.querySelector<HTMLSelectElement>("[data-filter-status]")!.addEventListener("change", (e) => { state.status = (e.target as HTMLSelectElement).value; filter(); });
+    document.querySelector<HTMLInputElement>("[data-filter-text]")!.addEventListener("input", (e) => { state.text = (e.target as HTMLInputElement).value.trim().toLowerCase(); filter(); });
+
+    document.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>(".pb-row [data-mark]");
+      if (!b) return;
+      const id = b.closest<HTMLElement>(".pb-row")!.dataset.id!;
+      if (marks[id] === b.dataset.mark) delete marks[id]; else marks[id] = b.dataset.mark!;
+      save(); paintMarks(); filter();
+    });
+
+    // Arriving with #key (or another tag) opens the index with that filter. #hard is the named-classics shelf.
+    const hash = location.hash.slice(1);
+    if (["key", "warm-up", "core", "code"].includes(hash)) { setTag(hash); document.getElementById("index")!.scrollIntoView(); }
+    paintMarks(); filter();
+  }
+
+  // The shelves' "cleared" ticks: { "<subject>/<id>": "YYYY-MM-DD" }, shared with the written entries' pages.
+  const CLEARED = "learn-cleared";
+  let cleared: Record<string, string> = {};
+  try { cleared = JSON.parse(localStorage.getItem(CLEARED) || "{}"); } catch {}
+  const boxes = [...document.querySelectorAll<HTMLInputElement>("input[data-clear]")];
+  const named = [...document.querySelectorAll<HTMLElement>("#hard [data-key]")];
+  function renderCleared() {
+    for (const b of boxes) {
+      b.checked = Boolean(cleared[b.dataset.clear!]);
+      b.closest(".pb-card")?.classList.toggle("is-cleared", b.checked);
+    }
+    const n = named.filter((c) => cleared[c.dataset.key!]).length;
+    const text = document.querySelector("[data-cleared]"), bar = document.querySelector<HTMLElement>("[data-cleared-bar]");
+    if (text) text.textContent = String(n);
+    if (bar) bar.style.width = `${(100 * n) / Math.max(named.length, 1)}%`;
+  }
+  for (const b of boxes) b.addEventListener("change", () => {
+    if (b.checked) cleared[b.dataset.clear!] = new Date().toISOString().slice(0, 10);
+    else delete cleared[b.dataset.clear!];
+    try { localStorage.setItem(CLEARED, JSON.stringify(cleared)); } catch {}
+    renderCleared();
+  });
+  renderCleared();
+</script>

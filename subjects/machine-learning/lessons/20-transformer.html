@@ -1,0 +1,289 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 20 · Stage 5: deep architectures</div>
+  <h1>The Transformer</h1>
+  <p class="lede">The Transformer is the architecture behind almost every large model since 2018: GPT, BERT, the Vision Transformer, the denoisers in modern diffusion models. It is short to state: a stack of identical blocks, each made of multi-head self-attention and a small MLP, wrapped in residual connections and layer normalisation, with positions added to the inputs. This lesson builds it one piece at a time, derives what each piece is for, counts its parameters and its compute, explains the causal mask that turns it into a language model, and then writes a complete GPT in NumPy, with a hand-written backward pass checked against finite differences, and trains it to reverse sequences.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/14-training-deep-networks/">lesson 14</a>, <a href="/machine-learning/16-modern-cnns/">lesson 16</a>, <a href="/machine-learning/19-attention/">lesson 19</a></span><span><b>Math pulled in:</b> the chain rule of probability, rotation matrices, Jacobians of residual maps, operation counting</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>From attention to an architecture</h2>
+    <p>Lesson 19 showed that one attention head can look up information anywhere in its input. A recurrent network (lesson 17) has to carry information step by step through a state vector, so a dependency $T$ steps back is a product of $T$ Jacobians, and its training is sequential in $T$. Self-attention connects every position with every other in one step, and all positions are computed in parallel, as a few matrix products. Vaswani et al. (2017) asked whether attention alone was enough, with no recurrence and no convolution. Their answer, the Transformer, was faster to train and better at translation, and it scaled.</p>
+    <p>Attention by itself is not enough, though. It is a weighted average, so it can only mix values that already exist: it has no nonlinearity per position beyond the softmax, it treats the input as an unordered set, and stacking many layers of it runs into lesson 14's problems with signal propagation. Each part of the Transformer block fixes one of these:</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>what it fixes</th></tr></thead>
+      <tbody>
+        <tr><td>multi-head attention</td><td>one softmax can focus on one place; $h$ heads can gather $h$ different things at once</td></tr>
+        <tr><td>position-wise MLP</td><td>attention only averages; the MLP transforms each position's vector nonlinearly</td></tr>
+        <tr><td>residual connections</td><td>deep stacks train (lesson 16), and each layer adds to a shared "residual stream"</td></tr>
+        <tr><td>layer normalisation</td><td>keeps activations at a fixed scale, so softmax scores and learning rates behave</td></tr>
+        <tr><td>positional encodings</td><td>attention is permutation equivariant (lesson 19); positions must be put into the inputs</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="multihead">
+    <h2>Multi-head self-attention</h2>
+    <p>The input to a layer is a sequence of $T$ vectors, the rows of $X\in\mathbb{R}^{T\times d}$. In <b>self-attention</b> the queries, keys and values all come from the same sequence. With $h$ heads, each of dimension $d_h = d/h$, head $j$ has its own projections $W_Q^{(j)}, W_K^{(j)}, W_V^{(j)}\in\mathbb{R}^{d\times d_h}$:</p>
+    <div class="eq">$$H_j = \operatorname{softmax}\!\left(\frac{(XW_Q^{(j)})(XW_K^{(j)})^\top}{\sqrt{d_h}} + M\right)XW_V^{(j)}\in\mathbb{R}^{T\times d_h}, \qquad \operatorname{MHA}(X) = [H_1, \dots, H_h]\,W_O ,$$</div>
+    <p>with $W_O\in\mathbb{R}^{d\times d}$ and an optional mask $M$ (below). The heads are concatenated back to width $d$ and mixed by the output projection. Writing $W_O$ in blocks of $d_h$ rows, $W_O^{(j)}$, the output is a sum over heads, $\operatorname{MHA}(X) = \sum_jH_jW_O^{(j)}$: each head reads from the input through $W_V^{(j)}$ and writes its result back through $W_O^{(j)}$.</p>
+    <p><b>Why several heads?</b> The output of one head at a position is a single convex combination of value vectors. If the next word depends both on the subject of the sentence and on the previous word, one softmax has to split its weight between the two and returns a blur of both. With several heads, one can attend to the subject and another to the previous word, each sharply, and $W_O$ combines the results. Splitting $d$ into $h$ heads of size $d/h$ costs the same as one head of size $d$: the projections are still $d\times d$ in total, and the score computations add up to $h\cdot T^2d_h = T^2d$ multiply-adds. In code, all heads are computed at once by reshaping the $T\times d$ projections to $h\times T\times d_h$, which is what <code>CausalSelfAttention</code> below does.</p>
+  </section>
+
+  <section id="block">
+    <h2>The block, and the residual stream</h2>
+    <p>The position-wise MLP applies the same two-layer network to every position separately: $\operatorname{MLP}(\mathbf{x}) = W_2\,\phi(W_1\mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2$, with a hidden width of $4d$ by convention and $\phi$ a ReLU or GELU. Attention moves information <i>between</i> positions; the MLP processes it <i>within</i> a position. Most of the parameters, and in large models much of the stored factual knowledge, live in the MLPs. A modern ("pre-norm") block is</p>
+    <div class="eq">$$X' = X + \operatorname{MHA}(\operatorname{LN}(X)), \qquad X'' = X' + \operatorname{MLP}(\operatorname{LN}(X')) ,$$</div>
+    <p>where the layer norm (lesson 14) normalises each position's vector to mean 0 and variance 1, then applies a learned scale and shift. A Transformer is an embedding, $L$ such blocks, a final layer norm, and a linear map to the outputs.</p>
+    <p><b>Pre-norm and post-norm.</b> The original Transformer was <i>post-norm</i>: $X' = \operatorname{LN}(X + \operatorname{MHA}(X))$. The difference is where the identity path goes. In pre-norm, writing the network as $\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + F_\ell(\mathbf{x}_\ell)$, the Jacobian from layer $\ell$ to the output is</p>
+    <div class="eq">$$\frac{\partial\mathbf{x}_L}{\partial\mathbf{x}_\ell} = \prod_{k=\ell}^{L-1}\left(I + \frac{\partial F_k}{\partial\mathbf{x}_k}\right) = I + \sum_{k}\frac{\partial F_k}{\partial\mathbf{x}_k} + \cdots ,$$</div>
+    <p>which always contains the identity, so the gradient reaches every layer undiminished, exactly as in lesson 16's ResNets. In post-norm, each layer norm sits <i>on</i> the residual path, and its Jacobian (a projection, scaled by $1/\sigma$) multiplies into every term. Xiong et al. (2020) showed that this makes the gradients of the last layers large at initialisation, which is why post-norm Transformers need a learning-rate warm-up to train at all. Pre-norm trains more stably, and nearly all large models since GPT-2 use it, usually with a final layer norm added after the last block, as here. (Our code still uses a short warm-up; it helps Adam's second-moment estimates settle.)</p>
+    <p><b>The residual stream.</b> Unrolling the residual connections, the final representation at a position is a sum: $\mathbf{x}_L = \mathbf{x}_0 + \sum_\ell F_\ell(\cdot)$. The embedding writes a vector into a shared "stream"; every attention head and every MLP reads the stream (through a layer norm) and adds its output back. Heads in later layers can read what earlier heads wrote. This view, from Elhage et al. (2021), is the starting point for interpreting what Transformers learn: a two-layer model can form an <i>induction head</i>, where a head in layer 1 copies "the previous token" into each position, and a head in layer 2 uses that to find an earlier occurrence of the current token and predict what followed it.</p>
+  </section>
+
+  <section id="positions">
+    <h2>Positions</h2>
+    <p>Lesson 19 proved that self-attention is permutation equivariant: shuffle the input tokens and the outputs are shuffled the same way. "Dog bites man" and "man bites dog" would get the same representations, up to order. The fix is to make each input vector depend on its position, $\mathbf{x}_t = \mathbf{e}(\text{token}_t) + \mathbf{p}_t$. Three choices are common.</p>
+    <p><b>Learned absolute positions.</b> $\mathbf{p}_t$ is a trainable vector for each $t$ up to a maximum length, as in GPT-2, BERT and the code below. Simple, but nothing is learned about positions past the training length.</p>
+    <p><b>Sinusoidal positions</b> (the original Transformer). For frequencies $\omega_i = 10000^{-2i/d}$, $i = 0, \dots, d/2 - 1$, set $p_{t,2i} = \sin(\omega_it)$, $p_{t,2i+1} = \cos(\omega_it)$. The frequencies range geometrically from one cycle per $2\pi$ positions to one per $2\pi\cdot10^4$. The reason for sines and cosines is that a shift by $k$ positions is a <i>linear</i> map that doesn't depend on $t$. For each frequency, the angle-addition formulas give</p>
+    <div class="eq">$$\begin{pmatrix}\sin\omega(t+k)\\ \cos\omega(t+k)\end{pmatrix} = \begin{pmatrix}\cos\omega k & \sin\omega k\\ -\sin\omega k & \cos\omega k\end{pmatrix}\begin{pmatrix}\sin\omega t\\ \cos\omega t\end{pmatrix},$$</div>
+    <p>a rotation by angle $\omega k$. So $\mathbf{p}_{t+k} = R_k\mathbf{p}_t$ with $R_k$ block-diagonal, and a linear layer can in principle learn to attend "$k$ positions back".</p>
+    <p><b>Rotary embeddings (RoPE)</b> (Su et al., 2021), used by LLaMA and most current language models, take this idea to the scores. Instead of adding anything to the inputs, rotate each query and key, pair of coordinates by pair, by an angle proportional to its position: $\tilde{\mathbf{q}}_m = R_m\mathbf{q}_m$, $\tilde{\mathbf{k}}_n = R_n\mathbf{k}_n$. Since rotations are orthogonal, $R_m^\top = R_{-m}$ and $R_{-m}R_n = R_{n-m}$, so</p>
+    <div class="eq">$$\tilde{\mathbf{q}}_m^\top\tilde{\mathbf{k}}_n = \mathbf{q}_m^\top R_m^\top R_n\mathbf{k}_n = \mathbf{q}_m^\top R_{n-m}\,\mathbf{k}_n .$$</div>
+    <p>The score depends on the positions only through their <i>difference</i> $n - m$. The model sees relative positions, which is what language mostly needs, at no extra parameter cost. ALiBi (Press et al., 2022) does something similar more crudely, adding $-c\,(m - n)$ to each score so that attention decays with distance.</p>
+  </section>
+
+  <section id="masking">
+    <h2>The causal mask, and three ways to use a Transformer</h2>
+    <p>A language model assigns a probability to a sequence of tokens. By the chain rule of probability, any distribution over sequences factorises as</p>
+    <div class="eq">$$p(x_1, \dots, x_T) = \prod_{t=1}^Tp(x_t\mid x_1, \dots, x_{t-1}),$$</div>
+    <p>so it is enough to predict each next token from the ones before it. The training loss is the cross-entropy of each next token, $-\frac1T\sum_t\log p_\theta(x_t\mid x_{&lt;t})$, which is the negative log-likelihood of the sequence per token. A Transformer computes all $T$ predictions in one forward pass, provided position $t$ cannot see positions after it. That is the <b>causal mask</b>: set $M_{ts} = -\infty$ for $s &gt; t$ and 0 otherwise, so that after the softmax $A_{ts} = 0$ for every future position. Since attention is the only place where positions interact, and each layer's output at $t$ depends only on its inputs at $s\le t$, by induction over layers the whole network's output at $t$ depends only on $x_1, \dots, x_t$. (Exercise 3 checks this numerically.) Training on all positions at once, with the true previous tokens as inputs, is called <i>teacher forcing</i>. At generation time the model is run one token at a time, each prediction appended to the input.</p>
+    <p>The same block gives three architectures:</p>
+    <ul>
+      <li><b>Decoder-only</b> (GPT): causal masking throughout, trained on next-token prediction. Every modern large language model.</li>
+      <li><b>Encoder-only</b> (BERT): no mask, so every position sees the whole input. Trained by masking out 15% of the tokens and predicting them. Good representations for classification and retrieval, but not a generator.</li>
+      <li><b>Encoder–decoder</b> (the original Transformer, T5): an unmasked encoder reads the source; a causal decoder generates the target, and each decoder block has an extra <i>cross-attention</i> layer whose queries come from the decoder and whose keys and values come from the encoder output. Natural for translation, where the input and output are different sequences.</li>
+    </ul>
+  </section>
+
+  <section id="counting">
+    <h2>Counting parameters and compute</h2>
+    <p><b>Parameters.</b> Per block, attention has $W_Q, W_K, W_V, W_O$, four $d\times d$ matrices, so $4d^2$; the MLP has $d\times4d$ and $4d\times d$, so $8d^2$. Ignoring biases and layer norms (a few $d$ each),</p>
+    <div class="eq">$$N_\text{block} \approx 12d^2, \qquad N \approx 12Ld^2 + Vd ,$$</div>
+    <p>with the embedding matrix ($V$ tokens) often shared with the output layer. GPT-2 small has $L = 12$, $d = 768$, $V = 50{,}257$: $12\cdot12\cdot768^2 = 84.9$ million in the blocks plus 38.6 million in the embedding, about 124 million in total, matching its published size. GPT-3 has $L = 96$, $d = 12{,}288$: $12\cdot96\cdot12288^2 = 174$ billion, close to its 175 billion. For the small model in the code, $d = 48$ and $L = 2$: each block has exactly $12d^2 + 9d + 4d = 28{,}272$ parameters (the $9d$ are the biases, the $4d$ the layer norms), and with the embeddings, final norm and output layer the total is the 58,475 the code prints.</p>
+    <p><b>Compute.</b> A matrix–vector product with an $m\times n$ matrix costs $mn$ multiply-adds, or $2mn$ floating-point operations. So the weight matrices cost $2N$ FLOPs per token in the forward pass. Attention adds the scores $QK^\top$ and the product $AV$: per token per layer, $Td$ multiply-adds each, or $4Td$ FLOPs, which is small next to $24d^2$ unless $T$ is larger than about $6d$. The backward pass costs about twice the forward pass (one product for the gradient of the input and one for the gradient of the weights, for every forward product). So</p>
+    <div class="eq">$$C_\text{train} \approx 6N \text{ FLOPs per token} ,$$</div>
+    <p>the rule used throughout the scaling-law literature (Kaplan et al., 2020). Training a 7-billion-parameter model on 2 trillion tokens takes about $6\cdot7\times10^9\cdot2\times10^{12} = 8.4\times10^{22}$ FLOPs; at 40% utilisation of a GPU doing $10^{15}$ FLOP/s, that is about $2\times10^8$ GPU-seconds, or 6.7 GPU-years. <b>Memory at inference.</b> Generating token by token, the keys and values of past positions don't change, so they are cached instead of recomputed: $2LTd$ numbers per sequence. For a 7B model ($L = 32$, $d = 4096$) with 4,096 tokens in 16-bit floats, the cache is $2\cdot32\cdot4096\cdot4096\cdot2$ bytes $= 2.1$ GB per sequence, which is why long contexts are expensive.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch: a GPT in NumPy</h2>
+    <p>Each layer is a class with a <code>forward</code> that caches what it needs and a <code>backward</code> that takes the gradient of the loss with respect to its output, stores the gradients of its parameters, and returns the gradient with respect to its input. This is the "module" style of PyTorch, with the autograd done by hand. The attention backward pass uses lesson 19's formulas; the layer norm backward is lesson 14's exercise 5; a residual connection passes its gradient straight through and adds the branch's gradient to it. A gradient check against finite differences on every parameter tensor confirms the whole thing.</p>
+    <p>The task: given 8 random digits and a separator token, output the digits in reverse order. The model is trained as a language model on sequences like <code>3 1 4 1 5 9 2 6 &gt; 6 2 9 5 1 4 1 3</code>, with the loss counted only on the 8 tokens after the separator (the first 8 are random, so there is nothing to learn there). At test time it gets 1,000 new inputs and generates its answer greedily, one token at a time. Reversal is impossible for a network that can't look at arbitrary earlier positions, and easy for one that can, provided it knows where it is: the output at position $8 + j$ has to copy the input at position $7 - j$.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# ---- layers, each with forward(x) and backward(grad of output) -&gt; grad of input ----
+class Linear:
+    def __init__(self, n_in, n_out):
+        self.W = rng.standard_normal((n_in, n_out)) * np.sqrt(1 / n_in); self.b = np.zeros(n_out)
+    def forward(self, x):
+        self.x = x; return x @ self.W + self.b
+    def backward(self, g):
+        self.dW = (self.x.reshape(-1, self.x.shape[-1]).T @ g.reshape(-1, g.shape[-1])); self.db = g.reshape(-1, g.shape[-1]).sum(0)
+        return g @ self.W.T
+    def params(self): return [(self, "W"), (self, "b")]
+
+class LayerNorm:
+    def __init__(self, d):
+        self.g = np.ones(d); self.b = np.zeros(d)
+    def forward(self, x):
+        self.mu, self.sd = x.mean(-1, keepdims=True), np.sqrt(x.var(-1, keepdims=True) + 1e-5)
+        self.xh = (x - self.mu) / self.sd; return self.g * self.xh + self.b
+    def backward(self, gy):
+        self.dg = (gy * self.xh).reshape(-1, len(self.g)).sum(0); self.db = gy.reshape(-1, len(self.b)).sum(0)
+        gx = gy * self.g                                          # lesson 14, exercise 5
+        return (gx - gx.mean(-1, keepdims=True) - self.xh * (gx * self.xh).mean(-1, keepdims=True)) / self.sd
+    def params(self): return [(self, "g"), (self, "b")]
+
+class CausalSelfAttention:
+    def __init__(self, d, heads):
+        self.h, self.qkv, self.proj = heads, Linear(d, 3 * d), Linear(d, d)
+    def forward(self, x):
+        B, T, d = x.shape; h, dh = self.h, d // self.h
+        q, k, v = np.split(self.qkv.forward(x), 3, -1)
+        q, k, v = [z.reshape(B, T, h, dh).transpose(0, 2, 1, 3) for z in (q, k, v)]       # (B, h, T, dh)
+        s = q @ k.transpose(0, 1, 3, 2) / np.sqrt(dh)
+        s = np.where(np.tril(np.ones((T, T), bool)), s, -np.inf)                       # causal mask
+        a = np.exp(s - s.max(-1, keepdims=True)); a /= a.sum(-1, keepdims=True)
+        self.cache = (q, k, v, a)
+        return self.proj.forward((a @ v).transpose(0, 2, 1, 3).reshape(B, T, d))
+    def backward(self, g):
+        q, k, v, a = self.cache; B, h, T, dh = q.shape
+        go = self.proj.backward(g).reshape(B, T, h, dh).transpose(0, 2, 1, 3)
+        da, dv = go @ v.transpose(0, 1, 3, 2), a.transpose(0, 1, 3, 2) @ go
+        ds = a * (da - (da * a).sum(-1, keepdims=True)) / np.sqrt(dh)                   # lesson 19's formulas
+        dq, dk = ds @ k, ds.transpose(0, 1, 3, 2) @ q
+        merge = lambda z: z.transpose(0, 2, 1, 3).reshape(B, T, h * dh)
+        return self.qkv.backward(np.concatenate([merge(dq), merge(dk), merge(dv)], -1))
+    def params(self): return self.qkv.params() + self.proj.params()
+
+class MLP:
+    def __init__(self, d):
+        self.fc, self.out = Linear(d, 4 * d), Linear(4 * d, d)
+    def forward(self, x):
+        self.z = self.fc.forward(x); return self.out.forward(np.maximum(self.z, 0))
+    def backward(self, g):
+        return self.fc.backward(self.out.backward(g) * (self.z &gt; 0))
+    def params(self): return self.fc.params() + self.out.params()
+
+class Block:
+    """Pre-norm transformer block: x + attn(LN(x)), then x + mlp(LN(x))."""
+    def __init__(self, d, heads):
+        self.ln1, self.attn, self.ln2, self.mlp = LayerNorm(d), CausalSelfAttention(d, heads), LayerNorm(d), MLP(d)
+    def forward(self, x):
+        x = x + self.attn.forward(self.ln1.forward(x))
+        return x + self.mlp.forward(self.ln2.forward(x))
+    def backward(self, g):
+        g = g + self.ln2.backward(self.mlp.backward(g))          # the residual path passes g straight through
+        return g + self.ln1.backward(self.attn.backward(g))
+    def params(self): return self.ln1.params() + self.attn.params() + self.ln2.params() + self.mlp.params()
+
+class GPT:
+    """Token and position embeddings, a stack of blocks, a final norm, and a linear head to logits."""
+    def __init__(self, vocab, T, d=48, heads=4, layers=2):
+        self.tok, self.pos = rng.standard_normal((vocab, d)) * 0.1, rng.standard_normal((T, d)) * 0.1
+        self.blocks = [Block(d, heads) for _ in range(layers)]
+        self.ln, self.head = LayerNorm(d), Linear(d, vocab)
+    def forward(self, idx):
+        self.idx = idx
+        x = self.tok[idx] + self.pos[:idx.shape[1]]
+        for b in self.blocks:
+            x = b.forward(x)
+        return self.head.forward(self.ln.forward(x))
+    def backward(self, g):
+        g = self.ln.backward(self.head.backward(g))
+        for b in reversed(self.blocks):
+            g = b.backward(g)
+        self.dtok = np.zeros_like(self.tok); np.add.at(self.dtok, self.idx, g)
+        self.dpos = np.zeros_like(self.pos); self.dpos[:g.shape[1]] = g.sum(0)
+    def params(self):
+        ps = [(self, "tok"), (self, "pos")]
+        for b in self.blocks:
+            ps += b.params()
+        return ps + self.ln.params() + self.head.params()
+
+def loss_and_grad(model, idx, targets, mask):
+    """Cross-entropy on the positions where mask is True; returns the loss and fills in gradients."""
+    F = model.forward(idx)
+    Z = F - F.max(-1, keepdims=True); P = np.exp(Z) / np.exp(Z).sum(-1, keepdims=True)
+    n = mask.sum()
+    loss = -np.log(P[mask, targets[mask]]).sum() / n
+    G = P.copy(); G[mask, targets[mask]] -= 1; G[~mask] = 0
+    model.backward(G / n)
+    return loss
+
+grad_name = lambda obj, name: "d" + name
+
+# The task: reverse a sequence of 8 digits. Input "3 1 4 1 5 9 2 6 &gt; 6 2 9 5 1 4 1 3"; the model is a
+# language model trained to predict each next token, and is scored only on the reversed half.
+L, SEP = 8, 10
+def make(n):
+    a = rng.integers(0, 10, (n, L))
+    seq = np.concatenate([a, np.full((n, 1), SEP), a[:, ::-1]], 1)
+    mask = np.zeros((n, 2 * L), bool); mask[:, L:] = True             # predict positions after the separator
+    return seq[:, :-1], seq[:, 1:], mask
+
+model = GPT(vocab=11, T=2 * L)
+print(f"parameters: {sum(getattr(o, n).size for o, n in model.params())}")
+
+# gradient check on a few entries of every parameter tensor
+idx, tgt, mask = make(3)
+loss_and_grad(model, idx, tgt, mask)
+worst = 0.0
+for o, n in model.params():
+    P, G = getattr(o, n), getattr(o, grad_name(o, n))
+    for i in [tuple(rng.integers(0, s) for s in P.shape) for _ in range(3)]:
+        old = P[i]; P[i] = old + 1e-5
+        up = loss_and_grad(model, idx, tgt, mask); P[i] = old - 1e-5
+        dn = loss_and_grad(model, idx, tgt, mask); P[i] = old
+        worst = max(worst, abs((up - dn) / 2e-5 - G[i]))
+    loss_and_grad(model, idx, tgt, mask)
+print(f"gradient check: max |backprop - finite difference| over sampled entries {worst:.1e}")
+
+# Train with Adam
+state, losses = {}, []
+for t in range(1, 3001):
+    idx, tgt, mask = make(64)
+    loss = loss_and_grad(model, idx, tgt, mask); losses.append(loss)
+    lr = 3e-3 * min(1, t / 200)                                       # linear warm-up
+    for o, n in model.params():
+        g = getattr(o, grad_name(o, n)); m, v = state.get((id(o), n), (0, 0))
+        m, v = 0.9 * m + 0.1 * g, 0.99 * v + 0.01 * g * g; state[(id(o), n)] = (m, v)
+        setattr(o, n, getattr(o, n) - lr * (m / (1 - 0.9 ** t)) / (np.sqrt(v / (1 - 0.99 ** t)) + 1e-8))
+    if t in (1, 500, 1000, 2000, 3000):
+        print(f"step {t:4d}  loss {loss:.3f}")
+
+# Generate: feed the digits and the separator, then sample greedily one token at a time
+a = rng.integers(0, 10, (1000, L)); seq = np.concatenate([a, np.full((1000, 1), SEP)], 1)
+for _ in range(L):
+    seq = np.concatenate([seq, model.forward(seq)[:, -1].argmax(-1)[:, None]], 1)
+print(f"test: {np.mean(np.all(seq[:, L + 1:] == a[:, ::-1], 1)):.3f} of 1,000 sequences reversed exactly;"
+      f" per-digit accuracy {np.mean(seq[:, L + 1:] == a[:, ::-1]):.3f}")
+print("example:", " ".join(map(str, a[0])), "-&gt;", " ".join(map(str, seq[0, L + 1:])))
+
+# parameters: 58475
+# gradient check: max |backprop - finite difference| over sampled entries 4.9e-11
+# step    1  loss 2.674
+# step  500  loss 0.000
+# step 1000  loss 0.000
+# step 2000  loss 0.000
+# step 3000  loss 0.000
+# test: 1.000 of 1,000 sequences reversed exactly; per-digit accuracy 1.000
+# example: 5 8 2 1 8 8 9 8 -&gt; 8 9 8 8 1 2 8 5</code></pre>
+    <p class="muted">The gradient check agrees to $10^{-10}$, so the hand-written backward pass is right. The model, with 58 thousand parameters and 2 layers, reverses every one of the 1,000 test sequences, and $10^8$ possible inputs means it can't have memorised them.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: transformer --></div>
+    </figure>
+    <p class="muted" id="transformer-caption">Left: the training loss per step (log scale, smoothed over 20 steps), with the warm-up shaded. It is below $10^{-3}$ after 300 steps and keeps falling, to about $10^{-9}$: once every prediction is right, cross-entropy pushes the logits further apart forever. Right: the attention weights of one head in the first layer, averaged over 200 test sequences. Rows are the positions that predict the 8 output digits; columns are the positions they can attend to (the mask hides everything to the right of the diagonal). The bright anti-diagonal is the reversal: to output the $j$-th digit of the answer, the model looks at the $j$-th digit from the end of the input. This head puts 93% to 99% of its weight on the right digit. The second layer's heads are diffuse: one head in the first layer does the copying, and the rest of the network only has to read out the digit it fetched.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Count the parameters of BERT-base ($L = 12$, $d = 768$, vocabulary 30,522, 512 learned positions) with the $12Ld^2$ rule. Its published size is 110 million. Where is the rest?</li>
+      <li>Show that multi-head attention with $h$ heads of size $d/h$ has the same number of parameters and (for the projections) the same number of FLOPs as one head of size $d$. Why do we not use $h = d$, heads of size 1?</li>
+      <li>In the code, change the input at one position $s$ and check that the logits at all positions $t &lt; s$ don't change. Then remove the mask and check that they do. Prove the causal property by induction over layers.</li>
+      <li>Remove the positional embeddings from the code (<code>self.pos</code> set to zero and not trained) and retrain. What accuracy do you get, and why? Is anything about the task still solvable?</li>
+      <li>Show that the sinusoidal encoding has $\mathbf{p}_t^\top\mathbf{p}_{t+k} = \sum_i\cos(\omega_ik)$, which depends only on $k$.</li>
+      <li>A 13-billion-parameter model is trained on 1 trillion tokens. Estimate the training FLOPs and the time on 1,000 GPUs each sustaining $4\times10^{14}$ FLOP/s.</li>
+      <li>With RoPE, the score between positions $m$ and $n$ depends only on $n - m$. Does that make the whole model translation equivariant? (Hint: the causal mask and the first position.)</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $12\cdot12\cdot768^2 = 84.9$M in the blocks; token embeddings $30522\cdot768 = 23.4$M; positions $512\cdot768 = 0.4$M. That is 108.7M; biases, layer norms, the segment embeddings and the pooler layer ($768^2 + 768$) make up the remaining 1.3M or so.</p>
+        <p><b>2.</b> Each head has $W_Q^{(j)}, W_K^{(j)}, W_V^{(j)}$ of size $d\times d/h$, so the $h$ heads together have $3d^2$, the same as one head with $d\times d$ matrices; $W_O$ is $d\times d$ in both cases. The projection FLOPs are the same because they are the same matrix products, reshaped. Heads of size 1 would make each score $q_jk_j$ a product of two scalars, a rank-1 similarity that can't express "match on these features": each head could only sort keys along one direction.</p>
+        <p><b>3.</b> Base case: the embedding at $t$ depends only on $x_t$. Step: if a layer's input at each position $s$ depends only on $x_{\le s}$, then the attention output at $t$ is a combination of values at $s\le t$ (the mask gives zero weight to $s &gt; t$), each depending only on $x_{\le s}\subseteq x_{\le t}$; layer norm, the MLP and the residual act position by position. So the output at $t$ depends only on $x_{\le t}$.</p>
+        <p><b>4.</b> We ran it: the loss stalls near 0.15 instead of reaching 0, and 74.1% of test sequences come out exactly reversed, with per-digit accuracy 0.919 (0.97 for the first output digit, falling to 0.85 in the middle and rising to 0.98 at the end). Far better than you might expect, because the causal mask leaks position: the output at position $t$ averages over exactly $t$ items, so a head that attends uniformly produces a vector whose statistics depend on $t$ (an average of $t$ random embeddings has variance proportional to $1/t$), and with the separator token as a landmark the network can partly reconstruct where it is. The ends of the sequence, close to a landmark, come out best. Without a mask (an encoder) and without positions, the outputs would be exactly permutation equivariant and reversal would be impossible.</p>
+        <p><b>5.</b> $\mathbf{p}_t^\top\mathbf{p}_{t+k} = \sum_i[\sin\omega_it\sin\omega_i(t+k) + \cos\omega_it\cos\omega_i(t+k)] = \sum_i\cos(\omega_i(t + k) - \omega_it) = \sum_i\cos\omega_ik$.</p>
+        <p><b>6.</b> $6\cdot1.3\times10^{10}\cdot10^{12} = 7.8\times10^{22}$ FLOPs; at $4\times10^{17}$ FLOP/s in total, $1.95\times10^5$ seconds, about 2.3 days.</p>
+        <p><b>7.</b> Not exactly. Within the attention scores, shifting every position by the same amount changes nothing, but the sequence has a start: the first token attends only to itself, the second to two tokens, and so on, so the network can tell how far it is from the beginning. Models do use this, for example by treating the first token as an "attention sink".</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Vaswani et al., "Attention is all you need"</b> (NeurIPS 2017). The original paper; section 3 is the architecture.</li>
+      <li><b>Phuong &amp; Hutter, "Formal algorithms for transformers"</b> (2022). Every variant as precise pseudocode.</li>
+      <li><b>Andrej Karpathy, "Let's build GPT: from scratch, in code, spelled out"</b> (video, 2023) and nanoGPT. The PyTorch version of this lesson's code.</li>
+      <li><b>Elhage et al., "A mathematical framework for transformer circuits"</b> (Anthropic, 2021). The residual stream, and induction heads.</li>
+      <li><b>Xiong et al., "On layer normalization in the transformer architecture"</b> (ICML 2020). Pre-norm against post-norm.</li>
+      <li><b>Su et al., "RoFormer: enhanced transformer with rotary position embedding"</b> (2021). RoPE.</li>
+      <li><b>Kaplan et al., "Scaling laws for neural language models"</b> (2020), section 2.1: the parameter and FLOP counts.</li>
+    </ul>
+  </section>
+</article>

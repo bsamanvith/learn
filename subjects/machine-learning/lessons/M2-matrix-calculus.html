@@ -1,0 +1,156 @@
+<header class="lesson-head">
+  <div class="eyebrow">Math toolkit M2 · read when a lesson sends you</div>
+  <h1>Matrix calculus</h1>
+  <p class="lede">Every gradient in this curriculum is a derivative of a scalar loss with respect to a vector or a matrix. Doing those entry by entry is slow and error-prone. This page gives one technique, the differential written as a trace, that turns them into a few lines of algebra. It also explains vector–Jacobian products, the operation backpropagation is built from, and how to check any gradient numerically.</p>
+  <div class="meta"><span><b>Used by:</b> <a href="/machine-learning/01-linear-regression/">01</a>, <a href="/machine-learning/06-softmax-regression/">06</a>, 13, 14, 20, 22</span><span><b>Assumes:</b> partial derivatives, the chain rule, matrix products and the trace</span></div>
+</header>
+
+<article class="lesson">
+  <section id="convention">
+    <h2>Shapes and the one convention</h2>
+    <p>For a scalar function $f$ of a matrix $X\in\mathbb{R}^{m\times n}$, define the gradient $\nabla_Xf$ as the $m\times n$ matrix of partial derivatives $\partial f/\partial X_{ij}$. <b>The gradient has the same shape as the variable.</b> That is the convention every deep-learning library uses, and it makes the gradient step $X\leftarrow X - \eta\nabla_Xf$ type-check. For a vector function $\mathbf{f}:\mathbb{R}^n\to\mathbb{R}^m$, the <b>Jacobian</b> $J\in\mathbb{R}^{m\times n}$ has entries $J_{ij} = \partial f_i/\partial x_j$, so the first-order change is $d\mathbf{f} = J\,d\mathbf{x}$.</p>
+    <p>A quick sanity check that catches most mistakes: <i>write the shape of every factor</i>. If a formula for $\nabla_W$ doesn't come out the shape of $W$, it is wrong.</p>
+  </section>
+
+  <section id="differential">
+    <h2>The trace trick</h2>
+    <p>The <b>differential</b> $df$ is the first-order change in $f$ when $X$ changes by a small $dX$. For a scalar function of a matrix it is always a linear function of $dX$, and every linear function of a matrix can be written as a trace:</p>
+    <div class="eq">$$df = \sum_{ij}\frac{\partial f}{\partial X_{ij}}\,dX_{ij} = \operatorname{tr}\big(G^\top dX\big)\quad\Longleftrightarrow\quad\nabla_Xf = G .$$</div>
+    <p>So the recipe is: <b>compute $df$ with the rules below, rearrange it into the form $\operatorname{tr}(G^\top dX)$, and read off $G$.</b> The rearranging uses three facts about the trace:</p>
+    <div class="eq">$$a = \operatorname{tr}(a)\ \text{for a scalar}, \qquad \operatorname{tr}(A^\top) = \operatorname{tr}(A), \qquad \operatorname{tr}(ABC) = \operatorname{tr}(CAB) = \operatorname{tr}(BCA).$$</div>
+    <p>The differential obeys the usual rules, with the order of factors kept:</p>
+    <div class="result">
+      <div class="label">Rules for differentials</div>
+      <div class="eq">$$\begin{aligned}
+        d(AXB) &amp;= A\,dX\,B \quad(A, B \text{ constant}) &amp; d(XY) &amp;= dX\,Y + X\,dY\\
+        d(X^\top) &amp;= (dX)^\top &amp; d\operatorname{tr}(X) &amp;= \operatorname{tr}(dX)\\
+        d(X^{-1}) &amp;= -X^{-1}\,dX\,X^{-1} &amp; d\log\det X &amp;= \operatorname{tr}(X^{-1}dX)\\
+        d\,\sigma(\mathbf{x}) &amp;= \sigma'(\mathbf{x})\odot d\mathbf{x}\ \ \text{(elementwise functions)} &amp;&amp;
+      \end{aligned}$$</div>
+    </div>
+    <p>The inverse rule comes from differentiating $XX^{-1} = I$: $dX\,X^{-1} + X\,d(X^{-1}) = 0$. The log-determinant rule comes from $\det(X + dX) = \det X\det(I + X^{-1}dX)$ and $\det(I + E)\approx 1 + \operatorname{tr}E$ for small $E$.</p>
+  </section>
+
+  <section id="examples">
+    <h2>Worked examples</h2>
+    <p><b>1. Least squares.</b> $f(\mathbf{w}) = \lVert X\mathbf{w} - \mathbf{y}\rVert^2 = \mathbf{r}^\top\mathbf{r}$ with $\mathbf{r} = X\mathbf{w} - \mathbf{y}$. Then $d\mathbf{r} = X\,d\mathbf{w}$ and</p>
+    <div class="eq">$$df = d\mathbf{r}^\top\mathbf{r} + \mathbf{r}^\top d\mathbf{r} = 2\,\mathbf{r}^\top X\,d\mathbf{w} = \operatorname{tr}\big((2X^\top\mathbf{r})^\top d\mathbf{w}\big) \;\Longrightarrow\; \nabla_{\mathbf{w}}f = 2X^\top(X\mathbf{w} - \mathbf{y}).$$</div>
+    <p>Setting it to zero gives lesson 01's normal equations. Shapes: $(d\times n)(n\times1) = d\times1$. ✓</p>
+    <p><b>2. A quadratic form.</b> $f = \mathbf{w}^\top M\mathbf{w}$: $df = d\mathbf{w}^\top M\mathbf{w} + \mathbf{w}^\top M\,d\mathbf{w} = \mathbf{w}^\top(M^\top + M)\,d\mathbf{w}$, so $\nabla f = (M + M^\top)\mathbf{w}$, which is $2M\mathbf{w}$ for symmetric $M$. Differentiating again, the Hessian is $M + M^\top$.</p>
+    <p><b>3. A matrix in the middle.</b> $f(W) = \operatorname{tr}(BWC)$: $df = \operatorname{tr}(B\,dW\,C) = \operatorname{tr}(CB\,dW)$, so $G^\top = CB$ and $\nabla_Wf = B^\top C^\top$.</p>
+    <p><b>4. A layer and its loss.</b> For a linear layer $Z = XW^\top$ ($X$ is $n\times d$, $W$ is $K\times d$) feeding any scalar loss with known $\nabla_ZL = G$:</p>
+    <div class="eq">$$dL = \operatorname{tr}(G^\top dZ) = \operatorname{tr}(G^\top X\,dW^\top) = \operatorname{tr}(dW\,X^\top G) = \operatorname{tr}\big((G^\top X)^\top dW\big)\;\Longrightarrow\;\nabla_WL = G^\top X,\quad\nabla_XL = GW .$$</div>
+    <p>With $G = (P - Y)/n$ this is lesson 06's softmax gradient, and the pair of formulas is the backward pass of every fully connected layer in lesson 13.</p>
+    <p><b>5. The covariance of a Gaussian.</b> For data $\mathbf{x}_1,\dots,\mathbf{x}_n$ with mean zero, the negative log-likelihood of $\mathcal{N}(\mathbf{0},\Sigma)$ is, up to a constant,</p>
+    <div class="eq">$$L(\Sigma) = \frac n2\log\det\Sigma + \frac12\sum_i\mathbf{x}_i^\top\Sigma^{-1}\mathbf{x}_i = \frac n2\log\det\Sigma + \frac12\operatorname{tr}(\Sigma^{-1}K),\qquad K = \sum_i\mathbf{x}_i\mathbf{x}_i^\top.$$</div>
+    <p>Using the log-det and inverse rules:</p>
+    <div class="eq">$$dL = \frac n2\operatorname{tr}(\Sigma^{-1}d\Sigma) - \frac12\operatorname{tr}(\Sigma^{-1}d\Sigma\,\Sigma^{-1}K) = \frac12\operatorname{tr}\Big(\big(n\Sigma^{-1} - \Sigma^{-1}K\Sigma^{-1}\big)d\Sigma\Big).$$</div>
+    <p>It vanishes for every $d\Sigma$ when $n\Sigma^{-1} = \Sigma^{-1}K\Sigma^{-1}$, that is, $\hat\Sigma = K/n$: the MLE of the covariance is the sample covariance. That is the matrix version of <a href="/machine-learning/M3-probability/">M3</a>'s $\hat\sigma^2 = \frac1n\sum_i(x_i - \bar x)^2$.</p>
+  </section>
+
+  <section id="chain">
+    <h2>The chain rule and vector–Jacobian products</h2>
+    <p>For a composition $\mathbf{x}\xrightarrow{f_1}\mathbf{h}_1\xrightarrow{f_2}\mathbf{h}_2\to\cdots\xrightarrow{f_k}L$ ending in a scalar loss, the chain rule multiplies Jacobians:</p>
+    <div class="eq">$$\nabla_{\mathbf{x}}L^\top = \underbrace{\nabla_{\mathbf{h}_{k-1}}L^\top}_{1\times m_{k-1}}\;J_{k-1}\cdots J_2\,J_1 .$$</div>
+    <p>Matrix multiplication is associative, so you can evaluate this product in any order, but the cost is wildly different. Left to right, every intermediate result is a <i>row vector</i>: each step is a <b>vector–Jacobian product</b> (VJP) $\mathbf{v}^\top J$, which costs about as much as evaluating the layer itself, and the Jacobian is never formed. Right to left, every intermediate is a full Jacobian matrix. For a network with a million inputs and one output, that is the difference between seconds and impossibility.</p>
+    <div class="result">
+      <div class="label">Reverse mode in one sentence</div>
+      <p>To get the gradient of a scalar with respect to everything, start from $\partial L/\partial L = 1$ and push a row vector backwards through each operation's VJP. That is backpropagation (lesson 13).</p>
+    </div>
+    <p>Each operation only needs to know how to compute its own VJP. For $\mathbf{h} = \tanh(W\mathbf{x})$ and an incoming $\mathbf{v} = \nabla_{\mathbf{h}}L$, the differential rules give $\nabla_{\mathbf{x}}L = W^\top\big((1 - \mathbf{h}^2)\odot\mathbf{v}\big)$ and $\nabla_WL = \big((1-\mathbf{h}^2)\odot\mathbf{v}\big)\mathbf{x}^\top$. The code checks a two-layer VJP against the explicitly built Jacobian.</p>
+  </section>
+
+  <section id="checking">
+    <h2>Checking a gradient numerically</h2>
+    <p>Always test a hand-derived gradient against finite differences. The <b>central difference</b></p>
+    <div class="eq">$$\frac{f(X + hE_{ij}) - f(X - hE_{ij})}{2h} = \frac{\partial f}{\partial X_{ij}} + O(h^2)$$</div>
+    <p>is accurate to second order (the one-sided version is only first order). With $h\approx10^{-6}$ in double precision, a correct gradient matches to a relative error of about $10^{-9}$ or better, and a wrong one is usually off by more than $10^{-3}$. It costs two function evaluations per entry, so use it on small test cases, never during training.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+def num_grad(f, X, h=1e-6):                        # central differences, one entry at a time
+    G = np.zeros_like(X)
+    for idx in np.ndindex(X.shape):
+        E = np.zeros_like(X); E[idx] = h
+        G[idx] = (f(X + E) - f(X - E)) / (2 * h)
+    return G
+
+def check(name, f, grad, X):
+    err = np.max(np.abs(grad(X) - num_grad(f, X))) / max(1.0, np.max(np.abs(grad(X))))
+    print(f"{name:42s} relative error {err:.1e}")
+
+n, d = 8, 4
+A = rng.standard_normal((n, d)); y = rng.standard_normal(n)
+M = rng.standard_normal((d, d)); B = rng.standard_normal((3, d)); C = rng.standard_normal((d, 3))
+P = rng.standard_normal((d, d)); P = P @ P.T + d * np.eye(d)       # symmetric positive definite
+
+check("||Aw - y||^2  -&gt;  2 A^T (Aw - y)", lambda w: np.sum((A @ w - y) ** 2), lambda w: 2 * A.T @ (A @ w - y), rng.standard_normal(d))
+check("w^T M w  -&gt;  (M + M^T) w", lambda w: w @ M @ w, lambda w: (M + M.T) @ w, rng.standard_normal(d))
+check("tr(B W C)  -&gt;  B^T C^T", lambda W: np.trace(B @ W @ C), lambda W: B.T @ C.T, rng.standard_normal((d, d)))
+check("log det S  -&gt;  S^{-1} (S sym. pos. def.)", lambda S: np.linalg.slogdet(S)[1], lambda S: np.linalg.inv(S).T, P)
+check("tr(S^{-1} K)  -&gt;  -S^{-1} K S^{-1}", lambda S: np.trace(np.linalg.solve(S, M @ M.T)),
+      lambda S: -(np.linalg.inv(S) @ M @ M.T @ np.linalg.inv(S)).T, P)
+
+# The Gaussian MLE of the covariance is the sample covariance: the gradient vanishes there
+X = rng.multivariate_normal(np.zeros(d), P, size=500)
+S_hat = X.T @ X / len(X)
+nll = lambda S: 0.5 * len(X) * np.linalg.slogdet(S)[1] + 0.5 * np.trace(np.linalg.solve(S, X.T @ X))
+print("gradient of Gaussian NLL at the sample covariance: max |entry| =", f"{np.max(np.abs(num_grad(nll, S_hat))):.1e}")
+
+# Vector-Jacobian products: backprop never builds the Jacobian
+W1, W2 = rng.standard_normal((300, 200)), rng.standard_normal((100, 300))
+f = lambda x: W2 @ np.tanh(W1 @ x)                 # R^200 -&gt; R^100
+x = rng.standard_normal(200); v = rng.standard_normal(100)
+J = W2 @ (np.diag(1 - np.tanh(W1 @ x) ** 2) @ W1)  # the full 100 x 200 Jacobian
+vjp = W1.T @ ((1 - np.tanh(W1 @ x) ** 2) * (W2.T @ v))   # v^T J computed right to left, no Jacobian
+print("v^T J by building J vs by a VJP: max difference", f"{np.max(np.abs(v @ J - vjp)):.1e}")
+
+# ||Aw - y||^2  -&gt;  2 A^T (Aw - y)           relative error 1.1e-10
+# w^T M w  -&gt;  (M + M^T) w                   relative error 2.4e-11
+# tr(B W C)  -&gt;  B^T C^T                     relative error 2.0e-10
+# log det S  -&gt;  S^{-1} (S sym. pos. def.)   relative error 5.1e-10
+# tr(S^{-1} K)  -&gt;  -S^{-1} K S^{-1}         relative error 6.0e-10
+# gradient of Gaussian NLL at the sample covariance: max |entry| = 2.3e-07
+# v^T J by building J vs by a VJP: max difference 5.7e-14</code></pre>
+    <p class="muted">Every formula derived on this page agrees with finite differences to about $10^{-10}$. The Gaussian NLL's gradient at the sample covariance is zero up to finite-difference noise. The vector–Jacobian product matches $\mathbf{v}^\top J$ to machine precision without ever building the $100\times200$ Jacobian.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Find $\nabla_{\mathbf{w}}$ of $\tfrac12\mathbf{w}^\top A\mathbf{w} - \mathbf{b}^\top\mathbf{w}$ for symmetric $A$, and its minimiser when $A$ is positive definite.</li>
+      <li>Find $\nabla_X\operatorname{tr}(X^\top AX)$.</li>
+      <li>Find $\nabla_X\lVert AXB - C\rVert_F^2$, using $\lVert M\rVert_F^2 = \operatorname{tr}(M^\top M)$.</li>
+      <li>Show that the gradient of the log-loss of logistic regression, $\ell(\mathbf{w}) = -y\log\sigma(\mathbf{w}^\top\mathbf{x}) - (1-y)\log(1-\sigma(\mathbf{w}^\top\mathbf{x}))$, is $(\sigma(\mathbf{w}^\top\mathbf{x}) - y)\mathbf{x}$, using $\sigma' = \sigma(1-\sigma)$.</li>
+      <li>A network maps $\mathbb{R}^{1000}\to\mathbb{R}^{1000}\to\mathbb{R}^{1000}\to\mathbb{R}$ with dense layers. Roughly how many multiplications does reverse mode (VJPs) need for the full gradient with respect to the input, and how many does forward mode (Jacobian–vector products, one per input direction) need?</li>
+      <li>Derive $d(X^{-1})$ and check it on a $1\times1$ matrix.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $A\mathbf{w} - \mathbf{b}$; minimiser $\mathbf{w}^* = A^{-1}\mathbf{b}$ (Hessian $A$ positive definite).</p>
+        <p><b>2.</b> $d\operatorname{tr}(X^\top AX) = \operatorname{tr}(dX^\top AX) + \operatorname{tr}(X^\top A\,dX) = \operatorname{tr}\big(X^\top(A^\top + A)\,dX\big)$, so the gradient is $(A + A^\top)X$.</p>
+        <p><b>3.</b> With $R = AXB - C$: $d\operatorname{tr}(R^\top R) = 2\operatorname{tr}(R^\top A\,dX\,B) = 2\operatorname{tr}(BR^\top A\,dX)$, so the gradient is $2A^\top RB^\top$. Shapes: $(k\times m)(m\times p)(p\times n)$ for $X$ of size $k\times n$. ✓</p>
+        <p><b>4.</b> With $s = \sigma(z)$, $z = \mathbf{w}^\top\mathbf{x}$: $d\ell/dz = -y\frac{s(1-s)}{s} + (1-y)\frac{s(1-s)}{1-s} = -y(1-s) + (1-y)s = s - y$, and $dz = \mathbf{x}^\top d\mathbf{w}$.</p>
+        <p><b>5.</b> Reverse mode: one VJP per layer. The last layer's costs $10^3$ multiplications and the two $1000\times1000$ layers $10^6$ each, so about $2\times10^6$ in total, the same as the forward pass. Forward mode needs one pass per input direction: $1000$ passes of about $2\times10^6$ each, around $2\times10^9$. Reverse mode wins by a factor of about the input dimension whenever the output is a scalar.</p>
+        <p><b>6.</b> From $XX^{-1} = I$: $dX\,X^{-1} + X\,d(X^{-1}) = 0$, so $d(X^{-1}) = -X^{-1}dX\,X^{-1}$. For $x\in\mathbb{R}$: $d(1/x) = -dx/x^2$. ✓</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Minka, "Old and new matrix algebra useful for statistics"</b> (2000). The differential-and-trace method, compactly.</li>
+      <li><b>Petersen &amp; Pedersen, <i>The Matrix Cookbook</i></b> (free online). A table of matrix derivatives to check your answers against.</li>
+      <li><b>Magnus &amp; Neudecker, <i>Matrix Differential Calculus with Applications in Statistics and Econometrics</i></b>. The rigorous treatment.</li>
+      <li><b>Baydin, Pearlmutter, Radul, Siskind, "Automatic differentiation in machine learning: a survey"</b> (JMLR, 2018). Forward and reverse mode.</li>
+      <li><b>Deisenroth, Faisal, Ong, <i>Mathematics for Machine Learning</i></b>, chapter 5.</li>
+    </ul>
+  </section>
+</article>

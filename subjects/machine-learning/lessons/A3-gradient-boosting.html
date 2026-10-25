@@ -1,0 +1,52 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A3 · after lessons 09–11</div>
+  <h1>Gradient-boosted trees from scratch</h1>
+  <p class="lede">Build a small XGBoost in plain NumPy: the losses and their derivatives, the exact split search, second-order trees, boosting with shrinkage and row subsampling, early stopping and permutation importance. Then use it to find out which knobs matter and when boosting beats a random forest. An autograder checks every function. Expect four to six hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/09-decision-trees/">09</a>, <a href="/machine-learning/10-random-forests/">10</a>, <a href="/machine-learning/11-gradient-boosting/">11</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A3-gradient-boosting">assignments/A3-gradient-boosting</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A3-gradient-boosting
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like</code></pre>
+    <p>As in <a href="/machine-learning/A1-linear-models/">A1</a>, the checker prints <code>PASS</code>, <code>FAIL</code> with a reason and a hint, or <code>todo</code>. It checks properties rather than a hidden answer key. Derivatives are compared with finite differences. Your split search is compared with a brute-force search over every threshold. Your trees' leaves must equal $-G/(H + \lambda)$ for the points that land in them, and a depth-1 tree must achieve the best gain over all features. Boosting is checked by replaying each round.</p>
+    <div class="note">
+      <div class="label">Rules</div>
+      <p>Use NumPy only. Any tree representation is fine (the lesson uses nested tuples) as long as <code>predict_tree</code> reads it. <code>best_split</code> must be $O(n\log n)$: the checker times it on 200,000 points. The checker runs with floating-point warnings turned into errors, so an overflow in your sigmoid is a failure, not a warning.</p>
+    </div>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>functions</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · losses</td><td><code>squared_loss</code>, <code>squared_grad_hess</code>, <code>log_loss</code>, <code>log_grad_hess</code>, <code>init_score</code></td><td>$g$ and $h$ against finite differences; no overflow at $F = \pm1000$; the starting score has zero total gradient</td></tr>
+        <tr><td>2 · one tree</td><td><code>best_split</code>, <code>grow_tree</code>, <code>predict_tree</code></td><td>the best gain on every feature equals a brute-force search, with ties, $\lambda$, $\gamma$ and <code>min_child_weight</code>; leaf values; optimal stumps; deeper trees never worse</td></tr>
+        <tr><td>3 · boosting</td><td><code>fit_gbdt</code>, <code>predict_gbdt</code></td><td>0 rounds gives $F_0$; training loss falls every round; each tree is the right tree for the current $F$; squared loss with $\nu = 1$ is "fit the residuals"; subsampling uses only the kept rows</td></tr>
+        <tr><td>4 · using the model</td><td><code>best_rounds</code>, <code>permutation_importance</code></td><td>an exact validation curve and its minimum; ignored features score exactly 0; X is left untouched</td></tr>
+      </tbody>
+    </table></div>
+    <p>The starter also has <code>make_data(n, seed=...)</code>, which draws lesson 10's problem: ten features, a label that depends on $x_0^2 + x_1^2 + x_2x_3$, and a best possible test accuracy of about 0.885 (log-loss 0.27).</p>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all nine checks pass, use your own code to answer these. Write a short paragraph and include a plot or a table for each. Use three separate draws of <code>make_data</code> for training (1,000 points), validation (1,000) and test (4,000), and choose every setting on validation only.</p>
+    <ol>
+      <li><b>Learning rate against rounds.</b> Train with $\nu = 1, 0.3, 0.1, 0.03$ (depth 3), with enough rounds for each to pass its best validation loss, and use <code>best_rounds</code> to stop. Plot the validation curves on a log $x$-axis, and tabulate the best round, the validation loss and the test loss. How does the best round scale with $\nu$? Is a smaller $\nu$ always better, and what does it cost? (For reference, our solution reaches test log-loss between 0.43 and 0.47 for all four rates, with $\nu = 1$ stopping after about 15 trees.) Relate what you see to problem 17 of <a href="/machine-learning/P3-problems-stage-3/">problem set P3</a>.</li>
+      <li><b>Depth is interaction order.</b> Write a generator whose label depends on $x_0x_1x_2$ (a three-way interaction) and nothing else. Fit depths 1 to 4, each with early stopping. Which depth is the first to do clearly better than chance, and why? Repeat on <code>make_data</code>, whose strongest interaction is two-way.</li>
+      <li><b>Boosting against a forest.</b> Using <a href="/machine-learning/10-random-forests/">lesson 10's code</a> for the forest (100 trees, $m = 3$) and your booster (tuned on validation), compare test accuracy and log-loss for training sets of 300, 1,000 and 3,000 points. For the forest, use the vote fraction, clipped to $[0.01, 0.99]$, as the probability. Then compute each model's ECE (<a href="/machine-learning/08-evaluating-classifiers/">lesson 08</a>). Which model ranks better, and which is better calibrated? Why would the forest's vote fractions be poorly calibrated?</li>
+      <li><b>Importance with correlated features.</b> Compute permutation importances of your tuned booster on the test set. Then add a feature that is $x_0$ plus a little noise ($\sigma = 0.05$), refit and recompute. What happens to the importance of $x_0$, and why? What does this mean for reading importance scores as "what the model relies on"?</li>
+      <li><b>Which knob matters?</b> Starting from your best depth-3 model, vary one setting at a time: $\lambda\in\{0, 1, 10\}$, $\gamma\in\{0, 0.5, 2\}$, <code>min_child_weight</code> $\in\{0, 1, 5\}$ and <code>subsample</code> $\in\{1, 0.7, 0.5\}$ (average three seeds for the last). Rank them by how much they change the best validation loss, and explain the top one using lesson 11.</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Nine checker passes are worth 55%. Each experiment is worth 9%: full marks if the table or plot is right <i>and</i> the explanation names the mechanism behind it (an equation from lessons 09–11, or a problem from P3). If you have <code>xgboost</code> installed, train <code>xgboost.XGBClassifier(n_estimators=M, learning_rate=0.1, max_depth=3, reg_lambda=1, tree_method="exact")</code> on the same data. Its test log-loss should be close to yours but not identical: list the differences in the algorithm that could explain the gap (look up how it chooses the starting score and how it prunes).</p>
+  </section>
+</article>

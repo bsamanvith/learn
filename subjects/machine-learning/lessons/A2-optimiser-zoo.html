@@ -1,0 +1,79 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A2 · after lessons 06–08</div>
+  <h1>An optimiser zoo</h1>
+  <p class="lede">Implement the softmax cross-entropy loss, seven optimisers (SGD, heavy-ball and Nesterov momentum, AdaGrad, RMSProp, Adam and AdamW), three learning-rate schedules and the metrics used to compare trained classifiers, all in NumPy. Then race them on test functions whose geometry you know exactly, and on MNIST, where you will find that most of the differences between optimisers are differences in effective step size. Expect four to six hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/06-softmax-regression/">06</a>, <a href="/machine-learning/07-stochastic-optimisation/">07</a>, <a href="/machine-learning/08-evaluating-classifiers/">08</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A2-optimiser-zoo">assignments/A2-optimiser-zoo</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A2-optimiser-zoo
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like (a few seconds, no download)</code></pre>
+    <p>Given: <code>load_mnist</code>, which downloads MNIST once (about 11 MB) and caches it; a two-layer <code>MLP</code> (784 → 128 ReLU → 10) with its backward pass; the test functions <code>quadratic(kappa)</code>, $f(x) = \tfrac12(x_1^2 + \kappa x_2^2)$, and <code>rosenbrock</code>; and a training loop <code>train(make_opt, epochs, batch, schedule, seed)</code> that returns the model, the loss at every step and the test accuracy. Every optimiser holds a list of parameter arrays, updates them <em>in place</em>, and is called as <code>opt.step(grads)</code>; its learning rate is the attribute <code>opt.lr</code>, which a schedule may change before each step.</p>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · the loss</td><td><code>softmax_cross_entropy</code></td><td>the value and the gradient $(\mathrm{softmax}(z) - \mathrm{onehot}(y))/B$ against finite differences; no overflow with logits of 1,000</td></tr>
+        <tr><td>2 · optimisers</td><td><code>SGD</code>, <code>Momentum</code> (heavy ball and Nesterov), <code>AdaGrad</code>, <code>RMSProp</code>, <code>Adam</code> (with coupled L2), <code>AdamW</code></td><td>four steps on fixed gradients against the update rules written out independently, to $10^{-10}$; Adam's first step is $\mathrm{lr}\cdot\mathrm{sign}(g)$; on the valley with $\kappa = 100$, SGD's exact error after 200 steps, momentum and Adam converging, and SGD diverging above $\mathrm{lr} = 2/\kappa$</td></tr>
+        <tr><td>3 · schedules</td><td><code>step_decay</code>, <code>warmup_cosine</code>, <code>inverse_sqrt</code></td><td>values at hand-picked steps, including the ends of warm-up and decay</td></tr>
+        <tr><td>4 · metrics</td><td><code>confusion_matrix</code>, <code>expected_calibration_error</code></td><td>a small confusion matrix and an ECE computed by hand, with a confidence of exactly 1 in the last bin</td></tr>
+      </tbody>
+    </table></div>
+    <p>The update rules, with $g_t$ the gradient at step $t$:</p>
+    <div class="eq">$$\begin{aligned}
+    \text{heavy ball:}\quad & v_t = \beta v_{t-1} + g_t, & \theta_t &= \theta_{t-1} - \eta\, v_t\\
+    \text{Nesterov:}\quad & v_t = \beta v_{t-1} + g_t, & \theta_t &= \theta_{t-1} - \eta\,(g_t + \beta v_t)\\
+    \text{AdaGrad:}\quad & s_t = s_{t-1} + g_t^2, & \theta_t &= \theta_{t-1} - \eta\, g_t / (\sqrt{s_t} + \epsilon)\\
+    \text{RMSProp:}\quad & s_t = \rho s_{t-1} + (1-\rho) g_t^2, & \theta_t &= \theta_{t-1} - \eta\, g_t / (\sqrt{s_t} + \epsilon)\\
+    \text{Adam:}\quad & m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t,\ \ v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2, & \theta_t &= \theta_{t-1} - \eta\, \frac{m_t/(1-\beta_1^t)}{\sqrt{v_t/(1-\beta_2^t)} + \epsilon}
+    \end{aligned}$$</div>
+    <p>Adam with <code>weight_decay</code> $\lambda$ adds $\lambda\theta$ to $g_t$ before anything else, so the decay is divided by $\sqrt{v_t}$ like the rest of the gradient. AdamW first shrinks $\theta \leftarrow \theta - \eta\lambda\theta$ and then takes the Adam step on the plain gradient, so every weight decays at the same rate.</p>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all ten checks pass, write scripts that use your functions. The solution's numbers are quoted for reference. The test-function numbers are deterministic and yours should match; the MNIST ones use <code>seed=0</code>, batch 128 and hidden width 128, and yours may differ in the last digit.</p>
+    <ol>
+      <li><b>The valley.</b> On <code>quadratic(100)</code> from $(1, 1)$, count the steps until $f &lt; 10^{-8}$ for SGD, heavy ball and Adam, and plot the trajectories over the contours. With $\mathrm{lr} = 0.019$ SGD takes 463 steps; heavy ball with the same rate and $\beta = 0.8$ takes 93; Adam at $0.05$ takes 172. Derive the best constant rate for SGD, $\eta = 2/(L + \mu)$, and its contraction factor $(\kappa - 1)/(\kappa + 1) = 0.980$ per step. Then show that heavy ball with $\eta = 4/(\sqrt L + \sqrt\mu)^2$ and $\beta = \big((\sqrt\kappa - 1)/(\sqrt\kappa + 1)\big)^2$ contracts at $(\sqrt\kappa - 1)/(\sqrt\kappa + 1) = 0.818$ (the solution reaches $10^{-8}$ in 81 steps). Why is Adam fast here, and what about this function makes that unfair to the others? (Rotate the valley by 45° and try again.)</li>
+      <li><b>Rosenbrock.</b> From $(-1.5, 2)$, count steps to $f &lt; 10^{-6}$. The solution: SGD at $10^{-3}$ takes 15,682; heavy ball and Nesterov at $10^{-4}$ (with $\beta = 0.9$) take 15,619 and 15,631; AdaGrad at 0.5 takes 12,312; Adam at 0.02 takes 2,287. Explain why momentum at $10^{-4}$ behaves almost exactly like SGD at $10^{-3}$. RMSProp at $10^{-3}$ never gets there: after 50,000 steps it is stuck at $f \approx 2.3\times10^{-4}$, and with a cosine decay of the same peak rate it reaches $2.3\times 10^{-10}$. Explain why an optimiser that divides by $\sqrt{s_t}$ needs a decaying rate to converge, and why AdaGrad does not.</li>
+      <li><b>Learning-rate sweeps on MNIST.</b> Train for 3 epochs with each optimiser at four rates a factor of about 3 apart, and plot test accuracy against rate on a log axis. The solution:
+        <div class="tablewrap"><table>
+          <thead><tr><th>optimiser</th><th>rates</th><th>test accuracy (%)</th></tr></thead>
+          <tbody>
+            <tr><td>SGD</td><td>0.03, 0.1, 0.3, 1</td><td>91.96, 94.61, 96.80, 97.57</td></tr>
+            <tr><td>heavy ball, $\beta = 0.9$</td><td>0.01, 0.03, 0.1, 0.3</td><td>94.48, 96.65, 97.16, 96.25</td></tr>
+            <tr><td>Nesterov, $\beta = 0.9$</td><td>0.01, 0.03, 0.1, 0.3</td><td>94.45, 96.73, 97.34, 96.79</td></tr>
+            <tr><td>AdaGrad</td><td>0.01, 0.03, 0.1, 0.3</td><td>95.80, 97.09, 97.07, 94.89</td></tr>
+            <tr><td>RMSProp</td><td>$10^{-4}$, $3\cdot10^{-4}$, $10^{-3}$, $3\cdot10^{-3}$</td><td>92.22, 94.54, 97.02, 97.82</td></tr>
+            <tr><td>Adam</td><td>$10^{-4}$, $3\cdot10^{-4}$, $10^{-3}$, $3\cdot10^{-3}$</td><td>92.09, 94.36, 96.90, 97.53</td></tr>
+          </tbody>
+        </table></div>
+        Two of these sweeps peak at the edge of their grid; extend them until you find the peak. Heavy ball at rate $\eta$ is compared with SGD at what rate? (Its steady-state step is $\eta/(1-\beta)$.) Plot the curves again against <em>effective</em> rate and say how much of the difference between SGD and momentum remains. Is the best accuracy you find for each optimiser different by more than the run-to-run spread? Measure that spread with three seeds at one rate.</li>
+      <li><b>Schedules.</b> Train heavy ball ($\eta = 0.1$) for 5 epochs (2,345 steps) with a constant rate, step decay by 10× after 3 epochs, warm-up for 200 steps then cosine to zero, and the inverse square root schedule with 200 warm-up steps. The solution's test accuracies are 97.64, 97.77, 97.88 and 97.55%; the mean training loss in the last epoch is 0.047, 0.038, 0.042 and 0.057; the expected calibration error (10 bins) is 0.0056, 0.0025, 0.0029 and 0.0028. Plot the four schedules and the four loss curves. Why does the loss drop sharply at the step decay? Why does the inverse square root schedule, the original transformer's, finish worst here?</li>
+      <li><b>Weight decay: L2 against AdamW.</b> Train for 10 epochs with Adam at $10^{-3}$, Adam with L2 $\lambda = 10^{-3}$, and AdamW with $\lambda = 0.1$ and $1$. The solution:
+        <div class="tablewrap"><table>
+          <thead><tr><th>run</th><th>test accuracy (%)</th><th>$\|W_1\|$, $\|W_2\|$</th><th>train loss, last epoch</th><th>ECE</th></tr></thead>
+          <tbody>
+            <tr><td>Adam</td><td>97.69</td><td>35.3, 9.2</td><td>0.032</td><td>0.0038</td></tr>
+            <tr><td>Adam + L2, $10^{-3}$</td><td>97.33</td><td>10.4, 8.2</td><td>0.087</td><td>0.0168</td></tr>
+            <tr><td>AdamW, 0.1</td><td>97.73</td><td>29.1, 7.9</td><td>0.044</td><td>0.0037</td></tr>
+            <tr><td>AdamW, 1.0</td><td>96.36</td><td>16.0, 4.6</td><td>0.133</td><td>0.0344</td></tr>
+          </tbody>
+        </table></div>
+        L2 with $\lambda = 10^{-3}$ shrinks $W_1$ to less than a third of its norm but barely touches $W_2$. Explain this from the update: which weights have small $\sqrt{v_t}$, and what does dividing $\lambda\theta$ by it do to them? Then explain why AdamW's decay is uniform. On a model this small, does either kind of decay help accuracy? What would you need to see a benefit?</li>
+      <li><b>Where the errors are.</b> For your best model, compute the confusion matrix and per-class accuracy, and show the 16 test images it gets most confidently wrong. The solution's Adam ($3\cdot 10^{-3}$, 3 epochs, 97.53%) makes 247 errors; its most common confusion is a 9 read as a 4 (16 times), and its weakest classes are 8 (95.6%) and 9 (96.1%). Draw a reliability diagram for the same model and say whether it is over- or under-confident.</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Ten checker passes are worth 40%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism, for example the effective step size, the condition number, or how the preconditioner rescales the decay term.</p>
+  </section>
+</article>

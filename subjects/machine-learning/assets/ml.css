@@ -11,9 +11,9 @@
 .ml .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
 .ml .eta { font-family: var(--f-display); font-style: italic; }
 .ml header.hero { display: grid; gap: 14px; }
-.ml .plate { display: grid; gap: 14px; margin: 0; }
+.ml .plate { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; }
 .ml .plate-head { display: grid; gap: 8px; max-width: 66ch; }
-.ml .stage { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 12px; min-width: 0; }
+.ml .stage { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
 .ml .stage canvas { display: block; width: 100%; touch-action: manipulation; }
 .ml .toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
 .ml .toolbar .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -56,8 +56,8 @@
 .ml .lesson-head { display: grid; gap: 14px; }
 .ml .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--muted); }
 .ml .meta b { color: var(--ink); font-weight: 600; }
-.ml article.lesson { display: grid; gap: 48px; counter-reset: sec; }
-.ml article.lesson > section { display: grid; gap: 16px; scroll-margin-top: 16px; }
+.ml article.lesson { display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; counter-reset: sec; }
+.ml article.lesson > section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; scroll-margin-top: 16px; }
 .ml article.lesson > section > :not(.plate):not(.wide) { max-width: 70ch; }
 .ml article.lesson h2 { counter-increment: sec; }
 .ml article.lesson h2::before { content: counter(sec) ". "; color: var(--muted); font-weight: 500; }
@@ -67,14 +67,15 @@
 .ml .eq { overflow-x: auto; overflow-y: hidden; padding-block: 4px; }
 .ml mjx-container[display="true"] { margin: 0.4em 0 !important; }
 .ml mjx-container { max-width: 100%; }
-.ml .detour, .ml .note { background: var(--tint); border-radius: 8px; padding: 14px 16px; display: grid; gap: 10px; }
+.ml .detour, .ml .note { background: var(--tint); border-radius: 8px; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .ml .detour > .label, .ml .note > .label { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.ml .result { border: 1px solid var(--accent); border-radius: 8px; padding: 12px 16px; display: grid; gap: 8px; }
+.ml .result { border: 1px solid var(--accent); border-radius: 8px; padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .ml .result > .label { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
 .ml pre { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-family: var(--f-mono); font-size: 13.5px; line-height: 1.55; }
 .ml code { font-family: var(--f-mono); font-size: 0.9em; }
 .ml p code, .ml li code { background: var(--tint); padding: 1px 5px; border-radius: 4px; }
 .ml .tablewrap { overflow-x: auto; }
+.ml :is(p, li, td) > code { overflow-wrap: anywhere; }
 .ml table { border-collapse: collapse; font-size: 14.5px; min-width: 100%; }
 .ml th, .ml td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .ml th { font-weight: 600; color: var(--muted); font-size: 13px; }
@@ -92,3 +93,124 @@
 .ml .refs li { color: var(--muted); }
 .ml .refs li b { color: var(--ink); font-weight: 600; }
 
+
+/* problem sets: one problem per list item, each with its own solution */
+.ml .problems ol { display: grid; gap: 22px; padding-left: 1.6em; }
+.ml .problems ol > li > p:first-child .tag { margin-right: 6px; }
+.ml .problems ol > li > details { margin-top: 10px; }
+.ml .problems ol > li::marker { font-family: var(--f-mono); color: var(--accent); font-weight: 600; }
+
+/* difficulty tags, shared by the problem sets and the problem book */
+.ml .tag.key { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.ml .tag.key::before { content: "★ "; }
+.ml .tag.warm-up { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.ml .tag.core { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 35%, transparent); }
+.ml .tag.hard { color: var(--event-both); border-color: color-mix(in srgb, var(--event-both) 50%, transparent); }
+.ml .tag.code { color: var(--data); border-color: color-mix(in srgb, var(--data) 50%, transparent); }
+
+/* marks under each problem on a problem-set page (added by script) */
+.ml .pb-marks-inline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ml .pb-marks-inline button { font-size: 13px; padding: 4px 10px; }
+.ml .pb-marks-inline button[aria-pressed="true"][data-mark="solved"] { background: var(--good); border-color: var(--good); color: var(--bg); }
+.ml .pb-marks-inline button[aria-pressed="true"][data-mark="revisit"] { background: var(--event-both); border-color: var(--event-both); color: var(--bg); }
+.ml .problems li.is-solved::marker { color: var(--good); }
+.ml .problems li:target > p:first-child { background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 6px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 10%, transparent); }
+
+/* ---------- the problem book page ---------- */
+.ml.pb { gap: 72px; }
+.ml .pb-cover { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px 48px; align-items: end;
+  padding: 40px 40px 36px; border: 1px solid var(--line); border-radius: 14px; position: relative; overflow: hidden;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 31px, color-mix(in srgb, var(--data) 9%, transparent) 31px 32px),
+    linear-gradient(to right, transparent 0 56px, color-mix(in srgb, var(--accent) 30%, transparent) 56px 57px, transparent 57px),
+    var(--card); }
+.ml .pb-cover-text { display: grid; gap: 14px; padding-left: 40px; }
+.ml .pb-cover h1 { font-size: clamp(40px, 7vw, 72px); letter-spacing: -0.02em; }
+.ml .pb-cover .kicker { margin: 0; }
+.ml .pb-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 13px; color: var(--muted); }
+.ml .pb-bar { width: min(280px, 100%); height: 8px; border-radius: 999px; background: var(--tint); display: flex; overflow: hidden; }
+.ml .pb-bar .solved { background: var(--good); transition: width .4s; }
+.ml .pb-bar .revisit { background: var(--event-both); transition: width .4s; }
+.ml .pb-stats { display: grid; grid-template-columns: repeat(5, auto); gap: 6px 18px; margin: 0; }
+.ml .pb-stats div { display: grid; justify-items: center; gap: 4px; }
+.ml .pb-stats dt { margin: 0; }
+.ml .pb-stats dd { margin: 0; font: 600 30px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.ml .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.ml .pb-paths { display: grid; gap: 18px; }
+.ml .pb-path-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.ml .pb-path { display: grid; gap: 6px; align-content: start; text-align: left; padding: 18px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card); color: var(--ink); text-decoration: none; font-size: 15px; line-height: 1.45; transition: transform .15s, border-color .15s; }
+.ml .pb-path:hover { border-color: var(--accent); transform: translateY(-2px); color: var(--ink); }
+.ml .pb-path b { font: 600 20px/1.2 var(--f-display); }
+.ml .pb-path > span:last-child { color: var(--muted); }
+.ml .pb-path-n { font: 600 40px/1 var(--f-display); color: var(--accent); }
+.ml .pb-more { color: var(--muted); max-width: 70ch; margin: 0; }
+.ml .pb-volumes { display: grid; gap: 56px; }
+.ml .pb-volume { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; }
+.ml .pb-volume-head { display: grid; gap: 8px; align-content: start; position: sticky; top: 80px; }
+.ml .pb-volume-head p { margin: 0; color: var(--muted); font-size: 15px; }
+.ml .pb-volume-n { font: 500 12px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.ml .pb-sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.ml .pb-set { --done: 0%; display: flex; flex-direction: column; gap: 8px; padding: 16px 16px 14px; border: 1px solid var(--line); border-radius: 10px;
+  background: linear-gradient(to right, color-mix(in srgb, var(--good) 10%, transparent) var(--done), transparent var(--done)), var(--card);
+  color: var(--ink); text-decoration: none; transition: transform .15s, border-color .15s; }
+.ml .pb-set:hover { border-color: var(--accent); transform: translateY(-2px); color: var(--ink); }
+.ml .pb-set-code { font: 600 13px var(--f-mono); color: var(--accent); }
+.ml .pb-set b { font: 600 19px/1.25 var(--f-display); }
+.ml .pb-set-blurb { font-size: 14px; color: var(--muted); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ml .pb-mix { display: flex; height: 6px; border-radius: 999px; overflow: hidden; gap: 2px; margin-top: auto; }
+.ml .pb-mix i { display: block; min-width: 4px; }
+.ml .pb-mix i.warm-up { background: var(--good); }
+.ml .pb-mix i.core { background: color-mix(in srgb, var(--ink) 55%, transparent); }
+.ml .pb-mix i.hard { background: var(--event-both); }
+.ml .pb-mix i.code { background: var(--data); }
+.ml .pb-set-foot { display: flex; justify-content: space-between; gap: 8px; font: 12.5px var(--f-mono); color: var(--muted); }
+.ml .pb-set-foot [data-set-progress] { color: var(--good); }
+.ml .pb-index { display: grid; gap: 28px; }
+.ml .pb-index-head { display: grid; gap: 14px; position: sticky; top: 56px; z-index: 2; padding: 14px 0 12px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.ml .pb-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ml .pb-filters input[type="search"] { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 0; flex: 1 1 200px; }
+.ml .pb-showing { margin: 0; font-size: 13px; color: var(--muted); }
+.ml .pb-group { display: grid; gap: 10px; }
+.ml .pb-group h3 a { color: var(--ink); text-decoration: none; }
+.ml .pb-group h3 a:hover { color: var(--accent); }
+.ml .pb-group h3 .mono { color: var(--accent); font-size: 15px; margin-right: 6px; }
+.ml .pb-row { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto; gap: 12px; padding: 14px 14px 14px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.ml .pb-row[data-status="solved"] { border-color: color-mix(in srgb, var(--good) 50%, var(--line)); }
+.ml .pb-row[data-status="solved"] .pb-num { background: var(--good); color: var(--bg); }
+.ml .pb-row[data-status="revisit"] { border-color: color-mix(in srgb, var(--event-both) 50%, var(--line)); }
+.ml .pb-num { display: grid; place-items: center; width: 2.2em; height: 2.2em; border-radius: 50%; border: 1px solid var(--line); text-decoration: none; color: var(--ink); font-size: 13px; }
+.ml .pb-num:hover { border-color: var(--accent); color: var(--accent); }
+.ml .pb-body { display: grid; gap: 6px; min-width: 0; }
+.ml .pb-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ml .pb-where { font: 12px var(--f-mono); color: var(--muted); margin-left: 4px; }
+.ml .pb-stmt { font-size: 15.5px; line-height: 1.55; overflow-wrap: anywhere; }
+.ml .pb-stmt .katex-display { margin: 0.3em 0; overflow-x: auto; overflow-y: hidden; }
+.ml .pb-open { font-size: 13.5px; justify-self: start; }
+.ml .pb-marks { display: flex; flex-direction: column; gap: 6px; }
+.ml .pb-mark { width: 34px; height: 34px; padding: 0; display: grid; place-items: center; font-size: 15px; color: var(--muted); }
+.ml .pb-mark[data-mark="solved"][aria-pressed="true"] { background: var(--good); border-color: var(--good); color: var(--bg); }
+.ml .pb-mark[data-mark="revisit"][aria-pressed="true"] { background: var(--event-both); border-color: var(--event-both); color: var(--bg); }
+.ml .pb-empty { color: var(--muted); }
+@media (max-width: 860px) {
+  .ml .pb-cover { grid-template-columns: minmax(0, 1fr); padding: 28px 20px 24px; }
+  .ml .pb-cover-text { padding-left: 22px; }
+  .ml .pb-cover { background:
+    repeating-linear-gradient(to bottom, transparent 0 31px, color-mix(in srgb, var(--data) 9%, transparent) 31px 32px),
+    linear-gradient(to right, transparent 0 26px, color-mix(in srgb, var(--accent) 30%, transparent) 26px 27px, transparent 27px),
+    var(--card); }
+  .ml .pb-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); padding-left: 22px; }
+  .ml .pb-stats dd { font-size: 24px; }
+  .ml .pb-path-grid { grid-template-columns: minmax(0, 1fr); }
+  .ml .pb-volume { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .ml .pb-volume-head { position: static; }
+  .ml .pb-index-head { position: static; }
+  .ml .pb-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .ml .pb-num { grid-row: 1; }
+  .ml .pb-body { grid-column: 1 / -1; grid-row: 2; }
+  .ml .pb-marks { flex-direction: row; grid-column: 2; grid-row: 1; }
+}
+
+/* Problem-book shelves inside the ML page grid: the grid gap already spaces them. */
+.ml.pb .pb-section { margin: 0; }

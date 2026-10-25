@@ -1,0 +1,367 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 41 · Stage 8: reinforcement learning</div>
+  <h1>AlphaGo, AlphaZero and MuZero</h1>
+  <p class="lede">Lesson 40's tree search knew nothing about the game beyond its rules: it chose moves by counting random playouts. The AlphaGo family adds what lessons 37 to 39 built, a neural network that predicts a policy and a value, and uses the two together. The network tells the search which moves are worth looking at and how good a position is without playing it out; the search returns a better policy than the network's, and the network is trained to imitate it. Repeated through self-play, this is policy iteration with search as the improvement step. This lesson derives the PUCT rule, explains why the search's visit counts are an improved policy, follows the line from AlphaGo to MuZero, which learns its own model and plans without knowing the rules, and trains an AlphaZero from scratch on tic-tac-toe, graded at every stage against the exact solution.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/40-model-based-rl-and-mcts/">40</a>, <a href="/machine-learning/38-policy-gradients-and-actor-critic/">38</a>, <a href="/machine-learning/16-modern-cnns/">16</a></span><span><b>Math pulled in:</b> PUCT, regularised policy optimisation and its closed form, KL divergence, generalised policy iteration, n-step bootstrapped targets</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Pure MCTS has two weak points. Selection spreads simulations over every legal move until their statistics separate, which is hopeless when there are 250 legal moves, as in Go. And a random playout from a Go position says almost nothing about who is winning. A network that maps a position $s$ to a <b>prior policy</b> $\mathbf{p}(\cdot\mid s)$ and a <b>value</b> $v(s)$ fixes both: the prior concentrates the search on a few plausible moves, and the value replaces the playout.</p>
+    <p>The network in turn needs training targets. The search supplies them. Its visit counts at the root are a better policy than $\mathbf{p}$, because they include what the search found, and the final result of the game is an unbiased sample of the value. Training $\mathbf{p}$ towards the visit counts and $v$ towards the results makes the network better, which makes the next search better. This is generalised policy iteration (lesson 34): the search is policy improvement and the network training is evaluation and projection onto what the network can represent.</p>
+  </section>
+
+  <section id="alphago">
+    <h2>AlphaGo</h2>
+    <p><b>AlphaGo</b> (Silver et al., 2016), the first program to beat a professional Go player, trained three networks in a pipeline:</p>
+    <ol>
+      <li>A <b>supervised policy network</b> $p_\sigma$, a 13-layer convolutional network trained on 30 million positions from human games to predict the expert's move (57% accuracy).</li>
+      <li>A <b>reinforcement learning policy network</b> $p_\rho$, initialised from $p_\sigma$ and improved by REINFORCE (lesson 38) on games against earlier versions of itself, with reward $\pm1$ at the end. It won 80% of games against $p_\sigma$.</li>
+      <li>A <b>value network</b> $v_\theta$, trained by regression on 30 million positions from games of $p_\rho$ against itself, one position per game to avoid the strong correlation between positions of the same game, to predict the winner.</li>
+    </ol>
+    <p>At play time, MCTS used $p_\sigma$ (not $p_\rho$: the more diverse human-like prior searched better) as the prior and evaluated each leaf by mixing the value network with a fast rollout, $V(s_L) = (1 - \lambda)v_\theta(s_L) + \lambda z_L$ with $\lambda = 0.5$.</p>
+  </section>
+
+  <section id="puct">
+    <h2>PUCT: UCB with a prior</h2>
+    <p>Each edge $(s, a)$ of the tree stores a visit count $N(s, a)$, a total value $W(s, a)$, the mean $Q(s, a) = W(s, a)/N(s, a)$, and the prior $P(s, a) = \mathbf{p}(a\mid s)$ from the network. AlphaGo Zero and AlphaZero select</p>
+    <div class="eq">$$a^\star = \arg\max_a\Big(Q(s, a) + c_\text{puct}\,P(s, a)\,\frac{\sqrt{\sum_bN(s, b)}}{1 + N(s, a)}\Big).$$</div>
+    <p>Compare UCT's bonus $c\sqrt{\ln N/N_a}$. The prior multiplies the bonus, so moves the network dislikes are explored rarely, and the bonus decays as $1/N_a$ rather than $1/\sqrt{N_a}$, so the search commits faster. Unvisited moves are not forced to be tried first: an edge with $N(s, a) = 0$ has bonus $c_\text{puct}P(s, a)\sqrt N$, which can lose to a well-visited edge with a high $Q$ if its prior is small. The rule is a variant of Rosin's PUCB (2011); unlike UCB1 it comes with no regret bound, and its justification is the next section's.</p>
+    <p>A simulation descends by this rule until it reaches an edge not in the tree, adds the new node, evaluates it with one network call, which returns the prior for its children and a value $v$, and backs $v$ up the path with its sign flipped at each ply. There is no rollout. After the budget is spent, the root's visit distribution, sharpened by a temperature $\tau$,</p>
+    <div class="eq">$$\pi(a\mid s_0)\propto N(s_0, a)^{1/\tau},$$</div>
+    <p>is the search's policy. During self-play, AlphaGo Zero sampled moves from it with $\tau = 1$ for the first 30 moves and played the most-visited move after that, and it added Dirichlet noise to the root prior, $P(s_0, a) = (1 - \epsilon)\mathbf{p}(a\mid s_0) + \epsilon\eta_a$ with $\boldsymbol\eta\sim\text{Dir}(\alpha)$ and $\epsilon = 0.25$, so that even moves the network rules out are sometimes searched.</p>
+  </section>
+
+  <section id="improvement">
+    <h2>Why the visit counts are a better policy</h2>
+    <p>Grill et al. (2020) showed what PUCT computes. Write $\hat\pi(a) = N(s, a)/\sum_bN(s, b)$ for the empirical visit distribution at a node, and</p>
+    <div class="eq">$$\lambda_N = c_\text{puct}\frac{\sqrt{\sum_bN(s, b)}}{|\mathcal{A}| + \sum_bN(s, b)}.$$</div>
+    <div class="result">
+      <div class="label">MCTS as regularised policy optimisation (Grill et al., 2020)</div>
+      <p>Up to a term that vanishes as the visits grow, $\hat\pi$ tracks the solution of</p>
+      <p>$$\bar\pi = \arg\max_{\mathbf{y}\in\Delta}\Big[\mathbf{q}^\top\mathbf{y} - \lambda_N\,D_\text{KL}(\mathbf{p}\,\|\,\mathbf{y})\Big],$$</p>
+      <p>the policy that maximises the current action values $\mathbf{q} = Q(s, \cdot)$ while staying close to the prior. Its solution is $\bar\pi(a) = \lambda_N\,p(a)/(\alpha - q_a)$, with $\alpha$ chosen so that $\bar\pi$ sums to 1.</p>
+    </div>
+    <p>The closed form follows from the Lagrangian $\mathbf{q}^\top\mathbf{y} - \lambda_N\sum_ap_a\log(p_a/y_a) - \alpha(\sum_ay_a - 1)$: its derivative in $y_a$ is $q_a + \lambda_Np_a/y_a - \alpha = 0$, so $y_a = \lambda_Np_a/(\alpha - q_a)$; $\alpha$ must exceed every $q_a$ for $y$ to be positive, and the sum is decreasing in $\alpha$, so exactly one $\alpha$ normalises it. The tracking part follows from the selection rule: PUCT picks the action whose visit fraction is furthest below its target, the same argument as for UCB keeping counts in proportion to its index.</p>
+    <p>This is the trust-region step of lesson 39, applied at every node: improve the policy against the current value estimates, with a KL penalty to the network's prior that weakens as $\sqrt N$ grows. With few simulations, the search returns roughly $\mathbf{p}$; with many, it concentrates on the best actions by $\mathbf{q}$. Training $\mathbf{p}$ towards $\hat\pi$ is therefore training it towards an improved policy, and self-play repeats the improvement.</p>
+  </section>
+
+  <section id="alphazero">
+    <h2>AlphaGo Zero and AlphaZero</h2>
+    <p><b>AlphaGo Zero</b> (Silver et al., 2017) removed the human data, the separate networks, the rollouts and the hand-made input features. One residual network (lesson 16) $f_\theta(s) = (\mathbf{p}, v)$, with a policy head and a value head on a shared trunk, is trained from random initialisation on positions from its own self-play games. Each position $s_t$ yields the search policy $\pi_t$ and, when the game ends with result $z\in\{-1, 0, +1\}$ from the point of view of the player to move at $t$, the target $z_t$. The loss is</p>
+    <div class="eq">$$\ell(\theta) = (z - v)^2 - \boldsymbol\pi^\top\log\mathbf{p} + c\|\theta\|^2,$$</div>
+    <p>squared error for the value, cross-entropy to the search policy for the prior, and weight decay. After three days of self-play it beat the version of AlphaGo that had beaten Lee Sedol, 100 games to 0.</p>
+    <p><b>AlphaZero</b> (Silver et al., 2018) applied the same algorithm, unchanged except for the input and output encodings, to chess and shogi, and beat the strongest programs of the time in all three games. It dropped two Go-specific details: the training data was not augmented with the board's eight symmetries, since chess has none, and the network was updated continuously rather than replaced only when a new version beat the old one in a match.</p>
+    <p>The value target $z$ is a Monte Carlo return (lesson 35): unbiased, but noisy, and only usable because the games are short enough and end. The policy target is the opposite: a low-variance, biased estimate of something better than the current policy. That pairing, a search-improved policy target and a Monte Carlo value target, is what made the method stable without any of DQN's machinery.</p>
+  </section>
+
+  <section id="muzero">
+    <h2>MuZero: planning with a learned model</h2>
+    <p>AlphaZero needs the rules: the search calls the true transition function at every edge. <b>MuZero</b> (Schrittwieser et al., 2020) learns a model and searches inside it. It has three functions:</p>
+    <ul>
+      <li>a <b>representation</b> $s^0 = h_\theta(o_1, \dots, o_t)$ that maps the observations so far to a hidden state;</li>
+      <li>a <b>dynamics</b> function $(r^k, s^k) = g_\theta(s^{k-1}, a^k)$ that predicts the reward and the next hidden state for an action;</li>
+      <li>a <b>prediction</b> function $(\mathbf{p}^k, v^k) = f_\theta(s^k)$, AlphaZero's two heads.</li>
+    </ul>
+    <p>The search is PUCT in the hidden-state space: expanding an edge calls $g_\theta$ instead of the rules, and the backup includes the predicted rewards, with $Q(s, a)$ estimated by $r + \gamma v$ along the path. Training unrolls the model $K = 5$ steps from each sampled position $t$ along the actions actually taken and matches three things at each step $k$:</p>
+    <div class="eq">$$\ell(\theta) = \sum_{k=0}^K\Big[\ell^r(u_{t+k}, r^k) + \ell^v(z_{t+k}, v^k) + \ell^p(\boldsymbol\pi_{t+k}, \mathbf{p}^k)\Big] + c\|\theta\|^2,$$</div>
+    <p>where $u$ is the observed reward, $\boldsymbol\pi$ the search policy that was recorded, and $z_{t+k} = u_{t+k+1} + \gamma u_{t+k+2} + \dots + \gamma^{n-1}u_{t+k+n} + \gamma^n\nu_{t+k+n}$ an $n$-step bootstrapped return (lesson 35), whose bootstrap value $\nu_{t+k+n}$ is the root value the search computed at that step.</p>
+    <p>Nothing asks the hidden state to reconstruct the observation. The model only has to predict the quantities planning uses: rewards, values and policies. This is the <b>value equivalence</b> principle (Grimm et al., 2020): two models that give the same values for every policy are equally good for planning, however differently they describe the world. MuZero matched AlphaZero in Go, chess and shogi without being told the rules, and set a new state of the art on the 57 Atari games, where the rules are not available at all.</p>
+    <p>Later work made the line more sample efficient and more general. EfficientZero (Ye et al., 2021) added a self-supervised consistency loss between predicted and encoded hidden states and reached human-level Atari performance from two hours of play; Gumbel MuZero (Danihelka et al., 2022) replaced the root's noise and visit counts with sampling without replacement and a policy-improvement guarantee that holds even with two simulations; Sampled MuZero handled continuous actions. Outside games, AlphaTensor (2022) used AlphaZero to find faster matrix multiplication algorithms, and AlphaDev (2023) faster sorting routines.</p>
+  </section>
+
+  <section id="tictactoe">
+    <h2>AlphaZero on tic-tac-toe, from scratch</h2>
+    <p>The code implements the algorithm at the smallest scale where it can be graded exactly. The network is an MLP with two hidden layers of 64 ReLU units, taking the board from the point of view of the player to move (9 inputs for its own stones, 9 for the opponent's), with a 9-way policy head and a tanh value head. Search is PUCT with $c_\text{puct} = 1.5$ and 30 simulations per move. Each iteration plays 40 self-play games with Dirichlet noise ($\alpha = 1$, $\epsilon = 0.25$), sampling the first five moves from the search policy (temperature 1) and playing the most-visited move after that, adds every position in its 8 symmetric forms to a buffer holding the last 400 games, and takes 300 Adam steps on minibatches of 128 with the AlphaZero loss. Three numbers grade the network after every iteration, using lesson 40's exact minimax: the fraction of all 4,520 reachable non-terminal positions whose value it predicts correctly (nearest of $-1, 0, +1$); the fraction of the 3,191 positions where a mistake is possible in which the raw policy's top move is optimal; and the same for the search's move on lesson 40's 300 test positions.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: alphazero-tictactoe --></div>
+    </figure>
+    <p class="muted">Value and policy accuracy against exact minimax after each training iteration, for self-play that samples the first five moves from the search policy (the main run) and for self-play that samples only the first three.</p>
+    <p>The untrained network values 23.3% of positions correctly and its top move is optimal in 41.4% of the positions where a mistake is possible; even so, a 30-simulation search with it already picks an optimal move in 93.0% of lesson 40's test positions, because the search sees wins and losses at terminal nodes. After one iteration of 40 games the raw policy is optimal in 73.3% of positions, after five in 94.0%, and the search's move in 99.3%. Pure UCT with 30 random playouts managed 91.7% on the same positions (lesson 40). After 30 iterations, the raw policy network, with no search at all, drew all 100 games as X and all 100 as O against the perfect player, and so did the network with search. The value head is the interesting part. It predicts 76.6% of all positions correctly, but that average hides two populations: the last 400 self-play games visited 1,128 of the 4,520 positions, and on those it is right 97.3% of the time; on the 3,392 positions self-play never reached, positions that only arise after poor play, it is right 69.8% of the time. The network learns the positions its own play produces. With less exploration, sampling only the first three moves, self-play covered 932 positions, and after 30 iterations the value head was right on 65.5% of positions and the raw policy optimal on 87.8%; played against the perfect player in a separate run, that agent lost 14 of 100 games as O without search and 15 with it. Exploration in self-play decides what the network ever gets to learn.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>The network's backward pass is written out by hand: the cross-entropy gradient through the softmax is $\mathbf{p} - \boldsymbol\pi$, and the squared error through the tanh is $-2(z - v)(1 - v^2)$. The search stores the prior, counts and values of a node's children as arrays, which makes the selection rule one line.</p>
+<pre><code>import math
+import numpy as np
+
+# AlphaZero on tic-tac-toe, from scratch: a policy-value network, PUCT search guided by it,
+# self-play, and training on the search's own output. Graded against exact minimax.
+LINES = [(0, 1, 2), (3, 4, 5), (6, 7, 8), (0, 3, 6), (1, 4, 7), (2, 5, 8), (0, 4, 8), (2, 4, 6)]
+
+def winner(b):
+    for i, j, k in LINES:
+        if b[i] != 0 and b[i] == b[j] == b[k]:
+            return b[i]
+    return 0
+
+def legal(b):
+    return [i for i in range(9) if b[i] == 0]
+
+def play(b, m, player):
+    return b[:m] + (player,) + b[m + 1:]
+
+def terminal(b):
+    return winner(b) != 0 or not legal(b)
+
+memo = {}
+def minimax(b, player):
+    key = (b, player)
+    if key not in memo:
+        w = winner(b)
+        if w != 0:
+            memo[key] = 1 if w == player else -1
+        elif not legal(b):
+            memo[key] = 0
+        else:
+            memo[key] = max(-minimax(play(b, m, player), -player) for m in legal(b))
+    return memo[key]
+
+def optimal_moves(b, player):
+    v = minimax(b, player)
+    return [m for m in legal(b) if -minimax(play(b, m, player), -player) == v]
+
+# ---- The network: 18 inputs (my stones, opponent's stones), two ReLU layers of 64,
+# a policy head (9 logits, illegal moves masked) and a value head (tanh).
+def encode(b, player):
+    a = np.array(b)
+    return np.concatenate([(a == player), (a == -player)]).astype(float)
+
+class Net:
+    def __init__(self, rng, h=64):
+        he = lambda i, o: rng.normal(0, math.sqrt(2 / i), (i, o))
+        self.p = {"W1": he(18, h), "b1": np.zeros(h), "W2": he(h, h), "b2": np.zeros(h),
+                  "Wp": np.zeros((h, 9)), "bp": np.zeros(9), "Wv": np.zeros((h, 1)), "bv": np.zeros(1)}
+        self.m = {k: np.zeros_like(v) for k, v in self.p.items()}; self.v = {k: np.zeros_like(v) for k, v in self.p.items()}; self.t = 0
+
+    def forward(self, X):
+        p = self.p
+        h1 = np.maximum(X @ p["W1"] + p["b1"], 0); h2 = np.maximum(h1 @ p["W2"] + p["b2"], 0)
+        logits = h2 @ p["Wp"] + p["bp"]
+        logits = np.where(X[:, :9] + X[:, 9:] &gt; 0, -1e9, logits)  # occupied squares are illegal
+        logits -= logits.max(1, keepdims=True)
+        prob = np.exp(logits); prob /= prob.sum(1, keepdims=True)
+        v = np.tanh(h2 @ p["Wv"] + p["bv"])[:, 0]
+        return prob, v, (X, h1, h2)
+
+    def train_step(self, X, pi, z, lr=1e-3, wd=1e-4):
+        prob, v, (X, h1, h2) = self.forward(X)
+        B = len(X); p = self.p
+        loss_v = np.mean((z - v) ** 2); loss_p = -np.mean(np.sum(pi * np.log(prob + 1e-12), 1))
+        dlogits = (prob - pi) / B                                  # cross-entropy through the softmax
+        dv = (-2 * (z - v) / B * (1 - v ** 2))[:, None]            # squared error through the tanh
+        g = {"Wp": h2.T @ dlogits, "bp": dlogits.sum(0), "Wv": h2.T @ dv, "bv": dv.sum(0)}
+        dh2 = (dlogits @ p["Wp"].T + dv @ p["Wv"].T) * (h2 &gt; 0)
+        g["W2"], g["b2"] = h1.T @ dh2, dh2.sum(0)
+        dh1 = dh2 @ p["W2"].T * (h1 &gt; 0)
+        g["W1"], g["b1"] = X.T @ dh1, dh1.sum(0)
+        self.t += 1
+        for k in p:                                                # Adam, with L2 weight decay
+            gk = g[k] + wd * p[k]
+            self.m[k] = 0.9 * self.m[k] + 0.1 * gk; self.v[k] = 0.999 * self.v[k] + 0.001 * gk ** 2
+            mh = self.m[k] / (1 - 0.9 ** self.t); vh = self.v[k] / (1 - 0.999 ** self.t)
+            p[k] -= lr * mh / (np.sqrt(vh) + 1e-8)
+        return loss_v, loss_p
+
+    def evaluate(self, b, player):
+        prob, v, _ = self.forward(encode(b, player)[None])
+        return prob[0], v[0]
+
+# ---- PUCT search. Each node stores, for its children, the prior P, visit count N and total
+# value W, all from the point of view of the player to move at the node.
+class Node:
+    __slots__ = ("b", "player", "P", "N", "W", "children", "value", "done")
+    def __init__(self, b, player, net):
+        self.b, self.player, self.children = b, player, {}
+        w = winner(b)
+        self.done = w != 0 or not legal(b)
+        if self.done:
+            self.value = -1.0 if w != 0 else 0.0                   # the previous mover just won, or a draw
+            return
+        prob, self.value = net.evaluate(b, player)                 # the network replaces the rollout
+        self.P = prob; self.N = np.zeros(9); self.W = np.zeros(9)
+
+def puct_search(b, player, net, sims, rng, c_puct=1.5, noise=False):
+    root = Node(b, player, net)
+    if noise:                                                      # Dirichlet noise for exploration in self-play
+        moves = legal(b); eta = rng.dirichlet([1.0] * len(moves))
+        root.P = root.P.copy(); root.P[moves] = 0.75 * root.P[moves] + 0.25 * eta
+    for _ in range(sims):
+        node, path = root, []
+        while not node.done:                                       # selection: argmax Q + U
+            moves = legal(node.b)
+            Q = np.where(node.N &gt; 0, node.W / np.maximum(node.N, 1), 0.0)
+            U = c_puct * node.P * math.sqrt(node.N.sum() + 1) / (1 + node.N)
+            m = moves[int(np.argmax((Q + U)[moves]))]
+            path.append((node, m))
+            if m not in node.children:                             # expansion: evaluate the new leaf
+                node.children[m] = Node(play(node.b, m, node.player), -node.player, net)
+                node = node.children[m]
+                break
+            node = node.children[m]
+        v = node.value                                             # from the leaf's player-to-move view
+        for parent, m in reversed(path):                           # backup, flipping the sign each ply
+            v = -v
+            parent.N[m] += 1; parent.W[m] += v
+    return root
+
+# ---- Symmetries of the board, used to multiply the training data by 8.
+grid = np.arange(9).reshape(3, 3)
+SYMS = []
+for k in range(4):
+    r = np.rot90(grid, k)
+    SYMS += [r.flatten(), np.fliplr(r).flatten()]
+
+def self_play_game(net, sims, rng, temp_moves=3):
+    b, player, history = (0,) * 9, 1, []
+    while not terminal(b):
+        root = puct_search(b, player, net, sims, rng, noise=True)
+        pi = root.N / root.N.sum()                                 # the search's improved policy
+        history.append((encode(b, player), pi, player))
+        if len(history) &lt;= temp_moves:
+            m = int(rng.choice(9, p=pi))                           # sample early moves (temperature 1)
+        else:
+            m = int(np.argmax(root.N))
+        b = play(b, m, player); player = -player
+    w = winner(b)
+    data = []
+    for x, pi, who in history:
+        z = 0.0 if w == 0 else (1.0 if w == who else -1.0)         # the outcome from the mover's view
+        for s in SYMS:
+            data.append((np.concatenate([x[:9][s], x[9:][s]]), pi[s], z))
+    return data
+
+# ---- Test sets: every reachable non-terminal position, and the 300 positions of lesson 40.
+positions, every = [], []
+def collect(b, player, seen):
+    if (b, player) in seen or winner(b) != 0 or not legal(b):
+        return
+    seen.add((b, player)); every.append((b, player))
+    if len(optimal_moves(b, player)) &lt; len(legal(b)):
+        positions.append((b, player))
+    for m in legal(b):
+        collect(play(b, m, player), -player, seen)
+collect((0,) * 9, 1, set())
+test = [positions[i] for i in np.random.default_rng(0).choice(len(positions), 300, replace=False)]
+X_all = np.array([encode(b, p) for b, p in every]); v_all = np.array([minimax(b, p) for b, p in every])
+X_mis = np.array([encode(b, p) for b, p in positions])
+
+def grade(net, rng, sims=None):
+    prob, v, _ = net.forward(X_all)
+    value_ok = np.mean(np.abs(v - v_all) &lt; 0.5)                    # nearest of -1, 0, +1 is the true value
+    probm, _, _ = net.forward(X_mis)
+    policy_ok = np.mean([int(np.argmax(probm[i])) in optimal_moves(b, p) for i, (b, p) in enumerate(positions)])
+    if sims is None:
+        return value_ok, policy_ok
+    search_ok = np.mean([int(np.argmax(puct_search(b, p, net, sims, rng).N)) in optimal_moves(b, p) for b, p in test])
+    return value_ok, policy_ok, search_ok
+
+def train(temp_moves, iterations=30, seed=0, verbose=True):
+    rng = np.random.default_rng(seed)
+    net = Net(rng)
+    buffer, history = [], []
+    if verbose:
+        v0, p0, s0 = grade(net, rng, sims=30)
+        print(f"untrained: value correct {v0:.1%}, raw policy optimal {p0:.1%}, search (30 simulations) optimal on the 300 test positions {s0:.1%}")
+    for it in range(1, iterations + 1):
+        for _ in range(40):
+            buffer.append(self_play_game(net, 30, rng, temp_moves))
+        buffer = buffer[-400:]                                     # keep the last 10 iterations' games
+        data = [d for game in buffer for d in game]
+        for _ in range(300):
+            idx = rng.integers(len(data), size=128)
+            X = np.array([data[i][0] for i in idx]); P = np.array([data[i][1] for i in idx]); Z = np.array([data[i][2] for i in idx])
+            lv, lp = net.train_step(X, P, Z)
+        history.append((it,) + grade(net, rng))
+        if verbose and it in (1, 5, 10, 20, 30):
+            v_, p_, s_ = grade(net, rng, sims=30)
+            print(f"iteration {it:2d}: value loss {lv:.3f}, policy loss {lp:.3f}; value correct {v_:.1%}, raw policy optimal {p_:.1%},"
+                  f" search (30 simulations) optimal {s_:.1%}")
+    seen = {tuple(x) for game in buffer for x, _, _ in game}       # positions in the buffer (all 8 symmetric forms)
+    in_buf = np.array([tuple(x) in seen for x in X_all])
+    _, v, _ = net.forward(X_all)
+    ok = np.abs(v - v_all) &lt; 0.5
+    return net, history, (in_buf.sum(), ok[in_buf].mean(), ok[~in_buf].mean())
+
+print(f"{len(every):,} non-terminal positions; {len(positions):,} where some move is a mistake")
+print("self-play sampling the first 5 moves from the search policy:")
+net, history, cover = train(temp_moves=5)
+print(f"the last 400 games cover {cover[0]:,} of the 4,520 positions; value correct on them {cover[1]:.1%}, on the rest {cover[2]:.1%}")
+_, history3, cover3 = train(temp_moves=3, verbose=False)
+print(f"sampling only the first 3 moves: after 30 iterations value correct {history3[-1][1]:.1%}, raw policy optimal {history3[-1][2]:.1%};"
+      f" the last 400 games cover {cover3[0]:,} positions")
+
+# The trained network, with and without search, against a perfect player (random among optimal moves).
+def match(sims, as_player, games, rng):
+    lost = 0
+    for _ in range(games):
+        b, who = (0,) * 9, 1
+        while not terminal(b):
+            if who == as_player:
+                if sims == 0:
+                    prob, _ = net.evaluate(b, who); m = int(np.argmax(prob))
+                else:
+                    m = int(np.argmax(puct_search(b, who, net, sims, rng).N))
+            else:
+                opt = optimal_moves(b, who); m = opt[int(rng.integers(len(opt)))]
+            b = play(b, m, who); who = -who
+        lost += winner(b) == -as_player
+    return lost
+
+rng = np.random.default_rng(1)
+for sims in (0, 30):
+    print(f"{'raw policy network' if sims == 0 else 'PUCT, 30 simulations':20s} vs perfect play, 100 games each: lost {match(sims, 1, 100, rng)} as X, {match(sims, -1, 100, rng)} as O")
+
+# 4,520 non-terminal positions; 3,191 where some move is a mistake
+# self-play sampling the first 5 moves from the search policy:
+# untrained: value correct 23.3%, raw policy optimal 41.4%, search (30 simulations) optimal on the 300 test positions 93.0%
+# iteration  1: value loss 0.530, policy loss 1.625; value correct 31.0%, raw policy optimal 73.3%, search (30 simulations) optimal 95.0%
+# iteration  5: value loss 0.337, policy loss 1.296; value correct 61.3%, raw policy optimal 94.0%, search (30 simulations) optimal 99.3%
+# iteration 10: value loss 0.272, policy loss 1.164; value correct 71.9%, raw policy optimal 94.9%, search (30 simulations) optimal 99.3%
+# iteration 20: value loss 0.170, policy loss 0.954; value correct 77.0%, raw policy optimal 94.7%, search (30 simulations) optimal 98.7%
+# iteration 30: value loss 0.111, policy loss 0.943; value correct 76.6%, raw policy optimal 93.8%, search (30 simulations) optimal 98.7%
+# the last 400 games cover 1,128 of the 4,520 positions; value correct on them 97.3%, on the rest 69.8%
+# sampling only the first 3 moves: after 30 iterations value correct 65.5%, raw policy optimal 87.8%; the last 400 games cover 932 positions
+# raw policy network   vs perfect play, 100 games each: lost 0 as X, 0 as O
+# PUCT, 30 simulations vs perfect play, 100 games each: lost 0 as X, 0 as O</code></pre>
+    <p><b>Reading the output.</b> The first line counts the test sets. The training log prints the losses on the last minibatch and the three grades at iterations 1, 5, 10, 20 and 30. The coverage line splits the value head's accuracy between positions that occur in the replay buffer and positions that do not. The ablation line repeats training with less exploration. The last two lines are the matches against a perfect player who chooses at random among optimal moves. The whole run takes a few minutes.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Derive the closed form $\bar\pi(a) = \lambda_Np(a)/(\alpha - q_a)$ of the regularised problem, and show that $\alpha$ is unique. What does $\bar\pi$ tend to as $\lambda_N\to\infty$, and as $\lambda_N\to0$?</li>
+      <li>At a node with $\sum_bN(s, b) = 100$, $c_\text{puct} = 1.5$, an unvisited move has prior 0.01 and a visited move has $N = 60$, $Q = 0.3$, $P = 0.5$. Which does PUCT choose? How small must $Q$ of the visited move get before the unvisited one is tried?</li>
+      <li>Why is the value target $z$ taken from the point of view of the player to move at each position, and why does the backup flip the sign at each ply? What would go wrong in the tic-tac-toe code if the encoding did not put the player to move's stones first?</li>
+      <li>AlphaGo trained its value network on one position per self-play game. Why would using every position of each game overfit? Why could AlphaGo Zero use every position?</li>
+      <li>Explain why MuZero's dynamics function is trained only through the reward, value and policy losses. What would be lost, and what gained, by adding a loss that reconstructs the observation from the hidden state?</li>
+      <li>Suppose the network's value head were perfect, $v = v^\star$. Show that a search of depth 1 (expand the root's children once each and pick $\arg\max_a(-v(s'_a))$) already plays perfectly. Why do AlphaZero's searches still use hundreds of simulations?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> The Lagrangian $\mathcal L = \mathbf{q}^\top\mathbf{y} - \lambda_N\sum_ap_a\log(p_a/y_a) - \alpha(\sum_ay_a - 1)$ is concave in $\mathbf{y}$; setting $\partial\mathcal L/\partial y_a = q_a + \lambda_Np_a/y_a - \alpha = 0$ gives $y_a = \lambda_Np_a/(\alpha - q_a)$. Positivity needs $\alpha &gt; \max_aq_a$. On $(\max_aq_a, \infty)$ the sum $\sum_a\lambda_Np_a/(\alpha - q_a)$ is continuous and strictly decreasing, from $+\infty$ (if the maximising action has $p_a &gt; 0$) to 0, so exactly one $\alpha$ makes it 1. As $\lambda_N\to\infty$ the KL term dominates and $\bar\pi\to\mathbf{p}$ ($\alpha\approx\lambda_N$). As $\lambda_N\to0$, $\alpha\to\max_aq_a$ and $\bar\pi$ concentrates on the greedy action.</p>
+        <p><b>2.</b> The bonus factor is $1.5\sqrt{100} = 15$. Unvisited: $0 + 15\cdot0.01/1 = 0.15$. Visited: $0.3 + 15\cdot0.5/61 = 0.3 + 0.123 = 0.423$. PUCT chooses the visited move. The unvisited move is tried when $Q + 0.123 &lt; 0.15$, i.e. $Q &lt; 0.027$ (ignoring that the counts grow meanwhile).</p>
+        <p><b>3.</b> The game is symmetric between the players, so one network evaluates positions "for the player to move". The backup needs every node's statistics in the point of view of the player choosing at that node, which alternates every ply: a value of $v$ for the player to move in a child is $-v$ for the player who moved into it. If the encoding were fixed to X and O instead, the same network would have to output values of opposite sign for positions that are identical up to colour, and the code's value targets, which are all from the mover's point of view, would contradict each other.</p>
+        <p><b>4.</b> Positions of one game share the result $z$ and differ by a few stones, so the network can memorise games: it learns to recognise which game a position came from and recalls its outcome, rather than learning to evaluate. AlphaGo's value network did exactly this when trained on whole human games: its mean squared error was 0.19 on the training set and 0.37 on the test set. AlphaGo Zero generated far more games, each with fresh noise and a constantly improving player, and it used a policy loss that regularises the shared trunk; with 29 million games, there was enough diversity to use every position.</p>
+        <p><b>5.</b> Planning only needs rewards, values and policies, so those are all the model is trained to predict, and its capacity is spent on what matters for decisions. A reconstruction loss would force the hidden state to encode every detail of the observation, including ones that never matter (the background of an Atari screen), which costs capacity and can dominate the loss. It would gain a dense training signal, useful when rewards are sparse; EfficientZero's consistency loss is a compromise, asking predicted hidden states to match encoded ones rather than pixels.</p>
+        <p><b>6.</b> With $v = v^\star$, $-v^\star(s'_a)$ is exactly the minimax value of playing $a$, so the argmax is an optimal move. A real value head has errors, and search reduces their effect: a deeper search compares values of positions further ahead, where the game is simpler and the errors are smaller, and averaging many leaf evaluations reduces noise. The search also needs many simulations to produce policy targets that are clearly better than the prior.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Silver et al., "Mastering the game of Go with deep neural networks and tree search"</b> (Nature, 2016). AlphaGo.</li>
+      <li><b>Silver et al., "Mastering the game of Go without human knowledge"</b> (Nature, 2017). AlphaGo Zero.</li>
+      <li><b>Silver et al., "A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play"</b> (Science, 2018). AlphaZero.</li>
+      <li><b>Schrittwieser et al., "Mastering Atari, Go, chess and shogi by planning with a learned model"</b> (Nature, 2020). MuZero.</li>
+      <li><b>Grill et al., "Monte-Carlo tree search as regularized policy optimization"</b> (ICML, 2020).</li>
+      <li><b>Danihelka et al., "Policy improvement by planning with Gumbel"</b> (ICLR, 2022).</li>
+      <li><b>Ye et al., "Mastering Atari games with limited data"</b> (NeurIPS, 2021). EfficientZero.</li>
+    </ul>
+  </section>
+</article>

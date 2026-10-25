@@ -1,0 +1,202 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 09 · Stage 3: trees and boosting</div>
+  <h1>Decision trees</h1>
+  <p class="lede">A decision tree asks a sequence of yes/no questions about the features, such as "is $x_2 \le 0.3$?", and predicts with the majority label (or the mean) of the training points that end up in the same leaf. It is the most interpretable model in this curriculum, and on its own it is unstable. Grown into forests (lesson 10) and boosted ensembles (lesson 11), trees are still the strongest models for tabular data. This lesson derives how a tree chooses its questions and why the usual impurity measures are shaped the way they are.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/04-generalisation/">lesson 04</a></span><span><b>Math pulled in:</b> impurity functions, concavity and Jensen's inequality, information gain as mutual information, cost-complexity pruning</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>A tree splits the input space into axis-aligned boxes. Each internal node tests one feature against one threshold and sends a point left or right; each leaf holds a constant prediction. Prediction is a walk from the root to a leaf, which takes as many comparisons as the tree is deep.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: tree-regions --></div>
+    </figure>
+    <p class="muted">The same 400 noisy points (true boundary: a circle; 10% of labels flipped), fitted by trees of depth 2, 6 and 20. Each shaded box is one leaf, coloured by its prediction. Depth 2 is too coarse. Depth 6 approximates the circle with a staircase. Depth 20 has carved out a tiny box for nearly every mislabelled point.</p>
+    <p>Finding the tree that minimises training error for a given number of leaves is NP-hard. Every practical algorithm (CART, ID3, C4.5, and the trees inside XGBoost and LightGBM) grows the tree <b>greedily</b>: at each node, choose the single split that most reduces an impurity measure, then recurse on the two children.</p>
+  </section>
+
+  <section id="impurity">
+    <h2>Impurity</h2>
+    <p>Let a node contain points whose class proportions are $\mathbf{p} = (p_1,\dots,p_K)$. An <b>impurity</b> $I(\mathbf{p})$ is zero when the node is pure (one $p_k = 1$) and largest when the classes are evenly mixed. Three standard choices:</p>
+    <div class="eq">$$\underbrace{1 - \max_kp_k}_{\text{misclassification}}, \qquad \underbrace{1 - \sum_kp_k^2 = \sum_kp_k(1 - p_k)}_{\text{Gini}}, \qquad \underbrace{-\sum_kp_k\log_2p_k}_{\text{entropy}} .$$</div>
+    <p>Misclassification is the error of predicting the majority class. Gini is the probability that two points drawn at random from the node have different labels; it is also the expected error of guessing a label at random with the node's proportions. Entropy is the information content of the label from <a href="/machine-learning/M4-information-theory/">M4</a>. A split sends a fraction $w_L$ of the node's points left and $w_R = 1 - w_L$ right, with class proportions $\mathbf{p}_L$ and $\mathbf{p}_R$, and its quality is the <b>impurity decrease</b></p>
+    <div class="result">
+      <div class="label">The splitting criterion</div>
+      <div class="eq">$$\Delta I = I(\mathbf{p}) - \big(w_L\,I(\mathbf{p}_L) + w_R\,I(\mathbf{p}_R)\big), \qquad \mathbf{p} = w_L\mathbf{p}_L + w_R\mathbf{p}_R .$$</div>
+    </div>
+    <p>With entropy, $\Delta I$ is called the <b>information gain</b>, and it is exactly the mutual information $I(Y; S)$ between the label $Y$ and the side $S$ a point is sent to: $H(Y) - H(Y\mid S)$.</p>
+  </section>
+
+  <section id="concavity">
+    <h2>Why Gini and entropy, not misclassification</h2>
+    <p>The parent's proportions are the weighted average of the children's, $\mathbf{p} = w_L\mathbf{p}_L + w_R\mathbf{p}_R$. All three impurities are <b>concave</b>, so Jensen's inequality gives</p>
+    <div class="eq">$$I(w_L\mathbf{p}_L + w_R\mathbf{p}_R) \ge w_LI(\mathbf{p}_L) + w_RI(\mathbf{p}_R), \qquad\text{that is,}\quad \Delta I\ge0 .$$</div>
+    <p>Splitting never increases impurity. The difference is in when the inequality is strict. Gini and entropy are <b>strictly</b> concave, so $\Delta I &gt; 0$ whenever $\mathbf{p}_L\ne\mathbf{p}_R$: any split that separates the classes at all registers as progress. Misclassification error is only piecewise linear, and it gives $\Delta I = 0$ whenever both children have the same majority class as the parent.</p>
+    <p>Example: a node with 80 points of class A and 20 of class B. Split it into (40 A, 0 B) and (40 A, 20 B). The left child is pure, which is real progress, since one more split of the right child could finish the job.</p>
+    <ul>
+      <li>Misclassification: parent $0.2$; children $0.4\times0 + 0.6\times\tfrac13 = 0.2$. Gain $0$: the split looks useless.</li>
+      <li>Gini: parent $1 - 0.8^2 - 0.2^2 = 0.32$; children $0.4\times0 + 0.6\times\big(1 - (\tfrac23)^2 - (\tfrac13)^2\big) = 0.267$. Gain $0.053$.</li>
+    </ul>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: tree-impurity --></div>
+    </figure>
+    <p class="muted">Left: the three impurities for two classes, as functions of $p = P(\text{class 1})$, with entropy scaled by ½ to share the axis. Misclassification has a corner at ½ and is flat-sided; Gini and entropy are strictly concave and almost proportional to each other. Right: test accuracy of the code's trees against depth. It peaks at depth 5 (0.835) and falls to 0.764 as the tree memorises noise; 0.90 is the best possible with 10% of labels flipped.</p>
+    <p>Gini and entropy rarely pick different splits in practice. Gini is slightly cheaper (no logarithms) and is the default in CART and scikit-learn. Misclassification error is still the right thing to <i>report</i>, and it is sometimes used for pruning.</p>
+  </section>
+
+  <section id="search">
+    <h2>Finding the best split</h2>
+    <p>For a node with $n$ points and $d$ features, only thresholds between consecutive distinct values of a feature give different splits, so there are at most $n - 1$ candidates per feature. Sort the points by feature $j$ once, then sweep the cut from left to right, moving one point at a time from the right child's class counts to the left's. Each candidate's impurity is then $O(K)$ to evaluate, and the whole node costs $O(d\,n\log n)$, dominated by the sort. The code below does the sweep with a cumulative sum. Because the points at each level of the tree are partitioned among its nodes, each level costs $O(d\,n\log n)$ in total, and so does a tree of depth $D$ times $D$.</p>
+    <p>Gradient-boosting libraries go further and bucket each feature into about 256 bins once, before training (lesson 11). Then a node's split search is a histogram sweep over 256 bins instead of a sort.</p>
+    <figure class="plate wide" data-scene="split">
+      <div class="stage">
+        <canvas aria-label="Two-class points with an axis-aligned split, and weighted impurity as a function of the threshold"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="sp-t">threshold <input id="sp-t" type="range" data-k="t" min="0.01" max="0.99" step="0.01"><output data-out="t"></output></label>
+            <div class="seg" data-opt="axis" role="group"><button type="button" data-v="0">split on x₁</button><button type="button" data-v="1">split on x₂</button></div>
+            <button type="button" data-act="best">Best Gini split</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The right panel is exactly what the greedy search computes: for every threshold, the size-weighted impurity of the two children. Gini and entropy are smooth and concave, so they reward any split that makes a child purer. Misclassification error is piecewise flat: over long stretches it cannot tell splits apart at all, which is why trees are not grown with it.</p>
+  </section>
+
+  <section id="regression">
+    <h2>Regression trees</h2>
+    <p>For a real-valued target, a leaf predicts a constant $c$, and the constant that minimises the squared error $\sum_{i\in\text{leaf}}(y_i - c)^2$ is the mean $\bar y_{\text{leaf}}$ (set the derivative to zero). The impurity of a node is the sum of squared errors around its mean, $n\cdot\widehat{\operatorname{Var}}(y)$, and a split is scored by how much it reduces that:</p>
+    <div class="eq">$$\Delta = \sum_{i\in\text{node}}(y_i - \bar y)^2 - \sum_{i\in L}(y_i - \bar y_L)^2 - \sum_{i\in R}(y_i - \bar y_R)^2 = \frac{n_Ln_R}{n}\,(\bar y_L - \bar y_R)^2 .$$</div>
+    <p>The last form (exercise 3) says a good split separates the two children's means as far as possible while keeping both reasonably large. It also lets the sweep evaluate each threshold in $O(1)$ from running sums. Lesson 11's gradient-boosted trees are regression trees fitted to gradients.</p>
+  </section>
+
+  <section id="pruning">
+    <h2>Controlling size: stopping and pruning</h2>
+    <p>Grown until every leaf is pure, a tree fits the training data perfectly and generalises badly (the right panel above). Two ways to stop that:</p>
+    <ul>
+      <li><b>Stopping rules</b>: a maximum depth, a minimum number of points per leaf, or a minimum impurity decrease. They are simple, but a split that looks useless can enable a very useful one below it (the XOR pattern is the classic case), and stopping early never finds it.</li>
+      <li><b>Cost-complexity pruning</b> (Breiman et al., 1984): grow a large tree $T_0$, then for each $\alpha\ge0$ find the subtree $T\subseteq T_0$ that minimises</li>
+    </ul>
+    <div class="eq">$$R_\alpha(T) = R(T) + \alpha\,|T|,$$</div>
+    <p>where $R(T)$ is the training error and $|T|$ the number of leaves. This is regularisation exactly as in lesson 05: a penalty on complexity, traded against fit. The solutions for all $\alpha$ form a nested sequence, found by <b>weakest-link pruning</b>: repeatedly collapse the internal node whose removal increases $R$ least per leaf removed. Then choose $\alpha$ by cross-validation (lesson 04).</p>
+  </section>
+
+  <section id="properties">
+    <h2>Strengths and the one big weakness</h2>
+    <p><b>Strengths.</b> Trees need no feature scaling: a split only compares values of one feature, so any increasing transformation of that feature gives the same tree. They handle mixed numeric and categorical features, capture interactions automatically (a split on $x_1$ followed by one on $x_2$ is an interaction), and can be read as rules.</p>
+    <p><b>Weakness: variance.</b> The greedy procedure is unstable. A small change to the training data can change the root split, and then everything below it changes too. In lesson 04's terms, a deep tree has low bias and very high variance. Its piecewise-constant boundary is also a poor fit for smooth or diagonal boundaries, which need a long staircase of axis-aligned splits. Both problems are what averaging many trees fixes, in the next lesson.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+def make(n):                                       # two classes separated by a circle, with 10% label noise
+    X = rng.uniform(-1, 1, (n, 2))
+    y = (X[:, 0] ** 2 + X[:, 1] ** 2 &lt; 0.5).astype(int)
+    flip = rng.random(n) &lt; 0.1
+    return X, np.where(flip, 1 - y, y)
+
+def gini(counts):                                  # 1 - sum_k p_k^2, from class counts
+    n = counts.sum(-1, keepdims=True)
+    p = counts / np.maximum(n, 1)
+    return 1 - (p ** 2).sum(-1)
+
+def best_split(X, y, K=2):
+    """Try every feature and every threshold between consecutive sorted values.
+    Returns (feature, threshold, weighted child impurity)."""
+    n, d = X.shape
+    best = (None, None, gini(np.bincount(y, minlength=K)[None])[0])
+    for j in range(d):
+        order = np.argsort(X[:, j]); xs, ys = X[order, j], y[order]
+        left = np.cumsum(np.eye(K)[ys], axis=0)[:-1]       # class counts left of each cut
+        right = np.bincount(ys, minlength=K) - left
+        nl = np.arange(1, n)
+        imp = (nl * gini(left) + (n - nl) * gini(right)) / n
+        imp[xs[1:] == xs[:-1]] = np.inf                    # can't cut between equal values
+        i = np.argmin(imp)
+        if imp[i] &lt; best[2] - 1e-12:
+            best = (j, (xs[i] + xs[i + 1]) / 2, imp[i])
+    return best
+
+def grow(X, y, depth, min_leaf=1):
+    counts = np.bincount(y, minlength=2)
+    node = {"predict": int(np.argmax(counts)), "n": len(y)}
+    if depth == 0 or len(y) &lt; 2 * min_leaf or counts.min() == 0:
+        return node
+    j, t, _ = best_split(X, y)
+    if j is None:
+        return node
+    m = X[:, j] &lt;= t
+    if m.sum() &lt; min_leaf or (~m).sum() &lt; min_leaf:
+        return node
+    node.update(feature=j, threshold=t, left=grow(X[m], y[m], depth - 1, min_leaf), right=grow(X[~m], y[~m], depth - 1, min_leaf))
+    return node
+
+def predict(node, X):
+    if "feature" not in node:
+        return np.full(len(X), node["predict"])
+    m = X[:, node["feature"]] &lt;= node["threshold"]
+    out = np.empty(len(X), int)
+    out[m], out[~m] = predict(node["left"], X[m]), predict(node["right"], X[~m])
+    return out
+
+def leaves(node):
+    return 1 if "feature" not in node else leaves(node["left"]) + leaves(node["right"])
+
+Xtr, ytr = make(400); Xte, yte = make(5000)
+for depth in [1, 2, 4, 6, 8, 12, 20]:
+    tree = grow(Xtr, ytr, depth)
+    print(f"depth {depth:2d}: {leaves(tree):3d} leaves   train acc {np.mean(predict(tree, Xtr) == ytr):.3f}"
+          f"   test acc {np.mean(predict(tree, Xte) == yte):.3f}")
+print("best achievable test accuracy with 10% label noise: about 0.900")
+
+# depth  1:   2 leaves   train acc 0.630   test acc 0.549
+# depth  2:   4 leaves   train acc 0.750   test acc 0.691
+# depth  4:  11 leaves   train acc 0.860   test acc 0.816
+# depth  6:  27 leaves   train acc 0.882   test acc 0.823
+# depth  8:  45 leaves   train acc 0.932   test acc 0.818
+# depth 12:  76 leaves   train acc 0.995   test acc 0.766
+# depth 20:  80 leaves   train acc 1.000   test acc 0.764
+# best achievable test accuracy with 10% label noise: about 0.900</code></pre>
+    <p class="muted">Training accuracy rises with depth all the way to 1.000. Test accuracy peaks between depths 4 and 8 (the figure above, which tries every depth, puts the best at 5) and then falls as the tree carves out boxes for flipped labels: the bias–variance curve of lesson 04 again, with depth as the complexity dial. Growth stops at 80 leaves because every leaf is pure by then.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>A node holds 30 points of class A and 30 of class B. Split 1 gives children (20 A, 10 B) and (10 A, 20 B). Split 2 gives (30 A, 20 B) and (0 A, 10 B). Compute the Gini decrease and the information gain of each. Do they agree on which split is better?</li>
+      <li>Show that for two classes the Gini impurity is $2p(1-p)$, and that it never exceeds the entropy: $2p(1-p)\le -p\ln p - (1-p)\ln(1-p)$. (Hint: $-\ln x\ge 1 - x$.)</li>
+      <li>Prove the regression split formula $\Delta = \frac{n_Ln_R}{n}(\bar y_L - \bar y_R)^2$.</li>
+      <li>Why does a tree not care whether a feature is measured in metres or in log-metres? What happens to linear regression under the same change?</li>
+      <li>Two features, four points: $(0,0)\to0$, $(1,1)\to0$, $(0,1)\to1$, $(1,0)\to1$ (XOR). What is the impurity decrease of every possible first split? What does that imply for a stopping rule "stop if no split decreases impurity"?</li>
+      <li>A tree with depth $D$ has at most how many leaves? If each leaf needs at least $m$ training points, what is the largest useful depth for $n$ points?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Parent Gini $0.5$, entropy 1 bit. Split 1: both children have Gini $1 - (\tfrac23)^2 - (\tfrac13)^2 = \tfrac49$, so the decrease is $0.5 - 0.444 = 0.056$; entropy $H_2(\tfrac13) = 0.918$, gain $0.082$. Split 2: Gini $\tfrac56\cdot(1 - 0.6^2 - 0.4^2) + \tfrac16\cdot0 = \tfrac56\cdot0.48 = 0.4$, decrease $0.1$; entropy $\tfrac56H_2(0.4) = \tfrac56\cdot0.971 = 0.809$, gain $0.191$. Both prefer split 2, which isolates a pure node.</p>
+        <p><b>2.</b> With $p_1 = p$, $p_2 = 1 - p$: $1 - p^2 - (1-p)^2 = 2p(1-p)$. Using $-\ln x\ge1 - x$: $-p\ln p\ge p(1-p)$ and $-(1-p)\ln(1-p)\ge(1-p)p$. Add them. Since an entropy in bits is $1/\ln2\approx1.44$ times the same entropy in nats, Gini is also below the entropy in bits.</p>
+        <p><b>3.</b> Use $\sum_{i\in A}(y_i - c)^2 = \sum_{i\in A}(y_i - \bar y_A)^2 + n_A(\bar y_A - c)^2$ for $A = L, R$ and $c = \bar y$. So $\Delta = n_L(\bar y_L - \bar y)^2 + n_R(\bar y_R - \bar y)^2$. Substitute $\bar y = (n_L\bar y_L + n_R\bar y_R)/n$: $\bar y_L - \bar y = \frac{n_R}{n}(\bar y_L - \bar y_R)$ and $\bar y_R - \bar y = -\frac{n_L}{n}(\bar y_L - \bar y_R)$. Then $\Delta = \frac{n_Ln_R^2 + n_Rn_L^2}{n^2}(\bar y_L - \bar y_R)^2 = \frac{n_Ln_R}{n}(\bar y_L - \bar y_R)^2$.</p>
+        <p><b>4.</b> A split $x\le t$ partitions the points by their order along $x$, and an increasing transformation preserves the order, so the same partitions are available (with transformed thresholds). Linear regression changes completely: a model linear in metres is not linear in log-metres.</p>
+        <p><b>5.</b> Every split on $x_1$ or $x_2$ gives two children with one point of each class: impurity unchanged, decrease $0$. A greedy tree with that stopping rule never starts, though two levels of splits would classify all four points perfectly. That is why trees are usually grown large and then pruned.</p>
+        <p><b>6.</b> $2^D$ leaves. With at least $m$ points per leaf there are at most $n/m$ leaves, so depths beyond about $\log_2(n/m)$ can't add leaves in a balanced tree (unbalanced trees can be deeper but no larger).</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Breiman, Friedman, Olshen, Stone, <i>Classification and Regression Trees</i></b> (1984). CART, the Gini index and cost-complexity pruning.</li>
+      <li><b>Hastie, Tibshirani, Friedman, <i>The Elements of Statistical Learning</i></b>, section 9.2.</li>
+      <li><b>James et al., <i>An Introduction to Statistical Learning</i></b>, chapter 8.1.</li>
+      <li><b>Quinlan, "Induction of decision trees"</b> (Machine Learning, 1986). ID3 and information gain.</li>
+      <li><b>Hyafil &amp; Rivest, "Constructing optimal binary decision trees is NP-complete"</b> (Information Processing Letters, 1976). Why everyone grows trees greedily.</li>
+    </ul>
+  </section>
+</article>

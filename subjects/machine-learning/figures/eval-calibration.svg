@@ -1,0 +1,76 @@
+<svg class="fig" viewBox="0 0 900 320" role="img" aria-label="Reliability diagrams: the raw model&#x27;s bars fall well below the diagonal at high predicted probability, and after Platt scaling they sit on the diagonal" style="width:100%;height:auto;display:block;overflow:visible">
+  <line x1="44" y1="286" x2="430" y2="286" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="44" y1="163" x2="430" y2="163" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="44" y1="40" x2="430" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="44" y1="286" x2="44" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="237" y1="286" x2="237" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="430" y1="286" x2="430" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="44" y1="286" x2="430" y2="286" style="stroke:var(--muted);stroke-width:1"/>
+  <line x1="44" y1="40" x2="44" y2="286" style="stroke:var(--muted);stroke-width:1"/>
+  <text x="44" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">0</text>
+  <text x="237" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">0.5</text>
+  <text x="430" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1</text>
+  <text x="38" y="290" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0</text>
+  <text x="38" y="167" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.5</text>
+  <text x="38" y="44" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">1</text>
+  <text x="430" y="315" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="end">predicted probability p̂</text>
+  <text x="48" y="36" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="start">observed fraction positive</text>
+  <line x1="44" y1="286" x2="430" y2="40" style="stroke:var(--muted);stroke-width:1.2;opacity:1.0;stroke-dasharray:4 4"/>
+  <rect x="47.86" y="275.49" width="30.88" height="10.51" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="47.07" cy="275.49" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="86.46" y="247.42" width="30.88" height="38.58" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="99.84" cy="247.42" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="125.06" y="245.46" width="30.88" height="40.54" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="140.92" cy="245.46" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="163.66" y="237.78" width="30.88" height="48.22" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="178.35" cy="237.78" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="202.26" y="236.5" width="30.88" height="49.5" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="215.78" cy="236.5" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="240.86" y="231.53" width="30.88" height="54.47" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="256.91" cy="231.53" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="279.46" y="232.56" width="30.88" height="53.44" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="295.5" cy="232.56" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="318.06" y="211.21" width="30.88" height="74.79" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="333.62" cy="211.21" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="356.66" y="217.06" width="30.88" height="68.94" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="372.95" cy="217.06" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="395.26" y="170.93" width="30.88" height="115.07" rx="0" style="fill:var(--accent);fill-opacity:0.55;stroke:none"/>
+  <circle cx="416.35" cy="170.93" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <text x="55.58" y="59.68" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">ECE = 0.082</text>
+  <text x="44" y="16" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">raw model: overconfident</text>
+  <line x1="494" y1="286" x2="880" y2="286" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="494" y1="163" x2="880" y2="163" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="494" y1="40" x2="880" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="494" y1="286" x2="494" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="687" y1="286" x2="687" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="880" y1="286" x2="880" y2="40" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="494" y1="286" x2="880" y2="286" style="stroke:var(--muted);stroke-width:1"/>
+  <line x1="494" y1="40" x2="494" y2="286" style="stroke:var(--muted);stroke-width:1"/>
+  <text x="494" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">0</text>
+  <text x="687" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">0.5</text>
+  <text x="880" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1</text>
+  <text x="488" y="290" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0</text>
+  <text x="488" y="167" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.5</text>
+  <text x="488" y="44" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">1</text>
+  <text x="880" y="315" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="end">predicted probability p̂</text>
+  <text x="498" y="36" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="start">observed fraction positive</text>
+  <line x1="494" y1="286" x2="880" y2="40" style="stroke:var(--muted);stroke-width:1.2;opacity:1.0;stroke-dasharray:4 4"/>
+  <rect x="497.86" y="277.64" width="30.88" height="8.36" rx="0" style="fill:var(--event-a);fill-opacity:0.55;stroke:none"/>
+  <circle cx="507.8" cy="277.64" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="536.46" y="251.2" width="30.88" height="34.8" rx="0" style="fill:var(--event-a);fill-opacity:0.55;stroke:none"/>
+  <circle cx="548.7" cy="251.2" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="575.06" y="231.35" width="30.88" height="54.65" rx="0" style="fill:var(--event-a);fill-opacity:0.55;stroke:none"/>
+  <circle cx="587.97" cy="231.35" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="613.66" y="207.56" width="30.88" height="78.44" rx="0" style="fill:var(--event-a);fill-opacity:0.55;stroke:none"/>
+  <circle cx="627.62" cy="207.56" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="652.26" y="182.33" width="30.88" height="103.67" rx="0" style="fill:var(--event-a);fill-opacity:0.55;stroke:none"/>
+  <circle cx="664.89" cy="182.33" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="690.86" y="147.53" width="30.88" height="138.47" rx="0" style="fill:var(--event-a);fill-opacity:0.55;stroke:none"/>
+  <circle cx="704.19" cy="147.53" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="729.46" y="141.1" width="30.88" height="144.9" rx="0" style="fill:var(--event-a);fill-opacity:0.55;stroke:none"/>
+  <circle cx="740.27" cy="141.1" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <rect x="768.06" y="105.6" width="30.88" height="180.4" rx="0" style="fill:var(--event-a);fill-opacity:0.55;stroke:none"/>
+  <circle cx="781.73" cy="105.6" r="2.6" style="fill:var(--fg);opacity:1.0"/>
+  <text x="505.58" y="59.68" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">ECE = 0.004</text>
+  <text x="494" y="16" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">after Platt scaling</text>
+</svg>

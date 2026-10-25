@@ -1,0 +1,327 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 39 · Stage 8: reinforcement learning</div>
+  <h1>Trust regions and PPO</h1>
+  <p class="lede">Lesson 38 ended with policy-gradient agents that collapsed, and never recovered, when the step was too large for the noise in their gradient. This lesson is about taking steps that are as large as possible but safe. It starts from an exact identity, the performance difference lemma, builds from it a surrogate objective that can be evaluated with data from the old policy, and bounds how far the surrogate can be trusted. Constraining the step by the KL divergence leads to the natural gradient and TRPO; replacing the constraint by clipping gives PPO, the workhorse of modern RL and of RLHF. The code checks the lemma exactly, measures the surrogate's error growing with the square of the step, shows the natural gradient solving a random MDP in a handful of iterations where the plain gradient needs dozens to thousands, and trains PPO from scratch on CartPole with and without its clip.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/38-policy-gradients-and-actor-critic/">38</a>, <a href="/machine-learning/M4-information-theory/">M4</a>, <a href="/machine-learning/M5-optimisation/">M5</a></span><span><b>Math pulled in:</b> telescoping sums, importance sampling, total variation and KL divergence, Pinsker's inequality, the Fisher information matrix, Lagrange multipliers, conjugate gradients, mirror descent</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>A policy-gradient step is computed at the current policy and is only valid near it. Step too far and the gradient's promise breaks: the new policy visits different states, where the old advantages say nothing. In supervised learning a bad step costs one noisy update. In RL it also corrupts the data, because the next batch is collected by the damaged policy, and the agent can fall off a cliff it never climbs back from, as the saturated CartPole policies of lesson 38 did.</p>
+    <p>Two wishes follow. Take steps that are guaranteed, or at least likely, to improve the policy. And squeeze more out of each batch of experience than one gradient step, which means optimising, for several steps, an objective built from data the old policy collected. Both need a way to say how much the new policy can differ from the old before the old data stops being trustworthy: a <b>trust region</b>.</p>
+  </section>
+
+  <section id="pdl">
+    <h2>The performance difference lemma</h2>
+    <p>As in lesson 38, let $\eta_\pi(s) = \sum_t\gamma^tP_\pi(S_t = s)$ be the discounted visit counts from the start distribution, and $A^\pi = Q^\pi - V^\pi$.</p>
+    <div class="result">
+      <div class="label">Performance difference lemma (Kakade and Langford, 2002)</div>
+      <p>For any two policies $\pi$ and $\pi'$,</p>
+      <p>$$J(\pi') - J(\pi) = \sum_s\eta_{\pi'}(s)\sum_a\pi'(a\mid s)\,A^\pi(s, a) = \mathbb{E}_{\tau\sim\pi'}\Big[\sum_t\gamma^tA^\pi(S_t, A_t)\Big].$$</p>
+    </div>
+    <p><b>Proof.</b> Along a trajectory of $\pi'$, $\mathbb{E}[A^\pi(S_t, A_t)\mid S_t, A_t] = \mathbb{E}[R_{t+1} + \gamma V^\pi(S_{t+1}) - V^\pi(S_t)\mid S_t, A_t]$, by the definition of $Q^\pi$ (the dynamics are the same whoever chose $A_t$). Sum with discounts; the $V^\pi$ terms telescope:</p>
+    <div class="eq">$$\mathbb{E}_{\pi'}\Big[\sum_t\gamma^tA^\pi(S_t, A_t)\Big] = \mathbb{E}_{\pi'}\Big[\sum_t\gamma^tR_{t+1}\Big] - \mathbb{E}[V^\pi(S_0)] = J(\pi') - J(\pi).\ \square$$</div>
+    <p>The new policy's return is the old one's plus the old policy's advantages, summed along the <i>new</i> policy's trajectories. If $\pi'$ puts more weight on positive-advantage actions in every state, it improves: this is the policy improvement theorem again. The catch is $\eta_{\pi'}$: to evaluate the right-hand side you need to know where the new policy goes, which is what you do not know before you run it.</p>
+  </section>
+
+  <section id="surrogate">
+    <h2>The surrogate objective and how far to trust it</h2>
+    <p>Replace the new policy's visit counts by the old policy's. The result is the <b>surrogate</b></p>
+    <div class="eq">$$L_\pi(\pi') = J(\pi) + \sum_s\eta_\pi(s)\sum_a\pi'(a\mid s)A^\pi(s, a) = J(\pi) + \mathbb{E}_{s, a\sim\pi}\Big[\frac{\pi'(a\mid s)}{\pi(a\mid s)}A^\pi(s, a)\Big],$$</div>
+    <p>where the second form, with $\mathbb{E}_{s, a\sim\pi}$ meaning the $\eta_\pi$-weighted sum over steps of the old policy's trajectories, is <b>importance sampling</b>: it estimates an average under $\pi'$ from actions drawn from $\pi$, by reweighting each with the ratio of probabilities. Everything in it can be computed from a batch the old policy collected, for any candidate $\pi'$. Two facts make it a good local model:</p>
+    <ul>
+      <li>$L_\pi(\pi) = J(\pi)$, because $\sum_a\pi(a\mid s)A^\pi(s, a) = 0$;</li>
+      <li>$\nabla_{\theta'}L_{\pi_\theta}(\pi_{\theta'})\big|_{\theta' = \theta} = \nabla J(\theta)$: differentiate under the sum and compare with the policy gradient theorem.</li>
+    </ul>
+    <p>So $L$ agrees with $J$ to first order, and the error is second order in the size of the step. Kakade and Langford (2002) and Schulman et al. (2015) made this quantitative. With $\epsilon = \max_{s, a}|A^\pi(s, a)|$ and $\alpha = \max_s D_\text{TV}\big(\pi(\cdot\mid s), \pi'(\cdot\mid s)\big)$,</p>
+    <div class="eq">$$J(\pi')\ge L_\pi(\pi') - \frac{4\epsilon\gamma}{(1 - \gamma)^2}\,\alpha^2 .$$</div>
+    <p>The idea of the proof: couple the two policies so that they choose the same action with probability $1 - \alpha$ in each state; until the first disagreement the trajectories coincide, and the difference between $\eta_{\pi'}$ and $\eta_\pi$ in the lemma comes only from trajectories that have disagreed, at most $\sum_t\gamma^t(1 - (1 - \alpha)^t)\le\frac{\gamma\alpha}{(1 - \gamma)^2}$ of them; each disagreement costs at most $2\epsilon\alpha$ in expected advantage. Since $D_\text{TV}^2\le\frac12D_\text{KL}$ (Pinsker), the bound can be stated with the KL divergence instead.</p>
+    <p>The bound gives an algorithm with a guarantee: maximise the right-hand side, $L_\pi(\pi') - C\alpha^2$, over $\pi'$. Since the right side equals $J(\pi)$ at $\pi' = \pi$, the maximiser can only improve $J$: a <b>minorise–maximise</b> scheme, monotone improvement at every step. In practice $C$ is enormous ($4\epsilon\gamma/(1 - \gamma)^2$ is 360 times $\epsilon$ for $\gamma = 0.9$), and the steps it allows are tiny. The code shows both halves on a random MDP: as the step grows, $|J - L|$ grows exactly in proportion to $\alpha^2$ (the ratio stays at 0.49 over three orders of magnitude), and the bound promises an improvement only for the smallest step tried; for a step that actually improved $J$ by 1.9, the bound says $J$ might fall by 61.</p>
+  </section>
+
+  <section id="natural">
+    <h2>The natural gradient</h2>
+    <p>The practical response is to keep the surrogate and constrain the step directly: maximise $L_\pi(\pi_{\theta'})$ subject to the new policy being within a KL distance $\delta$ of the old one, averaged over states. For a small step $\Delta = \theta' - \theta$, expand both to their leading order. The surrogate is linear, $L\approx J + \mathbf{g}^\top\Delta$ with $\mathbf{g} = \nabla J$. The KL divergence is quadratic, because it is zero with zero gradient at $\Delta = 0$:</p>
+    <div class="eq">$$\bar D_\text{KL}(\pi_\theta\,\|\,\pi_{\theta + \Delta})\approx\tfrac12\Delta^\top F\Delta,\qquad F = \mathbb{E}_{s, a\sim\pi_\theta}\big[\nabla\log\pi_\theta(a\mid s)\nabla\log\pi_\theta(a\mid s)^\top\big],$$</div>
+    <p>where $F$ is the <b>Fisher information matrix</b> of the policy (exercise 2). Maximise $\mathbf{g}^\top\Delta$ subject to $\frac12\Delta^\top F\Delta\le\delta$. Setting the gradient of the Lagrangian $\mathbf{g}^\top\Delta - \lambda(\frac12\Delta^\top F\Delta - \delta)$ to zero gives $\Delta = \frac1\lambda F^{-1}\mathbf{g}$, and making the constraint tight fixes the length:</p>
+    <div class="result">
+      <div class="label">Natural policy gradient (Kakade, 2001)</div>
+      <p>$$\Delta = \sqrt{\frac{2\delta}{\mathbf{g}^\top F^{-1}\mathbf{g}}}\;F^{-1}\mathbf{g} .$$</p>
+    </div>
+    <p>The ordinary gradient is the steepest direction when distance is measured in parameters, $\|\Delta\|_2$; the natural gradient is steepest when distance is measured by how much the <i>policy</i> changes. That makes it invariant to how the policy is parametrised: rescale or reparametrise $\theta$, and the natural gradient step produces the same new policy, which the ordinary gradient does not. It is the same idea as using the Fisher matrix in M5's second-order methods, applied to distributions.</p>
+    <p>For the tabular softmax policy something special happens. The gradient is $\eta_\pi(s)\pi(a\mid s)A^\pi(s, a)$ (lesson 38), and the Fisher matrix turns out to cancel both the visit weights and the policy probabilities, leaving (exercise 4)</p>
+    <div class="eq">$$\theta_{s, a}\leftarrow\theta_{s, a} + \frac{\beta}{1 - \gamma}A^\pi(s, a),\qquad\text{i.e.}\qquad\pi_{k+1}(a\mid s)\propto\pi_k(a\mid s)\exp\Big(\frac{\beta}{1 - \gamma}A^{\pi_k}(s, a)\Big):$$</div>
+    <p>a multiplicative-weights, or mirror-descent, update in every state, a soft version of policy iteration. Rarely visited states and nearly abandoned actions are no longer starved of gradient. The code compares the two with exact gradients on a random 8-state MDP: plain policy gradient needs 49 iterations to get within 0.001 of the optimum at its best step size, and over 5,000 at a cautious one; the natural gradient needs 4 to 6 at any reasonable step size. Agarwal, Kakade, Lee and Mahajan (2021) proved that this tabular NPG converges at a rate that does not depend on the size of the state space or on how well the start distribution covers it, unlike the plain gradient, which can take exponentially long to escape near-deterministic policies.</p>
+  </section>
+
+  <section id="trpo">
+    <h2>TRPO</h2>
+    <p>With a neural policy, $F$ has as many rows as parameters and cannot be formed, let alone inverted. <b>Trust region policy optimisation</b> (Schulman et al., 2015) computes $F^{-1}\mathbf{g}$ by the conjugate-gradient method, which needs only products $F\mathbf{v}$; those can be computed as the gradient of $\mathbf{v}^\top\nabla\bar D_\text{KL}$, two backward passes, without ever forming $F$. Then it scales the step to the KL radius $\delta$ (typically 0.01) and runs a backtracking line search, shrinking the step until the sampled surrogate actually improves and the sampled KL is within $\delta$. TRPO was the first method to train large neural policies for simulated locomotion reliably. It is also complicated, needs second-order machinery that does not fit easily with shared actor–critic networks or dropout, and takes only one step per batch.</p>
+  </section>
+
+  <section id="ppo">
+    <h2>PPO: the clipped surrogate</h2>
+    <p><b>Proximal policy optimisation</b> (Schulman et al., 2017) keeps the idea and drops the machinery. Write $r_t(\theta) = \pi_\theta(A_t\mid S_t)/\pi_{\theta_\text{old}}(A_t\mid S_t)$ for the probability ratio and $\hat A_t$ for a GAE advantage estimate from the old policy's batch. PPO maximises</p>
+    <div class="eq">$$L^\text{CLIP}(\theta) = \hat{\mathbb{E}}_t\Big[\min\Big(r_t(\theta)\hat A_t,\ \mathrm{clip}\big(r_t(\theta), 1 - \varepsilon, 1 + \varepsilon\big)\hat A_t\Big)\Big],\qquad\varepsilon\approx0.2,$$</div>
+    <p>by several epochs of minibatch Adam on the same batch. The unclipped term $r_t\hat A_t$ is the importance-sampled surrogate. The clip removes the incentive to move a ratio outside $[1 - \varepsilon, 1 + \varepsilon]$:</p>
+    <ul>
+      <li>If $\hat A_t &gt; 0$ (a good action), the objective rises with $r_t$ until $r_t = 1 + \varepsilon$, and is flat beyond: once the action has become 20% more likely, there is nothing more to gain from that sample, and its gradient is zero.</li>
+      <li>If $\hat A_t &lt; 0$, it rises as $r_t$ falls, until $r_t = 1 - \varepsilon$, and is flat below.</li>
+      <li>The $\min$ makes the objective a <i>pessimistic</i> bound on the unclipped surrogate: when a step has moved a ratio the wrong way (a good action became less likely), the unclipped term is the smaller one and its gradient stays on, pulling the ratio back.</li>
+    </ul>
+    <p>The full loss adds a value-function regression term for the critic and usually an entropy bonus to keep exploring. Nothing enforces the KL constraint exactly; the clip only removes the gradient that would push individual ratios far, and with many epochs or large learning rates the policy can still drift. Implementations therefore also normalise advantages per minibatch, clip the gradient norm, and sometimes stop the epochs early when the measured KL exceeds a threshold. Engstrom et al. (2020) found that such "code-level" details account for much of PPO's advantage over TRPO, which is a useful warning about attributing results to the headline idea.</p>
+    <p>PPO is the algorithm InstructGPT used for RLHF (lesson 28), with the policy a language model, an episode a response, and a per-token KL penalty to the supervised model added to the reward. GRPO, used for reasoning models, is PPO without the critic: it estimates each response's advantage by comparing its reward with the other responses sampled for the same prompt.</p>
+    <figure class="plate wide" data-scene="ppoclip">
+      <div class="stage">
+        <canvas aria-label="The PPO clipped surrogate objective against the probability ratio, for positive and negative advantage"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="pp-eps">clip ε <input id="pp-eps" type="range" data-k="eps" min="0.05" max="0.5" step="0.01"><output data-out="eps"></output></label>
+            <label for="pp-r">ratio r <input id="pp-r" type="range" data-k="r" min="0" max="2" step="0.01"><output data-out="r"></output></label>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each panel is one sample's contribution to the PPO objective as the new policy changes the probability of its action by the ratio $r$. With a positive advantage, raising $r$ helps only up to $1 + \varepsilon$; past that the objective is flat and the gradient vanishes, so there is no reason to move further. With a negative advantage it is flat below $1 - \varepsilon$. The minimum keeps the pessimistic branch: an update that makes things worse is always penalised in full.</p>
+  </section>
+
+  <section id="cartpole">
+    <h2>PPO on CartPole, from scratch</h2>
+    <p>The code implements PPO with a tanh MLP actor and critic (two hidden layers of 64), Adam at $3\times10^{-4}$, gradient-norm clipping at 0.5, GAE with $\gamma = 0.99$, $\lambda = 0.95$, batches of 2,048 steps, 10 epochs of minibatches of 64, and $\varepsilon = 0.2$. It compares PPO with the same loop on the unclipped surrogate (10 epochs of importance-weighted policy gradient on each batch), and with one epoch of the unclipped surrogate, which is an ordinary actor–critic step per minibatch, three seeds each.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: ppo-cartpole --></div>
+    </figure>
+    <p class="muted">Left: the average length of the last 10 episodes after each batch of 2,048 steps, three seeds per variant. Right: the average KL divergence from the batch's policy to the policy being updated, measured on the minibatches during each update, on a log scale.</p>
+    <p>With the clip, all three seeds reach an average of 475 or more within 15 batches and finish at 500, and the policy moves by a median KL of 0.0033 per update. Without the clip, 10 epochs on the same batch move the policy more than a hundred times as far (median KL 0.38). That is faster at first, reaching 475 after 5, 12 and 11 batches, but nothing holds it there: one seed falls back and finishes at 209. With one epoch the unclipped update is small (KL 0.0005) and safe, but it uses each sample once and needs 38 to 48 batches; after 50 it averages 452, 500 and 334. PPO keeps the speed of reusing the batch and the stability of a small step.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 checks the performance difference lemma exactly on a random MDP, and shows how much the surrogate differs from it. Part 2 steps along the policy gradient by increasing amounts, comparing the true improvement, the surrogate's prediction, their gap divided by $\alpha^2$, and the guaranteed lower bound. Part 3 runs exact plain and natural policy gradient from the uniform policy. Part 4 is PPO.</p>
+<pre><code>import numpy as np
+
+# ---- Part 1: the performance difference lemma, exactly, on a random MDP (8 states, 3 actions).
+rng = np.random.default_rng(1)
+nS, nA, gamma = 8, 3, 0.9
+P = rng.dirichlet(np.ones(nS) * 0.5, (nS, nA))
+R = rng.normal(0, 1, (nS, nA))
+mu0 = np.full(nS, 1 / nS)
+
+def softmax(theta):
+    e = np.exp(theta - theta.max(1, keepdims=True)); return e / e.sum(1, keepdims=True)
+def evaluate(pi):
+    """J, V, Q, A and the discounted visit counts eta = mu0 (I - gamma P_pi)^-1."""
+    P_pi = np.einsum("sa,sat-&gt;st", pi, P); r_pi = (pi * R).sum(1)
+    M = np.linalg.inv(np.eye(nS) - gamma * P_pi)
+    V = M @ r_pi; Q = R + gamma * P @ V
+    return mu0 @ V, V, Q, Q - V[:, None], mu0 @ M
+
+pi = softmax(rng.normal(0, 1, (nS, nA))); pi2 = softmax(rng.normal(0, 1, (nS, nA)))
+J1, V1, Q1, A1, eta1 = evaluate(pi)
+J2, _, _, _, eta2 = evaluate(pi2)
+lemma = eta2 @ (pi2 * A1).sum(1)                                   # visits under the NEW policy, advantages of the OLD
+print(f"J(pi') - J(pi) = {J2 - J1:+.6f}; performance difference lemma: {lemma:+.6f};"
+      f" the same sum with the old policy's visits (the surrogate): {eta1 @ (pi2 * A1).sum(1):+.6f}")
+
+# ---- Part 2: the surrogate L_pi(pi') = J(pi) + sum_s eta_pi(s) sum_a pi'(a|s) A_pi(s, a) and the
+# TRPO lower bound J(pi') &gt;= L_pi(pi') - 4 eps gamma / (1 - gamma)^2 * alpha^2, alpha = max_s TV.
+theta = rng.normal(0, 1, (nS, nA)); pi = softmax(theta)
+J0, V0, Q0, A0, eta0 = evaluate(pi)
+grad = eta0[:, None] * pi * A0                                     # the policy gradient (lesson 38)
+eps = np.abs(A0).max()
+print("  step   J(pi') - J(pi)   L(pi') - J(pi)   |J - L|   |J - L| / TV^2   max TV   bound - J(pi)")
+for t in [0.01, 0.03, 0.1, 0.3, 1, 3]:
+    pi_new = softmax(theta + t * grad / np.abs(grad).max())
+    J_new = evaluate(pi_new)[0]
+    L = J0 + eta0 @ (pi_new * A0).sum(1)
+    tv = 0.5 * np.abs(pi_new - pi).sum(1).max()
+    kl = (pi * np.log(pi / pi_new)).sum(1).max()
+    bound = L - 4 * eps * gamma / (1 - gamma) ** 2 * tv ** 2
+    print(f"{t:6.2f}   {J_new - J0:+.6f}        {L - J0:+.6f}       {abs(J_new - L):.2e}   {abs(J_new - L) / tv ** 2:8.3f}       {tv:.4f}   {bound - J0:+9.3f}")
+
+# ---- Part 3: vanilla against natural policy gradient, exact gradients, tabular softmax.
+# The natural gradient for a softmax policy is the advantage itself (Kakade 2001), so NPG is
+# theta &lt;- theta + step * A_pi / (1 - gamma): soft policy iteration.
+Q = np.zeros((nS, nA))
+for _ in range(2000):
+    Q = R + gamma * P @ Q.max(1)
+J_star = mu0 @ Q.max(1)
+def iterations_to(update, step, tol=1e-3, max_it=20_000):
+    th = np.zeros((nS, nA))
+    for it in range(1, max_it + 1):
+        J, V, Qp, A, eta = evaluate(softmax(th))
+        if J_star - J &lt; tol:
+            return it
+        th += step * update(softmax(th), A, eta)
+    return None
+pg = lambda pi, A, eta: eta[:, None] * pi * A
+npg = lambda pi, A, eta: A / (1 - gamma)
+for name, upd, steps in [("policy gradient", pg, [1, 10, 30, 100]), ("natural policy gradient", npg, [0.1, 1, 3, 10])]:
+    res = {s: iterations_to(upd, s) for s in steps}
+    print(f"{name:23s}: iterations to come within 0.001 of J* = {J_star:.4f}: " +
+          ", ".join(f"step {s}: {res[s] if res[s] else '&gt;20000'}" for s in steps))
+
+# ---- Part 4: PPO on CartPole, from scratch: a tanh MLP actor and critic with Adam, GAE(0.99, 0.95),
+# 2,048 steps per iteration, 10 epochs of minibatches of 64, the clipped surrogate.
+class CartPole:
+    g, mc, mp, l, F, dt = 9.8, 1.0, 0.1, 0.5, 10.0, 0.02
+    def __init__(self, rng): self.rng = rng
+    def reset(self):
+        self.s = self.rng.uniform(-0.05, 0.05, 4); self.t = 0; return self.s.copy()
+    def step(self, a):
+        x, xd, th, thd = self.s
+        f = self.F if a == 1 else -self.F
+        ct, st = np.cos(th), np.sin(th); m = self.mc + self.mp
+        tmp = (f + self.mp * self.l * thd ** 2 * st) / m
+        thacc = (self.g * st - ct * tmp) / (self.l * (4 / 3 - self.mp * ct ** 2 / m))
+        xacc = tmp - self.mp * self.l * thacc * ct / m
+        self.s = np.array([x + self.dt * xd, xd + self.dt * xacc, th + self.dt * thd, thd + self.dt * thacc]); self.t += 1
+        return self.s.copy(), 1.0, abs(self.s[0]) &gt; 2.4 or abs(self.s[2]) &gt; 12 * np.pi / 180, self.t &gt;= 500
+
+class MLP:
+    """tanh MLP with Adam; forward caches activations for one backward pass."""
+    def __init__(self, sizes, rng, out_scale=1.0):
+        self.W = [rng.normal(0, 1, (a, b)) / np.sqrt(a) for a, b in zip(sizes[:-1], sizes[1:])]
+        self.W[-1] *= out_scale
+        self.b = [np.zeros(b) for b in sizes[1:]]
+        self.m = [np.zeros_like(p) for p in self.W + self.b]; self.v = [np.zeros_like(p) for p in self.W + self.b]; self.k = 0
+    def forward(self, x):
+        self.h = [x]
+        for i, (W, b) in enumerate(zip(self.W, self.b)):
+            x = x @ W + b
+            if i &lt; len(self.W) - 1:
+                x = np.tanh(x)
+            self.h.append(x)
+        return x
+    def step(self, g, lr):
+        gW, gb = [], []
+        for i in range(len(self.W) - 1, -1, -1):
+            gW.insert(0, self.h[i].T @ g); gb.insert(0, g.sum(0))
+            if i:
+                g = (g @ self.W[i].T) * (1 - self.h[i] ** 2)
+        norm = np.sqrt(sum((x ** 2).sum() for x in gW + gb))      # clip the global gradient norm at 0.5
+        c = min(1.0, 0.5 / (norm + 1e-8))
+        self.k += 1
+        for j, (p, gr) in enumerate(zip(self.W + self.b, gW + gb)):
+            gr = gr * c
+            self.m[j] = 0.9 * self.m[j] + 0.1 * gr; self.v[j] = 0.999 * self.v[j] + 0.001 * gr ** 2
+            p -= lr * (self.m[j] / (1 - 0.9 ** self.k)) / (np.sqrt(self.v[j] / (1 - 0.999 ** self.k)) + 1e-8)
+
+SCALE = np.array([2.4, 3.0, 0.21, 3.0])
+
+def ppo(seed, iters=50, n_steps=2048, epochs=10, mb=64, clip=0.2, lr=3e-4, gamma=0.99, lam=0.95):
+    """clip=None runs the same loop on the unclipped surrogate (many epochs of plain importance-weighted policy gradient)."""
+    rng = np.random.default_rng(seed); env = CartPole(rng)
+    actor = MLP([4, 64, 64, 2], rng, out_scale=0.01); critic = MLP([4, 64, 64, 1], rng)
+    s = env.reset(); ep_len, lengths, log = 0, [], []
+    for it in range(iters):
+        S, A, R, S2, D, DONE, LP = [], [], [], [], [], [], []
+        for _ in range(n_steps):                                   # collect a batch with the current policy
+            z = s / SCALE
+            logits = actor.forward(z[None])[0]; p = np.exp(logits - logits.max()); p /= p.sum()
+            a = int(rng.random() &lt; p[1])
+            s2, r, term, trunc = env.step(a); ep_len += 1
+            S.append(z); A.append(a); R.append(r); S2.append(s2 / SCALE); D.append(term); DONE.append(term or trunc); LP.append(np.log(p[a]))
+            s = s2
+            if term or trunc:
+                lengths.append(ep_len); ep_len = 0; s = env.reset()
+        S, A, R, S2, D, DONE, LP = map(np.array, (S, A, R, S2, D, DONE, LP))
+        V, V2 = critic.forward(S)[:, 0], critic.forward(S2)[:, 0]
+        delta = R + gamma * (1 - D) * V2 - V                       # bootstrap unless the pole fell
+        adv = np.zeros(n_steps); gae = 0.0
+        for t in range(n_steps - 1, -1, -1):                       # GAE, cut at episode boundaries
+            gae = delta[t] + gamma * lam * (1 - DONE[t]) * gae
+            adv[t] = gae
+        ret = adv + V
+        kl_sum, clipped_frac, nmb = 0.0, 0.0, 0
+        for ep in range(epochs):
+            order = rng.permutation(n_steps)
+            for k in range(0, n_steps, mb):
+                i = order[k:k + mb]
+                a_ = adv[i]; a_ = (a_ - a_.mean()) / (a_.std() + 1e-8)  # normalise advantages per minibatch
+                logits = actor.forward(S[i]); logits -= logits.max(1, keepdims=True)
+                logp_all = logits - np.log(np.exp(logits).sum(1, keepdims=True))
+                lp = logp_all[np.arange(len(i)), A[i]]
+                ratio = np.exp(lp - LP[i])
+                if clip is None:
+                    coef = ratio * a_                              # d(ratio * A)/d(log pi) = ratio * A
+                else:
+                    unclipped = ratio * a_; clipped = np.clip(ratio, 1 - clip, 1 + clip) * a_
+                    active = unclipped &lt;= clipped                  # the min picks the unclipped term
+                    coef = np.where(active, ratio * a_, 0.0)       # the clipped branch has zero gradient
+                    clipped_frac += np.mean(~active); 
+                pi = np.exp(logp_all)
+                onehot = np.eye(2)[A[i]]
+                g = -(coef[:, None] * (onehot - pi)) / len(i)       # minus: gradient ascent on the surrogate
+                actor.step(g, lr)
+                vpred = critic.forward(S[i])[:, 0]
+                critic.step(((vpred - ret[i]) / len(i))[:, None], lr)
+                kl_sum += np.mean(LP[i] - lp); nmb += 1
+        log.append((it, np.mean(lengths[-10:]) if lengths else 0, kl_sum / nmb, clipped_frac / nmb))
+    return lengths, log
+
+
+ppo_runs = {}
+for name, kw in [("PPO, clip 0.2, 10 epochs", {}), ("no clipping, 10 epochs", {"clip": None}),
+                 ("no clipping, 1 epoch", {"clip": None, "epochs": 1})]:
+    runs = [ppo(seed, **kw) for seed in range(3)]
+    ppo_runs[name] = runs
+    first = [next((it for it, m, _, _ in log if m &gt;= 475), None) for _, log in runs]
+    print(f"{name:25s}: first iteration with the last 10 episodes averaging 475+: {first};"
+          f" final average {' '.join(f'{log[-1][1]:5.1f}' for _, log in runs)};"
+          f" median KL(old || new) per update {np.median([kl for _, log in runs for _, _, kl, _ in log]):.4f}")
+
+# J(pi') - J(pi) = +1.152474; performance difference lemma: +1.152474; the same sum with the old policy's visits (the surrogate): +1.120439
+#   step   J(pi') - J(pi)   L(pi') - J(pi)   |J - L|   |J - L| / TV^2   max TV   bound - J(pi)
+#   0.01   +0.023922        +0.023912       1.02e-05      0.493       0.0046      +0.013
+#   0.03   +0.071728        +0.071636       9.18e-05      0.494       0.0136      -0.028
+#   0.10   +0.238286        +0.237279       1.01e-03      0.494       0.0451      -0.851
+#   0.30   +0.698749        +0.690321       8.43e-03      0.491       0.1310      -8.472
+#   1.00   +1.915284        +1.863108       5.22e-02      0.441       0.3441     -61.388
+#   3.00   +2.947035        +2.922682       2.44e-02      0.110       0.4700    -115.091
+# policy gradient        : iterations to come within 0.001 of J* = 11.8436: step 1: 5345, step 10: 453, step 30: 49, step 100: 132
+# natural policy gradient: iterations to come within 0.001 of J* = 11.8436: step 0.1: 29, step 1: 6, step 3: 5, step 10: 4
+# PPO, clip 0.2, 10 epochs : first iteration with the last 10 episodes averaging 475+: [9, 14, 13]; final average 500.0 500.0 500.0; median KL(old || new) per update 0.0033
+# no clipping, 10 epochs   : first iteration with the last 10 episodes averaging 475+: [4, 11, 10]; final average 208.7 500.0 500.0; median KL(old || new) per update 0.3804
+# no clipping, 1 epoch     : first iteration with the last 10 episodes averaging 475+: [47, 47, 37]; final average 451.6 500.0 333.7; median KL(old || new) per update 0.0005</code></pre>
+    <p><b>Reading the output.</b> Parts 1 to 3 are exact computations on one random MDP with 8 states, 3 actions and $\gamma = 0.9$. In part 2 the gap between the true improvement and the surrogate, divided by the square of the largest total-variation change, stays near 0.49 for small steps, so the error really is second order in the step, as the bound says, but the guaranteed lower bound is positive only at the smallest step: it is far too pessimistic to choose a step with, which is why TRPO uses a KL constraint instead. In part 3 the natural gradient needs 4 to 29 iterations across a hundredfold range of step sizes, while the plain gradient needs 49 at its best step size and 5,345 at step 1. Part 4's numbers are those of the figure above; they depend on the seed, and a different set of seeds will move them, but not their order.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show that $\nabla_{\theta'}L_{\pi_\theta}(\pi_{\theta'})$ at $\theta' = \theta$ equals the policy gradient of lesson 38.</li>
+      <li>Show that the KL divergence between $\pi_\theta(\cdot\mid s)$ and $\pi_{\theta + \Delta}(\cdot\mid s)$ is $\frac12\Delta^\top F_s\Delta + O(\|\Delta\|^3)$, with $F_s = \mathbb{E}_{a\sim\pi_\theta}[\nabla\log\pi\nabla\log\pi^\top]$. (Use $\mathbb{E}[\nabla\log\pi] = 0$ and $\mathbb{E}[\nabla^2\log\pi] = -F_s$.)</li>
+      <li>Show that the natural gradient is invariant to linear reparametrisation: if $\theta = M\phi$ with $M$ invertible, the natural gradient step in $\phi$ gives the same change of policy, to first order, as the one in $\theta$. Show that the ordinary gradient step does not.</li>
+      <li>For the tabular softmax policy, show that $\Delta_{s, a} = \frac{1}{1 - \gamma}A^\pi(s, a)$ satisfies $F\Delta = \mathbf{g}/(1 - \gamma)$, so that it is a natural gradient direction, where $F = \sum_s\eta(s)F_s$ and $\mathbf{g}_{s, a} = \eta(s)\pi(a\mid s)A(s, a)$. (Hint: $F_s\mathbf{u} = \pi\odot(\mathbf{u} - \pi^\top\mathbf{u})$ for the softmax, and $\sum_a\pi(a\mid s)A(s, a) = 0$.)</li>
+      <li>Draw $L^\text{CLIP}$ for a single sample as a function of $r$, for $\hat A &gt; 0$ and for $\hat A &lt; 0$, and mark where its gradient is zero. Why is the min needed, rather than just the clipped term?</li>
+      <li>PPO's batch has 2,048 steps and is used for 10 epochs of minibatches of 64, so 320 gradient steps per batch. Lesson 38's actor–critic took one step per 5 episodes. Count how many environment steps each method needed before its last 10 episodes averaged 475 or more. Is the comparison a fair test of PPO's sample efficiency? What does reusing each batch for 10 epochs buy, and what makes that reuse safe?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\nabla_{\theta'}L = \sum_s\eta_\pi(s)\sum_a\nabla_{\theta'}\pi_{\theta'}(a\mid s)A^\pi(s, a)$. At $\theta' = \theta$, replace $A^\pi$ by $Q^\pi - V^\pi$; the $V^\pi$ part vanishes because $\sum_a\nabla\pi(a\mid s) = 0$, leaving $\sum_s\eta(s)\sum_a\nabla\pi(a\mid s)Q^\pi(s, a)$, the policy gradient theorem.</p>
+        <p><b>2.</b> $D_\text{KL} = \mathbb{E}_{a\sim\pi_\theta}[\log\pi_\theta(a) - \log\pi_{\theta + \Delta}(a)]$. Taylor-expand $\log\pi_{\theta + \Delta} = \log\pi_\theta + \Delta^\top\nabla\log\pi + \frac12\Delta^\top\nabla^2\log\pi\,\Delta + O(\|\Delta\|^3)$. The first-order term has zero mean; the second has mean $-\frac12\Delta^\top F_s\Delta$, because $\mathbb{E}[\nabla^2\log\pi] = \mathbb{E}[\nabla^2\pi/\pi] - \mathbb{E}[\nabla\log\pi\nabla\log\pi^\top] = \nabla^2\sum_a\pi - F_s = -F_s$. So $D_\text{KL} = \frac12\Delta^\top F_s\Delta + O(\|\Delta\|^3)$.</p>
+        <p><b>3.</b> $\nabla_\phi J = M^\top\nabla_\theta J$ and $F_\phi = M^\top F_\theta M$. The natural step in $\phi$ is $F_\phi^{-1}\nabla_\phi J = M^{-1}F_\theta^{-1}M^{-\top}M^\top\nabla_\theta J = M^{-1}F_\theta^{-1}\nabla_\theta J$, which maps to $\Delta\theta = M\Delta\phi = F_\theta^{-1}\nabla_\theta J$: the same step. The ordinary step $\Delta\phi = M^\top\nabla_\theta J$ maps to $\Delta\theta = MM^\top\nabla_\theta J$, which differs unless $MM^\top = I$.</p>
+        <p><b>4.</b> For the softmax with its own parameters $\theta_{s, \cdot}$, $\nabla\log\pi(a\mid s) = \mathbf{e}_a - \boldsymbol\pi_s$, so $F_s\mathbf{u} = \mathbb{E}_a[(\mathbf{e}_a - \boldsymbol\pi_s)(u_a - \boldsymbol\pi_s^\top\mathbf{u})] = \boldsymbol\pi_s\odot(\mathbf{u} - (\boldsymbol\pi_s^\top\mathbf{u})\mathbf{1})$. With $\mathbf{u} = A(s, \cdot)$, $\boldsymbol\pi_s^\top\mathbf{u} = 0$, so $F_s\mathbf{u} = \boldsymbol\pi_s\odot A(s, \cdot)$, and $F\Delta$ at $(s, a)$ is $\eta(s)\pi(a\mid s)A(s, a)\cdot\frac1{1 - \gamma}$, which is $\mathbf{g}/(1 - \gamma)$. So $\Delta\propto F^{-1}\mathbf{g}$ (the Fisher matrix is singular along the direction that adds a constant to every $\theta_{s, \cdot}$, which does not change the policy, so "$F^{-1}$" means any solution).</p>
+        <p><b>5.</b> For $\hat A &gt; 0$: $L = r\hat A$ for $r\le1 + \varepsilon$, then constant $(1 + \varepsilon)\hat A$; gradient zero for $r &gt; 1 + \varepsilon$. For $\hat A &lt; 0$: $L = r\hat A$ for $r\ge1 - \varepsilon$, then constant; gradient zero for $r &lt; 1 - \varepsilon$. Using only the clipped term would also make the objective flat when $r$ has moved the <i>wrong</i> way past the clip (for $\hat A &gt; 0$, $r &lt; 1 - \varepsilon$), so a step that made a good action much less likely could not be undone; the min keeps the unclipped, steeper term there.</p>
+        <p><b>6.</b> PPO first reached 475+ at the end of iterations 10, 15 and 14 (counting from 1), that is after 20,480, 30,720 and 28,672 steps. The λ = 0.95 actor–critic of lesson 38 got there after 100, 155 and 90 episodes, about 10,300, 20,500 and 10,700 steps, so on this count it was faster. The comparison is not fair to either side. Lesson 38's policy is linear in the four state variables (5 parameters), which suits CartPole, and its step size of 10 was tuned by hand for this one problem; with $\lambda = 0$ or $\lambda = 1$ the same settings failed. PPO trains two 64-unit networks with default settings that transfer to many problems. What the 10 epochs buy is 320 gradient steps from each batch instead of one; plain policy gradient cannot do that, because after the first few steps the batch no longer comes from the current policy and the unclipped surrogate keeps pushing ratios further (the unclipped run's update KL was about 100 times PPO's). The clip removes the gradient once a ratio leaves $[1-\varepsilon, 1+\varepsilon]$, which makes the reuse safe.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Kakade &amp; Langford, "Approximately optimal approximate reinforcement learning"</b> (2002). The performance difference lemma and conservative policy iteration.</li>
+      <li><b>Kakade, "A natural policy gradient"</b> (2001).</li>
+      <li><b>Schulman, Levine, Moritz, Jordan &amp; Abbeel, "Trust region policy optimization"</b> (2015).</li>
+      <li><b>Schulman, Wolski, Dhariwal, Radford &amp; Klimov, "Proximal policy optimization algorithms"</b> (2017).</li>
+      <li><b>Agarwal, Kakade, Lee &amp; Mahajan, "On the theory of policy gradient methods: optimality, approximation, and distribution shift"</b> (2021). Convergence rates of plain and natural policy gradient.</li>
+      <li><b>Engstrom et al., "Implementation matters in deep policy gradients: a case study on PPO and TRPO"</b> (2020).</li>
+      <li><b>Huang et al., "The 37 implementation details of proximal policy optimization"</b> (ICLR blog track, 2022).</li>
+    </ul>
+  </section>
+</article>

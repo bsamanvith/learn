@@ -1,0 +1,311 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 37 · Stage 8: reinforcement learning</div>
+  <h1>Function approximation and deep Q-networks</h1>
+  <p class="lede">Tables do not scale: Go has $10^{170}$ positions, a robot's state is continuous, and an agent will never visit most states even once. This lesson replaces the table by a parametrised function, $\hat v(s; \mathbf{w})$ or $\hat q(s, a; \mathbf{w})$, so that experience in one state generalises to similar ones. It derives gradient Monte Carlo and semi-gradient TD, characterises where linear TD converges (the projected Bellman equation) and proves how far that can be from the best approximation. It then shows how the combination of function approximation, bootstrapping and off-policy learning, the "deadly triad", can diverge, on Baird's counterexample. Finally it builds DQN, the algorithm that learned Atari games from pixels, from scratch in NumPy, and measures what its two stabilising tricks, experience replay and a target network, are worth on CartPole.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/36-sarsa-and-q-learning/">36</a>, <a href="/machine-learning/13-backpropagation/">13</a>, <a href="/machine-learning/07-stochastic-optimisation/">07</a></span><span><b>Math pulled in:</b> weighted norms and orthogonal projection, Jensen's inequality, the Pythagorean theorem in an inner-product space, linear stochastic approximation, positive definite matrices</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Represent the value function by a model with far fewer parameters than states: a linear function of features, $\hat v(s; \mathbf{w}) = \mathbf{w}^\top\mathbf{x}(s)$, or a neural network. Updating $\mathbf{w}$ after a visit to one state changes the estimates of every state that shares its features. That is the point, since it lets the agent generalise to states it has never seen, and the danger, since an update meant for one state can make another worse, and bootstrapped targets are built from those other estimates.</p>
+    <p>The tabular methods of lessons 35 and 36 come back almost unchanged, as stochastic gradient steps. What changes is the theory. With a table, the target of every update was a contraction's output and convergence was guaranteed. With approximation, some combinations still converge, to a point that can be characterised exactly; others provably diverge. Knowing which is which explains the design of DQN.</p>
+  </section>
+
+  <section id="objective">
+    <h2>The objective and gradient Monte Carlo</h2>
+    <p>With fewer parameters than states, the values cannot all be right; the approximation must trade errors between states. The natural objective weights each state by how often it is visited under the policy being evaluated, the on-policy distribution $\mu$:</p>
+    <div class="eq">$$\overline{\mathrm{VE}}(\mathbf{w}) = \sum_s\mu(s)\big(v^\pi(s) - \hat v(s; \mathbf{w})\big)^2 = \|\hat v_\mathbf{w} - v^\pi\|_\mu^2 .$$</div>
+    <p>Its gradient needs $v^\pi(S_t)$, which is unknown; the return $G_t$ is an unbiased sample of it. Using it gives <b>gradient Monte Carlo</b>:</p>
+    <div class="eq">$$\mathbf{w}\leftarrow\mathbf{w} + \alpha\big(G_t - \hat v(S_t; \mathbf{w})\big)\nabla_\mathbf{w}\hat v(S_t; \mathbf{w}).$$</div>
+    <p>This is genuine stochastic gradient descent on $\overline{\mathrm{VE}}$ (lesson 07): the expected update is $-\frac\alpha2\nabla\overline{\mathrm{VE}}$, because the states arrive distributed as $\mu$ and $\mathbb{E}[G_t\mid S_t] = v^\pi(S_t)$. So with decreasing step sizes it converges to a local minimum, and for linear features to the global one, $\mathbf{w}^* = (X^\top DX)^{-1}X^\top Dv^\pi$, where $X$ stacks the feature vectors as rows and $D = \mathrm{diag}(\mu)$. That is the $\mu$-weighted least-squares fit, $X\mathbf{w}^* = \Pi v^\pi$, where $\Pi = X(X^\top DX)^{-1}X^\top D$ is the orthogonal projection onto the span of the features in the $\mu$-weighted inner product.</p>
+  </section>
+
+  <section id="semi">
+    <h2>Semi-gradient TD</h2>
+    <p>Substitute the TD target for the return:</p>
+    <div class="eq">$$\mathbf{w}\leftarrow\mathbf{w} + \alpha\,\delta_t\nabla_\mathbf{w}\hat v(S_t; \mathbf{w}),\qquad\delta_t = R_{t+1} + \gamma\hat v(S_{t+1}; \mathbf{w}) - \hat v(S_t; \mathbf{w}).$$</div>
+    <p>This is not the gradient of anything. The target depends on $\mathbf{w}$ too, and the update ignores that dependence: the full gradient of $\frac12\delta_t^2$ would be $-\delta_t\big(\nabla\hat v(S_t) - \gamma\nabla\hat v(S_{t+1})\big)$. Hence the name <b>semi-gradient</b>. Following the full gradient (the "residual gradient" algorithm, Baird 1995) does converge, but slowly, and in stochastic environments to the wrong answer unless two independent next states can be sampled from the same state, which real experience does not provide. Semi-gradient TD is what everyone uses.</p>
+    <p><b>Linear TD.</b> With $\hat v = \mathbf{w}^\top\mathbf{x}$ and on-policy data, the expected update is linear in $\mathbf{w}$:</p>
+    <div class="eq">$$\mathbb{E}[\delta_t\mathbf{x}_t] = \mathbf{b} - A\mathbf{w},\qquad A = X^\top D(I - \gamma P_\pi)X,\qquad\mathbf{b} = X^\top Dr_\pi .$$</div>
+    <p>If it converges, it converges to where the expected update is zero, the <b>TD fixed point</b> $\mathbf{w}_\text{TD} = A^{-1}\mathbf{b}$. Rearranged, $X^\top D\big(r_\pi + \gamma P_\pi X\mathbf{w}_\text{TD} - X\mathbf{w}_\text{TD}\big) = 0$: the Bellman error is orthogonal to every feature, which says exactly</p>
+    <div class="eq">$$X\mathbf{w}_\text{TD} = \Pi\,\mathcal{T}^\pi(X\mathbf{w}_\text{TD}):$$</div>
+    <p>the <b>projected Bellman equation</b>. Apply the Bellman operator, then project back onto what the features can represent; the TD solution is the fixed point of that composition.</p>
+    <div class="result">
+      <div class="label">Convergence and quality of linear TD (Tsitsiklis and Van Roy, 1997)</div>
+      <p>If $\mu$ is the stationary distribution of $P_\pi$ and $\gamma &lt; 1$, then $\Pi\mathcal{T}^\pi$ is a $\gamma$-contraction in $\|\cdot\|_\mu$, linear TD converges with probability 1 (under Robbins–Monro step sizes and independent features), and</p>
+      <p>$$\|X\mathbf{w}_\text{TD} - v^\pi\|_\mu\le\frac{1}{\sqrt{1 - \gamma^2}}\,\|\Pi v^\pi - v^\pi\|_\mu .$$</p>
+    </div>
+    <p><b>Proof of the contraction and the bound.</b> First, $P_\pi$ does not expand $\|\cdot\|_\mu$. By Jensen's inequality, $\big(\sum_{s'}P(s, s')v(s')\big)^2\le\sum_{s'}P(s, s')v(s')^2$, so</p>
+    <div class="eq">$$\|P_\pi v\|_\mu^2\le\sum_s\mu(s)\sum_{s'}P(s, s')v(s')^2 = \sum_{s'}\Big(\sum_s\mu(s)P(s, s')\Big)v(s')^2 = \sum_{s'}\mu(s')v(s')^2 = \|v\|_\mu^2,$$</div>
+    <p>using stationarity, $\mu P_\pi = \mu$, in the second-last step. So $\|\mathcal{T}^\pi u - \mathcal{T}^\pi v\|_\mu = \gamma\|P_\pi(u - v)\|_\mu\le\gamma\|u - v\|_\mu$. An orthogonal projection never increases a norm, so $\Pi\mathcal{T}^\pi$ is a $\gamma$-contraction too, and has a unique fixed point $v_\text{TD}$. For the bound, $v_\text{TD} - \Pi v^\pi$ lies in the feature space and $\Pi v^\pi - v^\pi$ is orthogonal to it, so by Pythagoras,</p>
+    <div class="eq">$$\|v_\text{TD} - v^\pi\|_\mu^2 = \|v_\text{TD} - \Pi v^\pi\|_\mu^2 + \|\Pi v^\pi - v^\pi\|_\mu^2 .$$</div>
+    <p>And $\|v_\text{TD} - \Pi v^\pi\|_\mu = \|\Pi\mathcal{T}^\pi v_\text{TD} - \Pi\mathcal{T}^\pi v^\pi\|_\mu\le\gamma\|v_\text{TD} - v^\pi\|_\mu$, since $v^\pi = \mathcal{T}^\pi v^\pi$. Substitute and rearrange: $(1 - \gamma^2)\|v_\text{TD} - v^\pi\|_\mu^2\le\|\Pi v^\pi - v^\pi\|_\mu^2$. $\square$</p>
+    <p>So TD's answer is within a factor $1/\sqrt{1 - \gamma^2}$ of the best the features allow: about 2.3 for $\gamma = 0.9$, 7.1 for $\gamma = 0.99$. TD trades some asymptotic accuracy for its lower variance and faster learning. The code measures the trade on the 19-state random walk with the states aggregated into 5 groups, a feature set too coarse for the problem. The best possible fit has a $\mu$-weighted RMS error of 0.107, which gradient MC reaches (0.112 after 20,000 episodes); semi-gradient TD settles near its fixed point, whose error is 0.269 (0.279 after 20,000 episodes with a constant step size). Here $\gamma = 1$ and the bound says nothing, and the gap is large: within a group, TD bootstraps each state's value from neighbours that share its weight, which flattens the values towards zero.</p>
+  </section>
+
+  <section id="triad">
+    <h2>The deadly triad</h2>
+    <p>The proof leaned on $\mu$ being the stationary distribution of the policy whose values are learned. Off-policy, the states are distributed according to the behaviour policy, $P_\pi$ need not be non-expansive in that norm, and the contraction can fail. Sutton and Barto name the three ingredients whose combination risks divergence the <b>deadly triad</b>:</p>
+    <ul>
+      <li><b>function approximation</b>, which couples the states;</li>
+      <li><b>bootstrapping</b>, which builds targets from the current estimates;</li>
+      <li><b>off-policy training</b>, which updates states in proportions other than the target policy's own.</li>
+    </ul>
+    <p>Any two are safe: tabular off-policy Q-learning converges (lesson 36), on-policy linear TD converges (above), and off-policy Monte Carlo with function approximation is plain regression. All three together can diverge, even when the true value function is exactly representable, the features are linearly independent, and the expected update is used.</p>
+    <p><b>Baird's counterexample</b> (1995) has 7 states and 8 weights; states 1–6 have value $2w_i + w_8$ and state 7 has $w_7 + 2w_8$. All rewards are 0, so $\mathbf{w} = 0$ is exact. The behaviour policy moves to a random one of states 1–6 with probability $\frac67$ and to state 7 with $\frac17$; the target policy always moves to state 7. Off-policy semi-gradient TD, with importance ratio $\pi/b$ (7 for the move to state 7, 0 otherwise), diverges: in the code, the largest value estimate grows from 12 to about 700 in 1,000 steps and to $10^{12}$ in 10,000. The same updates on-policy (learning the behaviour policy's own values, ratio 1) shrink the estimates towards 0. The mechanism: updates happen at states 1–6, each of which raises $w_8$ through the shared feature; that raises state 7's value, which is the bootstrap target of every update, which raises the targets further. On-policy, state 7 would itself be updated often enough to pull its own value back down.</p>
+    <p>There are algorithms that are provably stable off-policy with linear features. The gradient-TD family (GTD2 and TDC; Sutton, Maei and others, 2009) does true stochastic gradient descent on the projected Bellman error, at the cost of a second set of weights, and emphatic TD reweights updates to restore the contraction. Deep RL mostly uses engineering instead: keep the data close to on-policy, and slow the bootstrap target down.</p>
+  </section>
+
+  <section id="dqn">
+    <h2>Deep Q-networks</h2>
+    <p>Q-learning with a neural network has all three triad ingredients: it is off-policy, it bootstraps, and it approximates. Before 2013 it was considered unstable. Mnih et al. (2013, 2015) made it work on 49 Atari games from raw pixels, with one architecture and one set of hyperparameters, reaching at least human-level scores on about half. Their <b>DQN</b> minimises, by stochastic gradient steps on minibatches,</p>
+    <div class="eq">$$L(\theta) = \mathbb{E}_{(s, a, r, s')\sim\mathcal{D}}\Big[\ell\Big(r + \gamma\max_{a'}Q(s', a'; \theta^-) - Q(s, a; \theta)\Big)\Big],$$</div>
+    <p>where $\ell$ is the Huber loss (squared for errors below 1, linear above, so outlier targets do not produce huge gradients), and two ideas tame the triad:</p>
+    <ul>
+      <li><b>Experience replay.</b> Store every transition in a buffer $\mathcal{D}$ of the last million, and train on minibatches sampled uniformly from it. Consecutive frames are highly correlated; sampling from a large buffer makes minibatches closer to independent, as SGD assumes, reuses each transition many times, and averages the training distribution over many past policies, which damps oscillations. Q-learning is off-policy, so old data remains valid.</li>
+      <li><b>A target network.</b> Compute targets with a copy $\theta^-$ of the network that is updated only occasionally (every 10,000 steps in the original; or smoothly, $\theta^-\leftarrow(1 - \tau)\theta^- + \tau\theta$). Between updates, each phase is an ordinary regression to fixed targets, rather than a chase after a target that moves with every step.</li>
+    </ul>
+    <p>For Atari they also stacked the last 4 frames to make the state closer to Markov, clipped rewards to $[-1, 1]$ so one learning rate fits every game, and annealed $\varepsilon$ from 1 to 0.1. Later improvements, each fixing a specific flaw, were combined in <b>Rainbow</b> (Hessel et al., 2018):</p>
+    <ul>
+      <li><b>Double DQN</b> (van Hasselt et al., 2016): choose the next action with the online network and evaluate it with the target network, $r + \gamma Q\big(s', \arg\max_{a'}Q(s', a'; \theta); \theta^-\big)$, the double-Q idea of lesson 36 almost for free.</li>
+      <li><b>Dueling networks</b>: two heads, $Q(s, a) = V(s) + A(s, a) - \frac1{|\mathcal{A}|}\sum_{a'}A(s, a')$, so the value of a state is learned from every action taken there.</li>
+      <li><b>Prioritised replay</b>: sample transitions in proportion to their TD error, with importance weights to correct the bias.</li>
+      <li><b>$n$-step targets</b>, <b>distributional</b> RL (learning the distribution of returns, not just the mean), and <b>noisy networks</b> for exploration.</li>
+    </ul>
+  </section>
+
+  <section id="cartpole">
+    <h2>DQN on CartPole, from scratch</h2>
+    <p>CartPole is the classic control benchmark: push a cart left or right to keep a pole balanced on it, for up to 500 steps, earning 1 per step. The state is four numbers: position, velocity, angle and angular velocity. The code implements the physics (with the constants of OpenAI Gym), a two-hidden-layer MLP with hand-written backpropagation and Adam, a 50,000-transition replay buffer, a Polyak-averaged target network ($\tau = 0.005$), the Huber loss, Double DQN targets, and $\varepsilon$ annealed from 1 to 0.05 over the first 10,000 steps. It trains for 100,000 steps and compares full DQN with two ablations, three seeds each.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: dqn-cartpole --></div>
+    </figure>
+    <p class="muted">Left: the largest value estimate on Baird's counterexample against the number of updates, both on log scales: off-policy semi-gradient TD diverges, on-policy it converges. Right: return per episode while training, smoothed over 20 episodes, for three seeds of each variant of DQN on CartPole; the training returns include the 5% random actions. From the code.</p>
+    <p>With both stabilisers, all three seeds learn to balance: two end with a greedy policy that lasts the full 500 steps on all 20 test episodes, and the third had collapsed to 94 at the moment training stopped. Learning is not monotone, as the figure shows: performance climbs to 500, crashes, and recovers, a well-known feature of DQN on this task. A training run that reached 500 at some point is not a run whose final network is good, which is why practitioners keep the best checkpoint by evaluation. Without the target network, nothing is learned at all. The values diverge: the largest $|Q|$ in the last batch is about $1.7\times10^9$, where the true values cannot exceed $\sum_t0.99^t = 100$. Each update raises the bootstrap targets of similar states, which raises the next updates, the triad's feedback loop with nothing to slow it. With the target network the largest values are 121–138, a mild overestimate (the true maximum is 100) of the kind double Q-learning reduces but does not remove. Removing experience replay, by training each step on the 64 most recent transitions instead of a random sample from the last 50,000, hurt much less here than in the Atari experiments: two of three seeds end at 500. CartPole's transitions are less correlated than consecutive video frames, and the 64-transition window is itself a small buffer. On Atari, Mnih et al. found replay to be the larger of the two effects.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 computes, for the 19-state random walk with 5 aggregated features, the best possible weights and the TD fixed point $A^{-1}\mathbf{b}$ exactly, then runs gradient MC and semi-gradient TD for 20,000 episodes and compares. Part 2 runs Baird's counterexample off-policy and on-policy. Part 3 is DQN on CartPole: the environment, the network, the replay buffer and the training loop, then the experiment. It takes a few minutes, almost all of it in part 3.</p>
+<pre><code>import numpy as np
+
+# ---- Part 1: linear TD and its fixed point. The 19-state random walk of lesson 35 with state
+# aggregation: 19 states in 5 groups of about 4, one weight per group. gamma = 1, so the walk's
+# stationary visiting distribution mu is used to weight errors. Compare semi-gradient TD(0) and
+# gradient Monte Carlo with the best possible weights, the projection of v_pi.
+n = 19
+true_v = np.arange(-(n - 1), n, 2) / (n + 1)
+groups = np.minimum(np.arange(n) * 5 // n, 4)
+X = np.eye(5)[groups]                                              # one-hot group features, (19, 5)
+P = np.zeros((n + 2, n + 2))                                       # states 0 and 20 are terminal
+for s in range(1, n + 1):
+    P[s, s - 1] = P[s, s + 1] = 0.5
+r = np.zeros(n + 2); r[1] = -0.5; r[n] = 0.5                       # expected reward on leaving s
+Pn = P[1:-1, 1:-1]                                                 # transitions among non-terminal states
+visits = np.linalg.solve(np.eye(n) - Pn.T, np.eye(n)[n // 2])      # expected visits per episode from the middle
+mu = visits / visits.sum()
+D = np.diag(mu)
+w_best = np.linalg.solve(X.T @ D @ X, X.T @ D @ true_v)            # minimises the mu-weighted value error
+A = X.T @ D @ (X - Pn @ X); b = X.T @ D @ r[1:-1]
+w_td = np.linalg.solve(A, b)                                       # the TD fixed point: E[delta x] = 0
+ve = lambda w: np.sqrt(mu @ (X @ w - true_v) ** 2)
+print(f"value error (mu-weighted RMS): best possible {ve(w_best):.4f}, TD fixed point {ve(w_td):.4f}")
+rng = np.random.default_rng(0)
+w_mc, w_t = np.zeros(5), np.zeros(5)
+for e in range(1, 20_001):
+    s, path = n // 2 + 1, []
+    while 1 &lt;= s &lt;= n:
+        path.append(s); s += rng.choice((-1, 1))
+    G = 1.0 if s == n + 1 else -1.0
+    alpha = 1e-4
+    for t, st in enumerate(path):
+        w_mc += alpha * (G - X[st - 1] @ w_mc) * X[st - 1]           # gradient MC: target is the return
+        nxt = path[t + 1] if t + 1 &lt; len(path) else s
+        v_next = X[nxt - 1] @ w_t if 1 &lt;= nxt &lt;= n else 0.0
+        rew = 0.0 if 1 &lt;= nxt &lt;= n else G
+        w_t += alpha * (rew + v_next - X[st - 1] @ w_t) * X[st - 1]  # semi-gradient TD(0)
+print(f"after 20,000 episodes: gradient MC {ve(w_mc):.4f} (|w - w_best| = {np.abs(w_mc - w_best).max():.3f}),"
+      f" semi-gradient TD {ve(w_t):.4f} (|w - w_TD| = {np.abs(w_t - w_td).max():.3f})")
+
+# ---- Part 2: the deadly triad. Baird's counterexample (Sutton and Barto, figure 11.1): seven
+# states, eight weights, linear features, all rewards 0, so v = 0 is representable exactly.
+# The behaviour policy goes to one of states 1-6 with probability 6/7 and to state 7 with 1/7;
+# the target policy always goes to state 7. gamma = 0.99.
+Xb = np.zeros((7, 8))
+for i in range(6):
+    Xb[i, i] = 2; Xb[i, 7] = 1
+Xb[6, 6] = 1; Xb[6, 7] = 2
+def baird(on_policy, steps=1000, alpha=0.01, seed=0):
+    """Semi-gradient TD(0). Off-policy: learn about the target policy from behaviour data,
+    weighting each update by rho = pi / b. On-policy: learn the behaviour policy's own values."""
+    rng = np.random.default_rng(seed)
+    w = np.array([1, 1, 1, 1, 1, 1, 10, 1], float)
+    s = int(rng.integers(7))
+    for _ in range(steps):
+        solid = rng.random() &lt; 1 / 7                               # the behaviour policy acts
+        s2 = 6 if solid else int(rng.integers(6))
+        rho = 1.0 if on_policy else (7.0 if solid else 0.0)       # importance ratio pi / b
+        delta = 0 + 0.99 * Xb[s2] @ w - Xb[s] @ w
+        w += alpha * rho * delta * Xb[s]
+        s = s2
+    return np.abs(Xb @ w).max()                                    # the largest |v(s)|; the truth is 0
+print(f"Baird, largest |v(s)| (true value 0): off-policy after 1,000 steps {baird(False):.3g}, after 10,000 {baird(False, 10_000):.3g};"
+      f" on-policy after 1,000 {baird(True):.3g}, after 10,000 {baird(True, 10_000):.3g} (it starts at 12)")
+
+# ---- Part 3: DQN on CartPole, written from scratch: a NumPy MLP, a replay buffer, a target
+# network (Polyak averaging), the Huber loss, epsilon-greedy exploration and Double DQN targets.
+class CartPole:
+    """The classic cart-pole (Barto, Sutton and Anderson, 1983), with the constants used by
+    OpenAI Gym: push the cart left or right; reward 1 per step; the episode ends when the pole
+    leans more than 12 degrees or the cart leaves [-2.4, 2.4], or after 500 steps."""
+    g, mc, mp, l, F, dt = 9.8, 1.0, 0.1, 0.5, 10.0, 0.02
+    def __init__(self, rng):
+        self.rng = rng
+    def reset(self):
+        self.s = self.rng.uniform(-0.05, 0.05, 4); self.t = 0
+        return self.s.copy()
+    def step(self, a):
+        x, xd, th, thd = self.s
+        f = self.F if a == 1 else -self.F
+        ct, st = np.cos(th), np.sin(th)
+        m = self.mc + self.mp
+        tmp = (f + self.mp * self.l * thd ** 2 * st) / m
+        thacc = (self.g * st - ct * tmp) / (self.l * (4 / 3 - self.mp * ct ** 2 / m))
+        xacc = tmp - self.mp * self.l * thacc * ct / m
+        x, xd, th, thd = x + self.dt * xd, xd + self.dt * xacc, th + self.dt * thd, thd + self.dt * thacc
+        self.s = np.array([x, xd, th, thd]); self.t += 1
+        fell = abs(x) &gt; 2.4 or abs(th) &gt; 12 * np.pi / 180
+        return self.s.copy(), 1.0, fell, self.t &gt;= 500           # next state, reward, terminal, truncated
+
+class MLP:
+    """A two-hidden-layer ReLU network with Adam, written out by hand."""
+    def __init__(self, sizes, rng):
+        self.W = [rng.normal(0, np.sqrt(2 / a), (a, b)) for a, b in zip(sizes[:-1], sizes[1:])]
+        self.b = [np.zeros(b) for b in sizes[1:]]
+        self.m = [np.zeros_like(p) for p in self.W + self.b]; self.v = [np.zeros_like(p) for p in self.W + self.b]; self.k = 0
+    scale = None
+    def forward(self, x):
+        if self.scale is not None:
+            x = x / self.scale
+        self.h = [x]
+        for i, (W, b) in enumerate(zip(self.W, self.b)):
+            x = x @ W + b
+            if i &lt; len(self.W) - 1:
+                x = np.maximum(x, 0)
+            self.h.append(x)
+        return x
+    def backward_and_step(self, g, lr=1e-3, b1=0.9, b2=0.999):
+        grads_W, grads_b = [], []
+        for i in range(len(self.W) - 1, -1, -1):
+            grads_W.insert(0, self.h[i].T @ g); grads_b.insert(0, g.sum(0))
+            if i:
+                g = (g @ self.W[i].T) * (self.h[i] &gt; 0)
+        self.k += 1
+        for j, (p, gr) in enumerate(zip(self.W + self.b, grads_W + grads_b)):
+            self.m[j] = b1 * self.m[j] + (1 - b1) * gr; self.v[j] = b2 * self.v[j] + (1 - b2) * gr ** 2
+            p -= lr * (self.m[j] / (1 - b1 ** self.k)) / (np.sqrt(self.v[j] / (1 - b2 ** self.k)) + 1e-8)
+    def copy_from(self, other):
+        self.W = [w.copy() for w in other.W]; self.b = [b.copy() for b in other.b]
+
+def dqn(seed, steps=100_000, target_every=1000, lr=5e-4, tau=0.005, replay=True, double=True, batch=64, gamma=0.99):
+    rng = np.random.default_rng(seed)
+    env = CartPole(rng)
+    q = MLP([4, 64, 64, 2], rng); q_tgt = MLP([4, 64, 64, 2], rng); q_tgt.copy_from(q)
+    q.scale = q_tgt.scale = np.array([2.4, 3.0, 0.21, 3.0])          # rough ranges of the four state variables
+    cap = 50_000 if replay else batch                              # without replay: only the latest transitions
+    S, A, R, S2, D = np.zeros((cap, 4)), np.zeros(cap, int), np.zeros(cap), np.zeros((cap, 4)), np.zeros(cap)
+    n = 0
+    s = env.reset(); ep_ret, returns = 0.0, []
+    for t in range(steps):
+        eps = max(0.05, 1 - t / 10_000)                            # explore a lot at first
+        a = int(rng.integers(2)) if rng.random() &lt; eps else int(np.argmax(q.forward(s[None])[0]))
+        s2, r, term, trunc = env.step(a)
+        i = n % cap; S[i], A[i], R[i], S2[i], D[i] = s, a, r, s2, term; n += 1
+        ep_ret += r; s = s2
+        if term or trunc:
+            returns.append((t, ep_ret)); s = env.reset(); ep_ret = 0.0
+        if n &gt;= batch:
+            idx = rng.integers(0, min(n, cap), batch) if replay else np.arange(batch)
+            if target_every:
+                nxt = q_tgt.forward(S2[idx])
+                if double:                                         # choose with the online net, evaluate with the target net
+                    a_star = np.argmax(q.forward(S2[idx]), 1); nxt_v = nxt[np.arange(batch), a_star]
+                else:
+                    nxt_v = nxt.max(1)
+            else:                                                  # no target network: bootstrap from the net being trained
+                nxt_v = q.forward(S2[idx]).max(1)
+            y = R[idx] + gamma * (1 - D[idx]) * nxt_v
+            out = q.forward(S[idx])
+            q_max = np.abs(out).max()                                  # watch for divergence
+            err = out[np.arange(batch), A[idx]] - y
+            g = np.zeros_like(out); g[np.arange(batch), A[idx]] = np.clip(err, -1, 1) / batch   # Huber loss gradient
+            q.backward_and_step(g, lr)
+            if tau:                                                # Polyak averaging of the target network
+                for P_t, P_o in zip(q_tgt.W + q_tgt.b, q.W + q.b):
+                    P_t += tau * (P_o - P_t)
+            elif target_every and t % target_every == 0:
+                q_tgt.copy_from(q)
+    # Evaluate the final greedy policy on 20 fresh episodes.
+    ev = CartPole(np.random.default_rng(10_000 + seed)); tot = []
+    for _ in range(20):
+        s, done, G = ev.reset(), False, 0
+        while not done:
+            s, r, term, trunc = ev.step(int(np.argmax(q.forward(s[None])[0]))); G += r; done = term or trunc
+        tot.append(G)
+    return np.array(returns), np.mean(tot), q_max
+
+
+results = {}
+for name, kw in [("DQN", {}), ("no target network", {"tau": None, "target_every": 0}), ("no replay", {"replay": False})]:
+    res = [dqn(seed, **kw) for seed in range(3)]
+    results[name] = res
+    last100 = [np.mean(r[-100:, 1]) for r, _, _ in res]
+    print(f"{name:17s}: mean return of the last 100 training episodes, seeds 0-2: {' '.join(f'{x:5.1f}' for x in last100)};"
+          f" greedy policy at the end: {' '.join(f'{ev:5.1f}' for _, ev, _ in res)}; largest |Q| in the last batch:"
+          f" {' '.join(f'{qm:.3g}' for _, _, qm in res)}")
+
+# value error (mu-weighted RMS): best possible 0.1068, TD fixed point 0.2691
+# after 20,000 episodes: gradient MC 0.1120 (|w - w_best| = 0.050), semi-gradient TD 0.2791 (|w - w_TD| = 0.030)
+# Baird, largest |v(s)| (true value 0): off-policy after 1,000 steps 696, after 10,000 1.5e+12; on-policy after 1,000 1.76, after 10,000 0.345 (it starts at 12)
+# DQN              : mean return of the last 100 training episodes, seeds 0-2: 190.2 345.3 234.1; greedy policy at the end: 500.0 500.0  93.7; largest |Q| in the last batch: 138 124 121
+# no target network: mean return of the last 100 training episodes, seeds 0-2:   9.8   9.5   9.6; greedy policy at the end:   9.7   9.2   9.6; largest |Q| in the last batch: 1.65e+09 1.72e+09 1.74e+09
+# no replay        : mean return of the last 100 training episodes, seeds 0-2: 383.8 211.8 334.2; greedy policy at the end: 500.0 127.7 500.0; largest |Q| in the last batch: 98 99.7 96.8</code></pre>
+    <p><b>Reading the output.</b> Linear TD lands near its fixed point and gradient MC near the best fit, with the large gap between them that coarse aggregation produces. On Baird's counterexample the off-policy estimates pass $10^{12}$ after 10,000 updates, while the on-policy ones shrink from 12 to 0.35. The DQN lines are discussed in the CartPole section. Expect your numbers to differ with other seeds, especially for DQN, where single runs vary a lot: the honest summary of an RL result is a distribution over seeds, and three is the bare minimum.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show that tabular TD(0) is the special case of semi-gradient TD with one-hot features, and that the TD fixed point is then $v^\pi$ exactly.</li>
+      <li>Show that the expected update of gradient Monte Carlo is $-\frac\alpha2\nabla\overline{\mathrm{VE}}$ when $S_t\sim\mu$. Why does the same argument fail for semi-gradient TD?</li>
+      <li>Sutton and Barto's two-state example: two states with values $w$ and $2w$ (one weight, features 1 and 2), a transition from the first to the second with reward 0, and only that transition is ever updated. Write the semi-gradient TD update for $w$ and show that it diverges for any $\alpha &gt; 0$ when $\gamma &gt; \frac12$. Which ingredient of the triad does "only that transition" represent?</li>
+      <li>Verify the identity $\|v_\text{TD} - v^\pi\|_\mu^2 = \|v_\text{TD} - \Pi v^\pi\|_\mu^2 + \|\Pi v^\pi - v^\pi\|_\mu^2$ by showing that $\Pi v - v$ is $\mu$-orthogonal to every vector of the form $X\mathbf{u}$.</li>
+      <li>Why does DQN need the max in its target to be computed with $\theta^-$ rather than $\theta$ for stability, while Double DQN's argmax uses $\theta$? What would go wrong if both used $\theta^-$?</li>
+      <li>In the dueling architecture, why subtract the mean advantage? Show that without it, $V$ and $A$ are not identifiable from $Q$.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> With $\mathbf{x}(s) = \mathbf{e}_s$, $\hat v(s) = w_s$ and $\nabla\hat v(S_t) = \mathbf{e}_{S_t}$, so the update changes only $w_{S_t}$, by $\alpha\delta_t$: tabular TD(0). The projection $\Pi$ is the identity, so the projected Bellman equation is the Bellman equation, with solution $v^\pi$.</p>
+        <p><b>2.</b> $\nabla\overline{\mathrm{VE}} = -2\sum_s\mu(s)(v^\pi(s) - \hat v(s))\nabla\hat v(s)$, and $\mathbb{E}[(G_t - \hat v(S_t))\nabla\hat v(S_t)] = \sum_s\mu(s)(v^\pi(s) - \hat v(s))\nabla\hat v(s)$ because $\mathbb{E}[G_t\mid S_t = s] = v^\pi(s)$ and the gradient depends only on $S_t$. For TD, $\mathbb{E}[R + \gamma\hat v(S')\mid S = s] = (\mathcal{T}^\pi\hat v)(s)\ne v^\pi(s)$, and it depends on $\mathbf{w}$, so the expected update is not the gradient of any fixed objective.</p>
+        <p><b>3.</b> $\delta = 0 + \gamma\cdot2w - w = (2\gamma - 1)w$, and $\nabla\hat v = 1$, so $w\leftarrow w + \alpha(2\gamma - 1)w = (1 + \alpha(2\gamma - 1))w$, a factor above 1 when $\gamma &gt; \frac12$: $w$ grows geometrically. Updating only that transition, and never the second state's own transition (which would pull $2w$ down), is an off-policy distribution of updates.</p>
+        <p><b>4.</b> $\langle X\mathbf{u}, \Pi v - v\rangle_\mu = \mathbf{u}^\top X^\top D\big(X(X^\top DX)^{-1}X^\top Dv - v\big) = \mathbf{u}^\top(X^\top Dv - X^\top Dv) = 0$. Then expand $\|(v_\text{TD} - \Pi v) + (\Pi v - v)\|_\mu^2$; the cross term vanishes because $v_\text{TD} - \Pi v$ is in the column space of $X$.</p>
+        <p><b>5.</b> The target network's job is to keep the regression target fixed while $\theta$ moves; the value used in the target must therefore come from $\theta^-$. Choosing the action with $\theta$ decouples selection from evaluation, which is what removes the maximisation bias (lesson 36). If both used $\theta^-$, selection and evaluation would use the same noisy estimates, and the target would be the plain max over $\theta^-$, with its full upward bias.</p>
+        <p><b>6.</b> For any constant $c$, $V + c$ and $A - c$ give the same $Q = V + A$, so a network could shift value between the heads arbitrarily; nothing forces $V$ to be the state's value. Subtracting the mean advantage forces $\sum_aA(s, a) = 0$ in the output, which pins down $V(s) = \frac1{|\mathcal{A}|}\sum_aQ(s, a)$. (Subtracting the max instead pins $V(s) = \max_aQ(s, a)$, the original paper's first version.)</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Sutton &amp; Barto, <i>Reinforcement Learning: An Introduction</i></b> (2nd edition, 2018), chapters 9 and 11. Semi-gradient methods, the TD fixed point, the deadly triad and Baird's counterexample.</li>
+      <li><b>Tsitsiklis &amp; Van Roy, "An analysis of temporal-difference learning with function approximation"</b> (1997). The convergence theorem and the error bound proved here.</li>
+      <li><b>Mnih et al., "Human-level control through deep reinforcement learning"</b> (<i>Nature</i>, 2015). DQN.</li>
+      <li><b>van Hasselt, Guez &amp; Silver, "Deep reinforcement learning with double Q-learning"</b> (2016).</li>
+      <li><b>Hessel et al., "Rainbow: combining improvements in deep reinforcement learning"</b> (2018). Double, dueling, prioritised, $n$-step, distributional and noisy DQN together, with ablations.</li>
+      <li><b>Sutton et al., "Fast gradient-descent methods for temporal-difference learning with linear function approximation"</b> (2009). GTD2 and TDC.</li>
+    </ul>
+  </section>
+</article>

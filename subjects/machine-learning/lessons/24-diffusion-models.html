@@ -1,0 +1,224 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 24 · Stage 6: generative models</div>
+  <h1>Diffusion models</h1>
+  <p class="lede">Take a data point and add a little Gaussian noise, then a little more, a hundred or a thousand times, until nothing is left but noise. Each step is easy to undo approximately, because a small amount of noise barely changes anything. A diffusion model learns to undo one step, and generates data by starting from pure noise and undoing every step in turn. This lesson derives the forward process and its closed-form marginals, the posterior of one reverse step, the evidence lower bound that justifies the whole construction and simplifies to "predict the noise", and why the optimal denoiser is a posterior mean. Then it trains a denoising diffusion model with a hand-written backward pass and samples a spiral out of noise.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/M3-probability/">M3</a>, <a href="/machine-learning/22-autoencoders-and-vaes/">lesson 22</a>, <a href="/machine-learning/20-transformer/">lesson 20</a> (for the time embedding)</span><span><b>Math pulled in:</b> Gaussian Markov chains, products of Gaussians, completing the square, the ELBO for a chain of latents, conditional expectation</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>A VAE (lesson 22) learns two maps at once, an encoder from data to latent codes and a decoder back, and the two must agree. Diffusion models fix the encoder in advance: it is a simple, known process that adds noise, with no parameters at all. The latent "codes" are the noisy versions $\mathbf{x}_1, \dots, \mathbf{x}_T$ of the data point $\mathbf{x}_0$, each the same size as the data, and the last one is indistinguishable from standard Gaussian noise. Only the decoder is learned, as a chain of $T$ small denoising steps, all computed by one network told which step it is on.</p>
+    <p>Why many small steps instead of one big one? Turning noise into an image in one go is a complicated map, which is what GANs and VAEs attempt. Removing a <i>small</i> amount of noise is a much simpler problem: if the noise added in one step is small enough, the reverse step is itself approximately Gaussian (Feller, 1949; Sohl-Dickstein et al., 2015), so a network only has to predict its mean. The difficulty is split into $T$ easy pieces. Ho, Jain and Abbeel (2020) showed that this, with the right parameterisation, produces images as good as GANs'; it is the basis of DALL·E 2, Imagen, Stable Diffusion and video models.</p>
+  </section>
+
+  <section id="forward">
+    <h2>The forward process</h2>
+    <p>Choose a noise schedule $0 &lt; \beta_1 &lt; \dots &lt; \beta_T &lt; 1$ and let $\alpha_t = 1 - \beta_t$. The forward process is the Markov chain</p>
+    <div class="eq">$$q(\mathbf{x}_t\mid\mathbf{x}_{t-1}) = \mathcal{N}\big(\sqrt{\alpha_t}\,\mathbf{x}_{t-1},\ \beta_tI\big), \qquad\text{i.e.}\quad \mathbf{x}_t = \sqrt{\alpha_t}\,\mathbf{x}_{t-1} + \sqrt{\beta_t}\,\boldsymbol{\epsilon}_t .$$</div>
+    <p>Each step shrinks the signal slightly and adds noise. The shrinking is chosen so that the process is <i>variance preserving</i>: if $\operatorname{Var}(\mathbf{x}_{t-1}) = 1$ then $\operatorname{Var}(\mathbf{x}_t) = \alpha_t + \beta_t = 1$, so data scaled to unit variance stays at unit variance all the way.</p>
+    <p><b>Jumping to any step.</b> Let $\bar\alpha_t = \alpha_1\alpha_2\cdots\alpha_t$. Then</p>
+    <div class="result">
+      <div class="label">The forward marginal</div>
+      <p>$$q(\mathbf{x}_t\mid\mathbf{x}_0) = \mathcal{N}\big(\sqrt{\bar\alpha_t}\,\mathbf{x}_0,\ (1 - \bar\alpha_t)I\big), \qquad\text{i.e.}\quad \mathbf{x}_t = \sqrt{\bar\alpha_t}\,\mathbf{x}_0 + \sqrt{1 - \bar\alpha_t}\,\boldsymbol{\epsilon},\quad \boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0}, I).$$</p>
+    </div>
+    <p><b>Proof</b> by induction. It holds for $t = 1$. If $\mathbf{x}_{t-1} = \sqrt{\bar\alpha_{t-1}}\mathbf{x}_0 + \sqrt{1 - \bar\alpha_{t-1}}\,\boldsymbol{\epsilon}'$, then $\mathbf{x}_t = \sqrt{\bar\alpha_t}\mathbf{x}_0 + \sqrt{\alpha_t(1 - \bar\alpha_{t-1})}\,\boldsymbol{\epsilon}' + \sqrt{\beta_t}\,\boldsymbol{\epsilon}_t$. The last two terms are independent zero-mean Gaussians, so their sum is Gaussian with variance $\alpha_t(1 - \bar\alpha_{t-1}) + 1 - \alpha_t = 1 - \bar\alpha_t$. $\square$</p>
+    <p>So training never has to simulate the chain: to get a noisy example at step $t$, draw one $\boldsymbol{\epsilon}$ and mix. As long as $\bar\alpha_T\approx0$, $q(\mathbf{x}_T\mid\mathbf{x}_0)\approx\mathcal{N}(\mathbf{0}, I)$ whatever $\mathbf{x}_0$ was: the end of the chain has forgotten the data. Ho et al. used $T = 1000$ with $\beta$ rising linearly from $10^{-4}$ to 0.02; for the 2-D data below, $T = 100$ steps up to $\beta = 0.2$ leave $\sqrt{\bar\alpha_T} = 0.005$ of the signal.</p>
+  </section>
+
+  <section id="reverse">
+    <h2>One reverse step</h2>
+    <p>The reverse conditional $q(\mathbf{x}_{t-1}\mid\mathbf{x}_t)$ depends on the whole data distribution and is unknown. But if we also condition on $\mathbf{x}_0$ it is a Gaussian we can write down. By Bayes' rule and the Markov property,</p>
+    <div class="eq">$$q(\mathbf{x}_{t-1}\mid\mathbf{x}_t, \mathbf{x}_0) \propto q(\mathbf{x}_t\mid\mathbf{x}_{t-1})\,q(\mathbf{x}_{t-1}\mid\mathbf{x}_0) \propto \exp\left(-\frac{\lVert\mathbf{x}_t - \sqrt{\alpha_t}\mathbf{x}_{t-1}\rVert^2}{2\beta_t} - \frac{\lVert\mathbf{x}_{t-1} - \sqrt{\bar\alpha_{t-1}}\mathbf{x}_0\rVert^2}{2(1 - \bar\alpha_{t-1})}\right).$$</div>
+    <p>The exponent is quadratic in $\mathbf{x}_{t-1}$, so the result is Gaussian. Its precision (inverse variance) is the sum of the coefficients of $\lVert\mathbf{x}_{t-1}\rVert^2$, and its mean is found by completing the square:</p>
+    <div class="eq">$$\frac{1}{\tilde\beta_t} = \frac{\alpha_t}{\beta_t} + \frac{1}{1 - \bar\alpha_{t-1}} = \frac{1 - \bar\alpha_t}{\beta_t(1 - \bar\alpha_{t-1})}, \qquad \tilde{\boldsymbol{\mu}}_t = \tilde\beta_t\left(\frac{\sqrt{\alpha_t}}{\beta_t}\mathbf{x}_t + \frac{\sqrt{\bar\alpha_{t-1}}}{1 - \bar\alpha_{t-1}}\mathbf{x}_0\right),$$</div>
+    <p>which gives</p>
+    <div class="eq">$$q(\mathbf{x}_{t-1}\mid\mathbf{x}_t, \mathbf{x}_0) = \mathcal{N}(\tilde{\boldsymbol{\mu}}_t, \tilde\beta_tI), \qquad \tilde{\boldsymbol{\mu}}_t = \frac{\sqrt{\alpha_t}(1 - \bar\alpha_{t-1})}{1 - \bar\alpha_t}\mathbf{x}_t + \frac{\sqrt{\bar\alpha_{t-1}}\,\beta_t}{1 - \bar\alpha_t}\mathbf{x}_0, \qquad \tilde\beta_t = \frac{1 - \bar\alpha_{t-1}}{1 - \bar\alpha_t}\beta_t .$$</div>
+    <p>The mean interpolates between the current noisy point and the clean one. Now eliminate $\mathbf{x}_0$ using the forward marginal, $\mathbf{x}_0 = (\mathbf{x}_t - \sqrt{1 - \bar\alpha_t}\,\boldsymbol{\epsilon})/\sqrt{\bar\alpha_t}$. After simplifying (exercise 2),</p>
+    <div class="eq">$$\tilde{\boldsymbol{\mu}}_t = \frac{1}{\sqrt{\alpha_t}}\left(\mathbf{x}_t - \frac{\beta_t}{\sqrt{1 - \bar\alpha_t}}\,\boldsymbol{\epsilon}\right).$$</div>
+    <p>To step backwards we only need to know the noise $\boldsymbol{\epsilon}$ that was mixed in. We don't, at generation time; so we train a network $\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)$ to estimate it, and define the learned reverse step as</p>
+    <div class="eq">$$p_\theta(\mathbf{x}_{t-1}\mid\mathbf{x}_t) = \mathcal{N}\left(\frac{1}{\sqrt{\alpha_t}}\Big(\mathbf{x}_t - \frac{\beta_t}{\sqrt{1 - \bar\alpha_t}}\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)\Big),\ \sigma_t^2I\right),$$</div>
+    <p>with a fixed variance: $\sigma_t^2 = \beta_t$ and $\sigma_t^2 = \tilde\beta_t$ both work in practice.</p>
+    <figure class="plate wide" data-scene="diffuse">
+      <div class="stage">
+        <canvas aria-label="Points on a spiral noised to an adjustable step, and new samples generated by running the reverse process"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="df-t">noise step t <input id="df-t" type="range" data-k="t" min="0" max="200" step="1"><output data-out="t"></output></label>
+            <button type="button" data-act="generate">Sample backwards from noise</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Drag $t$ from 0 to 200 to run the forward process on 300 points from a spiral (the schedule is the one from the assignment, $\beta$ from $10^{-4}$ to 0.08). By $t \approx 100$ the spiral is gone; at 200 it is a round Gaussian cloud. Then press <i>Sample backwards</i>: 400 fresh points start as pure noise and take 200 reverse steps, each using the exact posterior mean $\mathbb E[\mathbf x_0\mid\mathbf x_t]$ for these training points. The spiral reassembles. Look closely at the end: every sample sits on a training point. A trained network that cannot compute this exact mean is what makes genuinely new samples.</p>
+  </section>
+
+  <section id="loss">
+    <h2>The loss: a bound that becomes "predict the noise"</h2>
+    <p>The model $p_\theta(\mathbf{x}_{0:T}) = p(\mathbf{x}_T)\prod_tp_\theta(\mathbf{x}_{t-1}\mid\mathbf{x}_t)$ is a latent-variable model with latents $\mathbf{x}_{1:T}$, and $q(\mathbf{x}_{1:T}\mid\mathbf{x}_0)$ plays the encoder. Lesson 22's ELBO applies unchanged: $\log p_\theta(\mathbf{x}_0)\ge\mathbb{E}_q[\log p_\theta(\mathbf{x}_{0:T})/q(\mathbf{x}_{1:T}\mid\mathbf{x}_0)]$. Rewriting each forward factor with Bayes' rule, conditioned on $\mathbf{x}_0$, $q(\mathbf{x}_t\mid\mathbf{x}_{t-1}) = q(\mathbf{x}_{t-1}\mid\mathbf{x}_t, \mathbf{x}_0)\,q(\mathbf{x}_t\mid\mathbf{x}_0)/q(\mathbf{x}_{t-1}\mid\mathbf{x}_0)$, the ratios telescope and the bound becomes a sum of KL divergences between Gaussians (Sohl-Dickstein et al., 2015; Ho et al., 2020):</p>
+    <div class="eq">$$-\log p_\theta(\mathbf{x}_0)\le\underbrace{\operatorname{KL}\big(q(\mathbf{x}_T\mid\mathbf{x}_0)\,\|\,p(\mathbf{x}_T)\big)}_{\text{no parameters}} + \sum_{t=2}^T\mathbb{E}_q\underbrace{\operatorname{KL}\big(q(\mathbf{x}_{t-1}\mid\mathbf{x}_t, \mathbf{x}_0)\,\|\,p_\theta(\mathbf{x}_{t-1}\mid\mathbf{x}_t)\big)}_{L_{t-1}} - \mathbb{E}_q\log p_\theta(\mathbf{x}_0\mid\mathbf{x}_1).$$</div>
+    <p>Each $L_{t-1}$ compares two Gaussians with the same fixed covariance, so it is a squared distance between their means divided by $2\sigma_t^2$ (lesson 22, exercise 2). With both means written in terms of noise,</p>
+    <div class="eq">$$L_{t-1} = \frac{1}{2\sigma_t^2}\lVert\tilde{\boldsymbol{\mu}}_t - \boldsymbol{\mu}_\theta\rVert^2 = \frac{\beta_t^2}{2\sigma_t^2\alpha_t(1 - \bar\alpha_t)}\,\big\lVert\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_\theta(\sqrt{\bar\alpha_t}\mathbf{x}_0 + \sqrt{1 - \bar\alpha_t}\boldsymbol{\epsilon},\ t)\big\rVert^2 .$$</div>
+    <p>Ho et al. found that dropping the weight in front works better for image quality. That gives the famous simplified loss:</p>
+    <div class="result">
+      <div class="label">The DDPM training objective</div>
+      <p>$$\mathcal{L}_\text{simple}(\theta) = \mathbb{E}_{\mathbf{x}_0,\,t\sim\mathcal{U}\{1..T\},\,\boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0},I)}\Big[\big\lVert\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_\theta\big(\sqrt{\bar\alpha_t}\mathbf{x}_0 + \sqrt{1 - \bar\alpha_t}\,\boldsymbol{\epsilon},\ t\big)\big\rVert^2\Big].$$</p>
+    </div>
+    <p>Training is therefore just supervised regression: take a data point, a random step and random noise, mix, and teach the network to recover the noise. No adversary, no encoder to train, no sampling during training. The weights that were dropped emphasise small $t$ (fine detail); dropping them shifts the network's effort towards larger $t$, where the global structure of an image is decided.</p>
+  </section>
+
+  <section id="denoiser">
+    <h2>What the network learns</h2>
+    <p>A squared-error regression learns a conditional mean (M3): the minimiser of $\mathbb{E}\lVert\boldsymbol{\epsilon} - f(\mathbf{x}_t, t)\rVert^2$ over all functions $f$ is $f^*(\mathbf{x}_t, t) = \mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]$. Two consequences.</p>
+    <p><b>The loss never reaches zero.</b> Given a noisy point at large $t$, many combinations of data point and noise could have produced it, so the noise can only be estimated, not recovered. The minimum loss is $\mathbb{E}\operatorname{tr}\operatorname{Cov}(\boldsymbol{\epsilon}\mid\mathbf{x}_t)$, which is large when $t$ is large. That is why the code's loss levels off near 0.45 instead of falling to 0, and why the loss curve of a diffusion model says little about sample quality.</p>
+    <p><b>Predicting the noise is denoising.</b> From $\mathbf{x}_t = \sqrt{\bar\alpha_t}\mathbf{x}_0 + \sqrt{1 - \bar\alpha_t}\boldsymbol{\epsilon}$, the best estimate of the clean point is $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sqrt{1 - \bar\alpha_t}\,\boldsymbol{\epsilon}_\theta)/\sqrt{\bar\alpha_t} = \mathbb{E}[\mathbf{x}_0\mid\mathbf{x}_t]$. At large $t$ this is a blurry average of all data consistent with $\mathbf{x}_t$, and it sharpens as $t\to0$. A diffusion sampler repeatedly makes a guess at the clean data, moves a little towards it, and adds fresh noise. Lesson 25 shows that $\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]$ is also $-\sqrt{1 - \bar\alpha_t}$ times the gradient of $\log q(\mathbf{x}_t)$, the "score", which connects diffusion to Langevin dynamics and lets us steer it.</p>
+    <p><b>The network.</b> One network serves all $T$ steps, so it needs $t$ as input. The standard way is lesson 20's sinusoidal embedding of $t$, fed in alongside $\mathbf{x}_t$. For images, $\boldsymbol{\epsilon}_\theta$ is a U-Net, a convolutional network that downsamples and upsamples with skip connections between matching resolutions, so its output has the input's shape; newer models use Transformers on image patches (DiT, Peebles &amp; Xie, 2023). The price of diffusion is at sampling time: generating one image takes $T$ network evaluations, one per step, against one for a GAN. Much of lesson 25 is about reducing that.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 simulates the forward chain from $x_0 = 2$ and checks the closed-form marginal at two steps. Part 2 makes the data, points on a spiral in the plane. Part 3 is the noise predictor: an MLP with two hidden layers of 256 ReLU units whose input is $\mathbf{x}_t$ concatenated with a 16-dimensional sinusoidal embedding of $t$, trained on $\mathcal{L}_\text{simple}$ with Adam and a cosine learning-rate decay; the backward pass is written by hand. Part 4 samples 2,000 points by ancestral sampling, starting from $\mathcal{N}(\mathbf{0}, I)$ and applying the learned reverse step 100 times with $\sigma_t^2 = \beta_t$. It then measures two things: whether the samples lie on the spiral (precision), and whether the spiral is fully covered by samples (recall).</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# The noise schedule: T = 100 steps, beta rising linearly from 1e-4 to 0.2 (a short chain suits 2-D data).
+T = 100
+beta = np.linspace(1e-4, 0.2, T)
+alpha = 1 - beta
+abar = np.cumprod(alpha)                                   # abar[t] = alpha_1 ... alpha_t
+print(f"signal left at the end: sqrt(abar_T) = {np.sqrt(abar[-1]):.2e}")
+
+# 1. The forward process jumps straight to any step: q(x_t | x_0) = N(sqrt(abar_t) x_0, (1 - abar_t) I).
+# Simulate the chain step by step from x_0 = 2 and compare with the formula.
+x = np.full(200_000, 2.0)
+for t in range(T):
+    x = np.sqrt(alpha[t]) * x + np.sqrt(beta[t]) * rng.standard_normal(x.shape)
+    if t + 1 in (10, 30):
+        print(f"t = {t + 1}: simulated mean {x.mean():.4f}, var {x.var():.4f};"
+              f"  formula mean {np.sqrt(abar[t]) * 2:.4f}, var {1 - abar[t]:.4f}")
+
+# 2. Data: points on a spiral, with a little noise.
+def data(n):
+    s = rng.uniform(0.25, 1, n) ** 0.5 * 3 * np.pi
+    return np.stack([s * np.cos(s), s * np.sin(s)], 1) / 4 + 0.03 * rng.standard_normal((n, 2))
+
+# 3. The noise-prediction network eps_theta(x_t, t): an MLP on [x_t, sinusoidal embedding of t].
+def embed(t, k=16):
+    f = np.exp(-np.log(1000) * np.arange(k // 2) / (k // 2))
+    a = t[:, None] * f[None] * 1.0
+    return np.concatenate([np.sin(a), np.cos(a)], 1)
+
+sizes = [2 + 16, 256, 256, 2]
+W = [rng.standard_normal((a, b)) * np.sqrt(2 / a) for a, b in zip(sizes, sizes[1:])]
+b = [np.zeros(n) for n in sizes[1:]]
+params = W + b
+m1 = [np.zeros_like(p) for p in params]; m2 = [np.zeros_like(p) for p in params]
+
+def net(x, t):
+    hs = [np.concatenate([x, embed(t)], 1)]
+    for i in range(3):
+        z = hs[-1] @ W[i] + b[i]
+        hs.append(np.maximum(z, 0) if i &lt; 2 else z)
+    return hs
+
+def loss_and_grads(x0):
+    """The DDPM loss: pick t, add noise eps, ask the network for eps back; squared error."""
+    n = len(x0)
+    t = rng.integers(0, T, n)
+    eps = rng.standard_normal(x0.shape)
+    xt = np.sqrt(abar[t])[:, None] * x0 + np.sqrt(1 - abar[t])[:, None] * eps
+    hs = net(xt, t)
+    g = 2 * (hs[-1] - eps) / n
+    gW, gb = [None] * 3, [None] * 3
+    for i in reversed(range(3)):
+        gW[i], gb[i] = hs[i].T @ g, g.sum(0)
+        if i:
+            g = (g @ W[i].T) * (hs[i] &gt; 0)
+    return np.mean(np.sum((hs[-1] - eps) ** 2, 1)), gW + gb
+
+for step in range(1, 15001):
+    loss, grads = loss_and_grads(data(256))
+    lr = 1e-3 * 0.5 * (1 + np.cos(np.pi * step / 15000))
+    for i, (p, g) in enumerate(zip(params, grads)):
+        m1[i] = 0.9 * m1[i] + 0.1 * g; m2[i] = 0.999 * m2[i] + 0.001 * g * g
+        p -= lr * (m1[i] / (1 - 0.9 ** step)) / (np.sqrt(m2[i] / (1 - 0.999 ** step)) + 1e-8)
+    if step in (1, 1000, 5000, 15000):
+        print(f"step {step:5d}: loss {loss:.3f}")
+
+# 4. Ancestral sampling: start from pure noise and apply the learned reverse step T times.
+def sample(n, keep=()):
+    x = rng.standard_normal((n, 2)); kept = {T: x}
+    for t in reversed(range(T)):
+        eps = net(x, np.full(n, t))[-1]
+        mean = (x - beta[t] / np.sqrt(1 - abar[t]) * eps) / np.sqrt(alpha[t])
+        x = mean + (np.sqrt(beta[t]) * rng.standard_normal(x.shape) if t &gt; 0 else 0)
+        if t in keep:
+            kept[t] = x
+    return x, kept
+
+S, kept = sample(2000, keep=(75, 50, 25, 10))
+ref = data(20000)
+def median_nn(A, B):
+    """Median over the points of A of the distance to the nearest point of B."""
+    return np.median([np.sqrt(np.min(np.sum((B - a) ** 2, 1))) for a in A])
+D2, G2 = data(2000), rng.standard_normal((2000, 2))
+print("median distance from 500 points to the nearest of 20,000 fresh data points (are they on the spiral?):")
+print(f"  samples {median_nn(S[:500], ref):.4f}   fresh data {median_nn(D2[:500], ref):.4f}   Gaussian noise {median_nn(G2[:500], ref):.4f}")
+print("median distance from 500 fresh data points to the nearest of 2,000 points (is all of the spiral covered?):")
+print(f"  samples {median_nn(data(500), S):.4f}   fresh data {median_nn(data(500), D2):.4f}   Gaussian noise {median_nn(data(500), G2):.4f}")
+
+# signal left at the end: sqrt(abar_T) = 4.63e-03
+# t = 10: simulated mean 1.9105, var 0.0878;  formula mean 1.9096, var 0.0883
+# t = 30: simulated mean 1.2749, var 0.5942;  formula mean 1.2756, var 0.5932
+# step     1: loss 2.519
+# step  1000: loss 0.422
+# step  5000: loss 0.409
+# step 15000: loss 0.472
+# median distance from 500 points to the nearest of 20,000 fresh data points (are they on the spiral?):
+#   samples 0.0046   fresh data 0.0032   Gaussian noise 0.6706
+# median distance from 500 fresh data points to the nearest of 2,000 points (is all of the spiral covered?):
+#   samples 0.0128   fresh data 0.0106   Gaussian noise 0.0579</code></pre>
+    <p class="muted">The simulated chain matches the formula to the third decimal. The loss falls from 2.5 to about 0.45 and then fluctuates around it; it can't go further, because of the irreducible uncertainty about the noise. The samples are on the spiral: their median distance to it is 0.0046, against 0.0032 for fresh data and 0.67 for the Gaussian noise they started as. And they cover it: a typical point of the spiral is 0.0128 from the nearest sample, against 0.0106 from the nearest of 2,000 fresh data points. There is no sign of mode collapse.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: diffusion --></div>
+    </figure>
+    <p class="muted" id="diffusion-caption">Top: the forward process applied to 1,000 data points, at steps 0, 10, 25, 50 and 100. Bottom: the learned reverse process at the same steps; it runs from pure noise at $t = 100$ (right) back to $t = 0$ (left). Each step only removes a little noise, but 100 of them carry the Gaussian back to the spiral.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show that if $\operatorname{Var}(x_0) = 1$, then $\operatorname{Var}(x_t) = 1$ for all $t$, for any schedule. What happens to $\operatorname{Var}(x_t)$ when the data have variance 4? (This is one reason to normalise data before diffusion.)</li>
+      <li>Substitute $\mathbf{x}_0 = (\mathbf{x}_t - \sqrt{1 - \bar\alpha_t}\,\boldsymbol{\epsilon})/\sqrt{\bar\alpha_t}$ into $\tilde{\boldsymbol{\mu}}_t$ and show that it equals $\frac{1}{\sqrt{\alpha_t}}\big(\mathbf{x}_t - \frac{\beta_t}{\sqrt{1 - \bar\alpha_t}}\boldsymbol{\epsilon}\big)$.</li>
+      <li>One-dimensional data $x_0\sim\mathcal{N}(0, s^2)$. Compute $\mathbb{E}[\epsilon\mid x_t]$ exactly, and the minimum value of the per-step loss $\mathbb{E}(\epsilon - \mathbb{E}[\epsilon\mid x_t])^2$. What is it when $s = 1$? When $s\to0$?</li>
+      <li>How many network evaluations does generating 1,000 images take with $T = 1000$? If one evaluation takes 50 ms on a batch of 100 images, how long is that?</li>
+      <li>In the code, set $T = 10$ (with $\beta$ from $10^{-4}$ to 0.9, so the signal still vanishes) and retrain. What do you expect to happen to the samples, and why? Try it.</li>
+      <li>Show that $\tilde\beta_t\le\beta_t$, and explain the two choices of $\sigma_t^2$: Ho et al. say $\beta_t$ is optimal when $\mathbf{x}_0\sim\mathcal{N}(\mathbf{0}, I)$, and $\tilde\beta_t$ when $\mathbf{x}_0$ is a single fixed point. Why are these the two extremes?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\operatorname{Var}(x_t) = \bar\alpha_t\operatorname{Var}(x_0) + 1 - \bar\alpha_t$, which is 1 if $\operatorname{Var}(x_0) = 1$. With variance 4 it is $1 + 3\bar\alpha_t$, falling from 4 to 1: the signal-to-noise ratio at each step is different from the one the schedule was designed for, so the schedule effectively changes.</p>
+        <p><b>2.</b> The coefficient of $\mathbf{x}_t$ becomes $\frac{\sqrt{\alpha_t}(1 - \bar\alpha_{t-1})}{1 - \bar\alpha_t} + \frac{\sqrt{\bar\alpha_{t-1}}\beta_t}{(1 - \bar\alpha_t)\sqrt{\bar\alpha_t}}$. Since $\sqrt{\bar\alpha_{t-1}}/\sqrt{\bar\alpha_t} = 1/\sqrt{\alpha_t}$, this is $\frac{\alpha_t(1 - \bar\alpha_{t-1}) + \beta_t}{\sqrt{\alpha_t}(1 - \bar\alpha_t)} = \frac{1 - \bar\alpha_t}{\sqrt{\alpha_t}(1 - \bar\alpha_t)} = \frac{1}{\sqrt{\alpha_t}}$. The coefficient of $\boldsymbol{\epsilon}$ is $-\frac{\beta_t}{\sqrt{\alpha_t}(1 - \bar\alpha_t)}\sqrt{1 - \bar\alpha_t} = -\frac{\beta_t}{\sqrt{\alpha_t}\sqrt{1 - \bar\alpha_t}}$.</p>
+        <p><b>3.</b> $x_t = \sqrt{\bar\alpha}x_0 + \sqrt{1 - \bar\alpha}\epsilon$ is jointly Gaussian with $\epsilon$; $\operatorname{Var}x_t = \bar\alpha s^2 + 1 - \bar\alpha$ and $\operatorname{Cov}(\epsilon, x_t) = \sqrt{1 - \bar\alpha}$. So $\mathbb{E}[\epsilon\mid x_t] = \frac{\sqrt{1 - \bar\alpha}}{\bar\alpha s^2 + 1 - \bar\alpha}x_t$, and the minimum loss is the conditional variance $1 - \frac{1 - \bar\alpha}{\bar\alpha s^2 + 1 - \bar\alpha} = \frac{\bar\alpha s^2}{\bar\alpha s^2 + 1 - \bar\alpha}$. For $s = 1$ it is $\bar\alpha_t$: near 1 at small $t$ (the noise is tiny and hard to see against the data), near 0 at large $t$ (the noisy point is almost all noise). For $s\to0$ it is 0: with a single data point, the noise is exactly recoverable.</p>
+        <p><b>4.</b> $T$ evaluations per batch: 10 batches of 100, each needing 1,000 evaluations, so 10,000 evaluations, 500 seconds. A GAN would need 10 evaluations, half a second.</p>
+        <p><b>5.</b> With 10 large steps, each reverse step must remove a lot of noise, and the true reverse conditional is then far from Gaussian (it can be multimodal: a noisy point between two arms of the spiral could have come from either). A Gaussian step with a predicted mean puts samples between the arms. We ran it: the median distance of samples to the spiral is 0.131 instead of 0.0046, 28 times worse, and the loss settles at about 0.6 instead of 0.45.</p>
+        <p><b>6.</b> $\tilde\beta_t/\beta_t = (1 - \bar\alpha_{t-1})/(1 - \bar\alpha_t)\le1$ since $\bar\alpha_{t-1}\ge\bar\alpha_t$. The true reverse step $q(\mathbf{x}_{t-1}\mid\mathbf{x}_t)$ has variance $\tilde\beta_t$ plus the uncertainty about $\mathbf{x}_0$ given $\mathbf{x}_t$ (pushed through the mean's coefficient). If $\mathbf{x}_0$ is a known point there is no extra uncertainty: $\tilde\beta_t$. If $\mathbf{x}_0$ is standard Gaussian the forward process is stationary and time-reversible, so the reverse step has the forward step's variance, $\beta_t$. Real data lies between the two.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Ho, Jain &amp; Abbeel, "Denoising diffusion probabilistic models"</b> (NeurIPS 2020). The derivation and the simplified loss.</li>
+      <li><b>Sohl-Dickstein et al., "Deep unsupervised learning using nonequilibrium thermodynamics"</b> (ICML 2015). The original diffusion model.</li>
+      <li><b>Lilian Weng, "What are diffusion models?"</b> (blog post, 2021). All the derivations in one place.</li>
+      <li><b>Calvin Luo, "Understanding diffusion models: a unified perspective"</b> (2022). The ELBO, score and SDE views, derived step by step.</li>
+      <li><b>Nichol &amp; Dhariwal, "Improved denoising diffusion probabilistic models"</b> (ICML 2021). The cosine schedule and learned variances.</li>
+      <li><b>Bishop &amp; Bishop, <i>Deep Learning: Foundations and Concepts</i></b> (2024), chapter 20.</li>
+    </ul>
+  </section>
+</article>

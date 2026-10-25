@@ -1,0 +1,92 @@
+<svg class="fig" viewBox="0 0 900 330" role="img" aria-label="Left: held-out bits per character of character n-gram models against n, falling from 3.99 at n = 1 to 0.26 at n = 8 and levelling off on a dashed line at the true model&#x27;s 0.264. Right: average characters per BPE token against the number of merges, rising from 1 to about 4.6 at 150 merges, where most words are single tokens" style="width:100%;height:auto;display:block;overflow:visible">
+  <line x1="52" y1="286" x2="430" y2="286" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="228.86" x2="430" y2="228.86" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="171.71" x2="430" y2="171.71" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="114.57" x2="430" y2="114.57" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="57.43" x2="430" y2="57.43" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="67.75" y1="286" x2="67.75" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="99.25" y1="286" x2="99.25" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="130.75" y1="286" x2="130.75" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="162.25" y1="286" x2="162.25" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="193.75" y1="286" x2="193.75" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="225.25" y1="286" x2="225.25" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="288.25" y1="286" x2="288.25" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="351.25" y1="286" x2="351.25" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="414.25" y1="286" x2="414.25" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="52" y1="286" x2="430" y2="286" style="stroke:var(--muted);stroke-width:1"/>
+  <line x1="52" y1="46" x2="52" y2="286" style="stroke:var(--muted);stroke-width:1"/>
+  <text x="67.75" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">1</text>
+  <text x="99.25" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">2</text>
+  <text x="130.75" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">3</text>
+  <text x="162.25" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">4</text>
+  <text x="193.75" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">5</text>
+  <text x="225.25" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">6</text>
+  <text x="288.25" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">8</text>
+  <text x="351.25" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">10</text>
+  <text x="414.25" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">12</text>
+  <text x="46" y="290" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0</text>
+  <text x="46" y="232.86" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">1</text>
+  <text x="46" y="175.71" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">2</text>
+  <text x="46" y="118.57" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">3</text>
+  <text x="46" y="61.43" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">4</text>
+  <text x="430" y="315" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="end">context length n (characters)</text>
+  <text x="56" y="42" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="start">bits per character</text>
+  <polyline points="52,270.9 430,270.9" style="fill:none;stroke:var(--muted);stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round;opacity:1.0;stroke-dasharray:5 4"/>
+  <text x="423.7" y="245.19" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">dashed: true model on the test set, 0.264</text>
+  <polyline points="67.75,57.86 99.25,149.92 130.75,236.82 162.25,260.08 193.75,264.25 225.25,265.65 256.75,270.22 288.25,270.88 319.75,270.88 351.25,270.87 382.75,270.87 414.25,270.86" style="fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <circle cx="67.75" cy="57.86" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="99.25" cy="149.92" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="130.75" cy="236.82" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="162.25" cy="260.08" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="193.75" cy="264.25" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="225.25" cy="265.65" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="256.75" cy="270.22" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="288.25" cy="270.88" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="319.75" cy="270.88" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="351.25" cy="270.87" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="382.75" cy="270.87" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="414.25" cy="270.86" r="3.4" style="fill:var(--accent);opacity:1.0"/>
+  <text x="52" y="18" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">held-out cross-entropy of n-gram models</text>
+  <line x1="502" y1="286" x2="880" y2="286" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="502" y1="238" x2="880" y2="238" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="502" y1="190" x2="880" y2="190" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="502" y1="142" x2="880" y2="142" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="502" y1="94" x2="880" y2="94" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="502" y1="46" x2="880" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="502" y1="286" x2="502" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="628" y1="286" x2="628" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="754" y1="286" x2="754" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="880" y1="286" x2="880" y2="46" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="502" y1="286" x2="880" y2="286" style="stroke:var(--muted);stroke-width:1"/>
+  <line x1="502" y1="46" x2="502" y2="286" style="stroke:var(--muted);stroke-width:1"/>
+  <text x="502" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">0</text>
+  <text x="628" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">50</text>
+  <text x="754" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">100</text>
+  <text x="880" y="301" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">150</text>
+  <text x="496" y="290" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0</text>
+  <text x="496" y="242" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">1</text>
+  <text x="496" y="194" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">2</text>
+  <text x="496" y="146" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">3</text>
+  <text x="496" y="98" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">4</text>
+  <text x="496" y="50" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">5</text>
+  <text x="880" y="315" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="end">BPE merges learned</text>
+  <text x="506" y="42" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="start">characters per token</text>
+  <polyline points="502,238 527.2,220.44 552.4,209.86 577.6,199.4 602.8,190.12 628,178.47 653.2,166.68 678.4,153.53 703.6,141.82 728.8,128.86 754,115.04 779.2,98.29 804.4,77.79 829.6,65.97 854.8,65.97 880,65.97" style="fill:none;stroke:var(--event-a);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <circle cx="502" cy="238" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="527.2" cy="220.44" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="552.4" cy="209.86" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="577.6" cy="199.4" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="602.8" cy="190.12" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="628" cy="178.47" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="653.2" cy="166.68" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="678.4" cy="153.53" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="703.6" cy="141.82" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="728.8" cy="128.86" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="754" cy="115.04" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="779.2" cy="98.29" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="804.4" cy="77.79" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="829.6" cy="65.97" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="854.8" cy="65.97" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="880" cy="65.97" r="3.0" style="fill:var(--event-a);opacity:1.0"/>
+  <text x="502" y="18" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">compression: how long the tokens are</text>
+</svg>

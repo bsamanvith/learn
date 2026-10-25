@@ -1,0 +1,205 @@
+<header class="lesson-head">
+  <div class="eyebrow">Math toolkit M3 · read when a lesson sends you</div>
+  <h1>Probability for ML: expectation, Gaussians, MLE and MAP</h1>
+  <p class="lede">Machine learning treats data as samples from an unknown distribution and models as distributions we fit to them. This page collects the probability the curriculum leans on: expectation and variance and their rules, conditioning and Bayes' rule, the Gaussian in one and many dimensions, maximum likelihood and its Bayesian cousin MAP, and the two limit theorems that make averages trustworthy.</p>
+  <div class="meta"><span><b>Used by:</b> <a href="/machine-learning/01-linear-regression/">01</a>, <a href="/machine-learning/04-generalisation/">04</a>, <a href="/machine-learning/05-regularisation/">05</a>, <a href="/machine-learning/07-stochastic-optimisation/">07</a>, <a href="/machine-learning/08-evaluating-classifiers/">08</a>, 22, 24</span><span><b>Assumes:</b> sums and integrals; <a href="/probability/">the probability subject</a> covers the foundations slowly</span></div>
+</header>
+
+<article class="lesson">
+  <section id="variables">
+    <h2>Random variables and distributions</h2>
+    <p>A random variable $X$ is a quantity whose value is uncertain. A discrete one has a <b>probability mass function</b> $p(x) = P(X = x)$ with $\sum_x p(x) = 1$. A continuous one has a <b>density</b> $p(x)$ with $\int p(x)\,dx = 1$ and $P(a \le X \le b) = \int_a^b p(x)\,dx$; a density can exceed 1, it just can't integrate to more than 1. We write $p$ for both and sums for both, and swap in integrals where needed.</p>
+    <p>For two variables, the <b>joint</b> distribution $p(x, y)$ gives everything. From it:</p>
+    <div class="eq">$$\underbrace{p(x) = \sum_y p(x, y)}_{\text{marginal}},\qquad \underbrace{p(y\mid x) = \frac{p(x, y)}{p(x)}}_{\text{conditional}},\qquad \underbrace{p(x, y) = p(x)\,p(y\mid x)}_{\text{product rule}} .$$</div>
+    <p>$X$ and $Y$ are <b>independent</b> when $p(x, y) = p(x)p(y)$, equivalently $p(y\mid x) = p(y)$: knowing $x$ tells you nothing about $y$. Applying the product rule both ways round and dividing gives</p>
+    <div class="result">
+      <div class="label">Bayes' rule</div>
+      <div class="eq">$$p(y\mid x) = \frac{p(x\mid y)\,p(y)}{p(x)} = \frac{p(x\mid y)\,p(y)}{\sum_{y'}p(x\mid y')\,p(y')} .$$</div>
+    </div>
+    <p>In ML the most important instance is parameters $\boldsymbol\theta$ and data $\mathcal{D}$: posterior $\propto$ likelihood $\times$ prior, $p(\boldsymbol\theta\mid\mathcal{D})\propto p(\mathcal{D}\mid\boldsymbol\theta)\,p(\boldsymbol\theta)$. Lesson 08 used it with classes and test results.</p>
+  </section>
+
+  <section id="expectation">
+    <h2>Expectation and variance</h2>
+    <p>The <b>expectation</b> of a function $f(X)$ is its probability-weighted average, $\mathbb{E}[f(X)] = \sum_x f(x)\,p(x)$. It is <b>linear</b>, whether or not variables are independent:</p>
+    <div class="eq">$$\mathbb{E}[aX + bY + c] = \sum_{x,y}(ax + by + c)\,p(x,y) = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y] + c,$$</div>
+    <p>because summing $p(x, y)$ over $y$ leaves $p(x)$. Linearity is the workhorse behind every "unbiased estimator" argument, such as the minibatch gradient in lesson 07. For independent variables, also $\mathbb{E}[XY] = \mathbb{E}[X]\,\mathbb{E}[Y]$ (the sum factorises).</p>
+    <p>The <b>variance</b> measures spread around the mean $\mu = \mathbb{E}[X]$:</p>
+    <div class="eq">$$\operatorname{Var}(X) = \mathbb{E}\big[(X - \mu)^2\big] = \mathbb{E}[X^2] - 2\mu\,\mathbb{E}[X] + \mu^2 = \mathbb{E}[X^2] - \mu^2 .$$</div>
+    <p>The <b>covariance</b> $\operatorname{Cov}(X, Y) = \mathbb{E}[(X - \mu_X)(Y - \mu_Y)]$ measures how two variables move together. Independent variables have zero covariance (the converse is false). Expanding the square,</p>
+    <div class="eq">$$\operatorname{Var}\Big(\sum_i a_iX_i\Big) = \sum_{i,j}a_ia_j\operatorname{Cov}(X_i, X_j) .$$</div>
+    <p>For a random vector, collect these in the <b>covariance matrix</b> $\Sigma = \mathbb{E}[(\mathbf{X} - \boldsymbol\mu)(\mathbf{X} - \boldsymbol\mu)^\top]$, and the identity becomes $\operatorname{Var}(\mathbf{a}^\top\mathbf{X}) = \mathbf{a}^\top\Sigma\mathbf{a}$. Since a variance can't be negative, every covariance matrix is positive semidefinite (<a href="/machine-learning/M1-linear-algebra/">M1</a>).</p>
+    <div class="result">
+      <div class="label">The variance of a mean</div>
+      <div class="eq">$$X_1,\dots,X_n \text{ independent, each with variance } \sigma^2 \;\Longrightarrow\; \operatorname{Var}\Big(\frac1n\sum_{i=1}^nX_i\Big) = \frac{1}{n^2}\cdot n\sigma^2 = \frac{\sigma^2}{n}.$$</div>
+    </div>
+    <p>Averages are $\sqrt n$ times less noisy than single draws. That one line explains minibatches (lesson 07), the variance term of averaged models (lesson 10), and Monte Carlo estimates (M6).</p>
+  </section>
+
+  <section id="conditioning">
+    <h2>Conditional expectation and the two "towers"</h2>
+    <p>$\mathbb{E}[Y\mid X = x] = \sum_y y\,p(y\mid x)$ is the average of $Y$ among cases with $X = x$. As a function of $X$ it is itself a random variable, $\mathbb{E}[Y\mid X]$. It is the best predictor of $Y$ from $X$ in squared error (exercise 4), which is why regression aims at it. Averaging it over $X$ gives back the overall mean, and the variance splits in two:</p>
+    <div class="result">
+      <div class="label">Laws of total expectation and total variance</div>
+      <div class="eq">$$\mathbb{E}[Y] = \mathbb{E}\big[\mathbb{E}[Y\mid X]\big], \qquad \operatorname{Var}(Y) = \mathbb{E}\big[\operatorname{Var}(Y\mid X)\big] + \operatorname{Var}\big(\mathbb{E}[Y\mid X]\big).$$</div>
+    </div>
+    <p>The first is the product rule: $\sum_x p(x)\sum_y y\,p(y\mid x) = \sum_{x,y}y\,p(x,y)$. For the second, write $m(X) = \mathbb{E}[Y\mid X]$ and split $Y - \mathbb{E}Y = (Y - m(X)) + (m(X) - \mathbb{E}Y)$. Squaring and taking expectations, the cross term is $2\,\mathbb{E}\big[(m(X) - \mathbb{E}Y)\,\mathbb{E}[Y - m(X)\mid X]\big] = 0$, since the inner expectation is zero. What remains is the "within-group" plus the "between-group" variance. Lesson 04's bias–variance decomposition is the same calculation.</p>
+  </section>
+
+  <section id="gaussian">
+    <h2>The Gaussian</h2>
+    <p>The <b>normal</b> or <b>Gaussian</b> distribution with mean $\mu$ and variance $\sigma^2$ has density</p>
+    <div class="eq">$$\mathcal{N}(x\mid\mu,\sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\Big(-\frac{(x - \mu)^2}{2\sigma^2}\Big).$$</div>
+    <p>In $d$ dimensions, with mean vector $\boldsymbol\mu$ and positive definite covariance $\Sigma$:</p>
+    <div class="eq">$$\mathcal{N}(\mathbf{x}\mid\boldsymbol\mu,\Sigma) = \frac{1}{(2\pi)^{d/2}\det(\Sigma)^{1/2}}\exp\Big(-\tfrac12(\mathbf{x} - \boldsymbol\mu)^\top\Sigma^{-1}(\mathbf{x} - \boldsymbol\mu)\Big).$$</div>
+    <p>Its log-density is a quadratic in $\mathbf{x}$, which is why squared errors and Gaussians keep appearing together (lessons 01 and 05). Its contours are ellipses whose axes are the eigenvectors of $\Sigma$. Three facts are used constantly:</p>
+    <ol>
+      <li><b>Linear maps keep it Gaussian.</b> If $\mathbf{x}\sim\mathcal{N}(\boldsymbol\mu,\Sigma)$ then $A\mathbf{x} + \mathbf{b}\sim\mathcal{N}(A\boldsymbol\mu + \mathbf{b}, A\Sigma A^\top)$. The mean and covariance follow from linearity; that the result is Gaussian follows from a change of variables. In particular, to sample from $\mathcal{N}(\boldsymbol\mu,\Sigma)$, draw $\mathbf{z}\sim\mathcal{N}(\mathbf{0}, I)$ and return $\boldsymbol\mu + L\mathbf{z}$ with $LL^\top = \Sigma$ (a Cholesky factor). This is the <b>reparameterisation trick</b> of VAEs (lesson 22) and the noising step of diffusion models (lesson 24).</li>
+      <li><b>Sums of independent Gaussians are Gaussian</b>, with means and variances adding.</li>
+      <li><b>Marginals and conditionals are Gaussian.</b> Split $\mathbf{x} = (\mathbf{x}_1, \mathbf{x}_2)$ with blocks $\boldsymbol\mu_i$ and $\Sigma_{ij}$. The marginal of $\mathbf{x}_1$ is $\mathcal{N}(\boldsymbol\mu_1,\Sigma_{11})$, and</li>
+    </ol>
+    <div class="result">
+      <div class="label">Conditioning a Gaussian</div>
+      <div class="eq">$$\mathbf{x}_2\mid\mathbf{x}_1 \sim \mathcal{N}\Big(\boldsymbol\mu_2 + \Sigma_{21}\Sigma_{11}^{-1}(\mathbf{x}_1 - \boldsymbol\mu_1),\;\; \Sigma_{22} - \Sigma_{21}\Sigma_{11}^{-1}\Sigma_{12}\Big).$$</div>
+    </div>
+    <p><b>Proof.</b> Let $\mathbf{r} = \mathbf{x}_2 - \Sigma_{21}\Sigma_{11}^{-1}\mathbf{x}_1$, a linear function of $\mathbf{x}$, so $(\mathbf{x}_1, \mathbf{r})$ is jointly Gaussian. Its cross-covariance is $\operatorname{Cov}(\mathbf{r},\mathbf{x}_1) = \Sigma_{21} - \Sigma_{21}\Sigma_{11}^{-1}\Sigma_{11} = 0$. For jointly Gaussian variables, zero covariance means independence (the joint density factorises when the off-diagonal block is zero). So $\mathbf{r}$ is independent of $\mathbf{x}_1$, with mean $\boldsymbol\mu_2 - \Sigma_{21}\Sigma_{11}^{-1}\boldsymbol\mu_1$ and covariance $\Sigma_{22} - \Sigma_{21}\Sigma_{11}^{-1}\Sigma_{12}$ (expand $\operatorname{Var}(\mathbf{r})$). Given $\mathbf{x}_1$, $\mathbf{x}_2 = \mathbf{r} + \Sigma_{21}\Sigma_{11}^{-1}\mathbf{x}_1$ is $\mathbf{r}$ shifted by a known constant. $\square$</p>
+    <p>The conditional mean is linear in $\mathbf{x}_1$ (it is the population linear regression), and the conditional variance doesn't depend on $\mathbf{x}_1$ at all and is never larger than $\Sigma_{22}$: observing something can only reduce uncertainty. Gaussian processes and the Kalman filter are this formula applied repeatedly.</p>
+  </section>
+
+  <section id="mle">
+    <h2>Maximum likelihood</h2>
+    <p>A <b>model</b> is a family of distributions $p(x\mid\boldsymbol\theta)$. Given independent data $x_1,\dots,x_n$, the <b>likelihood</b> is $\prod_ip(x_i\mid\boldsymbol\theta)$, viewed as a function of $\boldsymbol\theta$. The <b>maximum likelihood estimate</b> (MLE) picks the parameters that make the observed data most probable. Products of many small numbers underflow, and logs turn products into sums, so we maximise the log-likelihood or, equivalently, minimise</p>
+    <div class="eq">$$\text{NLL}(\boldsymbol\theta) = -\sum_{i=1}^n\log p(x_i\mid\boldsymbol\theta).$$</div>
+    <p>Almost every loss in this curriculum is an NLL: squared error is a Gaussian NLL (lesson 01), log-loss is a Bernoulli NLL (lesson 03), cross-entropy is a categorical NLL (lesson 06), and an LLM's training loss is the NLL of the next token (lesson 26).</p>
+    <p><b>Example: the Gaussian.</b> With $p(x\mid\mu,\sigma^2) = \mathcal{N}(x\mid\mu,\sigma^2)$,</p>
+    <div class="eq">$$\text{NLL} = \frac{n}{2}\log(2\pi\sigma^2) + \frac{1}{2\sigma^2}\sum_i(x_i - \mu)^2 .$$</div>
+    <p>$\partial/\partial\mu = 0$ gives $\hat\mu = \bar x$, the sample mean. $\partial/\partial\sigma^2 = \frac{n}{2\sigma^2} - \frac{1}{2\sigma^4}\sum_i(x_i - \mu)^2 = 0$ gives $\hat\sigma^2 = \frac1n\sum_i(x_i - \bar x)^2$. That estimate is <b>biased</b>: since $\bar x$ is fitted to the same data, the residuals are a little too small, and $\mathbb{E}[\hat\sigma^2] = \frac{n-1}{n}\sigma^2$ (exercise 5). It's the $p = 1$ case of lesson 04's "training error is optimistic" result, $\sigma^2(1 - p/n)$. Under mild conditions the MLE is <b>consistent</b> (it converges to the true parameter as $n\to\infty$) and asymptotically has the smallest possible variance, which is why it is the default.</p>
+  </section>
+
+  <section id="map">
+    <h2>Priors, posteriors and MAP</h2>
+    <p>With little data the MLE can be absurd. Flip a coin three times, get three heads, and the MLE of the heads probability is $\hat\theta = 3/3 = 1$: it declares tails impossible. The Bayesian fix is to put a <b>prior</b> on $\theta$ and compute the posterior. For a coin, the convenient prior is the <b>Beta distribution</b>, $p(\theta) \propto \theta^{a-1}(1-\theta)^{b-1}$. After $h$ heads in $n$ flips the likelihood is $\theta^h(1-\theta)^{n-h}$, and</p>
+    <div class="eq">$$p(\theta\mid\mathcal{D}) \propto \theta^{h}(1-\theta)^{n-h}\cdot\theta^{a-1}(1-\theta)^{b-1} = \theta^{h + a - 1}(1-\theta)^{n - h + b - 1}.$$</div>
+    <p>The posterior is again a Beta, $\operatorname{Beta}(a + h,\ b + n - h)$. A prior whose posterior stays in the same family is called <b>conjugate</b>, and here the prior acts like $a$ imaginary heads and $b$ imaginary tails added to the data. Two ways to turn the posterior into one number:</p>
+    <ul>
+      <li>the <b>MAP</b> estimate, the posterior's peak: $\hat\theta_{\text{MAP}} = \dfrac{h + a - 1}{n + a + b - 2}$;</li>
+      <li>the <b>posterior mean</b>: $\mathbb{E}[\theta\mid\mathcal{D}] = \dfrac{h + a}{n + a + b}$, which is also the probability that the next flip is heads.</li>
+    </ul>
+    <p>With a $\operatorname{Beta}(2, 2)$ prior and three heads out of three, MAP gives 0.8 and the posterior mean 0.714: confident, but not certain. As $n$ grows, the data overwhelm the prior and all three estimates converge.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: m3-prob --></div>
+    </figure>
+    <p class="muted">Left: starting from a Beta(2, 2) prior, the posterior for a coin with true $\theta = 0.3$ after 3, 10 and 100 flips. It narrows roughly like $1/\sqrt n$ around the truth. Right: the central limit theorem at work on the very skewed exponential distribution. The average of 30 draws is already close to Gaussian.</p>
+    <p>In general, $\hat{\boldsymbol\theta}_{\text{MAP}} = \arg\min_{\boldsymbol\theta}\big[\text{NLL}(\boldsymbol\theta) - \log p(\boldsymbol\theta)\big]$: MLE plus a penalty. A Gaussian prior gives ridge, a Laplace prior gives the lasso (lesson 05). A fully Bayesian treatment keeps the whole posterior and averages predictions over it, which is more expensive but also tells you how uncertain the model is.</p>
+  </section>
+
+  <section id="limits">
+    <h2>Why averages work: LLN and CLT</h2>
+    <p>Let $X_1, X_2,\dots$ be independent with mean $\mu$ and variance $\sigma^2$, and $\bar X_n = \frac1n\sum_{i\le n}X_i$.</p>
+    <p><b>Law of large numbers.</b> $\bar X_n\to\mu$. The weak form has a two-line proof. <b>Chebyshev's inequality</b> says $P(|Z - \mathbb{E}Z|\ge\epsilon)\le\operatorname{Var}(Z)/\epsilon^2$ for any $Z$ (because $\operatorname{Var}(Z)\ge\epsilon^2\,P(|Z - \mathbb{E}Z|\ge\epsilon)$). Applied to $\bar X_n$, whose variance is $\sigma^2/n$:</p>
+    <div class="eq">$$P\big(|\bar X_n - \mu|\ge\epsilon\big)\le\frac{\sigma^2}{n\epsilon^2}\;\longrightarrow\;0 .$$</div>
+    <p><b>Central limit theorem.</b> Fluctuations around $\mu$ are Gaussian, whatever the distribution of each $X_i$:</p>
+    <div class="result">
+      <div class="label">Central limit theorem</div>
+      <div class="eq">$$\sqrt n\,\big(\bar X_n - \mu\big)\;\xrightarrow{\ d\ }\;\mathcal{N}(0,\sigma^2).$$</div>
+    </div>
+    <p>So $\bar X_n$ is approximately $\mathcal{N}(\mu, \sigma^2/n)$, which justifies the standard errors and confidence intervals of lesson 08 and the Gaussian model of minibatch noise in lesson 07. The skewness of the mean falls like $1/\sqrt n$, which is why the code finds 2.0, 0.90 and 0.37 for $n = 1, 5, 30$.</p>
+    <figure class="plate wide" data-scene="clt">
+      <div class="stage">
+        <canvas aria-label="Histogram of standardised sums of n random draws against the standard normal density"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="cl-n">draws per sum n <input id="cl-n" type="range" data-k="n" min="1" max="60" step="1"><output data-out="n"></output></label>
+            <div class="seg" data-opt="dist" role="group"><button type="button" data-v="uniform">uniform</button><button type="button" data-v="exponential">exponential</button><button type="button" data-v="coin">coin, p = 0.2</button></div>
+            <button type="button" data-act="resample">Resample</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Each bar chart is 6,000 sums of $n$ independent draws, shifted and scaled to mean 0 and variance 1. Start the exponential at $n = 1$: a lopsided ramp. By $n = 10$ the bell is visible, and by 60 the histogram sits on the normal curve. The uniform converges fastest because it is symmetric; the leftover skewness falls only as $1/\sqrt n$, which is why sums of very skewed variables need a large $n$.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. The MLE of a Gaussian's variance is biased by a factor (n-1)/n
+n, sigma2 = 5, 4.0
+samples = rng.normal(0.0, np.sqrt(sigma2), size=(200_000, n))
+mle_var = samples.var(axis=1)                      # divides by n
+print(f"E[MLE variance] ~ {mle_var.mean():.3f}   theory (n-1)/n * sigma^2 = {(n - 1) / n * sigma2:.3f}")
+print(f"E[unbiased var] ~ {samples.var(axis=1, ddof=1).mean():.3f}   theory sigma^2 = {sigma2:.3f}")
+
+# 2. Coin flips: MLE vs MAP vs posterior mean with a Beta(2, 2) prior
+heads, flips, a, b = 3, 3, 2, 2
+print(f"3 heads in 3 flips: MLE {heads / flips:.3f}   MAP {(heads + a - 1) / (flips + a + b - 2):.3f}"
+      f"   posterior mean {(heads + a) / (flips + a + b):.3f}")
+
+# 3. Central limit theorem: means of n exponential(1) draws (skewness 2) become Gaussian
+for n in [1, 5, 30]:
+    m = rng.exponential(1.0, size=(200_000, n)).mean(axis=1)
+    z = (m - m.mean()) / m.std()
+    print(f"n={n:2d}: std of mean {m.std():.4f} (theory {1 / np.sqrt(n):.4f})   skewness {np.mean(z**3):.3f} (theory {2 / np.sqrt(n):.3f})")
+
+# 4. Conditioning a bivariate Gaussian: x2 | x1 is Gaussian with a linear mean
+mu = np.array([1.0, -1.0]); S = np.array([[2.0, 1.2], [1.2, 1.0]])
+X = rng.multivariate_normal(mu, S, size=2_000_000)
+near = np.abs(X[:, 0] - 2.0) &lt; 0.01                # condition on x1 close to 2
+cond_mean = mu[1] + S[1, 0] / S[0, 0] * (2.0 - mu[0])
+cond_var = S[1, 1] - S[1, 0] ** 2 / S[0, 0]
+print(f"x2 | x1=2: sampled mean {X[near, 1].mean():.3f} var {X[near, 1].var():.3f}"
+      f"   formula mean {cond_mean:.3f} var {cond_var:.3f}")
+
+# 5. Law of total variance: Var(Y) = E[Var(Y|Z)] + Var(E[Y|Z]) for a mixture
+Z = rng.integers(0, 2, 1_000_000)                  # which component
+Y = np.where(Z == 0, rng.normal(0, 1, Z.size), rng.normal(4, 2, Z.size))
+print(f"Var(Y) sampled {Y.var():.3f}   E[Var(Y|Z)] + Var(E[Y|Z]) = {0.5 * 1 + 0.5 * 4 + 4.0:.3f}")
+
+# E[MLE variance] ~ 3.207   theory (n-1)/n * sigma^2 = 3.200
+# E[unbiased var] ~ 4.009   theory sigma^2 = 4.000
+# 3 heads in 3 flips: MLE 1.000   MAP 0.800   posterior mean 0.714
+# n= 1: std of mean 1.0014 (theory 1.0000)   skewness 2.001 (theory 2.000)
+# n= 5: std of mean 0.4464 (theory 0.4472)   skewness 0.900 (theory 0.894)
+# n=30: std of mean 0.1829 (theory 0.1826)   skewness 0.366 (theory 0.365)
+# x2 | x1=2: sampled mean -0.397 var 0.285   formula mean -0.400 var 0.280
+# Var(Y) sampled 6.501   E[Var(Y|Z)] + Var(E[Y|Z]) = 6.500</code></pre>
+    <p class="muted">Every printed estimate lands on its formula within simulation error: the $(n-1)/n$ bias of the variance MLE, the shrinkage of MAP toward the prior, the $1/\sqrt n$ shrinking of both the spread and the skewness of a mean, the Gaussian conditioning formula, and the law of total variance for a two-component mixture.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Find $X, Y$ with $\operatorname{Cov}(X, Y) = 0$ that are not independent.</li>
+      <li>A disease has prevalence 1 in 1,000. A test has sensitivity 0.99 and false positive rate 0.01. Given a positive test, what is the probability of disease? Given two independent positive tests?</li>
+      <li>For a Gaussian $\mathbf{x}\sim\mathcal{N}(\boldsymbol\mu,\Sigma)$, show that $\mathbb{E}\big[(\mathbf{x}-\boldsymbol\mu)^\top A(\mathbf{x}-\boldsymbol\mu)\big] = \operatorname{tr}(A\Sigma)$. (Lesson 04 used the case $\Sigma = \sigma^2I$.)</li>
+      <li>Show that $c = \mathbb{E}[Y]$ minimises $\mathbb{E}[(Y - c)^2]$, and deduce that $m(x) = \mathbb{E}[Y\mid X = x]$ minimises $\mathbb{E}[(Y - m(X))^2]$ over all functions $m$.</li>
+      <li>Prove $\mathbb{E}\big[\sum_i(X_i - \bar X)^2\big] = (n-1)\sigma^2$ for independent $X_i$ with variance $\sigma^2$.</li>
+      <li>Derive the MLE of a Bernoulli parameter $\theta$ from $h$ heads in $n$ flips, and show the MAP estimate with a $\operatorname{Beta}(a,b)$ prior is $(h+a-1)/(n+a+b-2)$.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $X$ uniform on $\{-1, 0, 1\}$ and $Y = X^2$. $\mathbb{E}[XY] = \mathbb{E}[X^3] = 0 = \mathbb{E}[X]\,\mathbb{E}[Y]$, so the covariance is 0, but $Y$ is a function of $X$.</p>
+        <p><b>2.</b> $0.99\times0.001/(0.99\times0.001 + 0.01\times0.999) \approx 0.090$. After a second positive, use 0.090 as the new prior: $0.99\times0.090/(0.99\times0.090 + 0.01\times0.910)\approx0.907$.</p>
+        <p><b>3.</b> The quadratic form is a scalar, so it equals its trace: $\mathbb{E}\operatorname{tr}\big(A(\mathbf{x}-\boldsymbol\mu)(\mathbf{x}-\boldsymbol\mu)^\top\big) = \operatorname{tr}(A\,\mathbb{E}[(\mathbf{x}-\boldsymbol\mu)(\mathbf{x}-\boldsymbol\mu)^\top]) = \operatorname{tr}(A\Sigma)$. Nothing Gaussian was used: it holds for any distribution with covariance $\Sigma$.</p>
+        <p><b>4.</b> $\mathbb{E}[(Y - c)^2] = \operatorname{Var}(Y) + (\mathbb{E}Y - c)^2$, minimised at $c = \mathbb{E}Y$. Apply this conditionally on each value $X = x$, then average over $X$.</p>
+        <p><b>5.</b> $\sum_i(X_i - \bar X)^2 = \sum_iX_i^2 - n\bar X^2$. Take expectations with $\mathbb{E}[X_i^2] = \sigma^2 + \mu^2$ and $\mathbb{E}[\bar X^2] = \sigma^2/n + \mu^2$: $n(\sigma^2 + \mu^2) - n(\sigma^2/n + \mu^2) = (n-1)\sigma^2$.</p>
+        <p><b>6.</b> $\text{NLL} = -h\log\theta - (n-h)\log(1-\theta)$; setting $-h/\theta + (n-h)/(1-\theta) = 0$ gives $\hat\theta = h/n$. With the prior, the exponents become $h + a - 1$ and $n - h + b - 1$; the same calculation gives $(h + a - 1)/(n + a + b - 2)$.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Blitzstein &amp; Hwang, <i>Introduction to Probability</i></b> (2nd ed., free online) and the Harvard Stat 110 lectures. The clearest first course.</li>
+      <li><b>Bishop, <i>Pattern Recognition and Machine Learning</i></b>, chapters 1.2 and 2. Probability, Gaussians (including the conditioning formulas), Beta–Bernoulli.</li>
+      <li><b>Murphy, <i>Probabilistic Machine Learning: An Introduction</i></b>, chapters 2–4. Distributions, MLE, MAP and Bayesian inference.</li>
+      <li><b>Deisenroth, Faisal, Ong, <i>Mathematics for Machine Learning</i></b>, chapter 6.</li>
+      <li><b>Wasserman, <i>All of Statistics</i></b>. Estimation, limit theorems and confidence intervals, compactly.</li>
+    </ul>
+  </section>
+</article>

@@ -1,0 +1,90 @@
+<svg class="fig" viewBox="0 0 900 300" role="img" aria-label="Left: training error falls with degree while test error falls then rises. Right: bias squared falls, variance rises, and their sum plus noise is U-shaped with its minimum at degree 3" style="width:100%;height:auto;display:block;overflow:visible">
+  <line x1="40" y1="266" x2="426" y2="266" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="40" y1="231.71" x2="426" y2="231.71" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="40" y1="163.14" x2="426" y2="163.14" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="40" y1="94.57" x2="426" y2="94.57" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="40" y1="26" x2="426" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="40" y1="266" x2="40" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="136.5" y1="266" x2="136.5" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="233" y1="266" x2="233" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="329.5" y1="266" x2="329.5" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="426" y1="266" x2="426" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="40" y1="266" x2="426" y2="266" style="stroke:var(--muted);stroke-width:1"/>
+  <line x1="40" y1="26" x2="40" y2="266" style="stroke:var(--muted);stroke-width:1"/>
+  <text x="40" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">0</text>
+  <text x="136.5" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">3</text>
+  <text x="233" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">6</text>
+  <text x="329.5" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">9</text>
+  <text x="426" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">12</text>
+  <text x="34" y="270" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0</text>
+  <text x="34" y="235.71" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.1</text>
+  <text x="34" y="167.14" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.3</text>
+  <text x="34" y="98.57" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.5</text>
+  <text x="34" y="30" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.7</text>
+  <text x="426" y="295" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="end">polynomial degree</text>
+  <text x="44" y="22" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="start">mean squared error</text>
+  <polyline points="40,55.21 72.17,171.83 104.33,169.88 136.5,226.48 168.67,224.66 200.83,223.65 233,221.48 265.17,219.38 297.33,215.91 329.5,210.88 361.67,199.37 393.83,157.84 426,26" style="fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <polyline points="40,64.97 72.17,173.99 104.33,176.74 136.5,242.15 168.67,244.16 200.83,247.46 233,249.59 265.17,251.5 297.33,253.43 329.5,255.66 361.67,257.74 393.83,259.85 426,261.81" style="fill:none;stroke:var(--event-a);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <circle cx="40" cy="55.21" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="72.17" cy="171.83" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="104.33" cy="169.88" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="136.5" cy="226.48" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="168.67" cy="224.66" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="200.83" cy="223.65" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="233" cy="221.48" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="265.17" cy="219.38" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="297.33" cy="215.91" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="329.5" cy="210.88" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="361.67" cy="199.37" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="393.83" cy="157.84" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="426" cy="26" r="3" style="fill:var(--accent);opacity:1.0"/>
+  <circle cx="40" cy="64.97" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="72.17" cy="173.99" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="104.33" cy="176.74" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="136.5" cy="242.15" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="168.67" cy="244.16" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="200.83" cy="247.46" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="233" cy="249.59" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="265.17" cy="251.5" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="297.33" cy="253.43" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="329.5" cy="255.66" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="361.67" cy="257.74" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="393.83" cy="259.85" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <circle cx="426" cy="261.81" r="3" style="fill:var(--event-a);opacity:1.0"/>
+  <line x1="40" y1="235.14" x2="426" y2="235.14" style="stroke:var(--muted);stroke-width:1.2;opacity:1.0;stroke-dasharray:4 4"/>
+  <text x="46.43" y="242" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="start">noise σ² = 0.09</text>
+  <text x="348.8" y="180.29" style="fill:var(--accent);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">test</text>
+  <text x="233" y="261.89" style="fill:var(--event-a);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">train</text>
+  <line x1="500" y1="266" x2="886" y2="266" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="500" y1="231.71" x2="886" y2="231.71" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="500" y1="163.14" x2="886" y2="163.14" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="500" y1="94.57" x2="886" y2="94.57" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="500" y1="26" x2="886" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="500" y1="266" x2="500" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="596.5" y1="266" x2="596.5" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="693" y1="266" x2="693" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="789.5" y1="266" x2="789.5" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="886" y1="266" x2="886" y2="26" style="stroke:var(--rule);stroke-width:1;opacity:1.0"/>
+  <line x1="500" y1="266" x2="886" y2="266" style="stroke:var(--muted);stroke-width:1"/>
+  <line x1="500" y1="26" x2="500" y2="266" style="stroke:var(--muted);stroke-width:1"/>
+  <text x="500" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">0</text>
+  <text x="596.5" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">3</text>
+  <text x="693" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">6</text>
+  <text x="789.5" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">9</text>
+  <text x="886" y="281" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">12</text>
+  <text x="494" y="270" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0</text>
+  <text x="494" y="235.71" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.1</text>
+  <text x="494" y="167.14" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.3</text>
+  <text x="494" y="98.57" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.5</text>
+  <text x="494" y="30" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="end">0.7</text>
+  <text x="886" y="295" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="end">polynomial degree</text>
+  <text x="504" y="22" style="fill:var(--muted);font-family:var(--f-mono);font-size:11.5px;font-weight:400" text-anchor="start">expected test error, decomposed</text>
+  <polygon points="500,235.14 532.17,235.14 564.33,235.14 596.5,235.14 628.67,235.14 660.83,235.14 693,235.14 725.17,235.14 757.33,235.14 789.5,235.14 821.67,235.14 853.83,235.14 886,235.14 886,266 853.83,266 821.67,266 789.5,266 757.33,266 725.17,266 693,266 660.83,266 628.67,266 596.5,266 564.33,266 532.17,266 500,266" style="fill:var(--muted);opacity:0.12;stroke:none"/>
+  <polyline points="500,88.08 532.17,206.58 564.33,206.6 596.5,264.83 628.67,264.83 660.83,265.99 693,265.99 725.17,266 757.33,266 789.5,266 821.67,265.99 853.83,265.95 886,265.91" style="fill:none;stroke:var(--event-a);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <polyline points="500,263.99 532.17,262.1 564.33,260.14 596.5,258.5 628.67,256.68 660.83,254.51 693,252.35 725.17,250.24 757.33,246.77 789.5,241.74 821.67,230.24 853.83,188.75 886,26" style="fill:none;stroke:var(--event-c);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <polyline points="500,55.21 532.17,171.83 564.33,169.88 596.5,226.48 628.67,224.66 660.83,223.65 693,221.48 725.17,219.38 757.33,215.91 789.5,210.88 821.67,199.37 853.83,157.84 886,26" style="fill:none;stroke:var(--accent);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round;opacity:1.0"/>
+  <text x="512.87" y="94.57" style="fill:var(--event-a);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">bias²</text>
+  <text x="873.13" y="183.71" style="fill:var(--event-c);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="end">variance</text>
+  <text x="615.8" y="207.71" style="fill:var(--accent);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">bias² + variance + σ²</text>
+  <text x="693" y="252.29" style="fill:var(--muted);font-family:var(--f-mono);font-size:11px;font-weight:400" text-anchor="middle">irreducible noise σ²</text>
+</svg>

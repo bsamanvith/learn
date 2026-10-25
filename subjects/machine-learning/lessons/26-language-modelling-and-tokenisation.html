@@ -1,0 +1,311 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 26 · Stage 7: large language models</div>
+  <h1>Language modelling and tokenisation</h1>
+  <p class="lede">A large language model is, before anything else, a probability distribution over text, factored by the chain rule into one next-token prediction after another. This lesson sets up that object properly. It covers the loss every LLM is trained on, why cross-entropy, perplexity and bits per character are the same quantity in different units, and why the number can never fall below the entropy of the language. It then builds the oldest language models, n-grams, and finds where they stop working. Last comes the step that decides what a "token" is: byte-pair encoding, its byte-level and unigram cousins, and the odd behaviours of LLMs that come from it. All of it runs on a toy language whose true entropy we can compute, so every number can be checked against the truth.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/M4-information-theory/">M4</a>, <a href="/machine-learning/06-softmax-regression/">lesson 06</a>, <a href="/machine-learning/20-transformer/">lesson 20</a></span><span><b>Math pulled in:</b> the chain rule of probability, cross-entropy and KL divergence, perplexity, the source coding theorem, maximum likelihood for categorical distributions, smoothing</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Write a piece of text as a sequence of tokens $x_1, x_2, \dots, x_n$, each from a fixed vocabulary $\mathcal{V}$ of size $V$. For now a token can be a character; later in the lesson it will be a piece of a word. A <b>language model</b> is a probability distribution $p(x_1, \dots, x_n)$ over such sequences. That sounds unmanageable, since there are $V^n$ sequences of length $n$, but the chain rule of probability turns it into something a network can output:</p>
+    <div class="result">
+      <div class="label">The autoregressive factorisation</div>
+      <p>$$p(x_1, \dots, x_n) = \prod_{i=1}^{n} p(x_i\mid x_1, \dots, x_{i-1}) = \prod_{i=1}^n p(x_i\mid x_{&lt;i}).$$</p>
+    </div>
+    <p>This is an identity, not an assumption: every joint distribution can be written this way. So a model that outputs, for any prefix, a distribution over the next token (a softmax over $\mathcal{V}$, lesson 06) defines a complete distribution over text. The prefix can be fed to any architecture: a lookup table of counts (this lesson), a recurrent network (lesson 17), or a causal transformer (lesson 20), which computes all $n$ conditionals in parallel because its mask stops position $i$ from seeing positions after it. To end a sequence, the vocabulary includes an end-of-text token; to generate, sample $x_1$, then $x_2$ given $x_1$, and so on (<a href="#sampling">below</a>).</p>
+    <p>GPT-3, Llama and Claude are all models of this form. Everything that makes them useful (fine-tuning, alignment, prompting, reasoning, lessons 28 to 30) changes which distribution is learned or how it is sampled, but the object is the same.</p>
+  </section>
+
+  <section id="loss">
+    <h2>The loss: cross-entropy, perplexity and bits</h2>
+    <p>Fit the model $q_\theta$ by maximum likelihood on a corpus. By the factorisation, the log-likelihood of a text is a sum of next-token log-probabilities, and the loss per token is</p>
+    <div class="eq">$$\mathcal{L}(\theta) = -\frac{1}{n}\sum_{i=1}^n \log q_\theta(x_i\mid x_{&lt;i}).$$</div>
+    <p>This is the softmax cross-entropy loss of lesson 06, with the next token as the class label, averaged over every position of every document. It is the only loss used to pretrain an LLM.</p>
+    <p><b>What it estimates.</b> Suppose the text comes from a true source $p$, a stationary process such as "English". As $n\to\infty$, $\mathcal{L}$ converges to the <i>cross-entropy rate</i> of $q$ relative to $p$, and the decomposition of M4 applies one token at a time:</p>
+    <div class="eq">$$\mathbb{E}_p\big[-\log q(x_i\mid x_{&lt;i})\big] = \underbrace{\mathbb{E}_p\big[-\log p(x_i\mid x_{&lt;i})\big]}_{\text{conditional entropy }H} + \underbrace{\mathbb{E}_p\,\mathrm{KL}\big(p(\cdot\mid x_{&lt;i})\,\|\,q(\cdot\mid x_{&lt;i})\big)}_{\ge 0}.$$</div>
+    <div class="result">
+      <div class="label">The floor</div>
+      <p>The expected loss of any model is at least the entropy rate $H$ of the source, with equality only for the true conditionals. The KL term is the model's whole excess, so lowering the loss means moving the model's next-token distributions towards the true ones, and nothing else.</p>
+    </div>
+    <p>For real text $H$ is unknown, and that is why the scaling-law curves of lesson 27 have an irreducible term: the loss falls as a power law towards a floor, not towards zero. Shannon (1951) had people guess the next letter of English text and bounded the entropy at between 0.6 and 1.3 bits per letter.</p>
+    <p><b>Units.</b> The same quantity is reported in four ways, and papers are hard to compare until you can convert between them.</p>
+    <ul>
+      <li><b>Nats per token</b>: $\mathcal{L}$ with the natural log, as printed by training code.</li>
+      <li><b>Bits per token</b>: $\mathcal{L}/\ln 2$.</li>
+      <li><b>Perplexity</b>: $\mathrm{PPL} = e^{\mathcal{L}} = 2^{\text{bits per token}}$, the geometric mean of $1/q(x_i\mid x_{&lt;i})$. A model that spreads its probability uniformly over $k$ tokens at every step has perplexity exactly $k$, so perplexity reads as an effective branching factor: "as uncertain as a fair choice among PPL tokens". A uniform model over the whole vocabulary has $\mathrm{PPL} = V$.</li>
+      <li><b>Bits per character</b> (or <b>bits per byte</b>): total bits divided by the number of characters (or UTF-8 bytes) of the text, rather than the number of tokens.</li>
+    </ul>
+    <p>The last is the only one that is comparable across tokenisers. If tokeniser A splits a text into twice as many tokens as tokeniser B, A's model makes twice as many predictions, each easier, and has a lower per-token perplexity for the same quality of model. The total number of bits to encode the text does not depend on how it was cut up, so</p>
+    <div class="eq">$$\text{bits per character} = \text{bits per token}\times\frac{\text{tokens}}{\text{characters}} .$$</div>
+    <p><b>Language modelling is compression.</b> The source coding theorem (M4) says why "bits" is the right word. Given a model $q$, arithmetic coding encodes a text in $-\log_2 q(x_1,\dots,x_n) + 2$ bits, and no code can do better on average than the entropy. So a language model with a loss of 0.8 bits per character is, quite literally, a compressor that stores text at 0.8 bits per character, a tenth of plain ASCII's 8. Better prediction and better compression are the same thing (Delétang et al., 2024).</p>
+  </section>
+
+  <section id="toy">
+    <h2>A language whose entropy we know</h2>
+    <p>To see these numbers against the truth, the code below uses a toy language. Each sentence makes four independent random choices: a subject from 8 options ("the cat", "the old man", …), a verb from 6, an object from 6 ("the river", "a red kite", …) and an optional place from 5 ("", " in the rain", …), each with its own fixed probabilities. Words are not shared between slots, so the sentence determines its choices, and the entropy of a sentence is the sum of the four choices' entropies: 9.868 bits. Sentences average 37.3 characters including the full stop and the space after it, so the true entropy rate is $9.868/37.3 = 0.2647$ bits per character. On the particular 2,000 test sentences used, the true model's cross-entropy is 0.2642 bits per character. That is the floor: no model can beat it except by luck, and only by a little.</p>
+    <p>Almost all characters in this language are free: once "the old m" has been written, "an " is certain. The information is in the four choice points per sentence, which is roughly what real text looks like too, with most characters predictable and a few carrying most of the information.</p>
+  </section>
+
+  <section id="ngrams">
+    <h2>n-gram models</h2>
+    <p>The simplest way to estimate $p(x_i\mid x_{&lt;i})$ is to forget all but the last $n - 1$ tokens, the <b>Markov assumption</b> of order $n - 1$:</p>
+    <div class="eq">$$q(x_i\mid x_{&lt;i}) = q(x_i\mid x_{i-n+1}, \dots, x_{i-1}).$$</div>
+    <p>An <b>n-gram model</b> stores one categorical distribution per context of $n - 1$ tokens. The maximum-likelihood estimate of a categorical distribution is the empirical frequency (lesson 06's exercise), so</p>
+    <div class="eq">$$\hat q(w\mid c) = \frac{\operatorname{count}(c\,w)}{\operatorname{count}(c)},$$</div>
+    <p>where $c$ is the context and $c\,w$ is the context followed by $w$. Shannon (1948) generated "English" from letter and word n-grams this way, and n-gram models were the core of speech recognition and machine translation until about 2015.</p>
+    <p><b>The problem is zeros.</b> Any n-gram that does not appear in the training text gets probability 0, and a single zero on the test text makes the loss infinite. The number of possible contexts is $V^{n-1}$, so for large $n$ almost every context the model meets is new. The fix is <b>smoothing</b>, which moves some probability from seen to unseen events. The simplest is add-$k$ (Laplace for $k = 1$):</p>
+    <div class="eq">$$\hat q_k(w\mid c) = \frac{\operatorname{count}(c\,w) + k}{\operatorname{count}(c) + kV}.$$</div>
+    <p>This is the posterior mean under a symmetric Dirichlet prior on each context's distribution (M3), so it is maximum likelihood's answer with $k$ imaginary observations of every token. Better methods interpolate the $n$-gram estimate with the $(n-1)$-gram estimate, which is less sparse, and the best of these, Kneser–Ney smoothing (1995), was the standard for twenty years (Chen and Goodman, 1999, compare them all).</p>
+    <p><b>The bias–variance trade-off again.</b> Small $n$ cannot see far enough: the model is biased, however much data it has. Large $n$ sees far but each context has been seen only a few times, so the estimates are noisy and smoothing dominates. On the toy language, character models with add-0.01 smoothing score:</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>$n$</th><th>1</th><th>2</th><th>3</th><th>5</th><th>8</th><th>12</th></tr></thead>
+      <tbody>
+        <tr><td>bits per character</td><td>3.9925</td><td>2.3813</td><td>0.8606</td><td>0.3807</td><td>0.2646</td><td>0.2650</td></tr>
+        <tr><td>perplexity per character</td><td>15.92</td><td>5.21</td><td>1.82</td><td>1.30</td><td>1.20</td><td>1.20</td></tr>
+      </tbody>
+    </table></div>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: lm-ngrams-bpe --></div>
+    </figure>
+    <p class="muted">Left: cross-entropy on held-out text against the context length. The 8-gram reaches the true model's 0.264 bits per character (dashed), and longer contexts gain nothing. Right: the average length of a BPE token as merges are learned, from the code's part 3.</p>
+    <p>Here an 8-gram is enough, because in this language seven characters of context are almost always enough to know where you are in the sentence ("ers the " can only be followed by an object), and 20,000 sentences have shown every such context many times. The 12-gram is slightly <i>worse</i>: it learns nothing more, and spreads its counts over more contexts, so smoothing costs a little more. Real language has dependencies hundreds of words long (a name introduced in the first paragraph, the topic of a document), and no amount of data makes a table indexed by hundred-word contexts work. That is why neural language models won: Bengio et al. (2003) replaced the table with a network that maps the context to an embedding, so similar contexts share statistics, and transformers made the context thousands of tokens long.</p>
+  </section>
+
+  <section id="tokenisation">
+    <h2>What is a token?</h2>
+    <p>The loss is the same whatever the tokens are, but the choice of vocabulary changes almost everything else. There are three options.</p>
+    <ul>
+      <li><b>Characters</b> (or bytes). A small vocabulary and no unknown words, but sequences are long. A transformer's attention costs $O(n^2)$ in the sequence length, and every character takes a full forward pass to generate.</li>
+      <li><b>Words.</b> Short sequences, but the vocabulary is unbounded (names, numbers, typos, "un-re-think-able"), so any finite vocabulary leaves words out and needs an "unknown" token. The model also cannot see that "walk", "walks" and "walked" share a stem.</li>
+      <li><b>Subwords</b>, the compromise every LLM uses: common words are single tokens, rare words are split into pieces, and the pieces go all the way down to single bytes, so nothing is ever unknown.</li>
+    </ul>
+    <p><b>Byte-pair encoding</b> (BPE) is a compression algorithm (Gage, 1994) that Sennrich, Haddow and Birch (2016) turned into a tokeniser. It learns a vocabulary bottom-up:</p>
+    <div class="note">
+      <div class="label">BPE training</div>
+      <ol>
+        <li>Split the training text into words (the "pretokenisation"), and each word into characters.</li>
+        <li>Count every adjacent pair of symbols, over all words, weighted by how often each word occurs.</li>
+        <li>Merge the most frequent pair into a new symbol everywhere, and record the merge.</li>
+        <li>Repeat until the vocabulary has the size you want.</li>
+      </ol>
+    </div>
+    <p>To tokenise new text, split it into words and characters the same way and apply the merges <i>in the order they were learned</i>. Each merge is a greedy compression step: it replaces the commonest pair, reducing the number of symbols in the training text by its count. On the toy language the first merges are "h e", " t", " t he", "i n", " r", "e r", " m", and after 150 merges the average token is 4.58 characters long and almost every word is one token: "the old man remembers the mountains" becomes ['t', 'he', ' old', ' man', ' remembers', ' the', ' mountains'].</p>
+    <p>Two details in that example are worth understanding. First, the spaces belong to the words: GPT-2's pretokeniser splits text with a regular expression that keeps a leading space attached to each word, so " the" and "the" are different tokens. The sentence above starts without a space, and its first word, which never occurs without a space in training except at the very start of the corpus, is split into two pieces. Second, merges never cross the boundary between pretokenised words, so a token never contains the end of one word and the start of the next.</p>
+    <p><b>Byte-level BPE</b> (GPT-2, Radford et al., 2019) starts from the 256 possible bytes instead of characters, so any string in any language or encoding can be tokenised with no unknown tokens. GPT-2's vocabulary is 256 bytes plus 50,000 merges plus one end-of-text token: 50,257. Later models use larger vocabularies (Llama 3 has 128,256), which make sequences shorter, especially for languages other than English, at the cost of a larger embedding table and output softmax. As a rule of thumb, an English word is about 1.3 tokens, or 4 characters per token.</p>
+    <p><b>Other tokenisers.</b> WordPiece (Schuster and Nakajima, 2012; used by BERT) merges the pair that most increases the likelihood of the training text under a unigram model, rather than the most frequent pair. The <b>unigram language model</b> tokeniser (Kudo, 2018) works the other way round: start from a large vocabulary of candidate pieces, model a word as a sequence of independently drawn pieces, fit the piece probabilities by EM, and repeatedly drop the pieces whose removal costs the least likelihood. Tokenising a word then means finding its most probable segmentation, a dynamic programme (Viterbi). SentencePiece (Kudo and Richardson, 2018) implements BPE and unigram on raw text, treating the space as an ordinary symbol, and was used for T5 and the first two Llamas.</p>
+  </section>
+
+  <section id="quirks">
+    <h2>What tokenisation does to a model</h2>
+    <p>A model sees token ids, never characters, and a surprising amount of LLM behaviour follows from that.</p>
+    <ul>
+      <li><b>Spelling and counting.</b> "strawberry" is two or three tokens, so the question "how many r's?" asks the model about the characters inside tokens, which it can only know from having memorised each token's spelling.</li>
+      <li><b>Arithmetic.</b> GPT-2's BPE split numbers into whatever chunks were frequent, so "1234" and "1235" could be tokenised completely differently. Later tokenisers split digits into single digits or fixed groups of three, which made arithmetic much easier to learn.</li>
+      <li><b>Unequal cost.</b> A tokeniser trained mostly on English splits other languages into more tokens per word, so the same content costs more context, compute and money, and gets a smaller effective context window.</li>
+      <li><b>Prompt boundaries.</b> A prompt ending in a space leaves the model having to produce a token that starts without its usual leading space, a rare event, which can lower the quality of the continuation.</li>
+      <li><b>Glitch tokens.</b> A token that was common in the tokeniser's training data but rare in the model's (the famous " SolidGoldMagikarp", a Reddit user name) has an embedding that was barely trained, and prompts containing it produced bizarre output (Rumbelow and Watkins, 2023).</li>
+    </ul>
+    <p>None of these are deep facts about language models; they are artefacts of a compression scheme fixed before training. This is why there is steady research on byte-level models that learn their own segmentation.</p>
+  </section>
+
+  <section id="sampling">
+    <h2>Generating text</h2>
+    <p>Generation samples from the factorisation one token at a time: draw $x_1\sim q(\cdot)$, then $x_2\sim q(\cdot\mid x_1)$, and so on, until the end-of-text token. Done exactly, this draws whole texts from the model's distribution $q(x_1, \dots, x_n)$. In practice the next-token distribution is first reshaped with a <b>temperature</b> $\tau$, dividing the logits $z$ by $\tau$ before the softmax:</p>
+    <div class="eq">$$q_\tau(w) = \frac{e^{z_w/\tau}}{\sum_{w'}e^{z_{w'}/\tau}} = \frac{q(w)^{1/\tau}}{\sum_{w'}q(w')^{1/\tau}} .$$</div>
+    <p>With $\tau = 1$ this is the model's distribution. As $\tau\to0$ all the probability goes to the most likely token (greedy decoding), and as $\tau\to\infty$ the distribution becomes uniform. Note the second form: temperature reweights the tokens the model gives positive probability to, and cannot create new ones. For the toy language's verb choice, with probabilities $(0.3, 0.2, 0.2, 0.1, 0.1, 0.1)$ and entropy 2.45 bits, $\tau = 0.3$ gives $(0.63, 0.16, 0.16, 0.02, 0.02, 0.02)$ with 1.56 bits, and $\tau = 3$ gives $(0.21, 0.18, 0.18, 0.14, 0.14, 0.14)$ with 2.57 bits, close to the uniform 2.58. Truncation methods, top-$k$ and top-$p$ (nucleus) sampling, which cut off the unlikely tail before sampling, and their effect on quality and diversity are in lesson 30.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 defines the toy language, draws 20,000 training sentences and 2,000 test sentences, and computes the true entropy. Part 2 fits character n-gram models with add-0.01 smoothing and scores them on the test text. Part 3 trains byte-pair encoding with a GPT-2-style pretokeniser (each word keeps its leading space) and measures how much it compresses the test text. Part 4 fits bigram models over BPE tokens and converts their loss to bits per character, to show why per-token perplexities cannot be compared across tokenisers. Part 5 samples from the 8-gram model at three temperatures.</p>
+<pre><code>import numpy as np
+import re
+from collections import Counter
+
+rng = np.random.default_rng(0)
+
+# 1. A toy language whose true entropy we can compute. Each sentence makes independent random
+# choices: a subject, a verb, an object, and optionally a place. Words are distinct across slots,
+# so a sentence determines its choices and H(sentence) = sum of the entropies of the choices.
+SLOTS = [
+    ("subject", ["the cat", "the dog", "a bird", "my sister", "the old man", "a child", "the teacher", "our neighbour"],
+                [0.25, 0.2, 0.15, 0.1, 0.1, 0.1, 0.05, 0.05]),
+    ("verb", ["sees", "likes", "follows", "draws", "watches", "remembers"], [0.3, 0.2, 0.2, 0.1, 0.1, 0.1]),
+    ("object", ["the river", "a red kite", "the mountains", "the moon", "an empty house", "the morning train"],
+               [0.3, 0.2, 0.15, 0.15, 0.1, 0.1]),
+    ("place", ["", " from the bridge", " in the rain", " every evening", " near the station"], [0.4, 0.2, 0.15, 0.15, 0.1]),
+]
+H = lambda p: -np.sum(np.array(p) * np.log2(p))
+H_sentence = sum(H(p) for _, _, p in SLOTS)
+
+def sentence():
+    idx = [rng.choice(len(w), p=p) for _, w, p in SLOTS]
+    s, q, o, pl = (w[i] for (_, w, _), i in zip(SLOTS, idx))
+    return f"{s} {q} {o}{pl}. ", -sum(np.log2(p[i]) for (_, _, p), i in zip(SLOTS, idx))
+
+train = "".join(sentence()[0] for _ in range(20000))
+test_pairs = [sentence() for _ in range(2000)]
+test = "".join(t for t, _ in test_pairs)
+mean_len = len(test) / 2000
+print(f"true entropy: {H_sentence:.3f} bits per sentence; sentences average {mean_len:.1f} characters,"
+      f" so {H_sentence / mean_len:.4f} bits per character")
+print(f"the true model's cross-entropy on this test set: {sum(b for _, b in test_pairs) / len(test):.4f} bits per character")
+
+# 2. Character n-gram models with add-k smoothing, scored by cross-entropy on held-out text.
+chars = sorted(set(train)); V = len(chars)
+def ngram_counts(seq, n):
+    counts, ctx = Counter(), Counter()
+    for i in range(n - 1, len(seq)):
+        counts[seq[i - n + 1:i + 1]] += 1; ctx[seq[i - n + 1:i]] += 1
+    return counts, ctx
+
+def ngram_bits_per_char(n, k=0.01):
+    counts, ctx = ngram_counts(train, n)
+    bits = [-np.log2((counts[test[i - n + 1:i + 1]] + k) / (ctx[test[i - n + 1:i]] + k * V)) for i in range(n - 1, len(test))]
+    return np.mean(bits)
+print(f"vocabulary: {V} characters (uniform model: {np.log2(V):.3f} bits per character)")
+for n in [1, 2, 3, 5, 8, 12]:
+    b = ngram_bits_per_char(n)
+    print(f"{n:2d}-gram: {b:.4f} bits per character, perplexity per character {2 ** b:6.3f}")
+
+# 3. Byte-pair encoding: start from characters, repeatedly merge the most frequent adjacent pair.
+# As in GPT-2, the text is first split into words, each keeping the space in front of it, and
+# merges never cross a word boundary.
+pretokenise = lambda text: re.findall(r" ?[a-z-]+| ?\.", text)
+def bpe_train(text, n_merges):
+    words = Counter(pretokenise(text))
+    seqs = {w: tuple(w) for w in words}
+    merges = []
+    for _ in range(n_merges):
+        pairs = Counter()
+        for w, c in words.items():
+            s = seqs[w]
+            for a, b in zip(s, s[1:]):
+                pairs[(a, b)] += c
+        if not pairs:
+            break
+        best = max(pairs, key=lambda p: (pairs[p], p))                   # ties go to the alphabetically last pair
+        merges.append(best)
+        for w in words:
+            s, out, i = seqs[w], [], 0
+            while i &lt; len(s):
+                if i + 1 &lt; len(s) and (s[i], s[i + 1]) == best:
+                    out.append(s[i] + s[i + 1]); i += 2
+                else:
+                    out.append(s[i]); i += 1
+            seqs[w] = tuple(out)
+    return merges
+
+def bpe_encode(word, merges):
+    s = list(word)
+    for a, b in merges:                                                  # apply merges in the order learned
+        i = 0
+        while i &lt; len(s) - 1:
+            if s[i] == a and s[i + 1] == b:
+                s[i:i + 2] = [a + b]
+            else:
+                i += 1
+    return s
+
+merges = bpe_train(train, 150)
+print("first 12 merges:", ["".join(m) for m in merges[:12]])
+words = pretokenise(test)
+for n_m in [0, 10, 40, 150]:
+    toks = sum(len(bpe_encode(w, merges[:n_m])) for w in words)
+    print(f"{n_m:3d} merges: {len(test) / toks:.2f} characters per token")
+print("encoding 'the old man remembers the mountains':",
+      [t for w in pretokenise("the old man remembers the mountains") for t in bpe_encode(w, merges)])
+
+# 4. Perplexities are only comparable per character (or byte). A bigram model over BPE tokens,
+# scored per token and then converted to bits per character.
+def token_bigram(n_m, k=0.01):
+    tr = [t for w in pretokenise(train) for t in bpe_encode(w, merges[:n_m])]
+    te = [t for w in pretokenise(test) for t in bpe_encode(w, merges[:n_m])]
+    V = len(set(tr)) + 1                                             # one extra for unseen tokens
+    counts, ctx = Counter(zip(tr, tr[1:])), Counter(tr[:-1])
+    bits = sum(-np.log2((counts[(a, b)] + k) / (ctx[a] + k * V)) for a, b in zip(te, te[1:]))
+    return V - 1, bits / (len(te) - 1), bits / len(test)
+for n_m in [0, 40, 150]:
+    V_t, per_tok, per_char = token_bigram(n_m)
+    print(f"token bigram, {n_m:3d} merges ({V_t:3d} types): {per_tok:.3f} bits per token,"
+          f" perplexity {2 ** per_tok:6.2f}; {per_char:.4f} bits per character")
+
+# 5. Sampling from the 8-gram model with a temperature: p_i^(1/tau), renormalised.
+counts, _ = ngram_counts(train, 8)
+nexts = {}
+for g, c in counts.items():
+    nexts.setdefault(g[:-1], []).append((g[-1], c))
+def generate(tau, n_chars=120, seed=1):
+    r = np.random.default_rng(seed); out = train[:7]
+    while len(out) &lt; n_chars:
+        cs, c = zip(*nexts[out[-7:]])
+        logp = np.log(np.array(c, float)) / tau
+        p = np.exp(logp - logp.max()); p /= p.sum()
+        out += cs[r.choice(len(cs), p=p)]
+    return out
+for tau in [1.0, 0.3, 3.0]:
+    print(f"tau = {tau}: {generate(tau)!r}")
+
+# true entropy: 9.868 bits per sentence; sentences average 37.3 characters, so 0.2647 bits per character
+# the true model's cross-entropy on this test set: 0.2642 bits per character
+# vocabulary: 24 characters (uniform model: 4.585 bits per character)
+#  1-gram: 3.9925 bits per character, perplexity per character 15.917
+#  2-gram: 2.3813 bits per character, perplexity per character  5.210
+#  3-gram: 0.8606 bits per character, perplexity per character  1.816
+#  5-gram: 0.3807 bits per character, perplexity per character  1.302
+#  8-gram: 0.2646 bits per character, perplexity per character  1.201
+# 12-gram: 0.2650 bits per character, perplexity per character  1.202
+# first 12 merges: ['he', ' t', ' the', 'in', ' r', 'er', ' m', ' a', ' s', 'es', 'at', 'ver']
+#   0 merges: 1.00 characters per token
+#  10 merges: 1.37 characters per token
+#  40 merges: 2.00 characters per token
+# 150 merges: 4.58 characters per token
+# encoding 'the old man remembers the mountains': ['t', 'he', ' old', ' man', ' remembers', ' the', ' mountains']
+# token bigram,   0 merges ( 24 types): 2.381 bits per token, perplexity   5.21; 2.3813 bits per character
+# token bigram,  40 merges ( 54 types): 1.723 bits per token, perplexity   3.30; 0.8628 bits per character
+# token bigram, 150 merges ( 39 types): 1.686 bits per token, perplexity   3.22; 0.3677 bits per character
+# tau = 1.0: 'my sister draws the moon in the rain. a child remembers a red kite from the bridge. a bird follows the river every eveni'
+# tau = 0.3: 'my sister follows the mountains. the cat draws the moon. the cat likes the mountains. the dog sees the river every eveni'
+# tau = 3.0: 'my sister draws the moon. a child sees an empty house in the rain. my sister sees the mountains near the station. my sis'</code></pre>
+    <p><b>Reading the output.</b> The 8-gram's 0.2646 bits per character is within 0.0004 of the true model on the same text, so a table of counts has, in effect, learned this language. The bigrams over tokens show why per-token numbers mislead. With 150 merges the token bigram has a per-token perplexity of 3.22, worse per token than the character 3-gram's 1.82 per character, but it is the better model: 0.368 bits per character against 0.861, because each of its tokens is a whole word. It is still well above the floor of 0.264. Its tokens are words, and with one word of context the model cannot tell whether " the" starts a subject or an object, two sets of nouns with different probabilities. The samples are grammatical at every temperature, because the 8-gram's contexts only allow continuations it has seen. Temperature changes which choices are made: at $\tau = 0.3$ the commonest subjects, verbs and objects dominate, and at $\tau = 3$ the rare ones ("an empty house", "near the station") turn up more often than they should.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show that a model that assigns probability $1/V$ to every token has perplexity $V$, and that a model whose perplexity is lower than $V$ on a long text cannot be uniform. Which value of $\mathcal{L}$ does a freshly initialised network with small random logits have on GPT-2's vocabulary, in nats? Training curves for GPT-2-sized models start there.</li>
+      <li>A paper reports 2.9 nats per token on a test set, with a tokeniser that averages 4.2 characters per token. Another reports 1.0 bits per character on the same test set. Which model is better?</li>
+      <li>Compute the entropy of the toy language's verb choice, with probabilities $(0.3, 0.2, 0.2, 0.1, 0.1, 0.1)$, and check it against the figure in the sampling section.</li>
+      <li>Show that the add-$k$ estimate is the posterior mean of a context's next-token distribution under a Dirichlet prior with all parameters equal to $k$. What does the estimate do as $k\to0$, and as $k\to\infty$?</li>
+      <li>Run BPE by hand for six merges on the corpus "low" ×5, "lower" ×2, "newest" ×6, "widest" ×3, where every word has a leading space and ties go to the pair that comes last alphabetically. Then tokenise " lowest" and " newer".</li>
+      <li>In the code's part 4, the bigram over 150-merge tokens has 39 token types in use, fewer than with 40 merges (54). How can learning more merges make the vocabulary in use <i>smaller</i>?</li>
+      <li>Prove that the entropy of $q_\tau$ is non-decreasing in $\tau$. (Hint: write $q_\tau$ as an exponential family in $\beta = 1/\tau$ and differentiate $H$ with respect to $\beta$.)</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\mathcal{L} = -\frac1n\sum\log(1/V) = \log V$ and $\mathrm{PPL} = e^{\log V} = V$. For any model, $\mathbb{E}[\mathcal{L}]\ge H$ and the uniform model's loss on any text is exactly $\log V$, so a lower measured perplexity means the model is not uniform. With small random logits the softmax is nearly uniform, so the loss starts at $\ln 50{,}257 = 10.82$ nats.</p>
+        <p><b>2.</b> $2.9/\ln 2 = 4.18$ bits per token, divided by 4.2 characters per token is 0.996 bits per character. The two are equal to within the rounding of the reported numbers.</p>
+        <p><b>3.</b> $-(0.3\log_2 0.3 + 2\times0.2\log_2 0.2 + 3\times0.1\log_2 0.1) = 0.521 + 0.929 + 0.997 = 2.446$ bits.</p>
+        <p><b>4.</b> With counts $n_w$ and a $\mathrm{Dir}(k, \dots, k)$ prior, the posterior is $\mathrm{Dir}(n_w + k)$, whose mean is $(n_w + k)/(\sum n_{w'} + kV)$. As $k\to0$ it becomes the maximum-likelihood estimate (with zeros); as $k\to\infty$ it becomes uniform, ignoring the data.</p>
+        <p><b>5.</b> The pairs "e s" and "s t" both occur 9 times (in newest and widest); "s t" is later alphabetically, so the merges are: "st", "e st" (9), then "o w" (7: low and lower, tied with " l" and "l o"), "l ow", " low" (7), and "w est" (6, tied with " n", "n e", "e w"). " lowest" becomes [" low", "est"], two tokens though the word was never seen. " newer" becomes [" ", "n", "e", "w", "e", "r"]: no merge applies, because "e w" was never merged, and the word falls back to characters. Every word can be encoded; rarer ones just cost more tokens.</p>
+        <p><b>6.</b> A merged symbol replaces its parts wherever it occurs. Once every occurrence of a character is inside larger tokens (after 150 merges, most words are single tokens), the character no longer appears as a token in the encoded text, so the number of types actually used goes down even though the vocabulary (bytes plus merges) has grown.</p>
+        <p><b>7.</b> With $\beta = 1/\tau$, $q_\beta(w) = e^{\beta z_w - A(\beta)}$ and $A(\beta) = \log\sum_w e^{\beta z_w}$, so $A'(\beta) = \mathbb{E}_\beta[z]$ and $A''(\beta) = \operatorname{Var}_\beta(z)$. Then $H(\beta) = A(\beta) - \beta\,\mathbb{E}_\beta[z]$ and $dH/d\beta = A' - \mathbb{E}_\beta[z] - \beta\operatorname{Var}_\beta(z) = -\beta\operatorname{Var}_\beta(z)\le0$ for $\beta &gt; 0$. So $H$ falls as $\beta$ rises, that is, rises with $\tau$, strictly unless all the logits are equal.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Jurafsky &amp; Martin, <i>Speech and Language Processing</i></b> (3rd edition draft), chapter 3 (n-gram models, perplexity, smoothing) and the tokenisation section of chapter 2.</li>
+      <li><b>Shannon, "Prediction and entropy of printed English"</b> (Bell System Technical Journal, 1951). The guessing-game estimate of the entropy of English.</li>
+      <li><b>Bengio, Ducharme, Vincent &amp; Jauvin, "A neural probabilistic language model"</b> (JMLR 2003). Embeddings instead of count tables.</li>
+      <li><b>Sennrich, Haddow &amp; Birch, "Neural machine translation of rare words with subword units"</b> (ACL 2016). BPE as a tokeniser.</li>
+      <li><b>Kudo, "Subword regularization"</b> (ACL 2018), and <b>Kudo &amp; Richardson, "SentencePiece"</b> (EMNLP 2018). The unigram tokeniser.</li>
+      <li><b>Delétang et al., "Language modeling is compression"</b> (ICLR 2024).</li>
+      <li><b>Andrej Karpathy, "Let's build the GPT tokenizer"</b> (video lecture, 2024), and his minbpe code. Byte-level BPE built line by line, with every quirk above demonstrated.</li>
+    </ul>
+  </section>
+</article>

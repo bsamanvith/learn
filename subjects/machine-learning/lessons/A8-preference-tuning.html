@@ -1,0 +1,49 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A8 · after lessons 28 and 29</div>
+  <h1>Preference tuning: reward models, RLHF, DPO and LoRA</h1>
+  <p class="lede">Fine-tune a small language model from human-style preferences, three ways. First fit a Bradley–Terry reward model and optimise the policy against it, both in closed form and with a GRPO-style policy gradient. Then skip the reward model with DPO, and compare it with IPO. Along the way, implement LoRA adapters and use them in place of full fine-tuning. The model has a vocabulary of 6 tokens, 10 prompts and 3-token responses, so every probability can be computed exactly by enumerating all 216 responses per prompt. Every method can therefore be checked against the truth, including a "true" reward that plays the part of the people whose preferences you learn from. Expect six to eight hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/28-fine-tuning-and-alignment/">28</a>, <a href="/machine-learning/29-making-llms-efficient/">29</a>, <a href="/machine-learning/03-logistic-regression/">03</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A8-preference-tuning">assignments/A8-preference-tuning</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A8-preference-tuning
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like (about 5 seconds)</code></pre>
+    <p>The policy is an autoregressive MLP: to predict response token $i$, it reads a one-hot code of the prompt, of the position, and of the tokens generated so far, and outputs 6 logits. A reference policy (the "SFT model") with random weights, a hidden <code>true_reward</code>, features for a linear reward model, and the layers and optimiser are given. The checker enumerates all responses to test that your probabilities sum to 1. It compares every gradient with finite differences, including the exact gradient your RLHF step follows for a fixed set of samples. It checks the closed-form policy against $J(\pi^*) = \beta\log Z$, and it trains RLHF and DPO for a few hundred steps to see that they move the right way.</p>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · LoRA</td><td><code>LoRALinear.forward</code>, <code>.backward</code>, <code>.merged</code></td><td>no change at initialisation; merging computes the same function; gradients of $A$, $B$ and the input; the frozen weights stay frozen</td></tr>
+        <tr><td>2 · probabilities</td><td><code>seq_logprob</code>, <code>seq_logprob_backward</code>, <code>sample</code></td><td>a proper distribution over the 216 responses; the gradient of $\sum_n w_n\log\pi(y_n\mid x_n)$; sampled frequencies</td></tr>
+        <tr><td>3 · reward models</td><td><code>bradley_terry_loss</code>, <code>fit_reward_model</code></td><td>value, gradients and stability; recovering a known linear reward from 20,000 comparisons</td></tr>
+        <tr><td>4 · RLHF</td><td><code>kl_optimal_policy</code>, <code>kl_divergence</code>, <code>rlhf_step</code></td><td>the closed form and its objective at $\beta$ down to $10^{-3}$; the exact policy-gradient direction with per-prompt group baselines; convergence towards the closed form</td></tr>
+        <tr><td>5 · DPO and IPO</td><td><code>dpo_loss</code>, <code>ipo_loss</code>, <code>preference_step</code></td><td>values and gradients; one correct descent step; DPO raising the true reward</td></tr>
+      </tbody>
+    </table></div>
+    <p>The true reward likes responses whose tokens sum to the prompt modulo 6 (+2), likes a response that starts with token 0 (+1), and dislikes every token repeated twice in a row (−1.5 each). The linear reward model's features see the tokens at each position and whether the sum matches, but not repetitions: like every real reward model, it is blind to something people care about.</p>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all twelve checks pass, write scripts that use your functions. Make the reference policy with <code>make_reference(np.random.default_rng(0))</code>, and the preference data from 3,000 pairs of responses sampled from it, labelled with Bradley–Terry probabilities of the true reward. For reference, the solution gets the numbers quoted below; with your own seeds, yours will differ somewhat.</p>
+    <ol>
+      <li><b>The reward model and over-optimisation.</b> Fit the linear reward model and report how many training pairs it orders correctly (the solution: 63.6%; the labels themselves are noisy). Sweep $\beta$ from 2 down to 0.03 through the closed-form optimum, and plot the reward model's score and the true reward against $\mathrm{KL}(\pi\|\pi_\text{ref})$. The solution's true reward rises from −0.47 to 2.22 at $\beta = 0.25$ (3.2 nats) and then only to 2.46 at $\beta = 0.03$, though the best responses score 3.0. Find the responses the optimised policy prefers that the true reward dislikes, and explain them with the reward model's features.</li>
+      <li><b>RLHF by policy gradient.</b> Run <code>rlhf_step</code> with the reward model, $\beta = 0.25$ and groups of 32 for 1,500 steps, and compare the KL and true reward with the closed form at the same $\beta$ (solution: KL 3.83, true reward 2.28, against 3.24 and 2.22). Then measure the gradient's variance with three baselines: none, the batch mean, and the per-prompt group mean. Why does the per-prompt mean help most, given that the reward model's scale differs across prompts?</li>
+      <li><b>DPO and IPO.</b> Train DPO ($\beta = 0.25$) and IPO ($\tau = 0.25$) on the same 3,000 pairs for 60 epochs with Adam at $10^{-3}$, and plot KL and true reward against epochs. In the solution, DPO reaches a true reward of 0.90 at 2.9 nats, and is still drifting; IPO stays near the reference model (0.24 nats, true reward 0.14). Both are far below RLHF with the reward model. Explain why, considering what each method can learn about a response that never appears in a pair, and what the reward model's features give RLHF for free.</li>
+      <li><b>LoRA.</b> Make a wider reference policy (<code>make_reference(rng, H=512)</code>), replace both of its linear layers by <code>LoRALinear</code> adapters of rank 1, 4 and 16 (with $\alpha = 2r$), and train each with DPO. Report the number of trainable parameters against full fine-tuning, and the KL and true reward. Then merge the adapters and confirm that the merged policy gives the same log-probabilities.</li>
+      <li><b>Your choice.</b> Do one of: (a) give the reward model a feature for repeated tokens and redo experiment 1; (b) collect preferences from the RLHF policy instead of the reference model ("on-policy" data) and refit the reward model, as in iterated RLHF; (c) replace the true reward by a verifiable one (1 if the sum matches, else 0) and train with <code>rlhf_step</code> directly, as reasoning models are trained.</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Twelve checker passes are worth 50%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism.</p>
+  </section>
+</article>

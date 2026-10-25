@@ -1,0 +1,48 @@
+<header class="lesson-head">
+  <div class="eyebrow">Assignment A9 · after lessons 31–36</div>
+  <h1>Tabular reinforcement learning: planning, prediction and control</h1>
+  <p class="lede">Implement the core algorithms of tabular RL and use them to answer questions with experiments. You will find stationary distributions and play bandits, solve gridworlds exactly with value and policy iteration, learn values from experience with TD and Monte Carlo, and learn to act with SARSA, Q-learning, Expected SARSA and double Q-learning. The environments are small enough that every answer can be checked against the exact solution, so when something is wrong the checker can say what. Expect five to eight hours.</p>
+  <div class="meta"><span><b>Builds on:</b> <a href="/machine-learning/31-markov-chains/">31</a>, <a href="/machine-learning/32-bandits-and-exploration/">32</a>, <a href="/machine-learning/33-mdps-and-bellman-equations/">33</a>, <a href="/machine-learning/34-dynamic-programming/">34</a>, <a href="/machine-learning/35-monte-carlo-and-td-learning/">35</a>, <a href="/machine-learning/36-sarsa-and-q-learning/">36</a></span><span><b>Files:</b> <a href="https://github.com/bsamanvith/learn/tree/main/subjects/machine-learning/assignments/A9-gridworld-rl">assignments/A9-gridworld-rl</a></span></div>
+</header>
+
+<article class="lesson">
+  <section id="setup">
+    <h2>Set-up</h2>
+    <p>You need Python 3 and NumPy. From the repository root:</p>
+<pre><code>cd subjects/machine-learning/assignments/A9-gridworld-rl
+cp starter.py mine.py          # work in your own copy
+python3 check.py mine.py       # run as often as you like (a few seconds)</code></pre>
+    <p>The environments are given. <code>GridWorld</code> builds an MDP from a text layout with walls, terminal cells, cliffs, a slip probability and a living reward, and exposes both its model (<code>P[a, s, s']</code> and <code>R[a, s]</code>) and a sampler (<code>reset</code>, <code>step</code>). <code>GRID_4x3</code> is lesson 33's world and <code>CLIFF</code> is lesson 36's. <code>RandomWalk</code> is lesson 35's five-state walk, whose true values are $1/6, \dots, 5/6$, and <code>MaxBias</code> is lesson 36's maximisation-bias MDP. Shapes follow one convention throughout: $V$ is $(S,)$, $Q$ is $(S, A)$, and a policy is an $(S, A)$ matrix of probabilities.</p>
+  </section>
+
+  <section id="parts">
+    <h2>What to implement</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>part</th><th>pieces</th><th>what it tests</th></tr></thead>
+      <tbody>
+        <tr><td>1 · chains and bandits</td><td><code>stationary_distribution</code>, <code>ucb1_choose</code>, <code>thompson_choose</code></td><td>$\pi P = \pi$ on a random chain and $\deg(v)/2|E|$ on a graph; the UCB1 index; Thompson sampling's choice frequencies against the posterior probability that each arm is best</td></tr>
+        <tr><td>2 · dynamic programming</td><td><code>policy_evaluation</code>, <code>q_from_v</code>, <code>greedy_policy</code>, <code>value_iteration</code>, <code>policy_iteration</code></td><td>the Bellman expectation and optimality equations to $10^{-9}$; the value of the returned policy; $V^\star$ of the 4×3 world; agreement between the two algorithms</td></tr>
+        <tr><td>3 · prediction</td><td><code>td0_prediction</code>, <code>mc_prediction</code></td><td>exact updates on a scripted episode; convergence to the random walk's true values</td></tr>
+        <tr><td>4 · control</td><td><code>epsilon_greedy</code>, <code>sarsa_target</code>, <code>q_learning_target</code>, <code>expected_sarsa_target</code>, <code>double_q_update</code>, <code>run_control</code></td><td>action frequencies; the targets and the double update by hand; on the cliff, SARSA's safe path and Q-learning's 13-step greedy path; double Q-learning avoiding the biased branch</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="experiments">
+    <h2>Experiments and write-up</h2>
+    <p>Once all fifteen checks pass, write scripts that use your functions. For reference, the solution gets the numbers quoted below; with your own seeds the sampled ones will differ somewhat, and the exact ones should not.</p>
+    <ol>
+      <li><b>What the living reward does.</b> On <code>GRID_4x3</code> with slip 0.2 and $\gamma = 0.99$, solve for living rewards $-2, -0.4, -0.04, -0.01, 0$ and $+0.1$, and draw each optimal policy as arrows. Explain each change of policy. The solution's $V^\star$ at the start is $-8.65, -1.20, 0.698, 0.872, 0.936$ and $10.0$. At $-2$ the agent heads for the nearest exit, even the pit; at $-0.01$ and $0$ it walks into a wall rather than risk slipping into the pit; at $+0.1$ it never leaves. Why does value iteration take 33 sweeps at $-2$ but 2,056 at $+0.1$? (Use the contraction bound and ask how long the optimal trajectory is.)</li>
+      <li><b>Value iteration against policy iteration.</b> Build a maze of your own, at least $9\times10$ with long corridors (the solution's is $9\times10$, with a 31-step shortest path), with slip 0.1 and living reward $-0.01$. For $\gamma = 0.9, 0.99, 0.999$, count value iteration's sweeps (to a change below $10^{-10}$) and policy iteration's improvement steps. In the solution, value iteration takes 58, 64 and 64 sweeps and policy iteration 16 steps each time. Explain why the number of sweeps barely depends on $\gamma$ here, although the contraction bound does, and why policy iteration needs 16 steps on a maze although each of its evaluations is exact.</li>
+      <li><b>TD against Monte Carlo.</b> On the random walk, plot the RMS error of the value estimates against episodes, averaged over 100 runs, for TD(0) with $\alpha\in\{0.05, 0.1, 0.15\}$ and constant-$\alpha$ Monte Carlo with $\alpha\in\{0.01, 0.02, 0.03, 0.04\}$, starting from $V = 0.5$. After 100 episodes the solution's errors are 0.036, 0.057, 0.073 for TD and 0.097, 0.085, 0.096, 0.109 for Monte Carlo. Why does the error of large-$\alpha$ TD level off, and why does MC's best $\alpha$ do worse than TD's?</li>
+      <li><b>The cliff.</b> Plot reward per episode for SARSA, Q-learning and Expected SARSA ($\alpha = 0.5$, $\varepsilon = 0.1$, 500 episodes, averaged over 10 runs). The solution's last-100 averages are $-23.4$, $-46.1$ and $-19.3$. Then decay $\varepsilon$ to zero over training and show that SARSA's final greedy path becomes the optimal one. Explain which value each method is learning while $\varepsilon$ is fixed.</li>
+      <li><b>Maximisation bias.</b> On <code>MaxBias</code>, plot the fraction of episodes that start with "left" against episode number for Q-learning and double Q-learning ($\alpha = 0.1$, $\varepsilon = 0.1$, 1,000 runs of 300 episodes). In the solution, Q-learning peaks at 0.95 around episode 16 and ends near 0.13; double Q-learning peaks at 0.52 around episode 7 and ends near 0.07, close to the 0.05 that $\varepsilon$-greedy exploration forces. Explain the peak with problem 20 of <a href="/machine-learning/P8-problems-stage-8/">P8</a>.</li>
+      <li><b>Your choice.</b> Do one of: (a) UCB1 against Thompson sampling on 10 Bernoulli arms with means drawn from $N(0.5, 0.1^2)$ over 5,000 steps (the solution's mean regret is 328 and 108 over 100 runs), with a plot of regret against $\ln t$; (b) $n$-step SARSA on the cliff for $n = 1, 2, 4, 8$; (c) Dyna-Q (lesson 40) on your maze from experiment 2, comparing the number of real steps to reach the optimal path with and without planning.</li>
+    </ol>
+  </section>
+
+  <section id="grading">
+    <h2>Grading yourself</h2>
+    <p>Fifteen checker passes are worth 40%. Each experiment is worth 10%: full marks if the plot or table is right <i>and</i> the explanation names the mechanism.</p>
+  </section>
+</article>

@@ -1,0 +1,282 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 36 · Stage 8: reinforcement learning</div>
+  <h1>SARSA and Q-learning</h1>
+  <p class="lede">Lesson 35 learned the value of a fixed policy from experience. This lesson learns to act: model-free <b>control</b>. The recipe is generalised policy iteration (lesson 34) with action values, so that improving the policy needs no model, and with exploration built in, since a greedy agent never learns about the actions it does not try. It derives the three standard one-step algorithms, SARSA, Q-learning and Expected SARSA, from the Bellman equations for $Q$; explains the difference between on-policy and off-policy learning with the cliff-walking example; and proves that the max in Q-learning's target is biased upwards, with double Q-learning as the fix. The code reproduces the cliff and the maximisation-bias experiments, and shows Q-learning finding $Q^*$ while behaving completely at random.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/35-monte-carlo-and-td-learning/">35</a>, <a href="/machine-learning/32-bandits-and-exploration/">32</a></span><span><b>Math pulled in:</b> the Bellman optimality operator on $Q$, the policy improvement theorem for stochastic policies, Jensen's inequality, the law of total variance, stochastic approximation</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Policy iteration alternates evaluation and greedy improvement. Without a model, both steps change. Evaluation becomes TD learning, from lesson 35. Improvement cannot use $\arg\max_a[R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V(s')]$, which needs $P$ and $R$; but it can use $\arg\max_aQ(s, a)$, which needs nothing else. So model-free control learns <b>action values</b> $Q(s, a)$.</p>
+    <p>Improvement must also stop short of fully greedy. Lesson 32's greedy bandit locked onto a bad arm because it never tried the others again; an agent in an MDP has the same problem in every state. The standard fix is an <b>$\varepsilon$-greedy</b> policy: take the greedy action with probability $1 - \varepsilon$ and a uniformly random one with probability $\varepsilon$. The three algorithms in this lesson differ only in the target they use for $Q(S_t, A_t)$, and the difference decides what they learn.</p>
+  </section>
+
+  <section id="soft">
+    <h2>Improvement with exploration</h2>
+    <p>Call a policy <b>$\varepsilon$-soft</b> if it gives every action probability at least $\varepsilon/|\mathcal{A}|$ in every state. Greedy improvement is not available inside this class, but $\varepsilon$-greedy improvement is, and it still never makes things worse.</p>
+    <div class="result">
+      <div class="label">Policy improvement for $\varepsilon$-soft policies</div>
+      <p>If $\pi$ is $\varepsilon$-soft and $\pi'$ is $\varepsilon$-greedy with respect to $Q^\pi$, then $V^{\pi'}\ge V^\pi$ in every state.</p>
+    </div>
+    <p><b>Proof.</b> By the policy improvement theorem of lesson 34 (whose proof works unchanged for stochastic $\pi'$), it is enough to show $\sum_a\pi'(a\mid s)Q^\pi(s, a)\ge V^\pi(s)$. Write $m = |\mathcal{A}|$. The weights $w_a = \frac{\pi(a\mid s) - \varepsilon/m}{1 - \varepsilon}$ are non-negative (because $\pi$ is $\varepsilon$-soft) and sum to 1, and a maximum is at least any weighted average:</p>
+    <div class="eq">$$\sum_a\pi'(a\mid s)Q^\pi(s, a) = \frac{\varepsilon}{m}\sum_aQ^\pi(s, a) + (1 - \varepsilon)\max_aQ^\pi(s, a)\ge\frac{\varepsilon}{m}\sum_aQ^\pi(s, a) + (1 - \varepsilon)\sum_aw_aQ^\pi(s, a) = \sum_a\pi(a\mid s)Q^\pi(s, a) = V^\pi(s).\ \square$$</div>
+    <p>Iterating this converges to the best $\varepsilon$-soft policy, not the optimal one. To reach the optimum, exploration must fade: a schedule is <b>GLIE</b>, greedy in the limit with infinite exploration, if every state–action pair is tried infinitely often and the policy becomes greedy in the limit, for example $\varepsilon_k = 1/k$ in the $k$-th episode.</p>
+  </section>
+
+  <section id="sarsa">
+    <h2>SARSA: on-policy TD control</h2>
+    <p>Apply TD(0) to action values. After each step, the agent has $S_t, A_t, R_{t+1}, S_{t+1}$ and, once it has chosen its next action, $A_{t+1}$: the quintuple that names the algorithm.</p>
+    <div class="eq">$$Q(S_t, A_t)\leftarrow Q(S_t, A_t) + \alpha\big[R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t)\big].$$</div>
+    <p>Given $S_{t+1}$, the expected target is $R + \gamma\sum_{a'}\pi(a'\mid S_{t+1})Q(S_{t+1}, a')$, the Bellman expectation operator for $Q^\pi$ (lesson 33, exercise 2). So SARSA evaluates the policy it is following, which is improved continually by being $\varepsilon$-greedy with respect to the current $Q$. It is <b>on-policy</b>: it learns the value of the behaviour that generates its data, exploration included. With GLIE exploration and Robbins–Monro step sizes, SARSA converges to $Q^*$ and the optimal policy with probability 1 (Singh, Jaakkola, Littman and Szepesvári, 2000).</p>
+  </section>
+
+  <section id="q-learning">
+    <h2>Q-learning: off-policy TD control</h2>
+    <p>Lesson 33's Bellman optimality equation for $Q$ is $Q^* = \mathcal{T}Q^*$, with</p>
+    <div class="eq">$$(\mathcal{T}Q)(s, a) = R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)\max_{a'}Q(s', a').$$</div>
+    <p>$\mathcal{T}$ is a $\gamma$-contraction in the sup norm, by the same argument as in lesson 34 (exercise 1). A single transition $(s, a, r, s')$ gives an unbiased sample of $(\mathcal{T}Q)(s, a)$, namely $r + \gamma\max_{a'}Q(s', a')$. Stepping towards that sample is <b>Q-learning</b> (Watkins, 1989):</p>
+    <div class="eq">$$Q(S_t, A_t)\leftarrow Q(S_t, A_t) + \alpha\big[R_{t+1} + \gamma\max_{a'}Q(S_{t+1}, a') - Q(S_t, A_t)\big].$$</div>
+    <p>It is sampled value iteration. The target never refers to the action the agent takes next, so the behaviour policy only decides <i>which</i> pairs get updated and how often; it does not change <i>what</i> they converge to. That is <b>off-policy</b> learning: learning about one policy (here the greedy one, the target policy) from data generated by another (the behaviour policy). Watkins and Dayan (1992) proved that tabular Q-learning converges to $Q^*$ with probability 1 if every pair is updated infinitely often and the step sizes satisfy the Robbins–Monro conditions, whatever the behaviour. The code demonstrates it: an agent that moves uniformly at random in lesson 33's gridworld, never trying to do well, learns $Q^*$ to within 0.016 after two million steps, and its greedy policy is optimal in every state.</p>
+    <p>Off-policy learning is what makes experience replay possible (lesson 37): transitions stored long ago, under an older and worse policy, are still valid training data for $Q^*$. It is also why Q-learning can learn from demonstrations, from other agents, or from exploratory behaviour that is nothing like the final policy.</p>
+  </section>
+
+  <section id="expected">
+    <h2>Expected SARSA</h2>
+    <p>SARSA's target uses the sampled next action $A_{t+1}$; its expectation over that action is known exactly, since the agent knows its own policy. <b>Expected SARSA</b> uses the expectation:</p>
+    <div class="eq">$$Q(S_t, A_t)\leftarrow Q(S_t, A_t) + \alpha\Big[R_{t+1} + \gamma\sum_{a'}\pi(a'\mid S_{t+1})Q(S_{t+1}, a') - Q(S_t, A_t)\Big].$$</div>
+    <p>It has the same expected update as SARSA, with less variance: by the law of total variance, the variance of SARSA's target equals that of Expected SARSA's plus $\gamma^2\,\mathbb{E}\big[\mathrm{Var}_{A'\sim\pi}Q(S_{t+1}, A')\big]$, the noise from sampling $A_{t+1}$. With $\pi$ greedy, the expectation is the max and Expected SARSA is Q-learning; with $\pi$ different from the behaviour policy, it is an off-policy method that generalises both. It costs a sum over actions per step.</p>
+  </section>
+
+  <section id="cliff">
+    <h2>On-policy against off-policy: the cliff</h2>
+    <p>Sutton and Barto's cliff-walking task is a 4 × 12 grid. The agent starts at the bottom left and must reach the bottom right; the ten cells between them are a cliff. Each step costs $-1$; stepping into the cliff costs $-100$ and sends the agent back to the start. The optimal path runs along the cliff edge, 13 steps. All three agents use $\varepsilon = 0.1$ and $\alpha = 0.5$.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: sarsa-q-learning --></div>
+    </figure>
+    <p class="muted">Left: reward per episode while learning on the cliff, averaged over 50 runs and smoothed over 10 episodes; the first episodes, far below −100, are cut off. Right: maximisation bias, the fraction of 2,000 runs that choose the worse action in state A (below). From the code.</p>
+    <p>Q-learning learns the values of the greedy policy, so its greedy path is the optimal one along the edge (13 steps). But it <i>behaves</i> $\varepsilon$-greedily, and one random step in ten from the edge cell above the cliff has a one-in-four chance of pointing down: it falls off often, and earns about $-49$ per episode late in training. SARSA learns the value of the $\varepsilon$-greedy policy it actually follows, whose values near the edge include the risk of those random steps, so it learns a safer path one or two rows up (17 steps in the run shown) and earns about $-26$. Expected SARSA, with the same targets but less noise, does best online, at about $-21$. Which answer is right depends on the question. If exploration will stop once learning is done, Q-learning's policy is the one to deploy. If the agent must keep exploring, or will be deployed with some noise in its actions, SARSA's caution is correct, because it has learned the value of what will actually happen.</p>
+    <figure class="plate wide" data-scene="cliff">
+      <div class="stage">
+        <canvas aria-label="The cliff-walking gridworld with the greedy paths learned by SARSA and Q-learning, and their returns per episode"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="cf-eps">exploration ε <input id="cf-eps" type="range" data-k="eps" min="0" max="0.3" step="0.01"><output data-out="eps"></output></label>
+            <button type="button" data-act="reset">Learn again</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Both agents learn from scratch for 500 episodes with the same ε-greedy exploration and $\alpha = 0.1$, smaller than above so that the greedy paths settle. Q-learning learns the values of the greedy policy, so its path hugs the cliff edge; but it is still exploring, and every so often a random step sends it over, which is why its returns are worse. SARSA learns the value of what it actually does, exploration included, and takes a safer route, further from the edge. Set ε to 0 and both converge to the edge path.</p>
+  </section>
+
+  <section id="bias">
+    <h2>Maximisation bias and double Q-learning</h2>
+    <p>Q-learning's target takes a maximum over estimates, and estimates are noisy. A maximum of noisy estimates is biased upwards even when each estimate is unbiased.</p>
+    <div class="result">
+      <div class="label">The max of unbiased estimates overestimates</div>
+      <p>If $\mathbb{E}\hat Q(a) = q(a)$ for every $a$, then $\mathbb{E}\big[\max_a\hat Q(a)\big]\ge\max_aq(a)$, with strict inequality whenever there is a positive probability that the maximising action changes.</p>
+    </div>
+    <p><b>Proof.</b> The function $\mathbf{x}\mapsto\max_ax_a$ is convex, so by Jensen's inequality $\mathbb{E}\max_a\hat Q(a)\ge\max_a\mathbb{E}\hat Q(a)$. More directly: for any fixed $b$, $\max_a\hat Q(a)\ge\hat Q(b)$, so $\mathbb{E}\max_a\hat Q(a)\ge q(b)$ for every $b$, including the best. $\square$</p>
+    <p>The size of the bias can be large. Ten actions all worth $-0.1$, each estimated with standard deviation 1: the expected maximum of the estimates is $+1.44$ (the code checks it by simulation). Sutton and Barto's example builds a trap out of this. From state A, "right" ends the episode with reward 0; "left" leads to state B with reward 0, and B has 10 actions, each ending the episode with a reward drawn from $N(-0.1, 1)$. "Left" is worth $-0.1$, so "right" is optimal; with $\varepsilon = 0.1$, an optimal agent goes left 5% of the time. Q-learning bootstraps $Q(A, \text{left})$ from $\max_bQ(B, b)$, which is inflated by whichever of B's actions has had lucky rewards so far. In the code, it chooses left in 82% of runs after 50 episodes and still 12% after 300.</p>
+    <p><b>Double Q-learning</b> (van Hasselt, 2010) separates choosing the best action from evaluating it. It keeps two independent estimates $Q_1$ and $Q_2$. On each step, flip a coin, and to update $Q_1$, use</p>
+    <div class="eq">$$Q_1(S_t, A_t)\leftarrow Q_1(S_t, A_t) + \alpha\big[R_{t+1} + \gamma\,Q_2\big(S_{t+1}, \arg\max_{a'}Q_1(S_{t+1}, a')\big) - Q_1(S_t, A_t)\big],$$</div>
+    <p>and symmetrically for $Q_2$; behave $\varepsilon$-greedily with respect to $Q_1 + Q_2$. The point: $Q_2$'s errors are independent of the choice made with $Q_1$, so conditional on $Q_1$, $\mathbb{E}[Q_2(a^*)] = q(a^*)\le\max_aq(a)$. The target is unbiased for the chosen action's value and therefore never overestimates in expectation (it can underestimate, when $Q_1$ picks a worse action). In the code, double Q-learning chooses "left" in 14% of runs after 50 episodes and 7% after 300, close to the optimal 5%. The same idea, applied to deep Q-networks, is Double DQN (lesson 37).</p>
+  </section>
+
+  <section id="beyond">
+    <h2>Beyond one step</h2>
+    <p>All three algorithms extend to $n$-step returns and eligibility traces as in lesson 35. On-policy, that is direct: $n$-step SARSA and SARSA($\lambda$). Off-policy it is not: an $n$-step return contains actions chosen by the behaviour policy $b$, not the target policy $\pi$, and must be corrected by the <b>importance-sampling ratio</b> $\prod_k\pi(A_k\mid S_k)/b(A_k\mid S_k)$, whose variance can be enormous, and which is zero as soon as the behaviour takes an action the greedy target policy would not. Tree-backup and Retrace (Munos et al., 2016) are ways to use multi-step returns off-policy while keeping the variance bounded; Retrace, for instance, truncates each ratio at 1. Many deep RL agents simply use uncorrected $n$-step returns with small $n$ and accept a little bias.</p>
+    <p>Exploration also has better options than $\varepsilon$-greedy. <b>Optimistic initial values</b> ($Q_0$ larger than any achievable return) make every untried action look attractive until tried. <b>Count-based bonuses</b> add something like $c/\sqrt{N(s, a)}$ to the reward, the UCB idea of lesson 32 applied per state; R-MAX and UCB-style algorithms built this way have polynomial sample-complexity guarantees, which $\varepsilon$-greedy lacks: there are MDPs where $\varepsilon$-greedy needs a number of steps exponential in the number of states to find the reward.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 implements cliff walking and runs SARSA, Q-learning and Expected SARSA for 500 episodes, 50 runs each, reporting the online reward and the greedy path learned in one run. Part 2 estimates the bias of a maximum by simulation, then runs Sutton and Barto's maximisation-bias example with Q-learning and double Q-learning over 2,000 runs. Part 3 runs Q-learning on lesson 33's gridworld with a uniformly random behaviour policy and step sizes $1/N(s, a)^{0.7}$ (which satisfy both Robbins–Monro conditions), and compares with $Q^*$ from value iteration. The full script takes under a minute.</p>
+<pre><code>import numpy as np
+
+# ---- Part 1: cliff walking (Sutton and Barto, example 6.6). A 4 x 12 grid; start bottom-left,
+# goal bottom-right; the cells between them on the bottom row are a cliff: stepping in costs
+# -100 and sends the agent back to the start. Every other step costs -1. gamma = 1.
+H, W = 4, 12
+START, GOAL = (3, 0), (3, 11)
+moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]                        # up, right, down, left
+
+def step(s, a):
+    i, j = s[0] + moves[a][0], s[1] + moves[a][1]
+    i, j = min(max(i, 0), H - 1), min(max(j, 0), W - 1)
+    if i == 3 and 0 &lt; j &lt; 11:
+        return START, -100.0
+    return (i, j), -1.0
+
+def eps_greedy(Q, s, eps, rng):
+    if rng.random() &lt; eps:
+        return int(rng.integers(4))
+    q = Q[s]
+    return int(rng.choice(np.flatnonzero(q == q.max())))           # break ties at random
+
+def cliff_run(method, episodes=500, alpha=0.5, eps=0.1, seed=0):
+    rng = np.random.default_rng(seed)
+    Q = np.zeros((H, W, 4))
+    totals = np.zeros(episodes)
+    for e in range(episodes):
+        s = START; a = eps_greedy(Q, s, eps, rng)
+        while s != GOAL:
+            s2, r = step(s, a)
+            a2 = eps_greedy(Q, s2, eps, rng)
+            if s2 == GOAL:
+                target = r
+            elif method == "SARSA":                                # the action actually taken next
+                target = r + Q[s2][a2]
+            elif method == "Q-learning":                           # the greedy action
+                target = r + Q[s2].max()
+            else:                                                  # Expected SARSA: average under the policy
+                pi = np.full(4, eps / 4); pi[np.argmax(Q[s2])] += 1 - eps
+                target = r + pi @ Q[s2]
+            Q[s][a] += alpha * (target - Q[s][a])
+            totals[e] += r
+            s, a = s2, a2
+    return totals, Q
+
+def greedy_path(Q):
+    s, path = START, []
+    for _ in range(60):
+        if s == GOAL:
+            break
+        a = int(np.argmax(Q[s])); path.append("^&gt;v&lt;"[a]); s, _ = step(s, a)
+    return "".join(path), s == GOAL
+
+cliff = {}
+for method in ["SARSA", "Q-learning", "Expected SARSA"]:
+    runs = [cliff_run(method, seed=r) for r in range(50)]
+    curve = np.mean([t for t, _ in runs], axis=0)
+    cliff[method] = curve
+    path, ok = greedy_path(runs[0][1])
+    print(f"{method:14s}: average reward per episode, episodes 401-500: {curve[400:].mean():7.2f};"
+          f" greedy path of run 0 ({len(path)} steps{'' if ok else ', does not reach the goal'}): {path}")
+
+# ---- Part 2: maximisation bias (Sutton and Barto, example 6.7). From A, "right" ends the
+# episode with reward 0; "left" goes to B with reward 0. B has 10 actions, each ending the episode
+# with reward drawn from N(-0.1, 1). So "left" is worth -0.1 and "right" is optimal.
+rng = np.random.default_rng(0)
+print(f"E[max of 10 noisy estimates of -0.1]: {np.mean(np.max(rng.normal(-0.1, 1, (100_000, 10)), axis=1)):+.3f}")
+def bias_run(double, episodes=300, alpha=0.1, eps=0.1, seed=0):
+    rng = np.random.default_rng(seed)
+    QA = [np.zeros(2), np.zeros(2)]                                # A: 0 = left, 1 = right
+    QB = [np.zeros(10), np.zeros(10)]
+    lefts = np.zeros(episodes)
+    for e in range(episodes):
+        qa = QA[0] + QA[1] if double else QA[0]
+        a = int(rng.integers(2)) if rng.random() &lt; eps else int(rng.choice(np.flatnonzero(qa == qa.max())))
+        lefts[e] = a == 0
+        if a == 1:
+            k = int(rng.integers(2)) if double else 0
+            QA[k][1] += alpha * (0 - QA[k][1])
+            continue
+        qb = QB[0] + QB[1] if double else QB[0]
+        b = int(rng.integers(10)) if rng.random() &lt; eps else int(rng.choice(np.flatnonzero(qb == qb.max())))
+        r = rng.normal(-0.1, 1)
+        if double:
+            k = int(rng.integers(2))                               # update one estimate at random...
+            best = int(np.argmax(QB[k]))                           # ...select with it,
+            QA[k][0] += alpha * (0 + QB[1 - k][best] - QA[k][0])   # ...evaluate with the other
+            QB[k][b] += alpha * (r - QB[k][b])
+        else:
+            QA[0][0] += alpha * (0 + QB[0].max() - QA[0][0])
+            QB[0][b] += alpha * (r - QB[0][b])
+    return lefts
+
+for double in [False, True]:
+    frac = np.mean([bias_run(double, seed=s) for s in range(2000)], axis=0)
+    name = "double Q-learning" if double else "Q-learning"
+    print(f"{name:17s}: fraction choosing 'left' at episodes 10, 50, 100, 300: {frac[9]:.3f} {frac[49]:.3f} {frac[99]:.3f} {frac[299]:.3f}"
+          f" (the optimal epsilon-greedy policy: 0.050)")
+    if double:
+        frac_double = frac
+    else:
+        frac_q = frac
+
+# ---- Part 3: Q-learning is off-policy. Learn Q* of lesson 33's gridworld while behaving
+# uniformly at random, and compare with Q* from value iteration.
+rows, cols, wall = 3, 4, (1, 1)
+cells = [(i, j) for i in range(rows) for j in range(cols) if (i, j) != wall]
+G = len(cells) + 1; END = G - 1
+gidx = {c: k for k, c in enumerate(cells)}
+term = {(0, 3): 1.0, (1, 3): -1.0}
+P = np.zeros((4, G, G)); R = np.zeros((4, G))
+for c in cells:
+    s = gidx[c]
+    for a in range(4):
+        if c in term:
+            P[a, s, END] = 1; R[a, s] = term[c]; continue
+        for d, p in [(a, 0.8), ((a + 1) % 4, 0.1), ((a + 3) % 4, 0.1)]:
+            nb = (c[0] + moves[d][0], c[1] + moves[d][1])
+            P[a, s, gidx[nb] if nb in gidx else s] += p
+        R[a, s] = -0.04
+P[:, END, END] = 1
+gamma = 0.99
+Qstar = np.zeros((4, G))
+for _ in range(2000):
+    Qstar = R + gamma * P @ Qstar.max(0)
+rng = np.random.default_rng(3)
+cum = P.cumsum(2)                                                  # for fast sampling of s'
+Q = np.zeros((4, G)); N = np.zeros((4, G))
+s = int(rng.integers(G - 1))
+for t in range(1, 2_000_001):
+    a = int(rng.integers(4))                                       # behaviour: uniformly random
+    s2 = min(int(np.searchsorted(cum[a, s], rng.random(), side="right")), G - 1)
+    N[a, s] += 1
+    Q[a, s] += (R[a, s] + gamma * Q[:, s2].max() - Q[a, s]) / N[a, s] ** 0.7   # sum alpha = inf, sum alpha^2 &lt; inf
+    s = s2 if s2 != END else int(rng.integers(G - 1))              # restart anywhere after an exit
+    if t in (10_000, 100_000, 2_000_000):
+        print(f"after {t:&gt;9,} random steps: max |Q - Q*| = {np.abs(Q - Qstar)[:, :END].max():.4f},"
+              f" greedy policy optimal in {np.sum(Q[:, :END].argmax(0) == Qstar[:, :END].argmax(0))} of {END} states")
+
+# SARSA         : average reward per episode, episodes 401-500:  -26.32; greedy path of run 0 (17 steps): ^^^&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;v&gt;vv
+# Q-learning    : average reward per episode, episodes 401-500:  -49.26; greedy path of run 0 (13 steps): ^&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;v
+# Expected SARSA: average reward per episode, episodes 401-500:  -20.68; greedy path of run 0 (15 steps): ^^&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;vv
+# E[max of 10 noisy estimates of -0.1]: +1.440
+# Q-learning       : fraction choosing 'left' at episodes 10, 50, 100, 300: 0.868 0.823 0.471 0.118 (the optimal epsilon-greedy policy: 0.050)
+# double Q-learning: fraction choosing 'left' at episodes 10, 50, 100, 300: 0.458 0.142 0.088 0.072 (the optimal epsilon-greedy policy: 0.050)
+# after    10,000 random steps: max |Q - Q*| = 0.0932, greedy policy optimal in 10 of 11 states
+# after   100,000 random steps: max |Q - Q*| = 0.0998, greedy policy optimal in 10 of 11 states
+# after 2,000,000 random steps: max |Q - Q*| = 0.0160, greedy policy optimal in 11 of 11 states</code></pre>
+    <p><b>Reading the output.</b> The cliff results are as described above: in its last 100 episodes, Q-learning averages $-49$ per episode, SARSA $-26$ and Expected SARSA $-21$, while Q-learning's greedy path is the 13-step optimal one and the SARSA agents' paths stay one or two rows from the edge. The maximisation-bias curves have the shape of Sutton and Barto's figure 6.5. In part 3, Q-learning's error is still 0.10 after 100,000 random steps, which is slow: pairs that random behaviour rarely reaches are rarely updated, and step sizes $N^{-0.7}$ shrink quickly. It is 0.016 after two million steps, with every greedy action correct. Off-policy learning works, but its efficiency depends on how well the behaviour covers the pairs that matter.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Prove that the operator $\mathcal{T}$ on action-value functions defined in the Q-learning section is a $\gamma$-contraction in the sup norm.</li>
+      <li>SARSA with a constant $\varepsilon = 0.1$ and Q-learning with $\varepsilon = 0.1$ behaviour both converge (with decaying step sizes). To what? What changes for SARSA if $\varepsilon_k\to0$?</li>
+      <li>Show that the expected update of Expected SARSA equals that of SARSA, and derive the variance difference stated in the text from the law of total variance.</li>
+      <li>Two actions, both worth 0, with independent estimates $\hat Q(a)\sim N(0, 1)$. Compute $\mathbb{E}\max(\hat Q(1), \hat Q(2))$ exactly. (Hint: $\max(x, y) = \frac{x + y}{2} + \frac{|x - y|}{2}$.)</li>
+      <li>Give a two-action example in which the double Q-learning target underestimates the best action's value in expectation.</li>
+      <li>On the cliff, what is the return of the 13-step edge path and of a 17-step path two rows up, without exploration? With $\varepsilon = 0.1$, estimate the probability per episode that an agent walking the edge path falls at least once, and explain the online rewards.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $|(\mathcal{T}Q)(s, a) - (\mathcal{T}Q')(s, a)| = \gamma\big|\sum_{s'}P(s'\mid s, a)\big(\max_{a'}Q(s', a') - \max_{a'}Q'(s', a')\big)\big|\le\gamma\sum_{s'}P(s'\mid s, a)\max_{a'}|Q(s', a') - Q'(s', a')|\le\gamma\|Q - Q'\|_\infty$, using $|\max f - \max g|\le\max|f - g|$ from lesson 34.</p>
+        <p><b>2.</b> Q-learning converges to $Q^*$ regardless of behaviour. SARSA with constant $\varepsilon$ converges to the action values of the best $\varepsilon$-greedy policy (the fixed point of evaluating and $\varepsilon$-greedily improving), which differs from $Q^*$ where exploration is costly, as on the cliff. With GLIE exploration, SARSA's target policy becomes greedy in the limit, and it converges to $Q^*$ too.</p>
+        <p><b>3.</b> $\mathbb{E}[Q(S', A')\mid S'] = \sum_{a'}\pi(a'\mid S')Q(S', a')$, so the two targets have the same conditional mean given $S'$, hence the same expectation. Law of total variance, conditioning on $(R, S')$: $\mathrm{Var}[R + \gamma Q(S', A')] = \mathrm{Var}\big[\mathbb{E}[\cdot\mid R, S']\big] + \mathbb{E}\big[\mathrm{Var}[\cdot\mid R, S']\big]$. The first term is the variance of the Expected SARSA target; the second is $\gamma^2\mathbb{E}[\mathrm{Var}_{A'\sim\pi}Q(S', A')]$.</p>
+        <p><b>4.</b> $\mathbb{E}\max = \mathbb{E}\frac{x + y}{2} + \frac12\mathbb{E}|x - y| = 0 + \frac12\mathbb{E}|Z|$ with $Z = x - y\sim N(0, 2)$, and $\mathbb{E}|Z| = \sqrt2\sqrt{2/\pi}$. So $\mathbb{E}\max = 1/\sqrt\pi\approx0.564$, an overestimate of more than half a standard deviation with only two actions.</p>
+        <p><b>5.</b> True values $q(1) = 1$, $q(2) = 0$; estimates with large noise. When $Q_1$'s noise makes it pick action 2 (with positive probability), the target uses $Q_2(2)$, whose expectation is 0 &lt; 1. So the expected target is $P(a^* = 1)\cdot1 + P(a^* = 2)\cdot0 &lt; 1 = \max_aq(a)$.</p>
+        <p><b>6.</b> $-13$ and $-17$. On the edge path, 10 of the steps are taken from a cell directly above the cliff (the cells above columns 1 to 10, moving right). Each has probability $\varepsilon/4 = 0.025$ of a random "down"; the chance of at least one fall is $1 - 0.975^{10}\approx0.22$, and each fall costs 100 plus the walk back. That explains why Q-learning's online reward is far below $-13$. Two rows up, a single random step down never reaches the cliff.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Sutton &amp; Barto, <i>Reinforcement Learning: An Introduction</i></b> (2nd edition, 2018), chapters 5.4, 6.4–6.7 and 7. SARSA, Q-learning, Expected SARSA, the cliff and the maximisation-bias example.</li>
+      <li><b>Watkins &amp; Dayan, "Q-learning"</b> (1992). The convergence proof.</li>
+      <li><b>Singh, Jaakkola, Littman &amp; Szepesvári, "Convergence results for single-step on-policy reinforcement-learning algorithms"</b> (2000). SARSA and GLIE.</li>
+      <li><b>van Hasselt, "Double Q-learning"</b> (2010).</li>
+      <li><b>Munos, Stepleton, Harutyunyan &amp; Bellemare, "Safe and efficient off-policy reinforcement learning"</b> (2016). Retrace.</li>
+      <li><b>Brafman &amp; Tennenholtz, "R-MAX"</b> (2002). Exploration with optimism and polynomial guarantees.</li>
+    </ul>
+  </section>
+</article>

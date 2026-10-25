@@ -1,0 +1,310 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 34 · Stage 8: reinforcement learning</div>
+  <h1>Dynamic programming</h1>
+  <p class="lede">When the model of an MDP is known, the Bellman equations of lesson 33 can be solved outright. This lesson does it three ways: policy evaluation by iteration, value iteration, and policy iteration. It proves why each works. The Bellman operators are contractions, so the Banach fixed-point theorem gives convergence, uniqueness and computable error bounds; the policy improvement theorem says that acting greedily on a policy's own values never makes it worse. It also shows how to bound the loss from stopping early, and how the whole problem can be written as a linear program whose dual variables are the occupancy measures of lesson 33. The code solves Sutton and Barto's car rental problem, 441 states, both ways, and measures the contraction rate. Every later method in this stage is an approximation to one of these algorithms.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/33-mdps-and-bellman-equations/">33</a>, <a href="/machine-learning/M1-linear-algebra/">M1</a></span><span><b>Math pulled in:</b> norms, Cauchy sequences and completeness, contraction mappings and the Banach fixed-point theorem, monotone operators, Newton's method, linear programming duality</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Lesson 33 wrote the value of a policy and the optimal value as fixed points: $V^\pi = \mathcal{T}^\pi V^\pi$ and $V^* = \mathcal{T}V^*$, where</p>
+    <div class="eq">$$(\mathcal{T}^\pi V)(s) = \sum_a\pi(a\mid s)\Big[R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V(s')\Big],\qquad(\mathcal{T}V)(s) = \max_a\Big[R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V(s')\Big].$$</div>
+    <p>The simplest way to find a fixed point is to apply the map over and over: start anywhere, and iterate $V_{k+1} = \mathcal{T}V_k$. That is <b>value iteration</b>. For this to work, the map has to pull points together, and the Bellman operators do, by a factor of $\gamma$ per application. The other approach alternates two steps that are each easy: compute a policy's values exactly, then switch to the greedy policy for those values. That is <b>policy iteration</b>, and it usually needs only a handful of rounds.</p>
+    <p>"Dynamic programming" is Bellman's 1950s name for solving a problem by combining the solutions of overlapping subproblems; here the subproblems are the values of the successor states. It needs the full model, $P$ and $R$, and work proportional to the number of states per sweep. Both requirements fail for most interesting problems, which is what the rest of the stage is about. But every method that follows, from TD learning to AlphaZero, is recognisably one of these algorithms with sampling or a neural network in place of exact sums.</p>
+  </section>
+
+  <section id="contraction">
+    <h2>Contractions and the fixed-point theorem</h2>
+    <p>Measure the distance between value functions by the largest difference in any state, the <b>sup norm</b> $\|V\|_\infty = \max_s|V(s)|$. A map $F$ is a <b>$\gamma$-contraction</b> if $\|FV - FW\|_\infty\le\gamma\|V - W\|_\infty$ for all $V, W$, with $\gamma &lt; 1$.</p>
+    <div class="result">
+      <div class="label">Both Bellman operators are $\gamma$-contractions in the sup norm</div>
+      <p>$$\|\mathcal{T}^\pi V - \mathcal{T}^\pi W\|_\infty\le\gamma\|V - W\|_\infty,\qquad\|\mathcal{T}V - \mathcal{T}W\|_\infty\le\gamma\|V - W\|_\infty .$$</p>
+    </div>
+    <p><b>Proof.</b> For $\mathcal{T}^\pi$, the rewards cancel: $\mathcal{T}^\pi V - \mathcal{T}^\pi W = \gamma P_\pi(V - W)$. Each entry of $P_\pi(V - W)$ is a weighted average of entries of $V - W$, with non-negative weights summing to 1, so it is at most $\|V - W\|_\infty$ in size. For $\mathcal{T}$, use the inequality $|\max_af(a) - \max_ag(a)|\le\max_a|f(a) - g(a)|$. (If the left side is $f(a_1) - g(a_2)$ with $a_1$ maximising $f$, it is at most $f(a_1) - g(a_1)$, since $g(a_2)\ge g(a_1)$; symmetrically for the other sign.) With $f(a) = R(s, a) + \gamma(P_aV)(s)$ and $g$ the same with $W$:</p>
+    <div class="eq">$$|(\mathcal{T}V)(s) - (\mathcal{T}W)(s)|\le\max_a\gamma|(P_a(V - W))(s)|\le\gamma\|V - W\|_\infty.\qquad\square$$</div>
+    <div class="result">
+      <div class="label">Banach fixed-point theorem</div>
+      <p>A $\gamma$-contraction $F$ on $\mathbb{R}^n$ has exactly one fixed point $V^\star$, and for any start $V_0$ the iterates $V_{k+1} = FV_k$ converge to it, with</p>
+      <p>$$\|V_k - V^\star\|_\infty\le\gamma^k\|V_0 - V^\star\|_\infty\quad\text{(a priori)},\qquad\|V_{k+1} - V^\star\|_\infty\le\frac{\gamma}{1 - \gamma}\|V_{k+1} - V_k\|_\infty\quad\text{(a posteriori)}.$$</p>
+    </div>
+    <p><b>Proof.</b> Successive steps shrink geometrically: $\|V_{k+1} - V_k\| = \|FV_k - FV_{k-1}\|\le\gamma\|V_k - V_{k-1}\|\le\dots\le\gamma^k\|V_1 - V_0\|$. So for $m &gt; k$, by the triangle inequality, $\|V_m - V_k\|\le\sum_{j=k}^{m-1}\gamma^j\|V_1 - V_0\|\le\frac{\gamma^k}{1 - \gamma}\|V_1 - V_0\|$, which goes to zero: the sequence is Cauchy. $\mathbb{R}^n$ is complete, so it has a limit $V^\star$, and since $F$ is continuous (it is Lipschitz), $FV^\star = \lim FV_k = \lim V_{k+1} = V^\star$. If $W$ were another fixed point, $\|V^\star - W\| = \|FV^\star - FW\|\le\gamma\|V^\star - W\|$ forces $\|V^\star - W\| = 0$. The a priori bound is the contraction applied $k$ times to $V_k - V^\star = F^kV_0 - F^kV^\star$. For the a posteriori bound, $\|V_{k+1} - V^\star\|\le\gamma\|V_k - V^\star\|\le\gamma\big(\|V_k - V_{k+1}\| + \|V_{k+1} - V^\star\|\big)$; rearrange. $\square$</p>
+    <p>This settles the facts lesson 33 borrowed. $\mathcal{T}$ has exactly one fixed point, so $V^*$ is the <i>unique</i> solution of the Bellman optimality equation, and iterating from any starting guess finds it. The a posteriori bound is the practical one: it turns a quantity you can observe, the size of the last update, into a guarantee about a quantity you cannot, the distance to the answer.</p>
+  </section>
+
+  <section id="evaluation">
+    <h2>Iterative policy evaluation</h2>
+    <p>For a fixed policy, $V_{k+1} = \mathcal{T}^\pi V_k = r_\pi + \gamma P_\pi V_k$ converges to $V^\pi$. Unrolled from $V_0 = 0$, $V_k = \sum_{t&lt;k}\gamma^tP_\pi^tr_\pi$ is the expected discounted reward of the first $k$ steps: iteration $k$ looks $k$ steps ahead. Each sweep costs one matrix–vector product, $O(|\mathcal{S}|^2)$, or much less when each state has only a few successors, against $O(|\mathcal{S}|^3)$ for the exact linear solve. To reach accuracy $\epsilon$ takes about $\log(1/\epsilon)/(1 - \gamma)$ sweeps.</p>
+    <p>Two variations matter in practice. <b>In-place</b> (Gauss–Seidel) iteration overwrites $V(s)$ as soon as it is computed, so later states in the same sweep already use the new values; it is still a contraction and usually converges in fewer sweeps. <b>Asynchronous</b> iteration updates states in any order, even one at a time, and still converges provided every state keeps being updated. That freedom is what lets later methods update only the states an agent actually visits.</p>
+  </section>
+
+  <section id="value-iteration">
+    <h2>Value iteration</h2>
+    <p><b>Value iteration</b> applies the optimality operator: $V_{k+1}(s) = \max_a\big[R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V_k(s')\big]$. By the theorems above it converges to $V^*$ from any start, at least as fast as $\gamma^k$. Then act greedily. The question is how good the greedy policy is when $V$ is only approximately $V^*$.</p>
+    <div class="result">
+      <div class="label">The greedy policy of an approximate value function</div>
+      <p>If $\|V - V^*\|_\infty\le\epsilon$ and $\pi$ is greedy with respect to $V$ (that is, $\mathcal{T}^\pi V = \mathcal{T}V$), then $\displaystyle\|V^\pi - V^*\|_\infty\le\frac{2\gamma\epsilon}{1 - \gamma}$.</p>
+    </div>
+    <p><b>Proof.</b> Since $V^* = \mathcal{T}V^*$, $V^\pi = \mathcal{T}^\pi V^\pi$ and $\mathcal{T}V = \mathcal{T}^\pi V$,</p>
+    <div class="eq">$$V^* - V^\pi = (\mathcal{T}V^* - \mathcal{T}V) + (\mathcal{T}^\pi V - \mathcal{T}^\pi V^\pi).$$</div>
+    <p>By the contractions, the sup norm of the right side is at most $\gamma\epsilon + \gamma\|V - V^\pi\|\le\gamma\epsilon + \gamma(\epsilon + \|V^* - V^\pi\|)$. Collect the $\|V^* - V^\pi\|$ terms: $(1 - \gamma)\|V^* - V^\pi\|\le2\gamma\epsilon$. $\square$</p>
+    <p>The factor $1/(1 - \gamma)$ is the horizon again: a small error in every state can steer the agent wrong at every step, and those losses accumulate over the horizon. The bound is tight in the worst case, but in practice the greedy policy is usually exactly optimal long before the values converge, because only the <i>ordering</i> of the actions matters. The code's value iteration needed 197 sweeps to bring the values within $5\times10^{-7}$ of $V^*$; its greedy policy was already exactly optimal after 32. A common stopping rule: stop when $\|V_{k+1} - V_k\|_\infty &lt; \epsilon(1 - \gamma)/(2\gamma)$, which by the a posteriori bound puts $V_{k+1}$ within $\epsilon/2$ of $V^*$.</p>
+    <figure class="plate wide" data-scene="valueiter">
+      <div class="stage">
+        <canvas aria-label="A gridworld with walls, a +1 and a −1 exit, showing the value of each square and the greedy action after each sweep of value iteration"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="vi-gamma">discount γ <input id="vi-gamma" type="range" data-k="gamma" min="0.5" max="0.99" step="0.01"><output data-out="gamma"></output></label>
+            <label for="vi-slip">slip probability <input id="vi-slip" type="range" data-k="slip" min="0" max="0.6" step="0.01"><output data-out="slip"></output></label>
+            <button type="button" data-act="sweep">One sweep</button>
+            <button type="button" data-act="run">Run to convergence</button>
+            <button type="button" data-act="reset">Reset</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Press <i>One sweep</i> repeatedly. Values spread outwards from the exits one square per sweep, and the arrows (the greedy policy) settle long before the numbers stop changing. Raise the slip probability and the policy starts giving the −1 square a wide berth, taking the longer route; lower γ and distant rewards fade until some squares prefer to wander.</p>
+  </section>
+
+  <section id="policy-iteration">
+    <h2>Policy iteration</h2>
+    <div class="result">
+      <div class="label">Policy improvement theorem</div>
+      <p>Let $\pi$ and $\pi'$ be policies with $Q^\pi(s, \pi'(s))\ge V^\pi(s)$ for every state $s$. Then $V^{\pi'}(s)\ge V^\pi(s)$ for every $s$, and if the first inequality is strict in some state, the second is strict there too.</p>
+    </div>
+    <p><b>Proof.</b> The hypothesis says $\mathcal{T}^{\pi'}V^\pi\ge V^\pi$: taking $\pi'$'s action for one step and then following $\pi$ is at least as good as following $\pi$. Apply $\mathcal{T}^{\pi'}$ to both sides and use monotonicity: $(\mathcal{T}^{\pi'})^2V^\pi\ge\mathcal{T}^{\pi'}V^\pi\ge V^\pi$, and by induction $(\mathcal{T}^{\pi'})^kV^\pi\ge V^\pi$ for all $k$. The left side converges to the fixed point of $\mathcal{T}^{\pi'}$, which is $V^{\pi'}$. Strictness: $V^{\pi'}\ge\mathcal{T}^{\pi'}V^\pi$ holds too (the chain started there), and the first step of the chain is strict in that state. $\square$</p>
+    <p>In words: switching to one better action in some states, and keeping it there, can only help, even though the comparison $Q^\pi(s, \pi'(s))$ assumed you would go back to $\pi$ afterwards. The greedy policy $\pi'(s) = \arg\max_aQ^\pi(s, a)$ satisfies the hypothesis, because the maximum is at least the average $V^\pi(s) = \sum_a\pi(a\mid s)Q^\pi(s, a)$. <b>Policy iteration</b> alternates:</p>
+    <ol>
+      <li><b>Evaluate:</b> compute $V^{\pi_k}$ exactly (a linear solve) or nearly (iterative evaluation).</li>
+      <li><b>Improve:</b> $\pi_{k+1}(s) = \arg\max_a\big[R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V^{\pi_k}(s')\big]$, keeping $\pi_k(s)$ on ties.</li>
+    </ol>
+    <p>Each round gives a policy at least as good in every state, strictly better somewhere, until no state changes. Then $V^{\pi_k} = \mathcal{T}^{\pi_{k+1}}V^{\pi_k} = \mathcal{T}V^{\pi_k}$: the values satisfy the Bellman optimality equation, so $\pi_k$ is optimal. Since policies never repeat (values strictly increase) and there are finitely many deterministic policies, policy iteration stops after at most $|\mathcal{A}|^{|\mathcal{S}|}$ rounds. That bound is hopelessly pessimistic: in practice a few rounds suffice. On the car rental problem, 441 states and up to 11 actions, it needed five evaluations: 318 states changed their action in the first improvement, then 272, 79, 8 and none.</p>
+    <p>Why so few? Policy iteration is <b>Newton's method</b> on the equation $\mathcal{T}V - V = 0$ (Puterman and Brumelle, 1979). The improvement step picks the policy whose linear map $\mathcal{T}^\pi$ touches the convex, piecewise-linear map $\mathcal{T}$ at the current point, a "tangent", and the evaluation step solves the linearised equation exactly. Like Newton's method, it converges much faster than fixed-point iteration once near the answer. It is also never slower than value iteration: started from the same point, policy iteration's $k$-th value function dominates value iteration's.</p>
+    <p>Between the two extremes sits <b>modified policy iteration</b>: evaluate with only $m$ sweeps of $\mathcal{T}^\pi$ before improving. $m = 1$ is value iteration; $m = \infty$ is policy iteration. Sutton and Barto call the general pattern, any interleaving of evaluation and improvement at any granularity, <b>generalised policy iteration</b>. Actor–critic methods (lesson 38) are generalised policy iteration with a learned critic for evaluation and a gradient step for improvement.</p>
+  </section>
+
+  <section id="jack">
+    <h2>Example: Jack's car rental</h2>
+    <p>Jack manages two car rental locations, each holding at most 20 cars. Each day, customers ask for cars at the two locations at Poisson rates 3 and 4, and return cars at rates 3 and 2; each rental earns 10 dollars, and a request with no car is lost. Overnight, Jack can move up to 5 cars between the locations at 2 dollars a car. With $\gamma = 0.9$, how many cars should he move?</p>
+    <p>The state is the pair of car counts, $21\times21 = 441$ states; the actions are $-5, \dots, +5$, the number of cars moved from location 1 to 2, restricted to the cars available. Since the two locations evolve independently once the move is made, each transition probability is a product of two single-location distributions, computed exactly from the Poisson probabilities. The figure shows the optimal policy and how value iteration's error falls.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: dp-convergence --></div>
+    </figure>
+    <p class="muted">Left: value iteration's error in the sup norm against the number of sweeps, on a log scale. For the car rental it runs parallel to the contraction bound $0.9^k\|V^*\|_\infty$ (dashed); for the gridworld of lesson 33 with $\gamma = 0.99$ it falls much faster than $0.99^k$. Right: the optimal number of cars to move, from the code.</p>
+    <p>The policy is intuitive once seen: location 2 has more demand and fewer returns, so it runs short. When location 1 is full and location 2 nearly empty, move up to 5 cars across; when location 1 runs low and location 2 has plenty, move up to 4 back. The boundary between "move" and "don't" bends because each car moved costs 2 dollars for certain but earns 10 only if it is actually rented.</p>
+    <p>The two error curves in the figure show what the contraction bound does and does not say. For the car rental, a business that never ends, the error falls by exactly 0.900 per sweep, the rate the theorem promises. For the gridworld, it falls by about 0.45 per sweep even at $\gamma = 0.99$, because the exits drain probability out of the grid: the relevant factor is $\gamma$ times the spectral radius of the optimal policy's chain on the non-terminal cells, $0.99\times0.437 = 0.433$. The bound $\gamma^k$ holds for every MDP, so it must hold for the ones that never end.</p>
+  </section>
+
+  <section id="lp">
+    <h2>Dynamic programming as a linear program</h2>
+    <p>There is a third exact method. Call $V$ <b>superharmonic</b> if $V\ge\mathcal{T}V$, that is $V(s)\ge R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V(s')$ for every $s$ and $a$: a set of linear inequalities. Every such $V$ is an upper bound on $V^*$, because by monotonicity $V\ge\mathcal{T}V\ge\mathcal{T}^2V\ge\dots\to V^*$. And $V^*$ itself satisfies them with equality. So for any positive weights $\boldsymbol{\mu}$,</p>
+    <div class="eq">$$V^* = \arg\min_V\ \sum_s\mu(s)V(s)\quad\text{subject to}\quad V(s)\ge R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V(s')\ \ \text{for all } s, a.$$</div>
+    <p>The dual of this linear program has one variable $x(s, a)\ge0$ per constraint, and reads</p>
+    <div class="eq">$$\max_{x\ge0}\ \sum_{s, a}x(s, a)R(s, a)\quad\text{subject to}\quad\sum_ax(s', a) - \gamma\sum_{s, a}P(s'\mid s, a)\,x(s, a) = \mu(s')\ \ \text{for all } s'.$$</div>
+    <p>The constraint is a flow-balance equation: the discounted number of visits to $s'$ equals the start weight plus the discounted flow into it. Its solutions are exactly the (unnormalised) discounted occupancy measures $x(s, a) = \frac{1}{1 - \gamma}d^\pi(s)\pi(a\mid s)$ of lesson 33, one for each policy, with $\boldsymbol{\mu}$ as the start distribution; the objective is the expected return. So the dual says: among all achievable state–action visit distributions, pick the one that earns the most. LP solvers are rarely the fastest way to solve an MDP, but the formulation is how constraints are added (constrained MDPs, "keep the expected cost below $c$" is one more linear inequality), and the occupancy view underlies much of RL theory.</p>
+  </section>
+
+  <section id="limits">
+    <h2>The limits of dynamic programming</h2>
+    <p>Each sweep touches every state and, for each, every action and every successor: $O(|\mathcal{S}|^2|\mathcal{A}|)$ work with a dense model. The car rental takes a fraction of a second. But the number of states grows exponentially with the number of variables describing the world, Bellman's <b>curse of dimensionality</b>: backgammon has about $10^{20}$ positions, chess about $10^{44}$, Go about $10^{170}$, and a robot's state is continuous. And DP needs $P$ and $R$ written down, which for most problems nobody has. The rest of the stage removes these requirements one at a time:</p>
+    <ul>
+      <li>replace the expectation over $s'$ by a sample of it, from experience (lessons 35 and 36);</li>
+      <li>replace the table $V(s)$ by a parametric function, so that states that were never visited still get values (lesson 37);</li>
+      <li>skip the values and improve the policy directly (lessons 38 and 39);</li>
+      <li>learn the model, then plan with it, only from the states that matter (lessons 40 and 41).</li>
+    </ul>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 builds the car rental MDP exactly and solves it by policy iteration from "never move a car", printing the value of the state (10, 10) and the number of states whose action changes in each round. It then runs value iteration from zero with the stopping rule above, records its error against the policy iteration answer, notes the first sweep at which its greedy policy is already optimal, and repeats with in-place (Gauss–Seidel) updates. Part 2 runs value iteration on lesson 33's gridworld and compares the observed error rate with $\gamma$ times the spectral radius of the optimal policy's chain on the cells.</p>
+<pre><code>import math
+import numpy as np
+
+# ---- Part 1: Jack's car rental (Sutton and Barto, example 4.2) ----
+# Two locations hold at most 20 cars each. Each day, rental requests at the two locations are
+# Poisson with means 3 and 4, and returns Poisson with means 3 and 2. A rental earns $10.
+# Overnight, Jack can move up to 5 cars from one location to the other at $2 a car.
+# The state is the number of cars at each location at the end of the day; gamma = 0.9.
+MAX, MOVE, gamma = 20, 5, 0.9
+n = MAX + 1
+poisson = lambda lam, k: math.exp(-lam) * lam ** k / math.factorial(k)
+
+def location(lam_req, lam_ret):
+    """For a location starting the day with c cars: the distribution of the number at the end
+    of the day, T[c, c'], and the expected number of rentals, E[c]. Exact: the tails of both
+    Poisson distributions are lumped into the last possible value."""
+    T, E = np.zeros((n, n)), np.zeros(n)
+    for c in range(n):
+        for req in range(c + 1):
+            p_req = poisson(lam_req, req) if req &lt; c else 1 - sum(poisson(lam_req, k) for k in range(c))
+            E[c] += p_req * req                         # rentals = min(requests, cars)
+            left = c - req
+            for ret in range(MAX - left + 1):
+                p_ret = poisson(lam_ret, ret) if ret &lt; MAX - left else 1 - sum(poisson(lam_ret, k) for k in range(MAX - left))
+                T[c, left + ret] += p_req * p_ret       # returns beyond 20 cars are lost
+    return T, E
+
+T1, E1 = location(3, 3)
+T2, E2 = location(4, 2)
+actions = np.arange(-MOVE, MOVE + 1)                    # cars moved from location 1 to location 2
+S = n * n                                               # state index s = c1 * 21 + c2
+c1, c2 = np.divmod(np.arange(S), n)
+P = np.zeros((len(actions), S, S)); R = np.full((len(actions), S), -np.inf)
+for k, a in enumerate(actions):
+    ok = (a &lt;= c1) &amp; (-a &lt;= c2)                         # cannot move cars that are not there
+    m1, m2 = np.minimum(c1 - a, MAX), np.minimum(c2 + a, MAX)   # after the move; excess cars are lost
+    R[k, ok] = 10 * (E1[m1[ok]] + E2[m2[ok]]) - 2 * abs(a)
+    P[k, ok] = (T1[m1[ok]][:, :, None] * T2[m2[ok]][:, None, :]).reshape(ok.sum(), S)
+print(f"{S} states, {len(actions)} actions; each row of P sums to 1: {np.allclose(P.sum(2)[np.isfinite(R)], 1)}")
+
+def evaluate(pi):
+    """Exact policy evaluation: one linear solve. pi holds an action index per state."""
+    P_pi, r_pi = P[pi, np.arange(S)], R[pi, np.arange(S)]
+    return np.linalg.solve(np.eye(S) - gamma * P_pi, r_pi)
+
+def greedy(V):
+    Q = R + gamma * P @ V                                # -inf for impossible moves
+    return Q.argmax(0), Q.max(0)
+
+# Policy iteration, starting from "never move a car".
+pi = np.full(S, MOVE)                                    # index of action 0
+for it in range(1, 50):
+    V = evaluate(pi)
+    new, _ = greedy(V)
+    changed = int((new != pi).sum())
+    print(f"policy iteration {it}: V(10, 10) = {V[10 * n + 10]:.2f}, states whose action changes: {changed}")
+    if changed == 0:
+        break
+    pi = new
+V_pi, pi_star = V, pi
+print(f"policy iteration: {it} evaluations; V* ranges from {V_pi.min():.1f} to {V_pi.max():.1f}")
+
+# Value iteration from zero, stopped when successive iterates differ by less than
+# eps (1 - gamma) / (2 gamma) with eps = 1e-6, which guarantees ||V - V*|| &lt; eps / 2 (the a posteriori bound).
+V = np.zeros(S)
+first_optimal, jack_errs = None, []
+for k in range(1, 10_000):
+    pol, V_new = greedy(V)
+    jack_errs.append(np.abs(V_new - V_pi).max())
+    if first_optimal is None and np.array_equal(pol, pi_star):
+        first_optimal = k
+    diff = np.abs(V_new - V).max(); V = V_new
+    if diff &lt; 1e-6 * (1 - gamma) / (2 * gamma):
+        break
+print(f"value iteration: {k} sweeps; max |V - V_PI| = {np.abs(V - V_pi).max():.2e};"
+      f" its greedy policy was already optimal after sweep {first_optimal}")
+jack_errs = np.array(jack_errs)
+print(f"error ||V_k - V*|| after 10, 50, 100 sweeps: {jack_errs[9]:.3e} {jack_errs[49]:.3e} {jack_errs[99]:.3e};"
+      f" the bound gamma^k ||V*||: {gamma ** 10 * V_pi.max():.3e} {gamma ** 50 * V_pi.max():.3e} {gamma ** 100 * V_pi.max():.3e}")
+print(f"observed contraction per sweep, sweeps 50 to 100: {(jack_errs[99] / jack_errs[49]) ** (1 / 50):.4f}")
+
+# Gauss-Seidel value iteration: update states in place, one at a time, using the newest values.
+V = np.zeros(S)
+for k_gs in range(1, 10_000):
+    diff = 0.0
+    for s_ in range(S):
+        v = np.max(R[:, s_] + gamma * P[:, s_] @ V)
+        diff = max(diff, abs(v - V[s_])); V[s_] = v
+    if diff &lt; 1e-6 * (1 - gamma) / (2 * gamma):
+        break
+print(f"Gauss-Seidel value iteration: {k_gs} sweeps; max |V - V_PI| = {np.abs(V - V_pi).max():.2e}")
+print("optimal number of cars to move (rows: cars at location 1 = 20, 15, 10, 5, 0; columns: location 2 = 0, 5, ..., 20):")
+for r in [20, 15, 10, 5, 0]:
+    print("  ", " ".join(f"{actions[pi_star[r * n + c]]:+d}" for c in range(0, n, 5)))
+
+# ---- Part 2: the contraction, measured. The gridworld of lesson 33, gamma = 0.9 and 0.99 ----
+rows, cols, wall = 3, 4, (1, 1)
+cells = [(i, j) for i in range(rows) for j in range(cols) if (i, j) != wall]
+G = len(cells) + 1; END = G - 1
+gidx = {c: k for k, c in enumerate(cells)}
+term = {(0, 3): 1.0, (1, 3): -1.0}
+moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+Pg = np.zeros((4, G, G)); Rg = np.zeros((4, G))
+for c in cells:
+    s = gidx[c]
+    for a in range(4):
+        if c in term:
+            Pg[a, s, END] = 1; Rg[a, s] = term[c]; continue
+        for d, p in [(a, 0.8), ((a + 1) % 4, 0.1), ((a + 3) % 4, 0.1)]:
+            nb = (c[0] + moves[d][0], c[1] + moves[d][1])
+            Pg[a, s, gidx[nb] if nb in gidx else s] += p
+        Rg[a, s] = -0.04
+Pg[:, END, END] = 1
+
+for g in [0.9, 0.99]:
+    pol = np.zeros(G, dtype=int)                         # V* by policy iteration
+    while True:
+        Vp = np.linalg.solve(np.eye(G) - g * Pg[pol, np.arange(G)], Rg[pol, np.arange(G)])
+        newp = (Rg + g * Pg @ Vp).argmax(0)
+        if np.array_equal(newp, pol):
+            break
+        pol = newp
+    V, errs = np.zeros(G), []
+    for k in range(1, 61):
+        V = (Rg + g * Pg @ V).max(0)
+        errs.append(np.abs(V - Vp).max())
+    # The error shrinks by gamma times the spectral radius of the optimal policy's chain on the
+    # cells, because the exits drain probability out of them: the episode ends.
+    rho = np.max(np.abs(np.linalg.eigvals(Pg[pol, np.arange(G)][:END, :END])))
+    print(f"gridworld, gamma {g}: ||V_k - V*|| after 10, 20, 40 sweeps: {errs[9]:.2e} {errs[19]:.2e} {errs[39]:.2e};"
+          f" observed rate {(errs[39] / errs[19]) ** (1 / 20):.3f}, gamma * rho(P_pi* on the cells) = {g * rho:.3f}")
+
+# 441 states, 11 actions; each row of P sums to 1: True
+# policy iteration 1: V(10, 10) = 550.75, states whose action changes: 318
+# policy iteration 2: V(10, 10) = 566.10, states whose action changes: 272
+# policy iteration 3: V(10, 10) = 574.82, states whose action changes: 79
+# policy iteration 4: V(10, 10) = 574.95, states whose action changes: 8
+# policy iteration 5: V(10, 10) = 574.95, states whose action changes: 0
+# policy iteration: 5 evaluations; V* ranges from 421.4 to 637.0
+# value iteration: 197 sweeps; max |V - V_PI| = 4.71e-07; its greedy policy was already optimal after sweep 32
+# error ||V_k - V*|| after 10, 50, 100 sweeps: 1.903e+02 2.510e+00 1.294e-02; the bound gamma^k ||V*||: 2.221e+02 3.283e+00 1.692e-02
+# observed contraction per sweep, sweeps 50 to 100: 0.9000
+# Gauss-Seidel value iteration: 108 sweeps; max |V - V_PI| = 2.46e-07
+# optimal number of cars to move (rows: cars at location 1 = 20, 15, 10, 5, 0; columns: location 2 = 0, 5, ..., 20):
+#    +5 +4 +2 +1 +0
+#    +5 +2 +0 +0 +0
+#    +4 +1 +0 +0 +0
+#    +1 +0 +0 +0 +0
+#    +0 +0 -2 -3 -4
+# gridworld, gamma 0.9: ||V_k - V*|| after 10, 20, 40 sweeps: 1.33e-02 2.06e-06 1.05e-13; observed rate 0.432, gamma * rho(P_pi* on the cells) = 0.438
+# gridworld, gamma 0.99: ||V_k - V*|| after 10, 20, 40 sweeps: 9.57e-02 1.34e-04 2.21e-11; observed rate 0.458, gamma * rho(P_pi* on the cells) = 0.433</code></pre>
+    <p><b>Reading the output.</b> Policy iteration finishes in five evaluations; the value of (10, 10) rises from 550.75 under "never move" to 574.95, and most of the gain comes in the first two rounds. Value iteration reaches the same values (to $5\times10^{-7}$) after 197 sweeps; its error after 10, 50 and 100 sweeps, 190, 2.51 and 0.0129, sits just below the a priori bound $0.9^k\|V^*\|_\infty$ (222, 3.28, 0.0169), and the measured rate is 0.9000 per sweep. The bound is nearly tight here. Gauss–Seidel updating meets the same stopping rule in 108 sweeps instead of 197, because each sweep already uses the values it has just computed. The optimal policy has the shape of Sutton and Barto's figure 4.2, which also needed four improvements. On the gridworld, value iteration is far faster than its worst case, at the rate predicted by the spectral radius.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Show that if all rewards are non-negative and $V_0 = 0$, value iteration's iterates increase monotonically, $V_0\le V_1\le V_2\le\dots$. Interpret $V_k$.</li>
+      <li>Is $\mathcal{T}^\pi$ a contraction in the Euclidean norm? Find a two-state Markov chain for which $\|P_\pi\mathbf{v}\|_2 &gt; \|\mathbf{v}\|_2$ for some $\mathbf{v}$, and explain why convergence of iterative evaluation is still guaranteed.</li>
+      <li>Run policy iteration by hand on lesson 33's two-state MDP (in A, "stay" pays 1, "go" pays 0 and moves to B; in B, the only action pays 2 and stays) with $\gamma = 0.75$, starting from "stay". How many rounds does it take?</li>
+      <li>Prove that policy iteration's value functions dominate value iteration's: if $V_0 = V^{\pi_0}$, then $V^{\pi_k}\ge\mathcal{T}^kV_0$ for all $k$.</li>
+      <li>The <b>gambler's problem</b> (Sutton and Barto, example 4.3): a gambler with capital $s\in\{1, \dots, 99\}$ stakes any amount up to $\min(s, 100 - s)$ on a coin that comes up heads with probability $p_h = 0.4$, winning the stake on heads and losing it on tails, until reaching 0 or 100. The reward is 1 on reaching 100, otherwise 0, with $\gamma = 1$. What does $V^*(s)$ mean? Why is the optimal policy not unique, and why is "bet everything you need to reach the next multiple of 25" sensible when $p_h &lt; \frac12$?</li>
+      <li>Write the linear program of the LP section for the two-state MDP of exercise 3 with $\mu = (1, 1)$, and solve it graphically. Which constraints are tight at the solution, and what does that say about the optimal policy?</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $V_1 = \max_aR(\cdot, a)\ge0 = V_0$. If $V_k\ge V_{k-1}$ then by monotonicity $V_{k+1} = \mathcal{T}V_k\ge\mathcal{T}V_{k-1} = V_k$. $V_k$ is the optimal expected discounted reward over a horizon of $k$ steps (the finite-horizon problem of lesson 33), which can only grow with $k$ when rewards are non-negative.</p>
+        <p><b>2.</b> Not in general. Take $P_\pi = \begin{pmatrix}1 &amp; 0\\ 1 &amp; 0\end{pmatrix}$ (both states move to state 1) and $\mathbf{v} = (1, 0)$: $P_\pi\mathbf{v} = (1, 1)$, with Euclidean norm $\sqrt2 &gt; 1$. With $\gamma = 0.9$, $\|\gamma P_\pi\mathbf{v}\|_2 = 1.27 &gt; 1$. But all norms on $\mathbb{R}^n$ are equivalent, and the sup-norm contraction gives $\|V_k - V^\pi\|_\infty\le\gamma^k\|V_0 - V^\pi\|_\infty$, so the iterates converge in every norm; only the one-step factor depends on the norm. (Lesson 37 meets this again: with function approximation, the natural projection is in a weighted Euclidean norm, and mixing the two norms is where the trouble starts.)</p>
+        <p><b>3.</b> $\pi_0$ = "stay": $V(A) = 1/(1 - 0.75) = 4$, $V(B) = 2/0.25 = 8$. Improve: in A, "stay" is worth $1 + 0.75\times4 = 4$, "go" $0 + 0.75\times8 = 6$, so switch. $\pi_1$ = "go": $V(A) = 6$, $V(B) = 8$. Improve: "stay" $1 + 4.5 = 5.5 &lt; 6$, so no change. Two evaluations, one change; $\pi^*$ = "go", as lesson 33's exercise 4 found for $\gamma &gt; \frac12$.</p>
+        <p><b>4.</b> By induction. $k = 0$: equality. Suppose $V^{\pi_k}\ge\mathcal{T}^kV_0$. Then $V^{\pi_{k+1}}\ge\mathcal{T}^{\pi_{k+1}}V^{\pi_k}$ (from the improvement theorem's proof) $= \mathcal{T}V^{\pi_k}\ge\mathcal{T}\mathcal{T}^kV_0$ by monotonicity of $\mathcal{T}$.</p>
+        <p><b>5.</b> With reward 1 only at 100 and $\gamma = 1$, $V^*(s)$ is the maximal probability of reaching 100 from $s$. With an unfavourable coin, every bet loses in expectation, so the gambler wants as few bets as possible: bold play. Many policies achieve the same probability, because of the self-similarity of the problem: from 50, betting 50 wins with probability 0.4; from 25 or 75, there are several ways of combining bets that reach the same probabilities. Value iteration's argmax then picks between exact ties according to rounding, which is why the published optimal policy looks spiky.</p>
+        <p><b>6.</b> Minimise $V_A + V_B$ subject to $V_A\ge1 + 0.75V_A$ (stay), $V_A\ge0.75V_B$ (go), $V_B\ge2 + 0.75V_B$. The third gives $V_B\ge8$, the first $V_A\ge4$, the second $V_A\ge0.75V_B\ge6$. The minimum is at $V_B = 8$, $V_A = 6$, where the "go" and B constraints are tight and the "stay" constraint is slack. The tight constraints are the optimal actions: complementary slackness says the dual variable $x(A, \text{stay})$ is zero, so the optimal occupancy measure never takes "stay".</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Sutton &amp; Barto, <i>Reinforcement Learning: An Introduction</i></b> (2nd edition, 2018), chapter 4. Policy evaluation, policy and value iteration, Jack's car rental and the gambler's problem.</li>
+      <li><b>Bellman, <i>Dynamic Programming</i></b> (1957). The origin of the principle of optimality and of the phrase "curse of dimensionality".</li>
+      <li><b>Howard, <i>Dynamic Programming and Markov Processes</i></b> (1960). Policy iteration.</li>
+      <li><b>Puterman, <i>Markov Decision Processes</i></b> (1994), chapter 6. Contraction proofs, stopping rules, modified policy iteration, and policy iteration as Newton's method.</li>
+      <li><b>Bertsekas, <i>Dynamic Programming and Optimal Control</i></b>, volume 2. Asynchronous DP and error bounds.</li>
+      <li><b>Singh &amp; Yee, "An upper bound on the loss from approximate optimal-value functions"</b> (1994). The $2\gamma\epsilon/(1 - \gamma)$ bound.</li>
+    </ul>
+  </section>
+</article>

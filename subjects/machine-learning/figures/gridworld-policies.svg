@@ -1,0 +1,132 @@
+<svg class="fig" viewBox="0 0 900 186" role="img" aria-label="Five copies of the 4 by 3 gridworld, each showing the optimal action in every cell as an arrow and the optimal value as shading, for living rewards of minus 2, minus 0.4, minus 0.04, minus 0.01 and plus 0.1. At minus 2 the agent heads for the nearest exit, even the minus 1 square. At minus 0.04 it takes the long safe route round the top. At minus 0.01 it avoids even a small risk of slipping into minus 1. At plus 0.1 it never leaves" style="width:100%;height:auto;display:block;overflow:visible">
+  <text x="14" y="24" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">r = -2.00</text>
+  <text x="14" y="42" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">V*(start) = -10.56</text>
+  <rect x="14" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.27;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="33" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="52" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.42;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="71" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="90" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.56;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="109" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="128" y="62" width="38" height="38" rx="0" style="fill:var(--good);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="147" y="86" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">+1</text>
+  <rect x="14" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.13;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="33" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="90" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.46;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="109" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="128" y="100" width="38" height="38" rx="0" style="fill:var(--bad);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="147" y="124" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">−1</text>
+  <rect x="14" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="33" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="52" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.19;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="71" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="90" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.32;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="109" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="128" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.45;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="147" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="52" y="100" width="38" height="38" rx="0" style="fill:var(--muted);fill-opacity:0.55;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="18" y="172" style="fill:var(--muted);font-family:var(--f-mono);font-size:9.5px;font-weight:400" text-anchor="start">S</text>
+  <text x="194" y="24" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">r = -0.40</text>
+  <text x="194" y="42" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">V*(start) = -1.59</text>
+  <rect x="194" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.29;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="213" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="232" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.43;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="251" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="270" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.56;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="289" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="308" y="62" width="38" height="38" rx="0" style="fill:var(--good);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="327" y="86" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">+1</text>
+  <rect x="194" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.17;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="213" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="270" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.41;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="289" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="308" y="100" width="38" height="38" rx="0" style="fill:var(--bad);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="327" y="124" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">−1</text>
+  <rect x="194" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="213" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="232" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.13;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="251" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="270" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.26;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="289" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="308" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.14;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="327" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">←</text>
+  <rect x="232" y="100" width="38" height="38" rx="0" style="fill:var(--muted);fill-opacity:0.55;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="198" y="172" style="fill:var(--muted);font-family:var(--f-mono);font-size:9.5px;font-weight:400" text-anchor="start">S</text>
+  <text x="374" y="24" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">r = -0.04</text>
+  <text x="374" y="42" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">V*(start) = +0.65</text>
+  <rect x="374" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.45;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="393" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="412" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.51;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="431" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="450" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.56;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="469" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="488" y="62" width="38" height="38" rx="0" style="fill:var(--good);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="507" y="86" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">+1</text>
+  <rect x="374" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.39;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="393" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="450" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.33;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="469" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="488" y="100" width="38" height="38" rx="0" style="fill:var(--bad);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="507" y="124" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">−1</text>
+  <rect x="374" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.34;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="393" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="412" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.28;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="431" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">←</text>
+  <rect x="450" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.26;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="469" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="488" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="507" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">←</text>
+  <rect x="412" y="100" width="38" height="38" rx="0" style="fill:var(--muted);fill-opacity:0.55;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="378" y="172" style="fill:var(--muted);font-family:var(--f-mono);font-size:9.5px;font-weight:400" text-anchor="start">S</text>
+  <text x="554" y="24" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">r = -0.01</text>
+  <text x="554" y="42" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">V*(start) = +0.85</text>
+  <rect x="554" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.48;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="573" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="592" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.52;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="611" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="630" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.56;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="649" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="668" y="62" width="38" height="38" rx="0" style="fill:var(--good);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="687" y="86" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">+1</text>
+  <rect x="554" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.44;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="573" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="630" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.3;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="649" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">←</text>
+  <rect x="668" y="100" width="38" height="38" rx="0" style="fill:var(--bad);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="687" y="124" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">−1</text>
+  <rect x="554" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.4;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="573" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="592" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.36;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="611" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">←</text>
+  <rect x="630" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.32;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="649" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">←</text>
+  <rect x="668" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="687" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↓</text>
+  <rect x="592" y="100" width="38" height="38" rx="0" style="fill:var(--muted);fill-opacity:0.55;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="558" y="172" style="fill:var(--muted);font-family:var(--f-mono);font-size:9.5px;font-weight:400" text-anchor="start">S</text>
+  <text x="734" y="24" style="fill:var(--fg);font-family:var(--f-mono);font-size:12px;font-weight:400" text-anchor="start">r = +0.10</text>
+  <text x="734" y="42" style="fill:var(--muted);font-family:var(--f-mono);font-size:10.5px;font-weight:400" text-anchor="start">V*(start) = +10.00</text>
+  <rect x="734" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="753" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="772" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="791" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="810" y="62" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="829" y="87" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">←</text>
+  <rect x="848" y="62" width="38" height="38" rx="0" style="fill:var(--good);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="867" y="86" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">+1</text>
+  <rect x="734" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="753" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="810" y="100" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="829" y="125" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">←</text>
+  <rect x="848" y="100" width="38" height="38" rx="0" style="fill:var(--bad);fill-opacity:0.25;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="867" y="124" style="fill:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:400" text-anchor="middle">−1</text>
+  <rect x="734" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="753" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="772" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="791" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">→</text>
+  <rect x="810" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="829" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↑</text>
+  <rect x="848" y="138" width="38" height="38" rx="0" style="fill:var(--accent);fill-opacity:0.06;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="867" y="163" style="fill:var(--fg);font-family:var(--f-mono);font-size:17px;font-weight:400" text-anchor="middle">↓</text>
+  <rect x="772" y="100" width="38" height="38" rx="0" style="fill:var(--muted);fill-opacity:0.55;stroke:var(--rule);stroke-width:1.2"/>
+  <text x="738" y="172" style="fill:var(--muted);font-family:var(--f-mono);font-size:9.5px;font-weight:400" text-anchor="start">S</text>
+</svg>

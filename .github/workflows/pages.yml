@@ -36,6 +36,8 @@ jobs:
       - run: pnpm -C site build
       - name: Fail on broken maths
         run: "! grep -rl --include='*.html' 'katex-error' site/dist"
+      - name: Fail on broken internal links
+        run: python3 tools/check_links.py site/dist /learn
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:

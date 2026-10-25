@@ -1,0 +1,549 @@
+{
+  "_about": "This subject's problem book (see principles/problem-books.md). books: external problem books and courses to pick up. hard: named cross-lesson problems, stars 1-4, unlocked by a lesson id (\"02\", \"T2\", \"R3\"). assignments: one-sitting builds. status: planned | written | keep | revise | drop. A written entry has problems/<id>.md. where: the problem already written in a problem set or assignment chapter, as \"<chapter>#<problem>\" (e.g. \"H2#7\") or \"<chapter>\" (e.g. \"A4\"); the card links there.",
+  "intro": "Hard problems here are derivations and 'why' questions you can't look up in an API. Assignments are evenings where you build the thing from scratch, break it on purpose, and then compare with the library.",
+  "books": [
+    {
+      "title": "Mathematics for Machine Learning",
+      "author": "Marc Peter Deisenroth, A. Aldo Faisal & Cheng Soon Ong",
+      "level": "Beginner → intermediate",
+      "free": true,
+      "when": "Whenever a math detour feels thin: linear algebra, calculus, probability and optimisation, with exercises aimed at ML."
+    },
+    {
+      "title": "An Introduction to Statistical Learning",
+      "author": "Gareth James, Daniela Witten, Trevor Hastie & Robert Tibshirani",
+      "level": "Beginner",
+      "free": true,
+      "when": "Stages 2–3. Conceptual and applied exercises with Python labs. Gentle and very clear on overfitting, trees and validation."
+    },
+    {
+      "title": "Pattern Recognition and Machine Learning",
+      "author": "Christopher Bishop",
+      "level": "Intermediate → hard",
+      "free": true,
+      "when": "After Stage 2, for derivations. Exercises are graded (*) to (***), and many have worked solutions."
+    },
+    {
+      "title": "The Elements of Statistical Learning",
+      "author": "Trevor Hastie, Robert Tibshirani & Jerome Friedman",
+      "level": "Hard",
+      "free": true,
+      "when": "Stages 2–3 a second time: ridge, lasso, boosting and trees done with full mathematics."
+    },
+    {
+      "title": "Probabilistic Machine Learning: An Introduction",
+      "author": "Kevin Murphy",
+      "level": "Intermediate",
+      "free": true,
+      "when": "Any stage, as the modern reference: everything from a probabilistic point of view, with notebooks."
+    },
+    {
+      "title": "Dive into Deep Learning",
+      "author": "Aston Zhang, Zachary Lipton, Mu Li & Alexander Smola",
+      "level": "Intermediate",
+      "free": true,
+      "when": "Stage 4. Every section ends with exercises you run in code. Good source of assignment-sized tasks."
+    },
+    {
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio & Aaron Courville",
+      "level": "Intermediate → hard",
+      "free": true,
+      "when": "Stage 4, for the theory behind optimisation, regularisation and initialisation."
+    },
+    {
+      "title": "Reinforcement Learning: An Introduction",
+      "author": "Richard Sutton & Andrew Barto",
+      "level": "Intermediate",
+      "free": true,
+      "when": "Stage 5. The exercises in each chapter are the standard practice set for bandits, Bellman and TD learning."
+    },
+    {
+      "title": "Stanford CS229 problem sets",
+      "author": "Stanford University",
+      "level": "Hard",
+      "free": true,
+      "when": "After Stage 2. Derivation-heavy sets on GLMs, kernels and EM, with posted solutions."
+    },
+    {
+      "title": "Neural Networks: Zero to Hero",
+      "author": "Andrej Karpathy",
+      "level": "Beginner → intermediate",
+      "free": true,
+      "when": "Stage 4. A video course that is a chain of assignments: autograd, a bigram model, an MLP, and finally a GPT."
+    }
+  ],
+  "hard": [
+    {
+      "id": "projection",
+      "title": "Least squares is a shadow",
+      "stars": 2,
+      "unlocks": "01",
+      "idea": "The residual is orthogonal to every column of X; the hat matrix H = X(XᵀX)⁻¹Xᵀ is a projection (H² = H). Prove it and see it.",
+      "visual": "y in 3D, the plane spanned by the columns, and the fitted ŷ as its shadow.",
+      "source": "Classic linear algebra",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#2"
+    },
+    {
+      "id": "lr-cliff",
+      "title": "The learning-rate cliff",
+      "stars": 2,
+      "unlocks": "02",
+      "idea": "On a quadratic, gradient descent converges exactly when 0 < η < 2/λₘₐₓ. Split the error into eigen-directions: each shrinks by (1 − ηλ) per step.",
+      "visual": "A zig-zag path on elliptical contours; |1 − ηλ| plotted against η for each eigenvalue.",
+      "source": "Classic numerical analysis",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#9"
+    },
+    {
+      "id": "condition-number",
+      "title": "Feature scaling, measured",
+      "stars": 2,
+      "unlocks": "02",
+      "idea": "Gradient descent needs about κ = λₘₐₓ/λₘᵢₙ steps per factor of e. Unscaled features make κ huge; standardising can make it 1.",
+      "visual": "Contours before and after scaling, with the GD paths drawn on them.",
+      "source": "Classic",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#10"
+    },
+    {
+      "id": "sigmoid-mse",
+      "title": "Why not squared error for classification?",
+      "stars": 2,
+      "unlocks": "03",
+      "idea": "Log-loss with a sigmoid is convex (the Hessian is XᵀSX). Squared error with a sigmoid is not, and its gradient vanishes exactly when the model is confidently wrong.",
+      "visual": "Both losses against the weight in 1D, for a point that is misclassified.",
+      "source": "Classic",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#16"
+    },
+    {
+      "id": "separable-runaway",
+      "title": "When logistic regression never stops",
+      "stars": 4,
+      "unlocks": "03",
+      "idea": "On separable data the MLE doesn't exist: ‖w‖ grows like log t forever. Its direction converges to the maximum-margin separator, an implicit bias of gradient descent.",
+      "visual": "The decision line rotating towards the max-margin line while ‖w‖ climbs on a log axis.",
+      "source": "Soudry, Hoffer, Nacson, Gunasekar & Srebro (2018)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#5"
+    },
+    {
+      "id": "bias-variance",
+      "title": "Bias² + variance + noise",
+      "stars": 2,
+      "unlocks": "04",
+      "idea": "Derive the decomposition of expected test error, then measure each term by refitting on many resampled training sets.",
+      "visual": "Many fitted curves (spread = variance) around their average (offset = bias), for low and high model complexity.",
+      "source": "Geman, Bienenstock & Doursat (1992)",
+      "status": "planned",
+      "notes": "",
+      "where": "P2#3"
+    },
+    {
+      "id": "double-descent",
+      "title": "Double descent",
+      "stars": 4,
+      "unlocks": "04",
+      "idea": "Add features past the number of data points and test error rises, peaks at p = n, then falls again. The minimum-norm interpolator explains the peak.",
+      "visual": "Test error against number of features, with the spike at p = n.",
+      "source": "Belkin, Hsu, Ma & Mandal (2019)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#7"
+    },
+    {
+      "id": "ridge-shrinkage",
+      "title": "What ridge really does",
+      "stars": 3,
+      "unlocks": "05",
+      "idea": "Through the SVD, ridge multiplies each principal direction by σ²/(σ² + λ): weak directions are crushed, strong ones kept. Ridge is also a Gaussian prior.",
+      "visual": "Shrinkage factor against σ for several λ; coefficient paths as λ grows.",
+      "source": "Hoerl & Kennard (1970)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#1"
+    },
+    {
+      "id": "lasso-zeros",
+      "title": "Why L1 makes exact zeros",
+      "stars": 3,
+      "unlocks": "05",
+      "idea": "The corner of the L1 ball, or equivalently soft-thresholding from the subgradient condition: small coefficients are set to exactly zero.",
+      "visual": "Loss ellipses meeting the diamond and the circle; the soft-threshold function.",
+      "source": "Tibshirani (1996)",
+      "status": "planned",
+      "notes": ""
+    },
+    {
+      "id": "softmax-gradient",
+      "title": "Softmax: shift it, differentiate it",
+      "stars": 2,
+      "unlocks": "06",
+      "idea": "Softmax ignores adding a constant (so subtract the max for stability), and the gradient of cross-entropy is just p − y.",
+      "visual": "Probabilities on a simplex moving as one logit slides.",
+      "source": "Classic",
+      "status": "planned",
+      "notes": "",
+      "where": "P2#13"
+    },
+    {
+      "id": "robbins-monro",
+      "title": "Why SGD's step size must shrink",
+      "stars": 3,
+      "unlocks": "07",
+      "idea": "With a fixed step, SGD rattles around the minimum forever at a noise floor proportional to η. Steps with Σηₜ = ∞ and Σηₜ² < ∞ converge.",
+      "visual": "SGD paths with fixed and decaying steps, and the loss floor each reaches.",
+      "source": "Robbins & Monro (1951)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#12"
+    },
+    {
+      "id": "adam-bias",
+      "title": "Adam's bias correction",
+      "stars": 2,
+      "unlocks": "07",
+      "idea": "Moving averages that start at zero are biased low in early steps; dividing by 1 − βᵗ undoes exactly that.",
+      "visual": "Raw and corrected averages against the true gradient over the first 50 steps.",
+      "source": "Kingma & Ba (2015)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#8"
+    },
+    {
+      "id": "auc-probability",
+      "title": "AUC is a probability",
+      "stars": 3,
+      "unlocks": "08",
+      "idea": "The area under the ROC curve equals P(a random positive scores above a random negative), the Mann–Whitney statistic.",
+      "visual": "The ROC staircase built one pair at a time.",
+      "source": "Hanley & McNeil (1982)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#2"
+    },
+    {
+      "id": "oob",
+      "title": "The 36.8% that bagging leaves out",
+      "stars": 2,
+      "unlocks": "10",
+      "idea": "A bootstrap sample misses each point with probability (1 − 1/n)ⁿ → 1/e, which gives a free validation set (out-of-bag error).",
+      "visual": "Bootstrap draws with the missed points greyed; the fraction left out against n.",
+      "source": "Breiman (1996)",
+      "status": "planned",
+      "notes": "",
+      "where": "P3#7"
+    },
+    {
+      "id": "boosting-gd",
+      "title": "Boosting is gradient descent on functions",
+      "stars": 3,
+      "unlocks": "11",
+      "idea": "Each tree fits the negative gradient of the loss at the current predictions. With squared loss that is the residual; with log-loss it is y − p.",
+      "visual": "The prediction curve improving tree by tree, with the residuals each tree was fitted to.",
+      "source": "Friedman (2001)",
+      "status": "planned",
+      "notes": "",
+      "where": "P3#17"
+    },
+    {
+      "id": "xor",
+      "title": "XOR needs a hidden layer",
+      "stars": 2,
+      "unlocks": "12",
+      "idea": "Prove no line separates XOR, then build a two-neuron hidden layer that does, by hand.",
+      "visual": "The four points, the impossible line, and the bent decision boundary of the small network.",
+      "source": "Minsky & Papert (1969)",
+      "status": "planned",
+      "notes": ""
+    },
+    {
+      "id": "universal-bumps",
+      "title": "Universal approximation, one bump at a time",
+      "stars": 3,
+      "unlocks": "12",
+      "idea": "Two steep sigmoids make a bump; enough bumps approximate any continuous function on an interval. Count how many you need for accuracy ε.",
+      "visual": "A target curve, and the sum of bumps matching it as you add neurons.",
+      "source": "Cybenko (1989); Nielsen, Neural Networks and Deep Learning ch. 4",
+      "status": "planned",
+      "notes": "",
+      "where": "P4#3"
+    },
+    {
+      "id": "backprop-cost",
+      "title": "Why backprop is cheap",
+      "stars": 3,
+      "unlocks": "13",
+      "idea": "Reverse mode gets every gradient of a scalar loss in a few times the cost of one forward pass; forward mode would need one pass per parameter.",
+      "visual": "A computational graph with values flowing forward and gradients flowing back, operation counts on each.",
+      "source": "Linnainmaa (1970); Griewank, Evaluating Derivatives",
+      "status": "planned",
+      "notes": "",
+      "where": "P4#9"
+    },
+    {
+      "id": "init-variance",
+      "title": "Xavier and He initialisation from scratch",
+      "stars": 3,
+      "unlocks": "14",
+      "idea": "Keep the variance of activations constant across layers: Var(w) = 1/fan_in (×2 for ReLU). Otherwise signals vanish or explode exponentially with depth.",
+      "visual": "Histograms of activations through 50 layers under three initialisations.",
+      "source": "Glorot & Bengio (2010); He et al. (2015)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#10"
+    },
+    {
+      "id": "conv-equivariance",
+      "title": "Shift the image, shift the features",
+      "stars": 2,
+      "unlocks": "15",
+      "idea": "Convolution commutes with translation (equivariance); pooling turns that into approximate invariance, and strides break it a little.",
+      "visual": "An image and its feature map, shifted together.",
+      "source": "Classic",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#17"
+    },
+    {
+      "id": "attention-sqrt-d",
+      "title": "Why attention divides by √d",
+      "stars": 3,
+      "unlocks": "19",
+      "idea": "The dot product of two random d-dimensional vectors has variance d. Unscaled, the softmax saturates and its gradients vanish.",
+      "visual": "Softmax weights for d = 4, 64, 1024, with and without scaling.",
+      "source": "Vaswani et al. (2017)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#18"
+    },
+    {
+      "id": "attention-permutation",
+      "title": "Attention can't tell order",
+      "stars": 3,
+      "unlocks": "19",
+      "idea": "Self-attention without positional encodings is permutation-equivariant: shuffle the tokens and the outputs shuffle the same way. Hence positional encodings.",
+      "visual": "Tokens shuffled, attention maps permuted to match.",
+      "source": "Classic",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#18"
+    },
+    {
+      "id": "ucb-regret",
+      "title": "Regret grows like log T",
+      "stars": 4,
+      "unlocks": "32",
+      "idea": "UCB tries each bad arm only O(log T / Δ²) times, using Hoeffding's inequality. Greedy can get stuck and lose linearly.",
+      "visual": "Cumulative regret for greedy, ε-greedy and UCB, on log-scaled time.",
+      "source": "Auer, Cesa-Bianchi & Fischer (2002)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#39"
+    },
+    {
+      "id": "bellman-contraction",
+      "title": "The Bellman operator is a contraction",
+      "stars": 3,
+      "unlocks": "33",
+      "idea": "In the max norm, one Bellman backup shrinks the distance between any two value functions by γ, so value iteration converges to one fixed point.",
+      "visual": "Two different starting value functions on a gridworld collapsing together.",
+      "source": "Bellman (1957)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#36"
+    },
+    {
+      "id": "max-bias",
+      "title": "Q-learning's optimism",
+      "stars": 3,
+      "unlocks": "36",
+      "idea": "E[max of noisy estimates] ≥ max of the true values, so Q-learning overestimates. Double Q-learning fixes it with two independent estimates.",
+      "visual": "Estimated against true value as noise grows, for single and double Q.",
+      "source": "van Hasselt (2010)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#40"
+    },
+    {
+      "id": "baseline",
+      "title": "Baselines don't bias policy gradients",
+      "stars": 3,
+      "unlocks": "38",
+      "idea": "Subtracting any baseline b(s) leaves the expected gradient unchanged (the score has mean zero) but can cut its variance enormously.",
+      "visual": "Gradient-estimate spread with and without a baseline over many episodes.",
+      "source": "Williams (1992)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#37"
+    }
+  ],
+  "assignments": [
+    {
+      "id": "fit-three-ways",
+      "title": "Fit a line three ways, then break it",
+      "time": "90–120 min",
+      "after": "02",
+      "build": "Normal equations, gradient descent from scratch and scikit-learn on real diabetes data; then the learning-rate cliff and feature scaling.",
+      "check": "All three agree to six decimals; raw BMI takes about 33,000 GD steps, standardised BMI takes 1 at the right step size.",
+      "visual": "Data with fitted line, residual plot, and loss curves on a log scale.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "runaway-logistic",
+      "title": "Watch logistic regression run away",
+      "time": "90 min",
+      "after": "03",
+      "build": "Logistic regression from scratch on separable and non-separable 2D data.",
+      "check": "On separable data ‖w‖ grows like log t and the boundary drifts to the max-margin line; on overlapping data it settles.",
+      "visual": "The decision line at t = 10 to 100,000 rotating towards the max-margin line, and ‖w‖ against log t.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "overfit",
+      "title": "Overfit on purpose",
+      "time": "90 min",
+      "after": "05",
+      "build": "Fit polynomials of degree 0 to 19 to 20 noisy points, then try two cures: a ridge penalty chosen by leave-one-out, and letting leave-one-out choose the degree. Then add data.",
+      "check": "Degree 19 fits the 20 points exactly and scores about 1e14 on test data; ridge chosen by leave-one-out brings it to 0.23, and letting leave-one-out pick the degree gives degree 3 at 0.099.",
+      "visual": "The degree-1, 3 and 19 fits over the data; train and test error against degree; error against λ.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "optimizer-race",
+      "title": "Optimizer race",
+      "time": "120 min",
+      "after": "07",
+      "build": "SGD, momentum, RMSProp and Adam from scratch, raced on the Rosenbrock valley and on logistic regression.",
+      "check": "Momentum overshoots then wins on the valley; Adam is robust to the step size; plain SGD stalls on the narrow valley.",
+      "visual": "Trajectories on the contour plot, and loss against step.",
+      "status": "planned",
+      "notes": "",
+      "where": "A2"
+    },
+    {
+      "id": "trees-forests-boosting",
+      "title": "One tree, a forest, a boosted ensemble",
+      "time": "90 min",
+      "after": "11",
+      "build": "Decision tree, random forest and gradient boosting on one tabular dataset; vary depth and number of trees.",
+      "check": "One deep tree overfits; the forest fixes variance; boosting fixes bias and then overfits if you let it.",
+      "visual": "Test error against number of trees for both ensembles.",
+      "status": "planned",
+      "notes": "",
+      "where": "A3"
+    },
+    {
+      "id": "micrograd",
+      "title": "Your own autograd in 100 lines",
+      "time": "120–180 min",
+      "after": "13",
+      "build": "A scalar Value class with +, ×, tanh and backward(), then a tiny MLP trained with it.",
+      "check": "Gradients match finite differences to 1e-6; the MLP fits a toy two-moons dataset.",
+      "visual": "The computational graph of one neuron with grads; the learned decision boundary.",
+      "status": "planned",
+      "notes": "",
+      "where": "A4"
+    },
+    {
+      "id": "digits-numpy",
+      "title": "Handwritten digits in pure NumPy",
+      "time": "2 hours",
+      "after": "14",
+      "build": "A two-layer network with ReLU and softmax on scikit-learn's 8×8 digits: forward pass, hand-written backprop with a gradient check, mini-batch SGD. Then break it three ways.",
+      "check": "Loss starts near ln 10 = 2.30, the gradient check agrees to 1e-8, and test accuracy reaches 97.3% (softmax regression alone gets 96.9%).",
+      "visual": "Learning curves on a log scale, and a strip of the twelve digits it misreads.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "paint-coordinates",
+      "title": "Paint a picture with a neural network",
+      "time": "90–120 min",
+      "after": "14",
+      "build": "An MLP that maps pixel coordinates to brightness, trained to repaint a smiley. Raw coordinates give a creased, piecewise-linear face; random Fourier features make it sharp; too-high frequencies make it memorise static.",
+      "check": "Raw coordinates reach 24.7 dB on the in-between pixels, Fourier features at scale 0.5 reach 40.2 dB, and scale 10 falls to 7 dB, worse than flat grey.",
+      "visual": "The target beside six paintings, one per input encoding.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "edge-detector",
+      "title": "Build an edge detector, then teach one",
+      "time": "90 min",
+      "after": "15",
+      "build": "Convolution by hand, Sobel edges, equivariance and composition checked numerically; then a 3×3 kernel learns Sobel from examples by gradient descent, and fails to on a smooth picture.",
+      "check": "The learned kernel matches Sobel to 4e-14 on the drawing; trained on a smooth blob it becomes a different kernel, perfect on the blob and off by 0.53 on the drawing.",
+      "visual": "The drawing, its Sobel-x map and edge magnitude, and the badly taught kernel applied to the drawing.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "names-gpt",
+      "title": "From bigrams to a tiny transformer",
+      "time": "180 min (two evenings)",
+      "after": "20",
+      "build": "Generate names: a bigram count model, then an MLP, then one attention block, on the same dataset.",
+      "check": "Validation loss drops at each step; the generated names get more name-like.",
+      "visual": "The bigram count matrix as a heatmap; an attention map for one name.",
+      "status": "planned",
+      "notes": "",
+      "where": "A6"
+    },
+    {
+      "id": "diffusion-spiral",
+      "title": "A diffusion model draws a spiral",
+      "time": "2 hours",
+      "after": "24",
+      "build": "DDPM in NumPy on 500 points of a spiral: first with the exact optimal denoiser of the training set, then with a small MLP that predicts the noise. Then break the sampler twice.",
+      "check": "The exact denoiser only redraws training points (3× closer to them than fresh data); the trained MLP draws new points on the spiral; dropping the sampling noise collapses everything to one spot.",
+      "visual": "Five scatter plots: data, exact denoiser, trained network, no-noise sampler, one-jump sampler.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "bandit-casino",
+      "title": "The bandit casino",
+      "time": "90 min",
+      "after": "32",
+      "build": "A 10-armed bandit; ε-greedy, UCB and Thompson sampling agents.",
+      "check": "Greedy ends on the best machine in only 36% of casinos; Thompson sampling reaches 92% with a seventh of greedy's regret; when the casino changes, UCB recovers best.",
+      "visual": "Average cumulative regret over 1,000 runs for each agent.",
+      "status": "written",
+      "notes": ""
+    },
+    {
+      "id": "gridworld",
+      "title": "Gridworld: plan it, then learn it",
+      "time": "120 min",
+      "after": "36",
+      "build": "Value iteration on a known gridworld, then Q-learning that has to discover the same values by trial and error.",
+      "check": "Both reach the same policy; Q-learning needs thousands of episodes and enough exploration.",
+      "visual": "Value heatmaps with policy arrows, iteration by iteration.",
+      "status": "planned",
+      "notes": "",
+      "where": "A9"
+    },
+    {
+      "id": "tictactoe-mcts",
+      "title": "Monte Carlo tree search plays tic-tac-toe",
+      "time": "2 hours",
+      "after": "40",
+      "build": "Solve tic-tac-toe with minimax (5,478 positions, a draw), then build UCT with random rollouts and grade it against perfect play.",
+      "check": "Draws against a perfect opponent climb from 13% at 10 simulations per move to 100% at 3,000; with no exploration bonus the search misses the only safe reply to a corner opening.",
+      "visual": "Draw rate against simulations per move, on a log axis.",
+      "status": "written",
+      "notes": ""
+    }
+  ]
+}

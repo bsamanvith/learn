@@ -1,0 +1,216 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 32 · Stage 8: reinforcement learning</div>
+  <h1>Bandits and exploration</h1>
+  <p class="lede">Before an agent can plan over many steps, it has to solve a simpler problem: choose repeatedly among a few options whose payoffs it does not know, and earn as much as possible while learning. This is the multi-armed bandit, and it isolates the tension at the heart of reinforcement learning, between exploiting what looks best and exploring what might be better. This lesson defines regret and decomposes it, and shows why greedy play fails. It derives the UCB algorithm from Hoeffding's inequality and proves its logarithmic regret, and states the Lai–Robbins lower bound that no algorithm can beat. It then covers Thompson sampling, which matches that bound, and the gradient bandit, the first policy-gradient method of this stage. Six algorithms are compared on the same problem.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/31-markov-chains/">lesson 31</a>, <a href="/machine-learning/M3-probability/">M3</a>, <a href="/machine-learning/M4-information-theory/">M4</a></span><span><b>Math pulled in:</b> regret and its decomposition, Hoeffding's inequality, union bounds, the KL divergence between Bernoulli distributions, Beta–Bernoulli conjugacy, the score-function gradient</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>A gambler faces $K$ slot machines ("one-armed bandits"). Pulling arm $a$ pays a random reward with unknown mean $\mu_a$. Over $T$ pulls, the gambler wants as much reward as possible. If the means were known, the answer would be to pull the best arm every time. They are not, so every pull has two purposes: to earn reward now and to learn about the arms. Pull only the arm that looks best and you may never discover that another was better; explore too much and you waste pulls on arms you already know are bad.</p>
+    <p>Bandits are reinforcement learning with a single state: actions have no effect on the future except through what they teach you. They are also directly useful. Website A/B tests, clinical trials with adaptive allocation, ad selection and recommendation are bandit problems, and the exploration methods developed here (optimism, posterior sampling) carry over to full RL.</p>
+  </section>
+
+  <section id="regret">
+    <h2>Regret</h2>
+    <p>Let $\mu^* = \max_a\mu_a$ and let $\Delta_a = \mu^* - \mu_a$ be the <b>gap</b> of arm $a$. An algorithm chooses arms $A_1, \dots, A_T$, each depending on the rewards seen before. Its <b>regret</b> is the expected reward lost compared with always pulling the best arm:</p>
+    <div class="eq">$$\mathcal{R}_T = T\mu^* - \mathbb{E}\Big[\sum_{t=1}^T\mu_{A_t}\Big].$$</div>
+    <p>Let $N_a(T)$ be the number of times arm $a$ is pulled. Since $T = \sum_aN_a(T)$ and $\sum_t\mu_{A_t} = \sum_a\mu_aN_a(T)$,</p>
+    <div class="result">
+      <div class="label">Regret decomposition</div>
+      <p>$$\mathcal{R}_T = \sum_a\Delta_a\,\mathbb{E}[N_a(T)].$$</p>
+    </div>
+    <p>So regret is small exactly when each bad arm is pulled few times, and the worse the arm, the fewer. An algorithm that pulls every arm a constant fraction of the time, however small, has <b>linear regret</b>, growing like $cT$. The goal is <b>sublinear</b> regret, so that the average reward per pull approaches $\mu^*$, and ideally regret that grows only like $\log T$.</p>
+    <p><b>Greedy fails.</b> Always pulling the arm with the highest estimated mean $\hat\mu_a$ can lock onto a bad arm: if the best arm's first few rewards happen to be low, its estimate is low, it is never pulled again, and the estimate is never corrected. This happens with constant probability, so the expected regret is linear. <b>ε-greedy</b> fixes this by pulling a uniformly random arm with probability $\varepsilon$; then every arm's estimate converges. But a fixed $\varepsilon$ keeps paying $\varepsilon\bar\Delta$ per pull forever, where $\bar\Delta$ is the average gap, so regret is still linear. Decaying $\varepsilon_t\propto1/t$ at the right rate can give logarithmic regret, but the right rate depends on the unknown gaps.</p>
+  </section>
+
+  <section id="ucb">
+    <h2>Optimism: the upper confidence bound</h2>
+    <p>A better principle is <b>optimism in the face of uncertainty</b>: treat each arm as if it were as good as it plausibly could be, and pull the arm whose plausible best is highest. Either that arm really is good, and pulling it earns reward; or it is not, and pulling it shrinks its uncertainty until the optimism disappears. Exploration then happens exactly where it is needed.</p>
+    <p>"Plausibly" is made precise by a concentration inequality. For rewards in $[0, 1]$, <b>Hoeffding's inequality</b> says that the average $\hat\mu$ of $n$ independent rewards with mean $\mu$ satisfies</p>
+    <div class="eq">$$P(\hat\mu \ge \mu + \epsilon)\le e^{-2n\epsilon^2}\quad\text{and}\quad P(\hat\mu\le\mu - \epsilon)\le e^{-2n\epsilon^2}.$$</div>
+    <p>Setting the right-hand side to $t^{-4}$ gives $\epsilon = \sqrt{2\log t/n}$: at time $t$, the true mean lies below $\hat\mu + \sqrt{2\log t/n}$ except with probability $t^{-4}$. <b>UCB1</b> (Auer, Cesa-Bianchi and Fischer, 2002) pulls each arm once, then</p>
+    <div class="result">
+      <div class="label">UCB1</div>
+      <p>$$A_t = \arg\max_a\Big(\hat\mu_a + \sqrt{\frac{2\log t}{N_a}}\Big).$$</p>
+    </div>
+    <p>The bonus shrinks as an arm is pulled and grows slowly, as $\sqrt{\log t}$, for arms that are left alone, so no arm is ever abandoned for good.</p>
+    <p><b>Why the regret is logarithmic.</b> Suppose a suboptimal arm $a$ has been pulled $n\ge\ell = \lceil8\log T/\Delta_a^2\rceil$ times. Its bonus is then at most $\sqrt{2\log T/n}\le\Delta_a/2$. For UCB1 to pull it again at time $t$, its index must beat the best arm's, which requires at least one of three things:</p>
+    <ol>
+      <li>the best arm's index is below its true mean, $\hat\mu^* + \text{bonus}^* &lt; \mu^*$;</li>
+      <li>arm $a$'s estimate is too high, $\hat\mu_a &gt; \mu_a + \text{bonus}_a$;</li>
+      <li>$\mu^*\le\mu_a + 2\,\text{bonus}_a$, that is, $\Delta_a\le2\sqrt{2\log t/n}$, which is impossible once $n\ge\ell$.</li>
+    </ol>
+    <p>Events 1 and 2 each have probability at most $t^{-4}$ for each possible number of pulls, so summing over the at most $t$ possible counts of each arm (a union bound) gives at most $2t^{-3}$ at time $t$, and $\sum_t2t^{-3}\le\pi^2/3$. So</p>
+    <div class="eq">$$\mathbb{E}[N_a(T)]\le\frac{8\log T}{\Delta_a^2} + 1 + \frac{\pi^2}{3},\qquad\mathcal{R}_T\le\sum_{a:\Delta_a&gt;0}\Big(\frac{8\log T}{\Delta_a} + \big(1 + \tfrac{\pi^2}{3}\big)\Delta_a\Big).$$</div>
+    <p>Logarithmic in $T$, for every problem, with no knowledge of the gaps. The constant is poor: Hoeffding's inequality is loose for rewards with small variance, and the analysis is worst-case. Tighter versions such as KL-UCB use the Bernoulli KL divergence in place of the quadratic bound.</p>
+  </section>
+
+  <section id="lower">
+    <h2>The best possible: Lai and Robbins</h2>
+    <p>How small can regret be? Lai and Robbins (1985) proved that any algorithm that does reasonably on every problem (regret $o(T^p)$ for every $p &gt; 0$) must, on each problem, pull every suboptimal arm at least</p>
+    <div class="result">
+      <div class="label">The Lai–Robbins lower bound</div>
+      <p>$$\liminf_{T\to\infty}\frac{\mathbb{E}[N_a(T)]}{\log T}\ge\frac{1}{\mathrm{KL}(\mu_a\,\|\,\mu^*)},\qquad\text{so}\qquad\liminf_{T\to\infty}\frac{\mathcal{R}_T}{\log T}\ge\sum_{a:\Delta_a&gt;0}\frac{\Delta_a}{\mathrm{KL}(\mu_a\,\|\,\mu^*)},$$</p>
+      <p>where $\mathrm{KL}(p\,\|\,q) = p\log\frac pq + (1 - p)\log\frac{1 - p}{1 - q}$ for Bernoulli rewards.</p>
+    </div>
+    <p>The intuition: to be sure that arm $a$ is not secretly the best, you must collect enough evidence to distinguish "mean $\mu_a$" from "mean slightly above $\mu^*$", and the number of samples needed to tell two distributions apart with error probability $1/T$ is about $\log T$ divided by their KL divergence (M4). Arms that are close to the best, or noisy, are expensive to rule out. By Pinsker's inequality, $\mathrm{KL}\ge2\Delta^2$, so UCB1's $8/\Delta_a^2$ pulls are within a constant of this, but the constant matters in practice.</p>
+  </section>
+
+  <section id="thompson">
+    <h2>Thompson sampling</h2>
+    <p>The oldest bandit algorithm (Thompson, 1933) is Bayesian. Keep a posterior over each arm's mean; at each step, draw one sample from each arm's posterior and pull the arm whose sample is largest. Each arm is pulled with exactly the posterior probability that it is the best one: <b>probability matching</b>. An arm whose posterior is wide sometimes produces a high sample and gets explored; an arm that is confidently bad almost never does.</p>
+    <p>For Bernoulli rewards the posterior is conjugate. With a uniform prior, $\mathrm{Beta}(1, 1)$, after $s$ successes in $n$ pulls the posterior of $\mu_a$ is $\mathrm{Beta}(1 + s, 1 + n - s)$. The algorithm is three lines, and it attains the Lai–Robbins constant asymptotically (Kaufmann, Korda and Munos, 2012; Agrawal and Goyal, 2012): it is optimal in the strongest sense available. It is also easy to extend to any model where posterior samples can be drawn, which is why it is widely used in practice.</p>
+    <figure class="plate wide" data-scene="bandit">
+      <div class="stage">
+        <canvas aria-label="Estimates of five slot machines' win rates with uncertainty bands and pull counts, and cumulative regret curves for each strategy"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <div class="seg" data-opt="algo" role="group"><button type="button" data-v="greedy">ε-greedy</button><button type="button" data-v="ucb">UCB</button><button type="button" data-v="thompson">Thompson</button></div>
+            <button type="button" data-act="restart">New casino run</button>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> Five machines with win rates 0.2, 0.45, 0.3, 0.7 and 0.55. Each strategy plays 5,000 pulls; switch between them and the earlier runs stay on the regret plot. ε-greedy's regret grows in a straight line, because it spends a tenth of its pulls exploring forever. UCB's curve bends over, the $\log T$ shape, though with its generous bonus it is no better than ε-greedy at this horizon. Thompson sampling does best by a wide margin: watch the pull counts under the arms, where the bad arms get only a few dozen pulls each. <i>New casino run</i> reruns with fresh luck; occasionally a strategy commits to the 0.55 arm for a long time.</p>
+  </section>
+
+  <section id="gradient">
+    <h2>The gradient bandit: a first policy gradient</h2>
+    <p>A different approach learns a policy directly. Keep a preference $H_a$ for each arm and choose arms with the softmax probabilities $\pi(a) = e^{H_a}/\sum_be^{H_b}$. To maximise the expected reward $J(\mathbf{H}) = \sum_a\pi(a)\mu_a$, use the score-function identity (lesson 22): $\nabla J = \mathbb{E}_{A\sim\pi}\big[\mu_A\nabla\log\pi(A)\big]$, and $\partial\log\pi(A)/\partial H_b = \mathbb{1}[A = b] - \pi(b)$. Replacing $\mu_A$ by the observed reward $R$ gives an unbiased gradient estimate, and subtracting a baseline $\bar R$ that does not depend on the action keeps it unbiased while reducing its variance:</p>
+    <div class="eq">$$H_b\leftarrow H_b + \alpha(R - \bar R)\big(\mathbb{1}[A = b] - \pi(b)\big)\quad\text{for every } b.$$</div>
+    <p>This is stochastic gradient ascent on the expected reward. Lesson 38 extends exactly this update to sequential problems, and it is the same update that trains LLMs with RL (lesson 28), where the "arm" is a whole response.</p>
+  </section>
+
+  <section id="contextual">
+    <h2>Contextual bandits</h2>
+    <p>In most applications the best arm depends on a <b>context</b> $\mathbf{x}_t$ observed before choosing: which ad to show depends on the user. A <b>contextual bandit</b> learns a model of $\mathbb{E}[R\mid\mathbf{x}, a]$ and explores using its uncertainty. LinUCB (Li et al., 2010) fits a ridge regression per arm and adds a bonus $\alpha\sqrt{\mathbf{x}^\top A_a^{-1}\mathbf{x}}$, the width of the confidence interval of the prediction; linear Thompson sampling samples the regression weights from their Gaussian posterior. Contextual bandits sit between bandits and full RL: there is a state, but actions do not change future states.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Ten Bernoulli arms with means from 0.9 (the best) down to 0.2, including two arms at 0.8, close to the best. Each algorithm is run 200 times for 50,000 pulls, vectorised across the runs, and the regret is averaged. The algorithms are greedy, ε-greedy with $\varepsilon = 0.1$ and 0.01, UCB1, Thompson sampling with uniform Beta priors, and the gradient bandit with step size 0.1 and a running-average baseline. The last lines compute the Lai–Robbins constant and UCB1's guaranteed bound for this problem.</p>
+<pre><code>import numpy as np
+
+# A 10-armed Bernoulli bandit: arm a pays 1 with probability mu[a]. The best arm pays 0.9;
+# the others are spread below it. Every algorithm is run 200 times for T = 50,000 pulls,
+# vectorised across the runs.
+mu = np.array([0.9, 0.8, 0.8, 0.7, 0.6, 0.5, 0.5, 0.4, 0.3, 0.2])
+K, T, runs = len(mu), 50_000, 200
+gaps = mu.max() - mu
+rows = np.arange(runs)
+
+def run(choose, update=None, seed=0):
+    """choose(t, counts, sums, rng) -&gt; arms (runs,). Returns the regret curve averaged over runs
+    and the mean number of pulls of each arm."""
+    rng = np.random.default_rng(seed)
+    counts, sums = np.zeros((runs, K)), np.zeros((runs, K))
+    regret = np.zeros(T)
+    for t in range(T):
+        a = choose(t, counts, sums, rng)
+        r = (rng.random(runs) &lt; mu[a]).astype(float)
+        counts[rows, a] += 1; sums[rows, a] += r
+        if update:
+            update(a, r)
+        regret[t] = gaps[a].mean()
+    return np.cumsum(regret), counts.mean(0)
+
+def means(counts, sums):
+    return np.where(counts &gt; 0, sums / np.maximum(counts, 1), np.inf)   # untried arms first
+
+def greedy(t, counts, sums, rng):
+    m = means(counts, sums)
+    return np.argmax(m + 1e-9 * rng.random(m.shape), 1)                  # random tie-breaking
+
+def eps_greedy(eps):
+    def choose(t, counts, sums, rng):
+        explore = rng.random(runs) &lt; eps
+        return np.where(explore, rng.integers(0, K, runs), greedy(t, counts, sums, rng))
+    return choose
+
+def ucb1(t, counts, sums, rng):
+    bonus = np.sqrt(2 * np.log(t + 1) / np.maximum(counts, 1))
+    return np.argmax(np.where(counts &gt; 0, sums / np.maximum(counts, 1) + bonus, np.inf), 1)
+
+def thompson(t, counts, sums, rng):
+    return np.argmax(rng.beta(1 + sums, 1 + counts - sums), 1)            # one posterior sample per arm
+
+H = np.zeros((runs, K)); baseline = np.zeros(runs)
+def gradient_choose(t, counts, sums, rng):
+    p = np.exp(H - H.max(1, keepdims=True)); p /= p.sum(1, keepdims=True)
+    gradient_choose.p = p
+    return (p.cumsum(1) &gt; rng.random(runs)[:, None]).argmax(1)
+def gradient_update(a, r, alpha=0.1):
+    global baseline
+    p = gradient_choose.p
+    onehot = np.zeros_like(p); onehot[rows, a] = 1
+    H[:] += alpha * (r - baseline)[:, None] * (onehot - p)              # stochastic gradient of E[r]
+    baseline += (r - baseline) / 100                                     # running average of reward
+
+results = {}
+for name, args in [("greedy", (greedy,)), ("epsilon-greedy 0.1", (eps_greedy(0.1),)),
+                   ("epsilon-greedy 0.01", (eps_greedy(0.01),)), ("UCB1", (ucb1,)),
+                   ("Thompson sampling", (thompson,)), ("gradient bandit", (gradient_choose, gradient_update))]:
+    curve, pulls = run(*args)
+    results[name] = curve
+    print(f"{name:19s} regret after 1,000 / 10,000 / 50,000 pulls: {curve[999]:6.1f} {curve[9999]:7.1f} {curve[-1]:7.1f};"
+          f" best arm pulled {pulls[0] / T:.3f} of the time")
+
+# The Lai-Robbins lower bound: any consistent algorithm pulls each suboptimal arm a at least
+# log(T) / KL(mu_a, mu*) times asymptotically, so regret &gt;= sum_a gap_a / KL(mu_a, mu*) log T.
+kl = lambda p, q: p * np.log(p / q) + (1 - p) * np.log((1 - p) / (1 - q))
+c_lr = sum(gaps[a] / kl(mu[a], mu[0]) for a in range(1, K))
+c_ucb = sum(8 / gaps[a] for a in range(1, K))
+print(f"Lai-Robbins: regret grows at least as {c_lr:.2f} log T, which is {c_lr * np.log(T):.1f} at T = 50,000;"
+      f" UCB1's guarantee, sum 8 / gap * log T, = {c_ucb * np.log(T):.0f}")
+
+# greedy              regret after 1,000 / 10,000 / 50,000 pulls:   48.3   410.7  2010.7; best arm pulled 0.639 of the time
+# epsilon-greedy 0.1  regret after 1,000 / 10,000 / 50,000 pulls:   57.0   368.8  1695.8; best arm pulled 0.903 of the time
+# epsilon-greedy 0.01 regret after 1,000 / 10,000 / 50,000 pulls:   48.4   260.4   438.1; best arm pulled 0.939 of the time
+# UCB1                regret after 1,000 / 10,000 / 50,000 pulls:  139.6   422.6   638.2; best arm pulled 0.921 of the time
+# Thompson sampling   regret after 1,000 / 10,000 / 50,000 pulls:   37.3    55.2    68.1; best arm pulled 0.992 of the time
+# gradient bandit     regret after 1,000 / 10,000 / 50,000 pulls:  133.3   183.6   199.3; best arm pulled 0.982 of the time
+# Lai-Robbins: regret grows at least as 10.10 log T, which is 109.2 at T = 50,000; UCB1's guarantee, sum 8 / gap * log T, = 3326</code></pre>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: bandit-regret --></div>
+    </figure>
+    <p class="muted">Average regret over 200 runs, from the code. Left: against the number of pulls; greedy and ε = 0.1 grow linearly. Right: the same curves against $\log_{10} t$, where regret that grows as $\log T$ becomes a straight line, at the slope set by its constant; the dashed line is the Lai–Robbins rate $10.10\log t$, which binds only in the limit.</p>
+    <p><b>Reading the output.</b> Greedy pulls the best arm only 64% of the time: in about a third of the runs it locked onto a worse arm and stayed there, and its regret, 2,011, grows linearly. ε-greedy with 0.1 also grows linearly, at almost exactly the predicted $\varepsilon\bar\Delta = 0.1\times0.33 = 0.033$ per pull. With $\varepsilon = 0.01$ it does well over this horizon (438), but it too is linear in the end. UCB1 explores heavily at first (140 regret after 1,000 pulls, the worst of all) and its regret grows logarithmically, more slowly than any ε-greedy's later on. Its constant is large, so at 50,000 pulls it has still not overtaken ε = 0.01. Thompson sampling is the best by far at every horizon, with 68 regret after 50,000 pulls, and pulls the best arm 99.2% of the time. The Lai–Robbins constant for this problem is 10.10, a slope of 10.10 per unit of $\log T$; between 10,000 and 50,000 pulls, Thompson's regret grew by 12.9, against $10.10\log5 = 16.3$ for the bound's slope. That is consistent with Thompson matching the bound, since the bound is about the limit and not any finite horizon. UCB1's worst-case guarantee, 3,326, is five times its actual regret.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Prove the regret decomposition $\mathcal{R}_T = \sum_a\Delta_a\mathbb{E}[N_a(T)]$.</li>
+      <li>Two arms with means 0.6 and 0.5. Greedy pulls each once and then always pulls the one with the higher average (ties broken at random). With what probability does it end up pulling the worse arm forever? (Consider the outcomes of the first two pulls, and what happens after a tie or when both pay 0.)</li>
+      <li>Derive the UCB bonus: for $n$ rewards in $[0, 1]$, find the $\epsilon$ that makes Hoeffding's bound equal to $\delta$. What bonus would you use if rewards were in $[0, 10]$?</li>
+      <li>Show that $\mathrm{KL}(p\,\|\,q)\ge2(p - q)^2$ for Bernoulli distributions (Pinsker), and compute the Lai–Robbins constant and UCB1's $\sum_a8/\Delta_a$ for two arms with means 0.9 and 0.8. How do they compare for means 0.5 and 0.4?</li>
+      <li>After 10 pulls of an arm with 7 successes, what is the probability that Thompson sampling's draw for it exceeds 0.8? Compare with an arm with 70 successes in 100 pulls.</li>
+      <li>Show that the gradient-bandit update with baseline $\bar R$ is unbiased for every constant $\bar R$, by showing that $\mathbb{E}_{A\sim\pi}[\nabla\log\pi(A)] = 0$.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $T\mu^* - \mathbb{E}\sum_t\mu_{A_t} = \mathbb{E}\sum_t(\mu^* - \mu_{A_t}) = \mathbb{E}\sum_t\sum_a\mathbb{1}[A_t = a]\Delta_a = \sum_a\Delta_a\mathbb{E}\sum_t\mathbb{1}[A_t = a] = \sum_a\Delta_a\mathbb{E}[N_a(T)]$.</p>
+        <p><b>2.</b> After one pull each, the averages are 0 or 1. Greedy locks onto the worse arm for good if the better arm's average reaches 0 while the worse arm's never does. If the worse arm pays 1 and the better pays 0 (probability $0.5\times0.4 = 0.2$), greedy pulls the worse arm, whose average stays positive forever, so it is never left. If both pay 0 or both pay 1 (probability $0.4\times0.5 + 0.6\times0.5 = 0.5$), the tie is broken at random and the race continues, with a similar risk. In total, roughly a quarter of runs lock onto the worse arm: a constant probability, hence linear regret.</p>
+        <p><b>3.</b> $e^{-2n\epsilon^2} = \delta$ gives $\epsilon = \sqrt{\log(1/\delta)/(2n)}$; with $\delta = t^{-4}$ this is $\sqrt{2\log t/n}$. For rewards in $[0, b]$, Hoeffding's exponent is $-2n\epsilon^2/b^2$, so the bonus scales by $b$: $10\sqrt{2\log t/n}$.</p>
+        <p><b>4.</b> Fix $q$ and let $f(p) = \mathrm{KL}(p\|q) - 2(p - q)^2$. Then $f(q) = f'(q) = 0$ and $f''(p) = \frac{1}{p(1 - p)} - 4\ge0$, so $f\ge0$. For 0.9 and 0.8: $\mathrm{KL}(0.8\|0.9) = 0.8\log\frac89 + 0.2\log2 = 0.0444$, so the constant is $0.1/0.0444 = 2.25$, against UCB1's $8/0.1 = 80$. For 0.5 and 0.4: $\mathrm{KL}(0.4\|0.5) = 0.0201$, constant $4.97$, against 80. Arms near 0 or 1 have small variance, which the KL divergence rewards and Hoeffding's bound ignores.</p>
+        <p><b>5.</b> $\mathrm{Beta}(8, 4)$: $P(\mu &gt; 0.8)\approx0.16$. $\mathrm{Beta}(71, 31)$: $P(\mu &gt; 0.8)\approx0.01$. The same average, 0.7, gives very different exploration: the arm with 10 pulls is still sampled above 0.8 one time in six.</p>
+        <p><b>6.</b> $\mathbb{E}_{A\sim\pi}[\nabla\log\pi(A)] = \sum_a\pi(a)\frac{\nabla\pi(a)}{\pi(a)} = \nabla\sum_a\pi(a) = \nabla1 = 0$, so $\mathbb{E}[\bar R\nabla\log\pi(A)] = 0$ for any $\bar R$ that does not depend on $A$.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Sutton &amp; Barto, <i>Reinforcement Learning: An Introduction</i></b> (2nd edition, 2018), chapter 2. The 10-armed testbed and the gradient bandit.</li>
+      <li><b>Lattimore &amp; Szepesvári, <i>Bandit Algorithms</i></b> (2020, free online). Chapters 6–8 (explore-then-commit, UCB), 15–16 (lower bounds) and 36 (Thompson sampling).</li>
+      <li><b>Auer, Cesa-Bianchi &amp; Fischer, "Finite-time analysis of the multiarmed bandit problem"</b> (Machine Learning, 2002). UCB1.</li>
+      <li><b>Russo, Van Roy et al., "A tutorial on Thompson sampling"</b> (Foundations and Trends in ML, 2018).</li>
+      <li><b>Li, Chu, Langford &amp; Schapire, "A contextual-bandit approach to personalized news article recommendation"</b> (WWW 2010). LinUCB.</li>
+    </ul>
+  </section>
+</article>

@@ -1,0 +1,233 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 25 · Stage 6: generative models</div>
+  <h1>Scores, guidance and fast sampling</h1>
+  <p class="lede">Lesson 24's noise predictor is secretly something more general: an estimate of the score, the gradient of the log-density of the noisy data. Seeing it that way connects diffusion models to Langevin dynamics from physics, to stochastic differential equations, and to a deterministic ODE that samples in far fewer steps. It also explains guidance, the trick that makes text-to-image models follow their prompts, and it leads to flow matching, the simpler recipe behind several of the newest image models. This lesson derives the score identity, Langevin sampling and why it needs annealing, the probability-flow view and DDIM, classifier and classifier-free guidance, latent diffusion and flow matching, and measures each idea in code.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/24-diffusion-models/">lesson 24</a>, <a href="/machine-learning/22-autoencoders-and-vaes/">lesson 22</a></span><span><b>Math pulled in:</b> score functions, Langevin dynamics, Tweedie's formula, stochastic and ordinary differential equations (light), Bayes' rule for gradients</span></div>
+</header>
+
+<article class="lesson">
+  <section id="score">
+    <h2>The score, and sampling with it</h2>
+    <p>The <b>score</b> of a density $p$ is $\nabla_\mathbf{x}\log p(\mathbf{x})$, a vector field pointing towards higher density. It has one great practical virtue: it doesn't depend on the normalising constant. If $p(\mathbf{x}) = \tilde p(\mathbf{x})/Z$ then $\nabla\log p = \nabla\log\tilde p$, since $\log Z$ is a constant. Energy-based models, physics simulations and Bayesian posteriors all have unnormalised densities, and the score is computable for all of them.</p>
+    <p>Knowing the score is enough to sample. <b>Langevin dynamics</b> repeats</p>
+    <div class="eq">$$\mathbf{x}_{k+1} = \mathbf{x}_k + \eta\,\nabla\log p(\mathbf{x}_k) + \sqrt{2\eta}\,\mathbf{z}_k, \qquad \mathbf{z}_k\sim\mathcal{N}(\mathbf{0}, I):$$</div>
+    <p>gradient ascent on $\log p$, plus noise. Without the noise every point would climb to a mode; the noise, at exactly this scale, spreads them out in just the right way. As $\eta\to0$ and the number of steps grows, the distribution of $\mathbf{x}_k$ converges to $p$ under mild conditions. The reason is that $p$ is a stationary distribution of the continuous-time limit $d\mathbf{x} = \nabla\log p\,dt + \sqrt2\,d\mathbf{W}$: its Fokker–Planck equation $\partial_t\rho = -\nabla\cdot(\rho\nabla\log p) + \Delta\rho$ is zero at $\rho = p$, because $p\nabla\log p = \nabla p$. Exercise 1 does the one-dimensional Gaussian case by hand, including the bias from a finite step.</p>
+    <p><b>Why plain Langevin isn't enough.</b> Langevin moves by local steps, so it crosses low-density regions between modes only rarely. Part 1 of the code samples a mixture with 80% of its mass in a mode at $-2$ and 20% at $+2$, with standard deviations 0.5. Started uniformly on $[-6, 6]$, after 2,000 steps 47.5% of the samples sit in the right-hand mode, because that is roughly where they started; the score inside each mode says nothing about the other mode's weight. Started in the left mode, only 1% ever cross. The fix, from Song and Ermon (2019), is <b>annealing</b>: run Langevin on a heavily smoothed version of $p$ first, where the modes merge and the samples can move freely, then gradually reduce the smoothing. In the code this gives 20.7%, close to the true 20%. A diffusion model's reverse process is exactly this kind of schedule, from very noisy to clean, and needs the score of $p$ smoothed by every noise level along the way.</p>
+  </section>
+
+  <section id="tweedie">
+    <h2>Noise prediction is score estimation</h2>
+    <p>Let $q_t(\mathbf{x}_t) = \int q(\mathbf{x}_t\mid\mathbf{x}_0)\,p_\text{data}(\mathbf{x}_0)\,d\mathbf{x}_0$ be the density of the noisy data at step $t$, with $q(\mathbf{x}_t\mid\mathbf{x}_0) = \mathcal{N}(\sqrt{\bar\alpha_t}\mathbf{x}_0, (1 - \bar\alpha_t)I)$. Differentiate under the integral and divide by $q_t$:</p>
+    <div class="eq">$$\nabla\log q_t(\mathbf{x}_t) = \frac{\int\nabla_{\mathbf{x}_t}q(\mathbf{x}_t\mid\mathbf{x}_0)\,p(\mathbf{x}_0)\,d\mathbf{x}_0}{q_t(\mathbf{x}_t)} = \mathbb{E}\big[\nabla_{\mathbf{x}_t}\log q(\mathbf{x}_t\mid\mathbf{x}_0)\ \big|\ \mathbf{x}_t\big] = \mathbb{E}\left[-\frac{\mathbf{x}_t - \sqrt{\bar\alpha_t}\mathbf{x}_0}{1 - \bar\alpha_t}\ \middle|\ \mathbf{x}_t\right].$$</div>
+    <p>using $\nabla q = q\nabla\log q$ and Bayes' rule for the posterior $p(\mathbf{x}_0\mid\mathbf{x}_t)$. Since $\mathbf{x}_t - \sqrt{\bar\alpha_t}\mathbf{x}_0 = \sqrt{1 - \bar\alpha_t}\,\boldsymbol{\epsilon}$,</p>
+    <div class="result">
+      <div class="label">Score and noise</div>
+      <p>$$\nabla\log q_t(\mathbf{x}_t) = -\frac{\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]}{\sqrt{1 - \bar\alpha_t}}, \qquad\text{so}\qquad \mathbf{s}_\theta(\mathbf{x}_t, t) = -\frac{\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)}{\sqrt{1 - \bar\alpha_t}} .$$</p>
+    </div>
+    <p>Lesson 24's network, which learns $\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]$, is a score model for every noise level at once. Rearranged, this is <b>Tweedie's formula</b>, $\mathbb{E}[\mathbf{x}_0\mid\mathbf{x}_t] = (\mathbf{x}_t + (1 - \bar\alpha_t)\nabla\log q_t(\mathbf{x}_t))/\sqrt{\bar\alpha_t}$: the best denoiser moves the noisy point uphill along the score. Training a score model this way, by regressing on the noise, is called <b>denoising score matching</b> (Vincent, 2011). It avoids the original score-matching objective of Hyvärinen (2005), which needs the trace of the Jacobian of $\mathbf{s}_\theta$ and is expensive in high dimensions.</p>
+  </section>
+
+  <section id="sde">
+    <h2>Continuous time: an SDE and an ODE</h2>
+    <p>Let the number of steps go to infinity with $\beta_t$ shrinking accordingly. The forward chain becomes a stochastic differential equation, $d\mathbf{x} = -\tfrac12\beta(t)\mathbf{x}\,dt + \sqrt{\beta(t)}\,d\mathbf{W}$ (Song et al., 2021). A classical result of Anderson (1982) says that the time-reversal of such a process is again a diffusion, whose drift involves the score:</p>
+    <div class="eq">$$d\mathbf{x} = \Big[-\tfrac12\beta(t)\mathbf{x} - \beta(t)\nabla\log q_t(\mathbf{x})\Big]dt + \sqrt{\beta(t)}\,d\bar{\mathbf{W}}, \qquad\text{run from } t = T \text{ down to } 0 .$$</div>
+    <p>Ancestral sampling (lesson 24) is a discretisation of this reverse SDE. More surprising is that there is also a deterministic process with the <i>same</i> marginal densities $q_t$ at every time, the <b>probability-flow ODE</b>:</p>
+    <div class="eq">$$\frac{d\mathbf{x}}{dt} = -\tfrac12\beta(t)\Big[\mathbf{x} + \nabla\log q_t(\mathbf{x})\Big].$$</div>
+    <p>(Both the SDE and the ODE transport $q_t$ the same way, because their Fokker–Planck equations agree: the ODE replaces the diffusion term $\tfrac12\beta\Delta q_t$ by an equivalent drift $-\tfrac12\beta\nabla\log q_t$, using $\Delta q = \nabla\cdot(q\nabla\log q)$.) Integrating it backwards from noise gives samples with no randomness after the first draw. That makes the map from noise to data a deterministic, invertible function, so images can be encoded to noise and back, interpolated, and, because ODEs are smooth, integrated with large steps.</p>
+    <p><b>DDIM</b> (Song, Meng &amp; Ermon, 2021) is a discretisation of this ODE that can skip steps. From $\mathbf{x}_t$, estimate the clean point, then re-noise it deterministically to an earlier step $s &lt; t$ using the <i>same</i> predicted noise:</p>
+    <div class="eq">$$\hat{\mathbf{x}}_0 = \frac{\mathbf{x}_t - \sqrt{1 - \bar\alpha_t}\,\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)}{\sqrt{\bar\alpha_t}}, \qquad \mathbf{x}_s = \sqrt{\bar\alpha_s}\,\hat{\mathbf{x}}_0 + \sqrt{1 - \bar\alpha_s}\,\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t).$$</div>
+    <p>It uses the network trained for DDPM unchanged. The code's measurements on one class of the blob data below (true spread 0.8): with 100 DDIM steps the samples have spread 0.78; with 20 steps, 0.71; with 5 steps, 0.47. Few large steps shrink the distribution: each step moves to a blend of the posterior mean $\hat{\mathbf{x}}_0$, which is an average, and at a large step the curvature of the ODE's paths is missed. Higher-order ODE solvers (DPM-Solver, Lu et al., 2022) and distillation into one- or few-step students (consistency models, Song et al., 2023) close most of that gap; production samplers use 20 to 50 steps, or 1 to 4 after distillation.</p>
+  </section>
+
+  <section id="guidance">
+    <h2>Guidance</h2>
+    <p>To generate from a class or a text prompt $y$, train a conditional model $\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t, y)$, which estimates the score of $q_t(\mathbf{x}\mid y)$. By Bayes' rule, $\log q_t(\mathbf{x}\mid y) = \log q_t(\mathbf{x}) + \log q_t(y\mid\mathbf{x}) - \log q(y)$, and the last term has no gradient in $\mathbf{x}$:</p>
+    <div class="eq">$$\nabla\log q_t(\mathbf{x}\mid y) = \nabla\log q_t(\mathbf{x}) + \nabla\log q_t(y\mid\mathbf{x}).$$</div>
+    <p><b>Classifier guidance</b> (Dhariwal &amp; Nichol, 2021) trains a classifier on noisy images and adds $w$ times its gradient, sampling in effect from $q(\mathbf{x})\,q(y\mid\mathbf{x})^{1+w}$: with $w &gt; 0$ it favours points the classifier finds <i>very</i> typical of $y$. <b>Classifier-free guidance</b> (Ho &amp; Salimans, 2022) needs no classifier. Train one network both with the condition and, on a random 10–20% of examples, with a "null" condition, so that it learns both $\boldsymbol{\epsilon}(\mathbf{x}, y)$ and $\boldsymbol{\epsilon}(\mathbf{x})$. Then, since by the identity above $\nabla\log q(y\mid\mathbf{x}) = \nabla\log q(\mathbf{x}\mid y) - \nabla\log q(\mathbf{x})$, sample with</p>
+    <div class="eq">$$\tilde{\boldsymbol{\epsilon}} = (1 + w)\,\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t, y) - w\,\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t, \varnothing) \quad\Longleftrightarrow\quad \tilde{\mathbf{s}} = \nabla\log q_t(\mathbf{x}\mid y) + w\,\nabla\log q_t(y\mid\mathbf{x}).$$</div>
+    <p>The network's own conditional and unconditional predictions define an implicit classifier, and guidance amplifies it. The effect, measured in part 3 of the code on three overlapping Gaussian blobs: unguided samples of class 0 are as typical of it as real data (the true posterior $p(y = 0\mid\mathbf{x})$ averages 0.867, against 0.863 for real data). With $w = 1$ it averages 0.971, and with $w = 3$, 0.992; the samples' centre moves outward from 1.51 to 1.92 to 2.20, away from the other two classes, and their spread shrinks from 0.80 to 0.66. Guidance trades diversity and faithfulness to the true distribution for samples that are unmistakably of the requested class. Text-to-image models typically use $w$ between about 3 and 10, which is why their images look so "on prompt", and also why they can look oversaturated and samey.</p>
+  </section>
+
+  <section id="latent">
+    <h2>Latent diffusion</h2>
+    <p>A $512\times512$ colour image has 786,432 numbers, and a U-Net that runs 50 times at that resolution is expensive. Most of those numbers encode imperceptible detail. <b>Latent diffusion</b> (Rombach et al., 2022, the basis of Stable Diffusion) first trains an autoencoder, a VAE with a small KL weight plus perceptual and adversarial losses (lessons 22 and 23), that compresses the image to a $64\times64\times4$ latent array, 48 times fewer numbers, and decodes it back almost perfectly. The diffusion model is trained and sampled entirely in that latent space; the decoder runs once at the end. Text conditioning enters through cross-attention (lesson 20): queries from the U-Net's feature maps, keys and values from a text encoder's token embeddings (CLIP's, lesson 21, or a language model's). Classifier-free guidance uses an empty prompt as the null condition.</p>
+  </section>
+
+  <section id="flow">
+    <h2>Flow matching</h2>
+    <p>The probability-flow ODE suggests a direct approach: learn a velocity field $\mathbf{v}_\theta(\mathbf{x}, t)$ whose ODE carries noise to data, without the diffusion machinery. <b>Flow matching</b> (Lipman et al., 2023) and <b>rectified flow</b> (Liu et al., 2023) pick the simplest path between a data point $\mathbf{x}_0$ and a noise sample $\boldsymbol{\epsilon}$, a straight line $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\boldsymbol{\epsilon}$ for $t\in[0, 1]$, whose velocity is the constant $\boldsymbol{\epsilon} - \mathbf{x}_0$, and regress on it:</p>
+    <div class="eq">$$\mathcal{L}_\text{FM}(\theta) = \mathbb{E}_{t,\,\mathbf{x}_0,\,\boldsymbol{\epsilon}}\big\lVert\mathbf{v}_\theta(\mathbf{x}_t, t) - (\boldsymbol{\epsilon} - \mathbf{x}_0)\big\rVert^2 .$$</div>
+    <p>Individual straight lines cross each other, so no single velocity field follows all of them. But the regression's optimum is the conditional mean $\mathbf{v}^*(\mathbf{x}, t) = \mathbb{E}[\boldsymbol{\epsilon} - \mathbf{x}_0\mid\mathbf{x}_t = \mathbf{x}]$, and one can show that the ODE $d\mathbf{x}/dt = \mathbf{v}^*$ transports the noise distribution exactly onto the data distribution, along curved but non-crossing paths. It is the same idea as denoising score matching: regress on a quantity defined per example, and the conditional mean does the right thing for the whole distribution. The training loop is as simple as DDPM's, sampling integrates an ODE from $t = 1$ to $0$, and the paths are straighter than diffusion's, so fewer steps are needed. Stable Diffusion 3 and FLUX are trained this way. In fact, with Gaussian noise, flow matching and diffusion are reparameterisations of each other with different weightings of noise levels (exercise 5).</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 runs Langevin dynamics with the exact score of the 1-D mixture, from uniform starts, from inside the left mode, and annealed through ten decreasing noise levels (the score of the mixture smoothed by Gaussian noise of variance $\sigma^2$ is again the score of a mixture, so it is exact at every level). Part 2 makes labelled data: three Gaussian blobs of standard deviation 0.8, centred 1.5 from the origin at angles 0°, 120° and 240°, so they overlap. Part 3 trains lesson 24's network with a one-hot class input that includes a fourth, "no label" option used for 20% of training examples. It then samples class 0 with classifier-free guidance $w = 0, 1, 3$, and with DDIM in 100, 20 and 5 steps. Since the true distribution is known, each set of samples is scored by the exact posterior probability of class 0, its centre and its spread.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+# 1. Langevin dynamics with the true score of a 1-D mixture: 0.8 N(-2, 0.5^2) + 0.2 N(2, 0.5^2).
+w, mu, s = np.array([0.8, 0.2]), np.array([-2.0, 2.0]), 0.5
+def score(x, extra=0.0):
+    """d/dx log p(x), for the mixture convolved with N(0, extra) (extra = 0 gives the mixture itself)."""
+    v = s ** 2 + extra
+    comp = w * np.exp(-(x[:, None] - mu) ** 2 / (2 * v))
+    return np.sum(comp * (mu - x[:, None]) / v, 1) / comp.sum(1)
+
+def langevin(x, eps, steps, extra=0.0):
+    for _ in range(steps):
+        x = x + eps * score(x, extra) + np.sqrt(2 * eps) * rng.standard_normal(x.shape)
+    return x
+
+x = langevin(rng.uniform(-6, 6, 5000), 0.01, 2000)
+print(f"Langevin from uniform starts:  fraction near +2 = {np.mean(x &gt; 0):.3f}   (true 0.2)")
+x = langevin(np.full(5000, -2.0), 0.01, 2000)
+print(f"Langevin started in the left mode: fraction near +2 = {np.mean(x &gt; 0):.3f}   (it can't cross)")
+x = rng.standard_normal(5000) * np.sqrt(s ** 2 + 4 + 16)
+for extra in [16, 8, 4, 2, 1, 0.5, 0.25, 0.1, 0.03, 0]:     # annealed: from heavy noise down to none
+    x = langevin(x, 0.02 * (s ** 2 + extra), 500, extra)
+print(f"annealed Langevin:            fraction near +2 = {np.mean(x &gt; 0):.3f}")
+
+# 2. Data with labels: three overlapping Gaussian blobs in the plane.
+centres = 1.5 * np.stack([np.cos(2 * np.pi * np.arange(3) / 3), np.sin(2 * np.pi * np.arange(3) / 3)], 1)
+SD = 0.8
+def data(n):
+    y = rng.integers(0, 3, n)
+    return centres[y] + SD * rng.standard_normal((n, 2)), y
+def posterior(X):
+    """Bayes-optimal class probabilities p(y | x) under the true data distribution."""
+    l = -np.sum((X[:, None] - centres[None]) ** 2, 2) / (2 * SD ** 2)
+    e = np.exp(l - l.max(1, keepdims=True)); return e / e.sum(1, keepdims=True)
+
+T = 100
+beta = np.linspace(1e-4, 0.2, T); alpha = 1 - beta; abar = np.cumprod(alpha)
+
+def embed(t, k=16):
+    f = np.exp(-np.log(1000) * np.arange(k // 2) / (k // 2))
+    return np.concatenate([np.sin(t[:, None] * f), np.cos(t[:, None] * f)], 1)
+
+# 3. A conditional noise predictor eps(x_t, t, y), where y = 3 means "no label".
+sizes = [2 + 16 + 4, 256, 256, 2]
+W = [rng.standard_normal((a, b)) * np.sqrt(2 / a) for a, b in zip(sizes, sizes[1:])]
+b = [np.zeros(n) for n in sizes[1:]]
+params = W + b; m1 = [np.zeros_like(p) for p in params]; m2 = [np.zeros_like(p) for p in params]
+
+def net(x, t, y):
+    hs = [np.concatenate([x, embed(t), np.eye(4)[y]], 1)]
+    for i in range(3):
+        z = hs[-1] @ W[i] + b[i]
+        hs.append(np.maximum(z, 0) if i &lt; 2 else z)
+    return hs
+
+for step in range(1, 15001):
+    x0, y = data(256)
+    y = np.where(rng.random(256) &lt; 0.2, 3, y)                   # drop the label 20% of the time
+    t = rng.integers(0, T, 256); eps = rng.standard_normal(x0.shape)
+    xt = np.sqrt(abar[t])[:, None] * x0 + np.sqrt(1 - abar[t])[:, None] * eps
+    hs = net(xt, t, y)
+    g = 2 * (hs[-1] - eps) / 256
+    grads = [None] * 6
+    for i in reversed(range(3)):
+        grads[i], grads[3 + i] = hs[i].T @ g, g.sum(0)
+        if i:
+            g = (g @ W[i].T) * (hs[i] &gt; 0)
+    lr = 1e-3 * 0.5 * (1 + np.cos(np.pi * step / 15000))
+    for i, (p, gr) in enumerate(zip(params, grads)):
+        m1[i] = 0.9 * m1[i] + 0.1 * gr; m2[i] = 0.999 * m2[i] + 0.001 * gr * gr
+        p -= lr * (m1[i] / (1 - 0.9 ** step)) / (np.sqrt(m2[i] / (1 - 0.999 ** step)) + 1e-8)
+
+def eps_hat(x, t, y, guidance):
+    """Classifier-free guidance: (1 + w) eps(x, y) - w eps(x, no label)."""
+    n = len(x); tt = np.full(n, t)
+    e_c = net(x, tt, np.full(n, y))[-1]
+    if guidance == 0:
+        return e_c
+    return (1 + guidance) * e_c - guidance * net(x, tt, np.full(n, 3))[-1]
+
+def ancestral(n, y, guidance=0.0):
+    x = rng.standard_normal((n, 2))
+    for t in reversed(range(T)):
+        e = eps_hat(x, t, y, guidance)
+        x = (x - beta[t] / np.sqrt(1 - abar[t]) * e) / np.sqrt(alpha[t]) + (np.sqrt(beta[t]) * rng.standard_normal(x.shape) if t else 0)
+    return x
+
+def ddim(n, y, steps):
+    """Deterministic DDIM sampling on an evenly spaced subset of the steps."""
+    ts = np.linspace(T - 1, 0, steps).round().astype(int)
+    x = rng.standard_normal((n, 2))
+    for i, t in enumerate(ts):
+        e = eps_hat(x, t, y, 0.0)
+        x0 = (x - np.sqrt(1 - abar[t]) * e) / np.sqrt(abar[t])
+        if i + 1 &lt; len(ts):
+            tp = ts[i + 1]; x = np.sqrt(abar[tp]) * x0 + np.sqrt(1 - abar[tp]) * e
+        else:
+            x = x0
+    return x
+
+def report(X, y):
+    """How typical of class y the samples are, where their centre is, and how spread out."""
+    return (f"mean p(y = {y} | x) {posterior(X)[:, y].mean():.3f},  mean ({X[:, 0].mean():.2f}, {X[:, 1].mean():.2f}),"
+            f"  spread {np.sqrt(np.mean(np.sum((X - X.mean(0)) ** 2, 1) / 2)):.3f}")
+
+print(f"real data of class 0 (centre (1.50, 0.00), spread {SD}):")
+print(f"                                  {report(centres[0] + SD * rng.standard_normal((2000, 2)), 0)}")
+for g in [0.0, 1.0, 3.0]:
+    print(f"ancestral, 100 steps, guidance {g:.0f}: {report(ancestral(2000, 0, g), 0)}")
+for k in [100, 20, 5]:
+    print(f"DDIM, {k:3d} steps, no guidance:     {report(ddim(2000, 0, k), 0)}")
+
+# Langevin from uniform starts:  fraction near +2 = 0.475   (true 0.2)
+# Langevin started in the left mode: fraction near +2 = 0.010   (it can't cross)
+# annealed Langevin:            fraction near +2 = 0.207
+# real data of class 0 (centre (1.50, 0.00), spread 0.8):
+#                                   mean p(y = 0 | x) 0.863,  mean (1.51, 0.03),  spread 0.810
+# ancestral, 100 steps, guidance 0: mean p(y = 0 | x) 0.867,  mean (1.51, 0.01),  spread 0.797
+# ancestral, 100 steps, guidance 1: mean p(y = 0 | x) 0.971,  mean (1.92, -0.01),  spread 0.685
+# ancestral, 100 steps, guidance 3: mean p(y = 0 | x) 0.992,  mean (2.20, -0.02),  spread 0.664
+# DDIM, 100 steps, no guidance:     mean p(y = 0 | x) 0.874,  mean (1.50, 0.02),  spread 0.778
+# DDIM,  20 steps, no guidance:     mean p(y = 0 | x) 0.897,  mean (1.52, -0.05),  spread 0.708
+# DDIM,   5 steps, no guidance:     mean p(y = 0 | x) 0.953,  mean (1.47, -0.01),  spread 0.470</code></pre>
+    <p class="muted">The numbers are discussed in the sections above. In one line each: plain Langevin gets the shape of each mode right and the weights between modes wrong; annealing fixes the weights; guidance makes samples more typical of their class at the cost of moving them away from the true class distribution; and DDIM with few steps shrinks the distribution.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: guidance --></div>
+    </figure>
+    <p class="muted" id="guidance-caption">Samples of class 0 (orange) with guidance $w = 0$, 1 and 3, drawn over real data of all three classes (grey). As $w$ grows the samples move away from the other two classes.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Langevin for $p = \mathcal{N}(0, \sigma^2)$: the update is $x' = (1 - \eta/\sigma^2)x + \sqrt{2\eta}\,z$. Find the stationary variance and show it is $\sigma^2/(1 - \eta/2\sigma^2)$, slightly too large. What step size makes the error 1%?</li>
+      <li>Verify the score identity for $p_\text{data} = \mathcal{N}(\mathbf{0}, s^2I)$: compute $q_t$, its score, and $\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]$ (lesson 24, exercise 3), and check that $\nabla\log q_t = -\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]/\sqrt{1 - \bar\alpha_t}$.</li>
+      <li>Show that classifier-free guidance with weight $w$ corresponds to the score of a density proportional to $q(\mathbf{x}\mid y)^{1+w}q(\mathbf{x})^{-w}$. For two 1-D Gaussians $q(x\mid y) = \mathcal{N}(1, 1)$ and $q(x) = \mathcal{N}(0, 2)$, find that density for $w = 1$ and $w = 3$, and compare its mean with the code's outward shift.</li>
+      <li>If the data is a single point $\mathbf{x}_0 = \mathbf{a}$ and the network is exact, show that one DDIM step from any $t$ to $s = 0$ returns exactly $\mathbf{a}$. Why can't one step work for a distribution with two points?</li>
+      <li>With straight paths $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\boldsymbol{\epsilon}$, show that knowing $\mathbf{v}^* = \mathbb{E}[\boldsymbol{\epsilon} - \mathbf{x}_0\mid\mathbf{x}_t]$ is equivalent to knowing $\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]$, and hence the score of $\mathbf{x}_t$'s distribution.</li>
+      <li>Why does annealed Langevin get the mode weights right when plain Langevin doesn't? Explain using what the smoothed density looks like at the highest noise level.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> Stationarity: $v = (1 - \eta/\sigma^2)^2v + 2\eta$, so $v = 2\eta/(2\eta/\sigma^2 - \eta^2/\sigma^4) = \sigma^2/(1 - \eta/2\sigma^2)$. A 1% excess needs $\eta/2\sigma^2\approx0.01$, $\eta = 0.02\sigma^2$, which is the step the code uses at each annealing level. A Metropolis accept/reject step (MALA) removes the bias entirely.</p>
+        <p><b>2.</b> $q_t = \mathcal{N}(\mathbf{0}, v I)$ with $v = \bar\alpha s^2 + 1 - \bar\alpha$, so $\nabla\log q_t = -\mathbf{x}_t/v$. From lesson 24, $\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t] = \sqrt{1 - \bar\alpha}\,\mathbf{x}_t/v$, and dividing by $-\sqrt{1 - \bar\alpha}$ gives $-\mathbf{x}_t/v$. ✓</p>
+        <p><b>3.</b> $(1 + w)\nabla\log q(\mathbf{x}\mid y) - w\nabla\log q(\mathbf{x}) = \nabla\log[q(\mathbf{x}\mid y)^{1+w}q(\mathbf{x})^{-w}]$. For the Gaussians, the log-density is $-(1 + w)(x - 1)^2/2 + wx^2/4$, a Gaussian with precision $(1 + w) - w/2 = 1 + w/2$ and mean $(1 + w)/(1 + w/2)$: for $w = 1$, variance $2/3$ and mean $4/3$; for $w = 3$, variance $0.4$ and mean $1.6$. The mean moves away from the unconditional distribution's centre and the variance shrinks, the same pattern as the code. (In a diffusion model the identity holds only at each noise level separately, so the samples don't follow this density exactly.)</p>
+        <p><b>4.</b> With one data point, $\mathbb{E}[\mathbf{x}_0\mid\mathbf{x}_t] = \mathbf{a}$ for every $\mathbf{x}_t$, so $\hat{\mathbf{x}}_0 = \mathbf{a}$ and $\mathbf{x}_0 = \sqrt{\bar\alpha_0}\hat{\mathbf{x}}_0 + 0 = \mathbf{a}$ (taking $\bar\alpha_0 = 1$). With two points, $\hat{\mathbf{x}}_0$ at large $t$ is a weighted average of the two, a point between them that is not data. Only as $t$ decreases does the posterior commit to one, which needs several steps.</p>
+        <p><b>5.</b> $\mathbf{x}_0 = (\mathbf{x}_t - t\boldsymbol{\epsilon})/(1 - t)$, so $\boldsymbol{\epsilon} - \mathbf{x}_0 = (\boldsymbol{\epsilon} - \mathbf{x}_t)/(1 - t)$ and $\mathbf{v}^* = (\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t] - \mathbf{x}_t)/(1 - t)$, an invertible affine function of $\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]$. The score follows by the same Tweedie argument as in the lesson, with $\mathbf{x}_t\mid\mathbf{x}_0\sim\mathcal{N}((1 - t)\mathbf{x}_0, t^2I)$: $\nabla\log q_t = -\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]/t$.</p>
+        <p><b>6.</b> At the highest noise level the smoothed density is a single broad bump, with the two modes merged into one, so Langevin mixes freely and puts the samples in proportion to each mode's weight (the smoothed mixture still has 80% of its mass from the left component). As the noise decreases the bump splits, and each sample stays on the side it was on: the proportions are inherited from the stage where moving between modes was easy.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Song &amp; Ermon, "Generative modeling by estimating gradients of the data distribution"</b> (NeurIPS 2019). Annealed Langevin with learned scores.</li>
+      <li><b>Song et al., "Score-based generative modeling through stochastic differential equations"</b> (ICLR 2021). The SDE and probability-flow ODE.</li>
+      <li><b>Song, Meng &amp; Ermon, "Denoising diffusion implicit models"</b> (ICLR 2021). DDIM.</li>
+      <li><b>Ho &amp; Salimans, "Classifier-free diffusion guidance"</b> (2022).</li>
+      <li><b>Rombach et al., "High-resolution image synthesis with latent diffusion models"</b> (CVPR 2022).</li>
+      <li><b>Lipman et al., "Flow matching for generative modeling"</b> (ICLR 2023); <b>Liu, Gong &amp; Liu, "Flow straight and fast"</b> (ICLR 2023).</li>
+      <li><b>Karras et al., "Elucidating the design space of diffusion-based generative models"</b> (NeurIPS 2022). What actually matters in practice.</li>
+    </ul>
+  </section>
+</article>

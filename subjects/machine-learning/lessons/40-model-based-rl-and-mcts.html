@@ -1,0 +1,330 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 40 · Stage 8: reinforcement learning</div>
+  <h1>Model-based RL and Monte Carlo tree search</h1>
+  <p class="lede">Every agent since lesson 35 learned from real experience and threw each transition away after one update. An agent that also remembers what the world did can replay it, and an agent that knows the rules can imagine moves before making them. This lesson covers both kinds of planning. Dyna learns a model and runs Q-learning on simulated experience in the background; Monte Carlo tree search plans at decision time, growing a search tree from the current position and treating every node as a bandit problem solved with UCB. The code measures how much planning speeds up learning on a maze, shows what happens when the model goes out of date, and checks a from-scratch UCT player against the exact minimax solution of tic-tac-toe.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/36-sarsa-and-q-learning/">36</a>, <a href="/machine-learning/32-bandits-and-exploration/">32</a>, <a href="/machine-learning/34-dynamic-programming/">34</a></span><span><b>Math pulled in:</b> certainty equivalence, Hoeffding's inequality and UCB1, minimax and negamax, the drift condition for non-stationary bandits</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Lesson 34 planned with a known model: dynamic programming sweeps $V\leftarrow\max_a[R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V(s')]$ and never touches the environment. Lessons 35 and 36 learned with no model at all: each update uses one real transition. These are two ends of a range. A <b>model</b> is anything the agent can query for $(s', r)$ given $(s, a)$: a <b>distribution model</b> returns $P(\cdot\mid s, a)$, a <b>sample model</b> returns one draw from it. A model can be given (the rules of chess, a physics simulator) or learned (counts of observed transitions, a neural network).</p>
+    <p>With a sample model, planning and learning are the same computation. A Q-learning update on a simulated transition is exactly a Q-learning update on a real one; only the source of the transition differs. The question is where to spend the computation. <b>Background planning</b> (Dyna) improves the value function for all states between real steps. <b>Decision-time planning</b> (MCTS) spends everything on the one state the agent is in now, builds a search tree from it, picks an action, and largely discards the tree.</p>
+  </section>
+
+  <section id="dyna">
+    <h2>Dyna: learning, modelling and planning together</h2>
+    <p><b>Dyna-Q</b> (Sutton, 1990) does three things after each real step $(S, A, R, S')$:</p>
+    <ol>
+      <li><b>Direct RL:</b> the Q-learning update $Q(S, A)\leftarrow Q(S, A) + \alpha[R + \gamma\max_aQ(S', a) - Q(S, A)]$.</li>
+      <li><b>Model learning:</b> store $\text{Model}(S, A)\leftarrow(R, S')$. For a deterministic environment this table is the exact model of every pair tried so far.</li>
+      <li><b>Planning:</b> $n$ times, pick a previously seen pair $(s, a)$ at random, look up $(r, s') = \text{Model}(s, a)$, and apply the same Q-learning update to it.</li>
+    </ol>
+    <p>What does planning converge to? If the agent stops acting and runs only planning updates, every remembered pair is updated infinitely often, and the updates are asynchronous value iteration (lesson 34) on the <b>model MDP</b>: the MDP whose transitions are the stored ones. The Bellman optimality operator of the model MDP is a $\gamma$-contraction, so $Q$ converges to its fixed point, the optimal action values of the model. Acting greedily on them is <b>certainty equivalence</b>: treat the learned model as if it were true.</p>
+    <div class="result">
+      <div class="label">What planning buys</div>
+      <p>One real step that reaches the goal changes one entry of $Q$ under Q-learning, so information about the goal travels back one state per episode. With $n$ planning steps per real step, the same information travels through every remembered pair that leads there, as fast as the random replay reaches them. After a single episode the model already contains a complete path from start to goal; the agent only has to propagate values along it.</p>
+    </div>
+    <p>The code runs Dyna-Q on the maze of Sutton and Barto's example 8.1: a $6\times9$ grid with seven wall cells, reward 1 for reaching the goal and 0 otherwise, $\gamma = 0.95$, $\alpha = 0.1$, $\varepsilon = 0.1$, 30 runs. The shortest path has 14 steps; with $\varepsilon$-greedy exploration the agent's average stays a little above it.</p>
+    <p>For all three agents the first episode is a random walk, about 870 to 900 steps on average, because $Q$ is zero everywhere until the goal is found and planning on zero rewards changes nothing. After that, planning makes all the difference. In episode 2 the agent without planning still needs 672 steps on average, the one with $n = 5$ needs 152 and the one with $n = 50$ needs 41. The average first falls to 20 steps or fewer in episode 30 for $n = 0$, episode 6 for $n = 5$ and episode 3 for $n = 50$. All three end at about 17 to 18 steps per episode, the shortest path plus the cost of $\varepsilon$-exploration: planning changes how fast the values are learned, not what they converge to.</p>
+    <p>Random replay is wasteful: most remembered pairs have values that will not change. <b>Prioritised sweeping</b> (Moore and Atkeson, 1993) keeps a queue keyed by the size of each pair's TD error $|r + \gamma\max_{a'}Q(s', a') - Q(s, a)|$, updates the largest first, and when a state's value changes, pushes the pairs that lead into it. Values then flow backwards from wherever something changed, which is the order an efficient planner wants.</p>
+  </section>
+
+  <section id="wrong-models">
+    <h2>When the model is wrong</h2>
+    <p>Certainty equivalence is only as good as the model. A learned model is wrong in two ways: it may describe the world as it was, if the world changed, and it says nothing about pairs never tried. The first kind corrects itself when the agent stumbles into the change: if a path is blocked, acting on the old model leads the agent into the wall and the model is updated. The second kind does not. If the world opens a shortcut, the old model predicts nothing better, the greedy policy never goes near it, and only $\varepsilon$-exploration can find it, which requires a run of several consecutive non-greedy moves in the right direction.</p>
+    <p><b>Dyna-Q+</b> adds an exploration bonus to planning. If the pair $(s, a)$ was last tried in the real world $\tau$ steps ago, the planning update uses the reward $r + \kappa\sqrt\tau$ in place of $r$. Long-untested pairs then look attractive in the model, the greedy policy goes to test them, and the test either confirms the model or corrects it. It also lets planning consider actions that were never tried in a visited state, modelled as leaving the agent where it was with reward 0, so that their bonus can grow too. The bonus is a heuristic, but it is the same principle as UCB: be optimistic about what you have not checked recently.</p>
+    <p>The code runs the shortcut maze of example 8.3: a wall across the grid with a gap at its left end, so the shortest path takes 16 steps; after 3,000 steps a second gap opens at its right end, giving a path of 10 steps. Both agents use $n = 50$, $\alpha = 0.5$, and Dyna-Q+ uses $\kappa = 10^{-3}$; 10 runs.</p>
+    <p>Before the change, both agents use the 16-step path; Dyna-Q+ collects slightly more (117 against 107 goals in 3,000 steps) despite the time its bonus spends on exploring. After the shortcut opens, Dyna-Q+ finds it and in the last 1,000 steps reaches the goal once every 12.5 steps; Dyna-Q never finds it and keeps reaching the goal once every 18.1 steps on the old path. Over all 6,000 steps, Dyna-Q+ collects 332 against 273.</p>
+  </section>
+
+  <section id="mcts">
+    <h2>Decision-time planning: Monte Carlo tree search</h2>
+    <p>In a game like Go, there are too many states to give each a value, but the rules are a perfect sample model. The agent is at one state $s_0$ and needs one good action. The simplest use of the model is a <b>rollout</b>: for each action, simulate many games to the end with a fixed fast policy and average the outcomes. This estimates $Q^{\pi}(s_0, a)$ for the rollout policy $\pi$, and choosing the best is one step of policy improvement (lesson 34). It is never better than one step above $\pi$.</p>
+    <p><b>Monte Carlo tree search</b> (Coulom, 2006; Kocsis and Szepesvári, 2006) keeps the statistics of the simulations in a tree rooted at $s_0$, so that later simulations follow better moves near the root and the improvement compounds. Each node stores a visit count $N$ and a total reward $W$. One simulation has four phases:</p>
+    <ol>
+      <li><b>Selection.</b> From the root, while the current node is fully expanded, move to the child that maximises a tree policy.</li>
+      <li><b>Expansion.</b> At the first node with an untried move, add one child for it.</li>
+      <li><b>Simulation.</b> From the new child, play the game to the end with the rollout policy (random moves here).</li>
+      <li><b>Backup.</b> Add 1 to $N$ along the path and add the result to $W$, each node counting it from the point of view of the player who moved into it.</li>
+    </ol>
+    <p>After the budget is spent, the agent plays the root's most-visited move. The visit count is used rather than the mean reward because a rarely visited child can have a high mean by chance.</p>
+  </section>
+
+  <section id="uct">
+    <h2>UCT: a bandit at every node</h2>
+    <p>Selection at a node is a bandit problem (lesson 32): the arms are the children, and pulling one returns the outcome of a simulation through it. <b>UCT</b> (Upper Confidence bounds applied to Trees) uses UCB1 at every node. With rewards in $[0, 1]$ from the point of view of the player to move, it picks</p>
+    <div class="eq">$$a^\star = \arg\max_a\left(\frac{W_a}{N_a} + c\sqrt{\frac{\ln N}{N_a}}\right),$$</div>
+    <p>where $N = \sum_aN_a$ is the parent's count. With $c = \sqrt2$ this is exactly UCB1's index $\hat\mu_a + \sqrt{2\ln N/N_a}$, whose bonus came from Hoeffding's inequality: the true mean lies below $\hat\mu_a + \sqrt{2\ln N/N_a}$ except with probability $N^{-4}$.</p>
+    <p>The bandit at an internal node is not the bandit of lesson 32. The rewards from a child are not identically distributed: as the subtree below the child learns to play better, the outcomes of simulations through it change. Kocsis and Szepesvári handled this with a <b>drift condition</b>: the average reward of each arm converges, and its deviations still satisfy a Hoeffding-type tail bound. Under that condition, which holds by induction from the leaves up in a finite game tree, they proved:</p>
+    <div class="result">
+      <div class="label">Consistency of UCT (Kocsis and Szepesvári, 2006)</div>
+      <p>In a finite game tree with an appropriate constant $c$, the mean reward at the root converges to the minimax value, the bias after $n$ simulations is $O(\log n/n)$, and the probability of choosing a move that is not optimal at the root goes to zero as $n\to\infty$.</p>
+    </div>
+    <p>The guarantee is asymptotic and says nothing useful about how many simulations a given game needs; in the worst case UCT can need a number of simulations exponential in the depth (Coquelin and Munos, 2007). What it does say is that the method is consistent: given enough computation, the tree's statistics become those of minimax search.</p>
+    <p><b>Minimax.</b> In a two-player zero-sum game with alternating moves, the value of a position for the player to move is $v(s) = \max_a(-v(s'_a))$, the <b>negamax</b> form of minimax, with $v = +1, 0, -1$ at terminal positions that are won, drawn and lost for the player to move. For tic-tac-toe the whole recursion fits in memory: there are 5,478 legal positions reachable from the empty board, and the empty board is a draw. The code computes it exactly and uses it to grade UCT.</p>
+  </section>
+
+  <section id="tictactoe">
+    <h2>UCT against the exact solution</h2>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: dyna-mcts --></div>
+    </figure>
+    <p class="muted">Left: steps per episode on the Dyna maze, averaged over 30 runs, on a log scale. Middle: cumulative reward on the shortcut maze, averaged over 10 runs; the shortcut opens at step 3,000. Right: the fraction of 300 tic-tac-toe positions in which UCT's chosen move keeps the minimax value, against the number of simulations per move.</p>
+    <p>The code collects every position reachable from the empty board in which at least one legal move is a mistake, one that changes the minimax value, which is 3,191 of them, and samples 300. With 10 simulations per move, UCT keeps the minimax value in 80.3% of them; with 30, 91.7%; 100, 95.3%; 300 and 1,000, 99.3%; and with 3,000, all 300. From the empty board, 20,000 simulations put 13,646 visits on the centre and between 446 and 1,355 on each other square. The centre's mean reward is 0.748, far above the minimax value of a draw, 0.5: the simulations through it mostly continue with exploratory moves in the tree and random moves after it, and against such play X wins often. The decision converges much faster than the value. In 100 full games on each side against a perfect player, UCT with 30 simulations per move lost 22 games as X and 74 as O; with 300 it drew every game as X but lost 23 as O, the harder side, where one inaccuracy loses; with 3,000 it drew all 200.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 is Dyna-Q on the Dyna maze. Part 2 is Dyna-Q and Dyna-Q+ on the shortcut maze. Part 3 solves tic-tac-toe by negamax with memoisation, implements UCT with random rollouts, and tests it on positions where a mistake is possible, on the empty board, and in full games against a perfect player who chooses at random among optimal moves.</p>
+<pre><code>import math
+import numpy as np
+
+# ---- Part 1: Dyna-Q on the Dyna maze (Sutton and Barto, example 8.1). A 6 x 9 grid with seven
+# wall cells; reward 1 on reaching the goal, 0 otherwise; gamma = 0.95, alpha = 0.1, epsilon = 0.1.
+# After every real step the agent replays n remembered transitions from its learned model.
+moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]                        # up, right, down, left
+
+def make_maze(H, W, walls, start, goal):
+    walls = set(walls)
+    def step(s, a):
+        i, j = s[0] + moves[a][0], s[1] + moves[a][1]
+        if not (0 &lt;= i &lt; H and 0 &lt;= j &lt; W) or (i, j) in walls:
+            i, j = s                                               # bump into the wall: stay put
+        return (i, j), float((i, j) == goal)
+    return dict(H=H, W=W, step=step, start=start, goal=goal, walls=walls)
+
+dyna_maze = make_maze(6, 9, [(1, 2), (2, 2), (3, 2), (4, 5), (0, 7), (1, 7), (2, 7)], (2, 0), (0, 8))
+
+def greedy(q, rng):
+    return int(rng.choice(np.flatnonzero(q == q.max())))          # break ties at random
+
+def dyna_q(maze, n, episodes, seed, alpha=0.1, eps=0.1, gamma=0.95):
+    rng = np.random.default_rng(seed)
+    Q = np.zeros((maze["H"], maze["W"], 4)); model = {}
+    lengths = []
+    for _ in range(episodes):
+        s, t = maze["start"], 0
+        while s != maze["goal"]:
+            a = int(rng.integers(4)) if rng.random() &lt; eps else greedy(Q[s], rng)
+            s2, r = maze["step"](s, a); t += 1
+            target = r if s2 == maze["goal"] else r + gamma * Q[s2].max()
+            Q[s][a] += alpha * (target - Q[s][a])                 # direct RL: one Q-learning update
+            model[(s, a)] = (s2, r)                                # model learning: remember what happened
+            keys = list(model)
+            for k in rng.integers(len(keys), size=n):              # planning: n simulated updates
+                ps, pa = keys[k]; ps2, pr = model[(ps, pa)]
+                ptarget = pr if ps2 == maze["goal"] else pr + gamma * Q[ps2].max()
+                Q[ps][pa] += alpha * (ptarget - Q[ps][pa])
+            s = s2
+        lengths.append(t)
+    return np.array(lengths)
+
+dyna = {n: np.mean([dyna_q(dyna_maze, n, 50, seed) for seed in range(30)], axis=0) for n in (0, 5, 50)}
+for n, L in dyna.items():
+    first = 1 + int(np.flatnonzero(L &lt;= 20)[0])                   # the shortest path is 14 steps
+    print(f"Dyna-Q, n = {n:2d}: mean steps in episode 2: {L[1]:6.1f}; episode 5: {L[4]:5.1f}; episodes 41-50: {L[40:].mean():5.1f};"
+          f" first episode averaging 20 steps or fewer: {first}")
+
+# ---- Part 2: the shortcut maze (example 8.3). A wall with a gap at its left end; after 3,000
+# steps a second gap opens at its right end, giving a shorter path. Dyna-Q+ adds kappa * sqrt(tau)
+# to the reward of a transition not tried for tau steps, and lets planning try untried actions.
+def shortcut_maze(opened):
+    wall = [(3, j) for j in range(1, 9 if not opened else 8)]
+    return make_maze(6, 9, wall, (5, 3), (0, 8))
+
+def dyna_changing(plus, seed, n=50, steps=6000, switch=3000, alpha=0.5, eps=0.1, gamma=0.95, kappa=1e-3):
+    rng = np.random.default_rng(seed)
+    Q = np.zeros((6, 9, 4)); model, last = {}, {}
+    maze = shortcut_maze(False); s = maze["start"]; cum = np.zeros(steps); total = 0.0
+    for t in range(steps):
+        if t == switch:
+            maze = shortcut_maze(True)
+        a = int(rng.integers(4)) if rng.random() &lt; eps else greedy(Q[s], rng)
+        s2, r = maze["step"](s, a); total += r; cum[t] = total
+        target = r if s2 == maze["goal"] else r + gamma * Q[s2].max()
+        Q[s][a] += alpha * (target - Q[s][a])
+        if plus and s not in {k[0] for k in model}:
+            for b in range(4):                                     # untried actions: modelled as staying put, reward 0
+                model.setdefault((s, b), (s, 0.0)); last.setdefault((s, b), t)
+        model[(s, a)] = (s2, r); last[(s, a)] = t
+        keys = list(model)
+        for k in rng.integers(len(keys), size=n):
+            ps, pa = keys[k]; ps2, pr = model[(ps, pa)]
+            if plus:
+                pr = pr + kappa * math.sqrt(t - last[(ps, pa)])    # the exploration bonus
+            ptarget = pr if ps2 == maze["goal"] else pr + gamma * Q[ps2].max()
+            Q[ps][pa] += alpha * (ptarget - Q[ps][pa])
+        s = maze["start"] if s2 == maze["goal"] else s2
+    return cum
+
+shortcut = {name: np.mean([dyna_changing(plus, seed) for seed in range(10)], axis=0) for name, plus in [("Dyna-Q", False), ("Dyna-Q+", True)]}
+for name, cum in shortcut.items():
+    print(f"{name:7s}: cumulative reward after 3,000 steps {cum[2999]:5.1f}; after 6,000 {cum[-1]:5.1f};"
+          f" reward rate in steps 5,001-6,000: one goal per {1000 / (cum[-1] - cum[4999]):4.1f} steps")
+
+# ---- Part 3: Monte Carlo tree search (UCT) on tic-tac-toe, checked against exact minimax.
+LINES = [(0, 1, 2), (3, 4, 5), (6, 7, 8), (0, 3, 6), (1, 4, 7), (2, 5, 8), (0, 4, 8), (2, 4, 6)]
+
+def winner(b):
+    for i, j, k in LINES:
+        if b[i] != 0 and b[i] == b[j] == b[k]:
+            return b[i]
+    return 0
+
+def legal(b):
+    return [i for i in range(9) if b[i] == 0]
+
+def play(b, m, player):
+    return b[:m] + (player,) + b[m + 1:]
+
+memo = {}
+def minimax(b, player):
+    """Value of position b for the player to move: +1 win, 0 draw, -1 loss, with perfect play."""
+    key = (b, player)
+    if key not in memo:
+        w = winner(b)
+        if w != 0:
+            memo[key] = 1 if w == player else -1
+        elif not legal(b):
+            memo[key] = 0
+        else:
+            memo[key] = max(-minimax(play(b, m, player), -player) for m in legal(b))
+    return memo[key]
+
+def optimal_moves(b, player):
+    v = minimax(b, player)
+    return [m for m in legal(b) if -minimax(play(b, m, player), -player) == v]
+
+class Node:
+    __slots__ = ("children", "untried", "N", "W")
+    def __init__(self, b):
+        self.children, self.untried, self.N, self.W = {}, legal(b) if winner(b) == 0 else [], 0, 0.0
+
+def uct(b, player, sims, rng, c=math.sqrt(2)):
+    """Run `sims` simulations from b; return the root (W counts reward for the player who moved INTO a node)."""
+    root = Node(b)
+    for _ in range(sims):
+        node, board, who, path = root, b, player, [root]
+        while not node.untried and node.children:                 # 1. selection by UCB1
+            logN = math.log(node.N)
+            m, node = max(node.children.items(), key=lambda kv: kv[1].W / kv[1].N + c * math.sqrt(logN / kv[1].N))
+            board = play(board, m, who); who = -who; path.append(node)
+        if node.untried:                                           # 2. expansion: add one child
+            m = node.untried.pop(int(rng.integers(len(node.untried))))
+            board = play(board, m, who); who = -who
+            child = Node(board); node.children[m] = child; node = child; path.append(node)
+        sim = board; turn = who                                    # 3. simulation: random play to the end
+        while winner(sim) == 0 and legal(sim):
+            moves_ = legal(sim); sim = play(sim, moves_[int(rng.integers(len(moves_)))], turn); turn = -turn
+        w = winner(sim)
+        mover = -who                                               # the player who moved into the leaf
+        for nd in reversed(path):                                  # 4. backup: reward 1 / 0.5 / 0 for the mover
+            nd.N += 1
+            nd.W += 0.5 if w == 0 else float(w == mover)
+            mover = -mover
+    return root
+
+def uct_move(b, player, sims, rng):
+    root = uct(b, player, sims, rng)
+    return max(root.children.items(), key=lambda kv: kv[1].N)[0]  # play the most-visited move
+
+# Test positions: every position reachable in play where at least one legal move is a mistake
+# (it changes the minimax value). How often does UCT's chosen move keep the value?
+positions = []
+def collect(b, player, seen):
+    if (b, player) in seen or winner(b) != 0 or not legal(b):
+        return
+    seen.add((b, player))
+    if len(optimal_moves(b, player)) &lt; len(legal(b)):
+        positions.append((b, player))
+    for m in legal(b):
+        collect(play(b, m, player), -player, seen)
+collect((0,) * 9, 1, set())
+rng = np.random.default_rng(0)
+test = [positions[i] for i in rng.choice(len(positions), 300, replace=False)]
+budgets = [10, 30, 100, 300, 1000, 3000]
+accuracy = {}
+for sims in budgets:
+    accuracy[sims] = np.mean([uct_move(b, p, sims, rng) in optimal_moves(b, p) for b, p in test])
+print(f"tic-tac-toe: {len(memo):,} positions solved by minimax; {len(positions):,} reachable positions where some move is a mistake")
+print("UCT picks a value-preserving move in 300 such positions: " + ", ".join(f"{s} simulations {accuracy[s]:.1%}" for s in budgets))
+
+# The root's value estimate from the empty board converges to the minimax value (a draw = 0.5).
+root = uct((0,) * 9, 1, 20000, np.random.default_rng(1))
+best = max(root.children.items(), key=lambda kv: kv[1].N)
+print(f"empty board, 20,000 simulations: most-visited move {best[0]} (visits {best[1].N:,}), its mean reward {best[1].W / best[1].N:.3f};"
+      f" visits per move {[root.children[m].N for m in range(9)]}")
+
+# Full games: UCT against a perfect player who picks uniformly among optimal moves.
+def match(sims, uct_player, games, rng):
+    out = {"win": 0, "draw": 0, "loss": 0}
+    for _ in range(games):
+        b, who = (0,) * 9, 1
+        while winner(b) == 0 and legal(b):
+            if who == uct_player:
+                m = uct_move(b, who, sims, rng)
+            else:
+                opt = optimal_moves(b, who); m = opt[int(rng.integers(len(opt)))]
+            b = play(b, m, who); who = -who
+        w = winner(b)
+        out["draw" if w == 0 else ("win" if w == uct_player else "loss")] += 1
+    return out
+
+rng = np.random.default_rng(2)
+for sims in (30, 300, 3000):
+    x, o = match(sims, 1, 100, rng), match(sims, -1, 100, rng)
+    print(f"UCT with {sims:4d} simulations vs perfect play, 100 games each: as X lost {x['loss']:3d}, drew {x['draw']:3d};"
+          f" as O lost {o['loss']:3d}, drew {o['draw']:3d}")
+
+# Dyna-Q, n =  0: mean steps in episode 2:  671.7; episode 5: 241.6; episodes 41-50:  18.1; first episode averaging 20 steps or fewer: 30
+# Dyna-Q, n =  5: mean steps in episode 2:  152.0; episode 5:  20.9; episodes 41-50:  16.8; first episode averaging 20 steps or fewer: 6
+# Dyna-Q, n = 50: mean steps in episode 2:   40.7; episode 5:  17.3; episodes 41-50:  17.2; first episode averaging 20 steps or fewer: 3
+# Dyna-Q : cumulative reward after 3,000 steps 107.3; after 6,000 273.3; reward rate in steps 5,001-6,000: one goal per 18.1 steps
+# Dyna-Q+: cumulative reward after 3,000 steps 116.9; after 6,000 332.2; reward rate in steps 5,001-6,000: one goal per 12.5 steps
+# tic-tac-toe: 5,478 positions solved by minimax; 3,191 reachable positions where some move is a mistake
+# UCT picks a value-preserving move in 300 such positions: 10 simulations 80.3%, 30 simulations 91.7%, 100 simulations 95.3%, 300 simulations 99.3%, 1000 simulations 99.3%, 3000 simulations 100.0%
+# empty board, 20,000 simulations: most-visited move 4 (visits 13,646), its mean reward 0.748; visits per move [824, 451, 1355, 675, 13646, 446, 1018, 564, 1021]
+# UCT with   30 simulations vs perfect play, 100 games each: as X lost  22, drew  78; as O lost  74, drew  26
+# UCT with  300 simulations vs perfect play, 100 games each: as X lost   0, drew 100; as O lost  23, drew  77
+# UCT with 3000 simulations vs perfect play, 100 games each: as X lost   0, drew 100; as O lost   0, drew 100</code></pre>
+    <p><b>Reading the output.</b> Part 1 prints the mean episode length over 30 runs at episodes 2, 5 and 41 to 50, and the first episode whose average is 20 steps or fewer. Part 2 prints the cumulative number of goals reached, averaged over 10 runs, and the rate in the last 1,000 steps. Part 3 prints the size of the solved game, the accuracy of UCT on the 300 test positions for each budget, the root statistics from the empty board, and the results of the full games. The runs take about a minute.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>A deterministic environment, and Dyna-Q has stopped acting and runs only planning updates on its stored model. Show that $Q$ converges, and describe its limit. What happens to $Q(s, a)$ for a pair the agent never tried, and why does that not matter for the greedy policy in states it has visited?</li>
+      <li>In the Dyna maze with $n = 0$, the first episode ends with only the last pair before the goal having nonzero value. Explain why, with $n = 0$ and a greedy agent, the value of the goal propagates back roughly one state per episode, and why with $n = \infty$ one episode is enough.</li>
+      <li>In the shortcut maze, the start is at the bottom, three cells from the left; the old path goes left to the gap at the left end of the wall, and the new path goes right to the gap at the right end. Estimate the probability that Dyna-Q, with $\varepsilon = 0.1$ and four actions, finds the shortcut by exploration in one episode, assuming it must take the five steps right and the step up into the new gap all as exploratory actions. How many episodes would that take on average?</li>
+      <li>Sutton and Barto's exercise 8.4: suppose Dyna-Q+ added the bonus $\kappa\sqrt{\tau}$ only when choosing real actions, as $\arg\max_a[Q(s, a) + \kappa\sqrt{\tau(s, a)}]$, and not in planning. Why does it then explore less effectively?</li>
+      <li>Show from Hoeffding's inequality that a child with $N_a$ visits and true mean $\mu_a$ has $W_a/N_a &gt; \mu_a + \sqrt{2\ln N/N_a}$ with probability at most $N^{-4}$, if the rewards are independent. Which assumption fails inside a search tree?</li>
+      <li>With 20,000 simulations from the empty board, UCT's mean reward for the centre was 0.748, though the minimax value is a draw (0.5). Explain why the estimate is so far above the true value, and why the chosen move is nevertheless a good one.</li>
+      <li>Why play the most-visited move at the root, rather than the move with the highest mean reward? Construct a case with two children where the highest mean is a bad choice.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> In a deterministic model each planning update is $Q(s, a)\leftarrow(1 - \alpha)Q(s, a) + \alpha[r + \gamma\max_{a'}Q(s', a')]$, a relaxed value-iteration step on the model MDP. Let $e = \max|Q - Q^\star_\text{model}|$ over the stored pairs. An update changes the error at $(s, a)$ to at most $(1 - \alpha)e + \alpha\gamma e = (1 - \alpha(1 - \gamma))e$ and leaves the others alone, so $e$ never grows, and once every stored pair has been updated (which random replay does infinitely often, with probability 1) it has shrunk by at least the factor $1 - \alpha(1 - \gamma) &lt; 1$. So $Q$ converges to the optimal action values of the model MDP. For a pair never tried, nothing updates $Q(s, a)$: it keeps its initial value 0. Rewards here are nonnegative, so tried pairs on a path to the goal have values $&gt; 0$ and are preferred to untried ones. (With optimistic initial values it would be the other way round: the untried pair would look best and the agent would go and try it, which is exploration by optimism.)</p>
+        <p><b>2.</b> With $n = 0$, $Q(s, a)$ changes only when $(s, a)$ is taken and $\max_{a'}Q(s', a')\ne0$. After episode 1 only the pair entering the goal has nonzero value. In episode 2, the agent eventually reaches that pair's state and its predecessor's value becomes nonzero, and so on: the front advances about one step per episode along the eventual path (it can advance more if the agent passes the same states repeatedly within an episode). With $n = \infty$, planning runs value iteration on the model to convergence after every step, so after the first episode, whose stored transitions contain a path from start to goal, every state on it has its correct model value and the greedy policy follows the shortest path in the model.</p>
+        <p><b>3.</b> At each of the six states the exploratory action must be taken ($\varepsilon = 0.1$) and must be the right one (probability $1/4$), so the probability is about $(0.025)^6\approx2.4\times10^{-10}$ per episode; even allowing for detours and for greedy actions that happen to agree, it is far below one in the 150 or so episodes the agent completes after the shortcut opens. On average it would take of order $10^9$ episodes. The model gives no reason to go right, because it remembers the cell below the right end of the wall as a dead end. Dyna-Q+ gets there because its bonus makes the long-untested pair "up from below the right end" look valuable in the model, so planning builds a greedy path to it.</p>
+        <p><b>4.</b> With the bonus only in action selection, an untried action is preferred only at the moment the agent is in that state. Planning does not propagate the bonus backwards, so the agent is never drawn towards a distant region of untested pairs; it only tries them if it happens to arrive. With the bonus in planning, the bonus becomes part of the values, and the greedy policy plans a path to the untested pair from anywhere.</p>
+        <p><b>5.</b> Hoeffding: for $n$ independent rewards in $[0, 1]$, $P(\hat\mu - \mu &gt; \epsilon)\le e^{-2n\epsilon^2}$. With $n = N_a$ and $\epsilon = \sqrt{2\ln N/N_a}$, the exponent is $-2N_a\cdot2\ln N/N_a = -4\ln N$, giving $N^{-4}$. Inside the tree the rewards through a child are neither independent nor identically distributed: the tree policy below the child depends on all earlier results and improves over time, so the mean drifts. That is why UCT's analysis needs the drift condition.</p>
+        <p><b>6.</b> The mean averages over all simulations through the centre, and most of them continue with exploratory moves by O in the tree and random moves in the rollout. Against random play X wins most games, so the average is pulled towards the value of the game against a weak opponent; it converges to 0.5 only as the subtree below learns O's best replies, which takes many more simulations than a decision does. The decision only needs the ordering of the root's children to be right, and the centre is the move that does best against an imperfect opponent while still keeping the draw, so it is a good move although its estimated value is wrong.</p>
+        <p><b>7.</b> The most-visited child is the one UCB kept returning to, so its mean is both high and well estimated. A child visited 3 times with 3 wins has mean 1 but a confidence interval that still includes values well below a child visited 3,000 times with mean 0.6; UCB stopped visiting the first because its index, inflated only by $\sqrt{2\ln N/3}$, fell below the second's, i.e. the first is likely worse. Choosing by mean would pick it.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Sutton &amp; Barto, <i>Reinforcement Learning: An Introduction</i></b> (2nd ed., 2018), chapter 8. Dyna, prioritised sweeping, rollouts and MCTS; the mazes here are its examples 8.1 and 8.3.</li>
+      <li><b>Sutton, "Integrated architectures for learning, planning, and reacting based on approximating dynamic programming"</b> (1990). The Dyna architecture.</li>
+      <li><b>Moore &amp; Atkeson, "Prioritized sweeping: reinforcement learning with less data and less time"</b> (1993).</li>
+      <li><b>Kocsis &amp; Szepesvári, "Bandit based Monte-Carlo planning"</b> (2006). UCT and its consistency proof.</li>
+      <li><b>Coulom, "Efficient selectivity and backup operators in Monte-Carlo tree search"</b> (2006). The first MCTS Go program.</li>
+      <li><b>Browne et al., "A survey of Monte Carlo tree search methods"</b> (2012). Variants, enhancements and applications.</li>
+    </ul>
+  </section>
+</article>

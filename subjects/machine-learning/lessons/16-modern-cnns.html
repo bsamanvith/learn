@@ -1,0 +1,197 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 16 · Stage 5: deep architectures</div>
+  <h1>Modern CNNs and residual networks</h1>
+  <p class="lede">Between 2012 and 2015 image classifiers went from 8 layers to 152, and the error on ImageNet fell from 26% to under 4%. Most of the gain came from depth, and depth became usable through one idea: let each block learn a correction to its input, $\mathbf{x} + F(\mathbf{x})$, instead of a whole new representation. This lesson walks through the architectures that got there, then derives why residual connections make very deep networks trainable, and shows a 50-layer network that can't learn at all without them and learns easily with them.</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/14-training-deep-networks/">lesson 14</a>, <a href="/machine-learning/15-convolutional-networks/">lesson 15</a></span><span><b>Math pulled in:</b> products of Jacobians, the identity plus a perturbation, counting paths, $1\times1$ convolutions as channel-mixing matrices</span></div>
+</header>
+
+<article class="lesson">
+  <section id="history">
+    <h2>From LeNet to ResNet</h2>
+    <p>Each of these networks is remembered for one idea that is still in use:</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>network</th><th>year</th><th>depth, parameters</th><th>the idea</th></tr></thead>
+      <tbody>
+        <tr><td>LeNet-5</td><td>1998</td><td>5 layers, 60 thousand</td><td>convolution, pooling and a classifier, trained end to end with backprop (digits)</td></tr>
+        <tr><td>AlexNet</td><td>2012</td><td>8 layers, 60 million</td><td>the same recipe scaled up on GPUs, with ReLU, dropout and data augmentation; ImageNet top-5 error 15.3% against 26% for the best non-neural entry</td></tr>
+        <tr><td>VGG</td><td>2014</td><td>16–19 layers, 138 million</td><td>only $3\times3$ convolutions, stacked; depth matters</td></tr>
+        <tr><td>GoogLeNet (Inception)</td><td>2014</td><td>22 layers, 6.8 million</td><td>parallel branches of different kernel sizes, with $1\times1$ convolutions to cut channels first; global average pooling instead of large fully connected layers</td></tr>
+        <tr><td>ResNet</td><td>2015</td><td>up to 152 layers, 60 million</td><td>residual connections; top-5 error 3.6%</td></tr>
+      </tbody>
+    </table></div>
+    <p>Two tricks in the table save most of the parameters. VGG's first fully connected layer, from a $7\times7\times512$ feature map to 4,096 units, has $25{,}088\times4{,}096\approx103$ million of its 138 million weights; global average pooling replaces it with a $512$-vector. And a $1\times1$ convolution is a matrix applied to the channel vector at every pixel (lesson 15, exercise 4): reducing 256 channels to 64 before a $3\times3$ convolution cuts its cost by a factor of 16. Later architectures (DenseNet, EfficientNet, ConvNeXt) refine these ideas; ConvNeXt (Liu et al., 2022) showed that a ResNet modernised with transformer-era training choices matches vision transformers.</p>
+  </section>
+
+  <section id="degradation">
+    <h2>The degradation problem</h2>
+    <p>With batch normalisation and He initialisation (lesson 14), 20- and 30-layer plain networks train. But He et al. (2015) found that going deeper made things <i>worse</i>, and not on the test set but on the training set: a 56-layer plain network had higher training error than a 20-layer one. That isn't overfitting. It is an optimisation failure, and a puzzling one, since the deeper network could copy the shallower one and set its extra layers to the identity. SGD simply doesn't find that solution: the identity is hard to represent with a stack of ReLU layers starting from random weights.</p>
+    <p>The fix makes the identity the default. Instead of asking a block to learn the map $H(\mathbf{x})$, ask it to learn the residual $F(\mathbf{x}) = H(\mathbf{x}) - \mathbf{x}$, and add the input back through a <b>skip connection</b>:</p>
+    <div class="eq">$$\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + F(\mathbf{x}_\ell;\,\theta_\ell) .$$</div>
+    <p>Setting $F = 0$ (all weights in the last layer of the block at zero) gives the identity exactly. A block now only has to learn how its output should <i>differ</i> from its input, and if a layer isn't needed it can stay near zero.</p>
+  </section>
+
+  <section id="gradients">
+    <h2>Why residual networks train: the gradient view</h2>
+    <p>Unroll the recurrence from block $\ell$ to the last block $L$: $\mathbf{x}_L = \mathbf{x}_\ell + \sum_{i=\ell}^{L-1}F(\mathbf{x}_i)$. Differentiating,</p>
+    <div class="result">
+      <div class="label">Gradient through a residual stack (He et al., 2016b)</div>
+      <div class="eq">$$\frac{\partial L}{\partial\mathbf{x}_\ell} = \frac{\partial L}{\partial\mathbf{x}_L}\left(I + \frac{\partial}{\partial\mathbf{x}_\ell}\sum_{i=\ell}^{L-1}F(\mathbf{x}_i)\right) .$$</div>
+      <p>The first term passes the gradient from the top straight down to every block, unchanged, however deep the network. It can only cancel if the second term happens to equal $-I$, which essentially never happens.</p>
+    </div>
+    <p>Compare a plain network, where $\partial\mathbf{x}_L/\partial\mathbf{x}_\ell = \prod_iJ_i$ is a product of $L - \ell$ Jacobians, each of which can shrink or rotate the gradient (lesson 14). For a residual network the product is $\prod_i(I + J_i)$, where $J_i = \partial F/\partial\mathbf{x}_i$. Expanding it gives a sum over subsets of blocks: the identity, every single $J_i$, every pair $J_iJ_j$, and so on. A residual network with $n$ blocks behaves like a combination of $2^n$ paths of different lengths, and Veit et al. (2016) showed that the gradient during training comes mostly from short paths, of 10–30 blocks in a 110-layer network. Deleting a single block from a trained ResNet barely hurts it; deleting one from VGG destroys it.</p>
+    <p>The code makes the comparison directly. It trains plain and residual networks of 10, 26 and 50 layers, each block two ReLU layers of width 32, with SGD and momentum. The residual branches start at zero, so each residual network starts as a 2-layer network with extra identity blocks. At 50 layers the gradient reaching the first plain layer at initialisation is 8 times smaller than in the residual network, and after 1,500 steps the plain network still hasn't moved from the loss of a coin flip.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: resnet-training --></div>
+    </figure>
+    <p class="muted">Training loss of plain and residual networks on lesson 12's spirals with SGD and momentum (learning rate 0.01). At 26 layers the plain network gets there, but erratically, with long stalls and spikes. At 50 layers it never leaves the starting loss for long. The residual networks of both depths reach zero loss within about 400 steps; the deeper one is no harder to train than the shallower one.</p>
+    <figure class="plate wide" data-scene="depth" data-init='{"res": 1, "act": "relu", "g": -1.75}'>
+      <div class="stage">
+        <canvas aria-label="Standard deviation of activations and gradients through 30 layers, with or without residual connections"></canvas>
+        <div class="toolbar">
+          <div class="sliders">
+            <label for="dr-g">log₂ gain g <input id="dr-g" type="range" data-k="g" min="-2" max="2" step="0.01"><output data-out="g"></output></label>
+            <div class="seg" data-opt="res" role="group"><button type="button" data-v="0">plain</button><button type="button" data-v="1">residual</button></div>
+          </div>
+          <div class="readout" data-role="readout"></div>
+        </div>
+      </div>
+    </figure>
+    <p class="muted"><b>Try it.</b> The same 30-layer experiment as in lesson 14, now with a switch for skip connections $\mathbf h_{l+1} = \mathbf h_l + \phi(W_l\mathbf h_l)$. Turn the gain down to 0.3: the plain network's gradient vanishes by many orders of magnitude, while the residual network's stays near 1, because the identity path carries it straight down. Turn the gain up and the residual network's activations grow instead, which is why real ResNets add normalisation and scale down the last layer of each block.</p>
+  </section>
+
+  <section id="blocks">
+    <h2>Residual blocks in practice</h2>
+    <ul>
+      <li><b>Basic block</b> (ResNet-18/34): two $3\times3$ convolutions, each followed by batch norm, ReLU after the first and after the addition.</li>
+      <li><b>Bottleneck block</b> (ResNet-50 and deeper): $1\times1$ to reduce channels by 4, a $3\times3$, and $1\times1$ to expand back. For 256 channels this costs $256\cdot64 + 9\cdot64^2 + 64\cdot256 = 69{,}632$ weights against $2\cdot9\cdot256^2 = 1{,}179{,}648$ for a basic block at full width.</li>
+      <li><b>Changing shape.</b> When a block halves the resolution and doubles the channels, the skip connection can't be the identity; it becomes a $1\times1$ convolution with stride 2 (a "projection shortcut").</li>
+      <li><b>Pre-activation</b> (He et al., 2016b): order each block as norm → ReLU → conv, so the skip path is a pure identity from input to output, with nothing applied after the addition. This is exactly the form of the gradient formula above, and it trains 1,000-layer networks. Transformers use the same layout ("pre-norm", lesson 20).</li>
+      <li><b>Zero-init the last layer of each block</b> (or the scale $\gamma$ of its final batch norm), so every block starts as the identity (Goyal et al., 2017). The code does this.</li>
+    </ul>
+    <p>The residual connection is the most widely reused idea in this stage. LSTMs already had it in time (lesson 17), every transformer layer uses two of them, and diffusion models' U-Nets are built from residual blocks.</p>
+  </section>
+
+  <section id="transfer">
+    <h2>Transfer learning</h2>
+    <p>A ResNet trained on ImageNet's 1.3 million images has learned general features: edges and textures in early layers, object parts later. For a new task with little data, start from those weights instead of random ones. Either freeze the network and train a new linear classifier on its final features ("linear probing"), or train the whole network with a small learning rate ("fine-tuning"). With a few thousand labelled images, a pretrained network routinely beats one trained from scratch by a wide margin. This idea, pretraining on a large generic task and adapting cheaply, became the template for language models (stage 7).</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Fully connected rather than convolutional blocks, to keep it fast in NumPy, but the mechanism is identical. Plain block: $\mathbf{h}\mapsto\operatorname{ReLU}(W_2\operatorname{ReLU}(W_1\mathbf{h}))$. Residual block: $\mathbf{h}\mapsto\mathbf{h} + W_2\operatorname{ReLU}(W_1\mathbf{h})$. Note the one-line difference in the backward pass: the identity path adds the incoming gradient unchanged. Both backward passes agree with finite differences to $10^{-10}$.</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(0)
+
+def spirals(n, noise=0.08):                        # lesson 12's data
+    t = np.sqrt(rng.uniform(0, 1, n)) * 3 * np.pi
+    y = rng.integers(0, 2, n); r = t / (3 * np.pi)
+    return np.c_[r * np.cos(t + np.pi * y), r * np.sin(t + np.pi * y)] + noise * rng.standard_normal((n, 2)), y
+
+def init(depth, width, residual, seed):
+    """An input layer, `depth` blocks of two ReLU layers each, and an output layer.
+    Plain blocks: h -&gt; relu(W2 relu(W1 h)).  Residual blocks: h -&gt; h + W2 relu(W1 h)."""
+    r = np.random.default_rng(seed); he = lambda m, k: r.standard_normal((m, k)) * np.sqrt(2 / k)
+    blocks = []
+    for _ in range(depth):
+        W2 = he(width, width) * (0.0 if residual else 1.0)   # residual branches start at 0: each block is the identity
+        blocks.append([he(width, width), np.zeros(width), W2, np.zeros(width)])
+    return {"inp": [he(width, 2), np.zeros(width)], "blocks": blocks, "out": [he(1, width), np.zeros(1)], "res": residual}
+
+def forward(P, X):
+    h = np.maximum(X @ P["inp"][0].T + P["inp"][1], 0)
+    cache = [h]
+    for W1, b1, W2, b2 in P["blocks"]:
+        a = np.maximum(h @ W1.T + b1, 0)
+        u = a @ W2.T + b2
+        h = h + u if P["res"] else np.maximum(u, 0)
+        cache.append((a, u, h))
+    return (h @ P["out"][0].T + P["out"][1])[:, 0], cache
+
+def backward(P, X, y):
+    F, cache = forward(P, X)
+    loss = np.mean(np.logaddexp(0, F) - y * F)
+    d = ((1 / (1 + np.exp(-F))) - y)[:, None] / len(y)
+    h_last = cache[-1][2] if P["blocks"] else cache[0]
+    G = {"out": [d.T @ h_last, d.sum(0)], "blocks": [None] * len(P["blocks"])}
+    dh = d @ P["out"][0]
+    for k in reversed(range(len(P["blocks"]))):
+        W1, b1, W2, b2 = P["blocks"][k]
+        a, u, h = cache[k + 1]
+        h_prev = cache[k] if k == 0 else cache[k][2]
+        du = dh if P["res"] else dh * (u &gt; 0)
+        da = (du @ W2) * (a &gt; 0)
+        G["blocks"][k] = [da.T @ h_prev, da.sum(0), du.T @ a, du.sum(0)]
+        dh = (dh if P["res"] else 0) + da @ W1           # the identity path adds dh unchanged
+    dz = dh * (cache[0] &gt; 0)
+    G["inp"] = [dz.T @ X, dz.sum(0)]
+    return loss, G
+
+def flat(P):
+    return [P["inp"], *P["blocks"], P["out"]]
+
+def train(depth, residual, steps=1500, lr=0.01, seed=0):
+    """Full-batch SGD with momentum 0.9, which (unlike Adam) doesn't rescale small gradients."""
+    P = init(depth, 32, residual, seed)
+    vel = [[np.zeros_like(x) for x in grp] for grp in flat(P)]
+    hist = []
+    for t in range(steps):
+        loss, G = backward(P, Xtr, ytr)
+        if t == 0:
+            g_first = np.linalg.norm(G["inp"][0])         # gradient reaching the first layer at init
+        hist.append(loss)
+        for grp, ggrp, vg in zip(flat(P), flat(G), vel):
+            for i in range(len(grp)):
+                vg[i] = 0.9 * vg[i] - lr * ggrp[i]; grp[i] += vg[i]
+    return hist, np.mean((forward(P, Xte)[0] &gt; 0) == yte), g_first
+
+Xtr, ytr = spirals(400); Xte, yte = spirals(4000)
+for depth in [4, 12, 24]:
+    for residual in [False, True]:
+        hist, acc, g = train(depth, residual)
+        print(f"{2 * depth + 2:2d} layers  {'residual' if residual else 'plain   '}  |grad W_in| at init {g:.1e}"
+              f"   train loss at 0/300/1500 steps {hist[0]:.3f} {hist[299]:.3f} {hist[-1]:.3f}   test acc {acc:.3f}")
+
+# 10 layers  plain     |grad W_in| at init 3.4e-02   train loss at 0/300/1500 steps 0.670 0.148 0.001   test acc 0.954
+# 10 layers  residual  |grad W_in| at init 1.1e-01   train loss at 0/300/1500 steps 0.826 0.510 0.004   test acc 0.946
+# 26 layers  plain     |grad W_in| at init 1.5e-02   train loss at 0/300/1500 steps 0.702 0.676 0.016   test acc 0.930
+# 26 layers  residual  |grad W_in| at init 1.2e-01   train loss at 0/300/1500 steps 0.770 0.434 0.000   test acc 0.943
+# 50 layers  plain     |grad W_in| at init 8.6e-03   train loss at 0/300/1500 steps 0.692 0.691 0.693   test acc 0.494
+# 50 layers  residual  |grad W_in| at init 6.7e-02   train loss at 0/300/1500 steps 0.666 0.077 0.000   test acc 0.951</code></pre>
+    <p class="muted">At 10 layers both versions train to near-zero loss and about 95% test accuracy. At 26 layers the plain network has barely moved after 300 steps (0.676) but gets there eventually; the residual one is already at 0.434. At 50 layers the plain network is stuck at $\log2 = 0.693$ and predicts one class (49.4%), while the residual network reaches zero training loss and 95.1% test accuracy, as good as the shallow networks. Without normalisation layers, even residual networks eventually struggle (at about 100 layers here, the training diverges); real ResNets combine skip connections with batch normalisation.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Expand $(I + J_1)(I + J_2)(I + J_3)$. How many terms are there, and how many are products of exactly $k$ Jacobians? For $n$ blocks, how many paths have length $k$?</li>
+      <li>Suppose every $J_i$ in a plain network has all singular values equal to 0.9. How much is the gradient scaled after 50 layers? Now suppose a residual network's $J_i$ are small, with $\lVert J_i\rVert\le0.05$. Show that $\prod_{i=1}^{50}(I + J_i)$ has all singular values between $0.95^{50}\approx0.08$ and $1.05^{50}\approx11.5$.</li>
+      <li>VGG-16 ends with $7\times7\times512\to4096\to4096\to1000$ fully connected layers. Count their parameters. How many does global average pooling followed by one $512\to1000$ layer have?</li>
+      <li>A projection shortcut maps a $56\times56\times64$ feature map to $28\times28\times128$. What layer does it use, and how many parameters does it have?</li>
+      <li>Why does zero-initialising the second weight matrix of each residual block not stop it from learning? (Contrast with lesson 12's warning about initialising all weights equal.)</li>
+      <li>Explain why deleting a block from a trained ResNet changes its output only a little, while deleting a layer from a trained plain network wrecks it.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $I + J_1 + J_2 + J_3 + J_1J_2 + J_1J_3 + J_2J_3 + J_1J_2J_3$ (keeping the order of the factors in each product): $2^3 = 8$ terms, $\binom3k$ with $k$ Jacobians. With $n$ blocks there are $\binom nk$ paths of length $k$; most have length near $n/2$, but the short ones carry most of the gradient because each Jacobian factor tends to shrink it.</p>
+        <p><b>2.</b> $0.9^{50} = 0.005$. For the residual product, each factor satisfies $(1 - 0.05)\lVert\mathbf{v}\rVert\le\lVert(I + J_i)\mathbf{v}\rVert\le(1 + 0.05)\lVert\mathbf{v}\rVert$ by the triangle inequality, and these bounds multiply. The gradient stays within a moderate band, instead of shrinking by a factor of 200.</p>
+        <p><b>3.</b> $25{,}088\cdot4{,}096 + 4{,}096 = 102{,}764{,}544$; $4{,}096\cdot4{,}096 + 4{,}096 = 16{,}781{,}312$; $4{,}096\cdot1{,}000 + 1{,}000 = 4{,}097{,}000$: about 123.6 million, most of VGG's 138 million. Global average pooling and one layer: $512\cdot1000 + 1000 = 513{,}000$.</p>
+        <p><b>4.</b> A $1\times1$ convolution with stride 2 from 64 to 128 channels: $64\cdot128 = 8{,}192$ weights (plus 128 biases or a batch norm).</p>
+        <p><b>5.</b> The symmetry problem arises when units are interchangeable and receive identical gradients. Here $W_1$ is random, so the hidden units of the branch differ, and the gradient for $W_2$ is $\bar{\mathbf{u}}\,\mathbf{a}^\top$ with $\mathbf{a} = \operatorname{ReLU}(W_1\mathbf{h})$, which is nonzero and different for each entry. $W_2$ moves off zero at the first step, and then $W_1$ starts receiving gradient too.</p>
+        <p><b>6.</b> In a ResNet each block adds a small correction to a representation that every later block also sees directly through the skip connections, so removing one block perturbs the input of the rest only slightly. In a plain network each layer's output is the next layer's entire input, in a format that layer was trained on; removing one feeds the next layer something it has never seen.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>He, Zhang, Ren &amp; Sun, "Deep residual learning for image recognition"</b> (CVPR 2016), and <b>"Identity mappings in deep residual networks"</b> (ECCV 2016).</li>
+      <li><b>Krizhevsky, Sutskever &amp; Hinton, "ImageNet classification with deep convolutional neural networks"</b> (NeurIPS 2012). AlexNet.</li>
+      <li><b>Simonyan &amp; Zisserman, "Very deep convolutional networks for large-scale image recognition"</b> (2014), and <b>Szegedy et al., "Going deeper with convolutions"</b> (CVPR 2015).</li>
+      <li><b>Veit, Wilber &amp; Belongie, "Residual networks behave like ensembles of relatively shallow networks"</b> (NeurIPS 2016).</li>
+      <li><b>Liu et al., "A ConvNet for the 2020s"</b> (CVPR 2022). ConvNeXt.</li>
+    </ul>
+  </section>
+</article>

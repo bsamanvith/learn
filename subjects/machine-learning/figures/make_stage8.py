@@ -165,3 +165,30 @@ for r in range(n):
             p.text(x0 + (c_ + 0.5) * cell, y0 + (r + 0.5) * cell + 3.5, f"{a:+d}", color="fg", size=8, anchor="middle", px=True)
 p.text(x0 - 26, 22, "optimal moves: + from 1 to 2, − from 2 to 1", color="fg", size=12, px=True)
 p.save(OUT / "dp-convergence.svg", "Left: the error of value iteration in the sup norm, on a log scale, against the number of sweeps. For Jack's car rental the error falls in a straight line parallel to the dashed contraction bound gamma to the k times the size of V star, with gamma 0.9. For the gridworld with gamma 0.99 it falls much faster than the bound, about a factor 0.45 per sweep, because episodes end. Right: the optimal policy of Jack's car rental as a 21 by 21 grid, cars at location 1 on the vertical axis and at location 2 on the horizontal; up to 5 cars move from location 1 to 2 when location 1 is full and location 2 nearly empty, and up to 4 move back when location 1 is nearly empty")
+
+
+# ---------- 35: TD against MC on the 5-state walk, and n-step TD on the 19-state walk ----------
+ns = run("35-monte-carlo-and-td-learning")
+curves5, nstep_err, alphas = ns["curves5"], ns["nstep_err"], ns["alphas"]
+p = Plot(900, 360)
+p.panel(0, 0, 440, 360, (0, 100), (0, 0.25), margin=(40, 16, 44, 52))
+p.axes("episodes", "RMS error, averaged over 100 runs", xticks=[0, 25, 50, 75, 100], yticks=[0, 0.05, 0.1, 0.15, 0.2, 0.25])
+ep = np.arange(1, 101)
+for (m, a), cur in curves5.items():
+    col = "accent" if m == "TD" else "data"
+    op = {0.05: 1.0, 0.1: 0.7, 0.15: 0.45, 0.01: 1.0, 0.02: 0.75, 0.03: 0.55, 0.04: 0.4}[a]
+    p.line(ep, cur, color=col, width=1.6, opacity=op)
+p.text(98, curves5[("TD", 0.05)][-1] - 0.012, "TD, α = 0.05", color="accent", size=10, anchor="end")
+p.text(98, curves5[("TD", 0.15)][-1] + 0.008, "TD, α = 0.15", color="accent", size=10, anchor="end")
+p.text(55, 0.15, "MC, α = 0.01 to 0.04", color="data", size=10)
+p.text(p.box[0], 22, "5-state walk: TD (orange) learns faster than MC (blue)", color="fg", size=12, px=True)
+p.panel(460, 0, 440, 360, (0, 1), (0.2, 0.56), margin=(40, 70, 44, 50))
+p.axes("step size α", "RMS error over the first 10 episodes", xticks=[0, 0.2, 0.4, 0.6, 0.8, 1.0], yticks=[0.2, 0.3, 0.4, 0.5])
+shades = {1: 1.0, 2: 0.85, 4: 0.7, 8: 0.55, 16: 0.45, 32: 0.35, 512: 0.25}
+for nn, err in nstep_err.items():
+    keep = err < 0.56
+    p.line(alphas[keep], err[keep], color="accent" if nn == 4 else "fg", width=1.8 if nn == 4 else 1.3, opacity=1.0 if nn == 4 else shades[nn])
+    last = np.flatnonzero(keep)[-1]
+    p.text(p.X(alphas[last]) + 5, p.Y(err[last]) + (-6 if nn == 512 else 4), f"n={nn}", size=10, color="accent" if nn == 4 else "muted", px=True)
+p.text(p.box[0], 22, "19-state walk: intermediate n is best", color="fg", size=12, px=True)
+p.save(OUT / "td-vs-mc.svg", "Left: root mean square error of the value estimates on the 5-state random walk against the number of episodes, averaged over 100 runs, for TD(0) with step sizes 0.05, 0.1 and 0.15 and constant-alpha Monte Carlo with step sizes 0.01 to 0.04. TD's errors fall faster and lower. Right: on the 19-state random walk, the error averaged over the first 10 episodes against the step size, for n-step TD with n from 1 to 512; n equal to 4 reaches the lowest error, about 0.26, and both one-step TD and Monte Carlo are worse")

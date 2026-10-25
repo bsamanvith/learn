@@ -70,13 +70,13 @@
 
   <section id="jack">
     <h2>Example: Jack's car rental</h2>
-    <p>Jack manages two car rental locations, each holding at most 20 cars. Each day, customers ask for cars at the two locations at Poisson rates 3 and 4, and return cars at rates 3 and 2; each rental earns \$10, and a request with no car is lost. Overnight, Jack can move up to 5 cars between the locations at \$2 a car. With $\gamma = 0.9$, how many cars should he move?</p>
+    <p>Jack manages two car rental locations, each holding at most 20 cars. Each day, customers ask for cars at the two locations at Poisson rates 3 and 4, and return cars at rates 3 and 2; each rental earns 10 dollars, and a request with no car is lost. Overnight, Jack can move up to 5 cars between the locations at 2 dollars a car. With $\gamma = 0.9$, how many cars should he move?</p>
     <p>The state is the pair of car counts, $21\times21 = 441$ states; the actions are $-5, \dots, +5$, the number of cars moved from location 1 to 2, restricted to the cars available. Since the two locations evolve independently once the move is made, each transition probability is a product of two single-location distributions, computed exactly from the Poisson probabilities. The figure shows the optimal policy and how value iteration's error falls.</p>
     <figure class="plate wide">
       <div class="stage"><!-- figure: dp-convergence --></div>
     </figure>
     <p class="muted">Left: value iteration's error in the sup norm against the number of sweeps, on a log scale. For the car rental it runs parallel to the contraction bound $0.9^k\|V^*\|_\infty$ (dashed); for the gridworld of lesson 33 with $\gamma = 0.99$ it falls much faster than $0.99^k$. Right: the optimal number of cars to move, from the code.</p>
-    <p>The policy is intuitive once seen: location 2 has more demand and fewer returns, so it runs short. When location 1 is full and location 2 nearly empty, move up to 5 cars across; when location 1 runs low and location 2 has plenty, move up to 4 back. The boundary between "move" and "don't" bends because each car moved costs \$2 for certain but earns \$10 only if it is actually rented.</p>
+    <p>The policy is intuitive once seen: location 2 has more demand and fewer returns, so it runs short. When location 1 is full and location 2 nearly empty, move up to 5 cars across; when location 1 runs low and location 2 has plenty, move up to 4 back. The boundary between "move" and "don't" bends because each car moved costs 2 dollars for certain but earns 10 only if it is actually rented.</p>
     <p>The two error curves in the figure show what the contraction bound does and does not say. For the car rental, a business that never ends, the error falls by exactly 0.900 per sweep, the rate the theorem promises. For the gridworld, it falls by about 0.45 per sweep even at $\gamma = 0.99$, because the exits drain probability out of the grid: the relevant factor is $\gamma$ times the spectral radius of the optimal policy's chain on the non-terminal cells, $0.99\times0.437 = 0.433$. The bound $\gamma^k$ holds for every MDP, so it must hold for the ones that never end.</p>
   </section>
 

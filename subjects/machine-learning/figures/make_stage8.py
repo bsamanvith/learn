@@ -219,3 +219,142 @@ p.text(70, 0.3, "double Q-learning", color="data", size=10.5)
 p.text(298, 0.012, "optimal under ε = 0.1", size=10, anchor="end")
 p.text(p.box[0], 22, "maximisation bias", color="fg", size=12, px=True)
 p.save(OUT / "sarsa-q-learning.svg", "Left: reward per episode on the cliff-walking task, averaged over 50 runs and smoothed, for SARSA, Q-learning and Expected SARSA with epsilon 0.1 and step size 0.5. After about 100 episodes Q-learning earns about minus 49 per episode, because it walks along the cliff edge and its exploration sometimes pushes it off, while SARSA earns about minus 26 and Expected SARSA about minus 21. Right: the fraction of runs choosing the action left in state A, against episodes, for Q-learning and double Q-learning; Q-learning chooses the worse action left over 80 percent of the time for the first 50 episodes, double Q-learning drops quickly towards the optimal 5 percent")
+
+
+# ---------- 37: Baird's counterexample, and DQN on CartPole with ablations ----------
+ns = run("37-function-approximation-and-dqn")
+baird, results = ns["baird"], ns["results"]
+p = Plot(900, 360)
+p.panel(0, 0, 330, 360, (0, 4), (-2, 13), margin=(40, 16, 44, 52))
+p.axes("log₁₀ steps", "log₁₀ largest |v(s)|", xticks=[0, 1, 2, 3, 4], yticks=[-2, 0, 2, 4, 6, 8, 10, 12])
+steps = np.unique(np.geomspace(1, 10_000, 30).astype(int))
+for on, col, lab, y in [(False, "accent", "off-policy", 9), (True, "data", "on-policy", -1.2)]:
+    vals = [np.log10(max(baird(on, int(k)), 1e-3)) for k in steps]
+    p.line(np.log10(steps), vals, color=col)
+    p.text(2.4 if on else 1.4, y, lab, color=col, size=10.5)
+p.text(p.box[0], 22, "Baird's counterexample", color="fg", size=12, px=True)
+p.panel(350, 0, 550, 360, (0, 100_000), (0, 500), margin=(40, 120, 44, 50))
+p.axes("environment steps", "return (moving average of 20 episodes)", xticks=[0, 25000, 50000, 75000, 100000], yticks=[0, 100, 200, 300, 400, 500],
+       fmt=lambda v: f"{int(v / 1000)}k" if v >= 1000 else f"{int(v)}")
+for name, col in [("DQN", "accent"), ("no target network", "data"), ("no replay", "fg")]:
+    for r, _, _ in results[name]:
+        t, g = r[:, 0], r[:, 1]
+        sm = np.convolve(g, np.ones(20) / 20, mode="valid")
+        k = np.unique(np.linspace(0, len(sm) - 1, 400).astype(int))
+        p.line(t[19:][k], sm[k], color=col, width=1.2, opacity=0.8)
+bx, by, bw, bh = p.box
+for i, (name, col) in enumerate([("DQN", "accent"), ("no target network", "data"), ("no replay", "fg")]):
+    y = by + 20 + 22 * i
+    p.items.append(f'<line x1="{bx + bw + 12}" y1="{y}" x2="{bx + bw + 30}" y2="{y}" style="stroke:{c(col)};stroke-width:2.2"/>')
+    p.text(bx + bw + 36, y + 4, name, size=10.5, px=True)
+p.text(p.box[0], 22, "DQN on CartPole, three seeds each", color="fg", size=12, px=True)
+p.save(OUT / "dqn-cartpole.svg", "Left: on Baird's counterexample, the largest value estimate on a log scale against the number of updates; off-policy semi-gradient TD grows without bound, past 10 to the 12 after 10,000 steps, while the same updates on-policy shrink towards zero. Right: the return per episode, smoothed over 20 episodes, against environment steps for DQN on CartPole, three seeds each, for full DQN, DQN without a target network, and DQN without experience replay")
+
+
+# ---------- 38: REINFORCE on the short corridor, and actor-critic on CartPole ----------
+ns = run("38-policy-gradients-and-actor-critic")
+corr, ac = ns["corr"], ns["ac"]
+p = Plot(900, 360)
+p.panel(0, 0, 420, 360, (0, 1000), (-90, -5), margin=(40, 16, 44, 52))
+p.axes("episodes", "return (100 runs, smoothed)", xticks=[0, 250, 500, 750, 1000], yticks=[-80, -60, -40, -20])
+p.line([0, 1000], [-11.66, -11.66], color="muted", width=1.2, dash="4 4")
+k = 20
+for (name, cur), col in zip(corr.items(), ["data", "c", "accent"]):
+    sm = np.convolve(cur, np.ones(k) / k, mode="valid")
+    p.line(np.arange(k, 1001), sm, color=col, width=1.6)
+p.text(990, -7.5, "best stochastic policy, p = 0.59", size=10, anchor="end")
+p.text(150, -62, "REINFORCE, α = 2⁻¹³", color="data", size=10.5)
+p.text(150, -72, "REINFORCE, α = 2⁻¹²", color="c", size=10.5)
+p.text(150, -82, "with baseline, α = 2⁻⁹", color="accent", size=10.5)
+p.text(p.box[0], 22, "short corridor: learning a stochastic policy", color="fg", size=12, px=True)
+p.panel(440, 0, 460, 360, (0, 600), (0, 520), margin=(40, 16, 44, 50))
+p.axes("episodes", "episode length (3 seeds, smoothed)", xticks=[0, 200, 400, 600], yticks=[0, 100, 200, 300, 400, 500])
+styles = {"GAE lambda = 0.95": ("accent", "λ = 0.95"), "GAE lambda = 1, step size 1": ("data", "λ = 1, step ÷ 10"),
+          "GAE lambda = 0 (one-step TD advantage)": ("c", "λ = 0"), "GAE lambda = 1 (return minus V)": ("muted", "λ = 1"),
+          "no critic (REINFORCE, return-to-go)": ("fg", "no critic")}
+for name, runs in ac.items():
+    col, _ = styles[name]
+    cur = np.mean(runs, axis=0)
+    sm = np.convolve(cur, np.ones(k) / k, mode="valid")
+    p.line(np.arange(k, len(cur) + 1), sm, color=col, width=1.6)
+p.text(300, 470, "λ = 0.95", color="accent", size=10.5)
+p.text(420, 330, "λ = 1, step ÷ 10", color="data", size=10.5)
+p.text(590, 75, "λ = 0", color="c", size=10.5, anchor="end")
+p.text(590, 22, "λ = 1 and no critic", color="fg", size=10.5, anchor="end")
+p.text(p.box[0], 22, "CartPole: linear actor–critic with GAE", color="fg", size=12, px=True)
+p.save(OUT / "policy-gradients.svg", "Left: average return per episode on the short corridor over 1,000 episodes for REINFORCE with step sizes 2 to the minus 13 and 2 to the minus 12, and REINFORCE with a learned baseline and step size 2 to the minus 9; all approach the optimum of minus 11.66, the baseline version fastest. Right: episode length on CartPole for a linear actor-critic, averaged over three seeds: GAE with lambda 0.95 reaches 500 within about 250 episodes; lambda 1 with a ten times smaller step size gets there more slowly; lambda 0 stalls below 100; lambda 1 and no critic at the large step size collapse to about 9 steps")
+
+
+# ---------- 39: PPO on CartPole, with and without the clip ----------
+ppo_runs = run("39-trust-regions-and-ppo")["ppo_runs"]
+variants = [("no clipping, 1 epoch", "fg", "no clip, 1 epoch"),
+            ("no clipping, 10 epochs", "data", "no clip, 10 epochs"),
+            ("PPO, clip 0.2, 10 epochs", "accent", "PPO")]             # PPO drawn last, on top
+p = Plot(900, 340)
+p.panel(0, 0, 450, 340, (0, 50), (0, 520), margin=(40, 16, 44, 52))
+p.axes("batches of 2,048 steps", "mean length of the last 10 episodes", xticks=[0, 10, 20, 30, 40, 50], yticks=[0, 100, 200, 300, 400, 500])
+for name, col, _ in variants:
+    for _, log in ppo_runs[name]:
+        p.line([it + 1 for it, *_ in log], [m for _, m, _, _ in log], color=col, width=1.4, opacity=0.85)
+p.text(p.box[0], 22, "learning curves, three seeds each", color="fg", size=12, px=True)
+p.panel(470, 0, 430, 340, (0, 50), (-4, 1), margin=(40, 150, 44, 46))
+p.axes("batches of 2,048 steps", "log₁₀ KL per update", xticks=[0, 10, 20, 30, 40, 50], yticks=[-4, -3, -2, -1, 0, 1])
+for name, col, _ in variants:
+    for _, log in ppo_runs[name]:
+        p.line([it + 1 for it, *_ in log], [float(np.clip(np.log10(max(kl, 1e-6)), -4, 1)) for _, _, kl, _ in log], color=col, width=1.4, opacity=0.85)
+bx, by, bw, bh = p.box
+for i, (_, col, lab) in enumerate(variants):
+    y = by + 20 + 22 * i
+    p.items.append(f'<line x1="{bx + bw + 12}" y1="{y}" x2="{bx + bw + 30}" y2="{y}" style="stroke:{c(col)};stroke-width:2.2"/>')
+    p.text(bx + bw + 36, y + 4, lab, size=10.5, px=True)
+p.text(p.box[0], 22, "how far each update moves the policy", color="fg", size=12, px=True)
+p.save(OUT / "ppo-cartpole.svg", "Left: mean length of the last 10 CartPole episodes after each batch of 2,048 steps, three seeds each, for PPO with clip 0.2 and 10 epochs, the unclipped surrogate with 10 epochs, and the unclipped surrogate with one epoch; PPO reaches 500 within 15 batches on every seed, the unclipped 10-epoch version is fast but unstable, and the one-epoch version is slow. Right: the KL divergence moved by each update on a log scale; the unclipped 10-epoch updates are about a hundred times larger than PPO's, the one-epoch updates several times smaller")
+
+
+# ---------- 40: Dyna-Q, the shortcut maze, and UCT on tic-tac-toe ----------
+ns = run("40-model-based-rl-and-mcts")
+dyna, shortcut, accuracy = ns["dyna"], ns["shortcut"], ns["accuracy"]
+p = Plot(900, 330)
+p.panel(0, 0, 300, 330, (0, 50), (1, 3), margin=(40, 16, 44, 46))
+p.axes("episode", "log₁₀ steps per episode", xticks=[0, 10, 20, 30, 40, 50], yticks=[1, 1.5, 2, 2.5, 3])
+for (n, L), col in zip(dyna.items(), ["fg", "data", "accent"]):
+    p.line(np.arange(2, 51), np.log10(L[1:]), color=col, width=1.6)
+p.line([0, 50], [np.log10(14), np.log10(14)], color="muted", width=1.1, dash="4 4")
+p.text(48, 1.07, "shortest path, 14", size=10, anchor="end")
+p.text(28, 2.8, "n = 0, no planning", color="fg", size=10.5)
+p.text(28, 2.6, "n = 5", color="data", size=10.5)
+p.text(28, 2.4, "n = 50", color="accent", size=10.5)
+p.text(p.box[0], 22, "Dyna maze: planning steps n", color="fg", size=12, px=True)
+p.panel(310, 0, 300, 330, (0, 6000), (0, 350), margin=(40, 16, 44, 46))
+p.axes("time steps", "cumulative reward", xticks=[0, 2000, 4000, 6000], yticks=[0, 100, 200, 300],
+       fmt=lambda v: f"{v / 1000:g}k" if v >= 1000 else f"{v:g}")
+p.line([3000, 3000], [0, 350], color="muted", width=1.1, dash="4 4")
+p.text(2900, 330, "shortcut opens", size=10, anchor="end")
+for (name, cum), col in zip(shortcut.items(), ["data", "accent"]):
+    k = np.arange(0, 6000, 20)
+    p.line(k + 1, cum[k], color=col, width=1.8)
+p.text(5900, 175, "Dyna-Q", color="data", size=10.5, anchor="end")
+p.text(4000, 265, "Dyna-Q+", color="accent", size=10.5, anchor="end")
+p.text(p.box[0], 22, "shortcut maze, 10 runs", color="fg", size=12, px=True)
+p.panel(620, 0, 280, 330, (0.8, 3.7), (0.75, 1.0), margin=(40, 16, 44, 50))
+p.axes("log₁₀ simulations per move", "fraction of positions", xticks=[1, 2, 3], yticks=[0.8, 0.85, 0.9, 0.95, 1.0])
+xs = np.log10(list(accuracy)); ys = list(accuracy.values())
+p.line(xs, ys, color="accent", width=1.8); p.dots(xs, ys, color="accent")
+p.text(p.box[0], 22, "UCT keeps the minimax value", color="fg", size=12, px=True)
+p.save(OUT / "dyna-mcts.svg", "Left: steps per episode on the Dyna maze, averaged over 30 runs, on a log scale, for Dyna-Q with 0, 5 and 50 planning steps per real step; the average first falls to 20 steps or fewer in episode 3 with 50 planning steps, episode 6 with 5, and episode 30 without planning. Middle: cumulative reward on the shortcut maze, averaged over 10 runs; after the shortcut opens at step 3,000 Dyna-Q+ finds it and its reward rate rises, while Dyna-Q keeps using the old path. Right: the fraction of 300 tic-tac-toe positions in which UCT's chosen move keeps the minimax value, against the number of simulations, rising from 80 percent at 10 simulations to 100 percent at 3,000")
+
+
+# ---------- 41: AlphaZero on tic-tac-toe, graded against minimax ----------
+ns = run("41-alphago-alphazero-and-muzero")
+hist5, hist3 = ns["history"], ns["history3"]
+p = Plot(900, 330)
+for k, (x0, title, ylab) in enumerate([(0, "value head: positions valued correctly", "fraction of all 4,520 positions"),
+                                       (460, "policy head: top move optimal", "fraction of 3,191 positions")]):
+    p.panel(x0, 0, 440, 330, (0, 30), (0, 1), margin=(40, 16, 44, 52))
+    p.axes("training iteration (40 self-play games each)", ylab, xticks=[0, 5, 10, 15, 20, 25, 30], yticks=[0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    for hist, col in [(hist3, "data"), (hist5, "accent")]:
+        p.line([h[0] for h in hist], [h[1 + k] for h in hist], color=col, width=1.8)
+    p.text(p.box[0], 22, title, color="fg", size=12, px=True)
+p.text(29, 0.12, "sampling the first 5 moves", color="accent", size=10.5, anchor="end")
+p.text(29, 0.05, "sampling the first 3 moves", color="data", size=10.5, anchor="end")
+p.save(OUT / "alphazero-tictactoe.svg", "Left: the fraction of all reachable non-terminal tic-tac-toe positions whose minimax value the value head predicts correctly, against training iteration, for self-play that samples the first five moves from the search policy and for self-play that samples only the first three. Right: the fraction of positions where a mistake is possible in which the policy head's top move is optimal. Both rise quickly in the first five iterations; the more exploratory self-play ends higher on both")

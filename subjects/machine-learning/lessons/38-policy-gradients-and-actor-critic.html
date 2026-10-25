@@ -1,0 +1,298 @@
+<header class="lesson-head">
+  <div class="eyebrow">Lesson 38 · Stage 8: reinforcement learning</div>
+  <h1>Policy gradients and actor–critic</h1>
+  <p class="lede">Value-based methods learn $Q$ and act greedily on it. Policy-gradient methods skip that step: they parametrise the policy itself, $\pi_\theta(a\mid s)$, and climb the gradient of the expected return. This lesson derives the score-function estimator, proves the policy gradient theorem, and shows why subtracting a baseline changes the variance but not the mean. Replacing the Monte Carlo return by a learned critic gives actor–critic methods, and generalised advantage estimation (GAE) interpolates between them with lesson 35's $\lambda$. The code checks the theorem to ten decimal places against finite differences, reproduces Sutton and Barto's short-corridor example, where the best policy is stochastic and no greedy method can find it, and trains a linear actor–critic on CartPole, where the choice of $\lambda$ decides whether it learns at all. These are the methods behind RLHF (lesson 28) and PPO (lesson 39).</p>
+  <div class="meta"><span><b>Prerequisites:</b> <a href="/machine-learning/37-function-approximation-and-dqn/">37</a>, <a href="/machine-learning/35-monte-carlo-and-td-learning/">35</a>, <a href="/machine-learning/06-softmax-regression/">06</a></span><span><b>Math pulled in:</b> the log-derivative (score function) trick, gradients of expectations, the softmax Jacobian, variance of an estimator and control variates, Gaussian log-densities</span></div>
+</header>
+
+<article class="lesson">
+  <section id="idea">
+    <h2>The idea</h2>
+    <p>Write the policy as a differentiable function, say a softmax over action preferences computed by a network, and maximise</p>
+    <div class="eq">$$J(\theta) = \mathbb{E}_{S_0\sim\mu_0}\big[V^{\pi_\theta}(S_0)\big] = \mathbb{E}_{\tau\sim\pi_\theta}\Big[\sum_t\gamma^tR_{t+1}\Big]$$</div>
+    <p>by gradient ascent. The difficulty is that $\theta$ affects $J$ through the distribution of trajectories, including the states visited, and the environment's dynamics are unknown, so the gradient cannot be computed by backpropagation through the environment. The trick that makes it possible is to differentiate the <i>probability</i> of each trajectory, not its outcome.</p>
+    <p>Why bother, when Q-learning works? Four reasons:</p>
+    <ul>
+      <li><b>Continuous actions.</b> $\arg\max_aQ(s, a)$ is itself an optimisation problem when $a$ is a vector of joint torques; a policy that outputs the mean of a Gaussian over torques needs none.</li>
+      <li><b>Stochastic optimal policies.</b> In a partially observed problem or a game, the best policy may have to randomise. A greedy policy cannot; a softmax policy can learn any probabilities.</li>
+      <li><b>Smoothness.</b> A small change in $Q$ can flip an argmax and change the policy completely; a small change in $\theta$ changes a softmax policy a little. This makes convergence arguments, and trust regions (lesson 39), possible.</li>
+      <li><b>Sometimes the policy is simpler than the values.</b> Keeping a pole upright needs one sign; its value function is a complicated surface.</li>
+    </ul>
+  </section>
+
+  <section id="score">
+    <h2>The score-function estimator</h2>
+    <p>For any distribution $p_\theta(x)$ and function $f$ that does not depend on $\theta$, the identity $\nabla_\theta p_\theta = p_\theta\nabla_\theta\log p_\theta$ gives</p>
+    <div class="eq">$$\nabla_\theta\,\mathbb{E}_{x\sim p_\theta}[f(x)] = \sum_xf(x)\nabla_\theta p_\theta(x) = \sum_xp_\theta(x)f(x)\nabla_\theta\log p_\theta(x) = \mathbb{E}_{x\sim p_\theta}\big[f(x)\,\nabla_\theta\log p_\theta(x)\big].$$</div>
+    <p>The gradient of an expectation is itself an expectation, so it can be estimated by sampling $x$ and averaging $f(x)\nabla\log p_\theta(x)$. The vector $\nabla_\theta\log p_\theta(x)$ is the <b>score</b>; this is the <b>likelihood-ratio</b> or <b>REINFORCE</b> estimator. It needs $f$ only as a black box, and nothing about how $f$ depends on $x$: unlike the reparameterisation trick of lesson 22, it works for discrete $x$ and non-differentiable $f$. The price is variance. A useful fact: the score has mean zero, $\mathbb{E}[\nabla\log p_\theta(x)] = \nabla\sum_xp_\theta(x) = \nabla1 = 0$.</p>
+    <p>Apply it with $x$ a trajectory $\tau = (S_0, A_0, R_1, S_1, \dots)$, whose probability is</p>
+    <div class="eq">$$p_\theta(\tau) = \mu_0(S_0)\prod_t\pi_\theta(A_t\mid S_t)\,P(S_{t+1}, R_{t+1}\mid S_t, A_t).$$</div>
+    <p>The dynamics do not depend on $\theta$, so they vanish from the score: $\nabla\log p_\theta(\tau) = \sum_t\nabla\log\pi_\theta(A_t\mid S_t)$. The unknown environment drops out entirely, and</p>
+    <div class="eq">$$\nabla J(\theta) = \mathbb{E}_\tau\Big[\Big(\sum_k\gamma^kR_{k+1}\Big)\sum_t\nabla\log\pi_\theta(A_t\mid S_t)\Big].$$</div>
+    <p><b>Causality.</b> An action cannot affect rewards that came before it. Formally, for $k\le t$, $\mathbb{E}[R_{k}\nabla\log\pi_\theta(A_t\mid S_t)] = 0$: condition on the history up to $S_t$, which fixes $R_k$, and the score of $A_t$ has conditional mean zero. Dropping those terms leaves the same mean with less variance:</p>
+    <div class="eq">$$\nabla J(\theta) = \mathbb{E}_\tau\Big[\sum_t\gamma^tG_t\,\nabla\log\pi_\theta(A_t\mid S_t)\Big],\qquad G_t = \sum_{k\ge t}\gamma^{k-t}R_{k+1}.$$</div>
+  </section>
+
+  <section id="theorem">
+    <h2>The policy gradient theorem</h2>
+    <p>Since $\mathbb{E}[G_t\mid S_t, A_t] = Q^\pi(S_t, A_t)$, the same gradient can be written with action values, as a sum over states weighted by how often they are visited.</p>
+    <div class="result">
+      <div class="label">Policy gradient theorem (Sutton, McAllester, Singh and Mansour, 2000)</div>
+      <p>With $\eta(s) = \sum_t\gamma^tP(S_t = s)$ the discounted expected number of visits to $s$ from $\mu_0$,</p>
+      <p>$$\nabla J(\theta) = \sum_s\eta(s)\sum_aQ^{\pi}(s, a)\,\nabla\pi_\theta(a\mid s) = \sum_s\eta(s)\,\mathbb{E}_{a\sim\pi(\cdot\mid s)}\big[Q^\pi(s, a)\nabla\log\pi_\theta(a\mid s)\big].$$</p>
+    </div>
+    <p><b>Proof.</b> Differentiate $V^\pi(s) = \sum_a\pi(a\mid s)Q^\pi(s, a)$ with the product rule, and use $Q^\pi(s, a) = R(s, a) + \gamma\sum_{s'}P(s'\mid s, a)V^\pi(s')$, where only $V^\pi(s')$ depends on $\theta$:</p>
+    <div class="eq">$$\nabla V^\pi(s) = \underbrace{\sum_a\nabla\pi(a\mid s)\,Q^\pi(s, a)}_{\phi(s)} + \gamma\sum_a\pi(a\mid s)\sum_{s'}P(s'\mid s, a)\nabla V^\pi(s') = \phi(s) + \gamma\sum_{s'}P_\pi(s, s')\nabla V^\pi(s').$$</div>
+    <p>This is a Bellman equation for the vector of gradients, with "reward" $\phi$: its solution is $\nabla V^\pi = \sum_t\gamma^tP_\pi^t\phi$. Average over $\mu_0$: $\nabla J = \sum_t\gamma^t\mu_0P_\pi^t\phi = \sum_s\eta(s)\phi(s)$. The second form uses $\nabla\pi = \pi\nabla\log\pi$. $\square$</p>
+    <p>The remarkable feature is what is <i>missing</i>: the gradient of the state distribution. Changing $\theta$ changes which states are visited, but the theorem's right-hand side needs only the current distribution $\eta$ and current $Q^\pi$, both of which can be sampled by running the policy. (Since $\eta = d^\pi/(1 - \gamma)$, with $d^\pi$ the occupancy measure of lesson 33, the theorem is often written $\nabla J = \frac{1}{1 - \gamma}\mathbb{E}_{s\sim d^\pi, a\sim\pi}[Q^\pi(s, a)\nabla\log\pi(a\mid s)]$.)</p>
+    <p>For a tabular softmax policy, $\pi(a\mid s)\propto e^{\theta_{sa}}$, the score is $\partial\log\pi(b\mid s)/\partial\theta_{sa} = \mathbf{1}[a = b] - \pi(a\mid s)$ (lesson 06), and the theorem collapses to</p>
+    <div class="eq">$$\frac{\partial J}{\partial\theta_{sa}} = \eta(s)\,\pi(a\mid s)\big(Q^\pi(s, a) - V^\pi(s)\big) = \eta(s)\,\pi(a\mid s)\,A^\pi(s, a):$$</div>
+    <p>raise the preference of actions that are better than the policy's average, in proportion to how often their state is visited and how often they are already taken. The code computes this exactly for a random 6-state MDP and matches finite differences of $J$ to $4\times10^{-10}$.</p>
+  </section>
+
+  <section id="reinforce">
+    <h2>REINFORCE and baselines</h2>
+    <p><b>REINFORCE</b> (Williams, 1992) runs an episode, then for each step takes</p>
+    <div class="eq">$$\theta\leftarrow\theta + \alpha\,\gamma^tG_t\,\nabla\log\pi_\theta(A_t\mid S_t).$$</div>
+    <p>It is stochastic gradient ascent on $J$ with an unbiased gradient estimate. (Most implementations drop the $\gamma^t$, which biases the gradient towards caring about later states as much as early ones; it usually helps in practice.) Its weakness is variance: $G_t$ sums many random rewards, and every action in an episode is pushed up or down according to the whole episode's luck.</p>
+    <p><b>Baselines.</b> For any function $b(s)$ that does not depend on the action,</p>
+    <div class="eq">$$\mathbb{E}_{a\sim\pi(\cdot\mid s)}\big[b(s)\nabla\log\pi(a\mid s)\big] = b(s)\sum_a\nabla\pi(a\mid s) = b(s)\nabla1 = 0 .$$</div>
+    <p>So $G_t - b(S_t)$ can replace $G_t$ without changing the expected gradient. The variance does change. For a single parameter, the variance of $(G - b)\,\psi$, with $\psi$ the score, is minimised by $b^* = \mathbb{E}[G\psi^2]/\mathbb{E}[\psi^2]$, a score-weighted average return (exercise 3); the common, nearly optimal choice is $b(s) = V^\pi(s)$, which makes the weight an estimate of the <b>advantage</b> $A^\pi(S_t, A_t)$. A baseline is a <b>control variate</b>: subtract something correlated with the noise whose mean is known to be zero. An action is then pushed up only if it did better than expected <i>from that state</i>, not merely because the episode happened to go well.</p>
+    <p>The <b>short corridor</b> of Sutton and Barto shows what a policy gradient can do that value-based control cannot. Three states, reward $-1$ per step; in the second state the actions are reversed; and all three states look identical to the agent, so the policy is a single probability $p$ of choosing "right". The best $p$ is 0.586, worth $-11.66$; an $\varepsilon$-greedy agent, forced to choose mostly right or mostly left, gets $-44.2$ or $-82.1$. Started at $p = 0.05$, REINFORCE finds the stochastic optimum: in the code, the average return rises from about $-40$ to $-50$ in the first 100 episodes to $-11.7$ to $-12.5$ after 1,000. With a learned baseline and a larger step size, it averages $-17.6$ over the first 100 episodes already: the variance reduction allows a 16 times larger step.</p>
+  </section>
+
+  <section id="actor-critic">
+    <h2>Actor–critic and generalised advantage estimation</h2>
+    <p>The baseline $V$ has to be learned, by any method from lessons 35–37, and once it is, it can do more than reduce variance: it can replace the Monte Carlo return. The <b>one-step actor–critic</b> uses the TD error as the advantage estimate,</p>
+    <div class="eq">$$\delta_t = R_{t+1} + \gamma\hat v(S_{t+1}) - \hat v(S_t),\qquad\theta\leftarrow\theta + \alpha_\theta\,\delta_t\nabla\log\pi_\theta(A_t\mid S_t),\qquad\mathbf{w}\leftarrow\mathbf{w} + \alpha_w\,\delta_t\nabla\hat v(S_t).$$</div>
+    <p>The <b>actor</b> is the policy; the <b>critic</b> is the value function that judges its actions. If $\hat v = V^\pi$ exactly, $\mathbb{E}[\delta_t\mid S_t, A_t] = Q^\pi(S_t, A_t) - V^\pi(S_t) = A^\pi(S_t, A_t)$, so the update is unbiased; with an imperfect critic it is biased, but its variance involves only one step's randomness. It also works online, step by step, and for tasks that never end. This is generalised policy iteration (lesson 34) with both halves done by gradient steps.</p>
+    <p>Between $\delta_t$ and the full return lies lesson 35's $\lambda$-return. <b>Generalised advantage estimation</b> (Schulman et al., 2016) applies it to advantages:</p>
+    <div class="eq">$$\hat A_t^{\text{GAE}(\gamma, \lambda)} = \sum_{l\ge0}(\gamma\lambda)^l\delta_{t+l} .$$</div>
+    <p>With $\lambda = 0$ it is $\delta_t$, the one-step advantage: low variance, biased by the critic's errors. With $\lambda = 1$ the sum telescopes to $G_t - \hat v(S_t)$: REINFORCE with a baseline, unbiased whatever the critic, high variance. In between, the critic's error enters each term discounted by $(\gamma\lambda)^l$; $\lambda = 0.95$ is the usual choice. The critic is trained on the matching targets $\hat A_t + \hat v(S_t)$, which are TD($\lambda$) returns.</p>
+    <p>The code trains a linear-logistic policy on CartPole (push right with probability $\sigma(\theta^\top\mathbf{x})$, $\mathbf{x}$ the scaled state and a constant) with a critic that is linear in the 15 quadratic features of the state, updating after every 5 episodes. The figure shows the result.</p>
+    <figure class="plate wide">
+      <div class="stage"><!-- figure: policy-gradients --></div>
+    </figure>
+    <p class="muted">Left: the short corridor, average return per episode over 100 runs (smoothed over 20 episodes), for REINFORCE at two step sizes and with a learned baseline; the dashed line is the best possible, −11.66. Right: CartPole episode length (the return) for the linear actor–critic, averaged over three seeds and smoothed, for different advantage estimators. From the code.</p>
+    <p>At a policy step size of 10 (on returns scaled by 1/100), GAE with $\lambda = 0.95$ learns to balance in every seed, reaching 500 steps on all of the last 50 episodes. At the same step size, the two unbiased, high-variance estimators fail: with $\lambda = 1$ ($G_t - \hat v(S_t)$) and with no critic at all (REINFORCE on returns-to-go), one unlucky large step drives the policy to always push the same way, and episodes end after about 9 steps; it never recovers, because a saturated policy's score, and hence its gradient, is almost zero. With a ten times smaller step, $\lambda = 1$ learns too (500, 500 and 481 over the last 50 episodes), just more slowly. At the other extreme, $\lambda = 0$ is too biased: the quadratic critic cannot represent CartPole's values accurately, and advantages built from one step of it point the policy the wrong way often enough that it stalls at 10 to 62 steps. Variance limits the step size you can take; bias limits where you can get. $\lambda$ trades one for the other, and the best setting depends on how good the critic is.</p>
+  </section>
+
+  <section id="continuous">
+    <h2>Continuous actions</h2>
+    <p>For a real-valued action, use a Gaussian policy: a network outputs the mean $m_\theta(s)$, and the standard deviation $\sigma$ is either a learned constant or another output. The score is</p>
+    <div class="eq">$$\nabla_\theta\log\mathcal{N}\big(a; m_\theta(s), \sigma^2\big) = \frac{a - m_\theta(s)}{\sigma^2}\nabla_\theta m_\theta(s),\qquad\frac{\partial}{\partial\log\sigma}\log\mathcal{N} = \frac{(a - m)^2}{\sigma^2} - 1 .$$</div>
+    <p>If an action turned out better than expected, move the mean towards it; if actions far from the mean did well, widen $\sigma$. As $\sigma\to0$ the variance of the estimator blows up (the score scales as $1/\sigma$), which is one reason to keep some exploration noise, or an entropy bonus, until late in training. For deterministic policies, the <b>deterministic policy gradient</b> (Silver et al., 2014), $\nabla J = \mathbb{E}_s[\nabla_\theta m_\theta(s)\nabla_aQ(s, a)|_{a = m_\theta(s)}]$, uses the critic's gradient with respect to the action instead; it underlies DDPG, TD3 and, with an entropy term, SAC.</p>
+  </section>
+
+  <section id="code">
+    <h2>Code from scratch</h2>
+    <p>Part 1 builds a random MDP with 6 states and 3 actions and a tabular softmax policy, computes $J$, $Q^\pi$, $V^\pi$ and the visit weights $\eta$ exactly, and compares the theorem's gradient with central finite differences. It then averages 4,000 REINFORCE estimates, with and without the baseline $V^\pi$, and measures their bias and spread. Part 2 is the short corridor, solved exactly as a function of $p$ and then by REINFORCE with and without a learned baseline, 100 runs each. Part 3 is the CartPole actor–critic with GAE.</p>
+<pre><code>import numpy as np
+
+# ---- Part 1: the policy gradient theorem, checked exactly. A random MDP with 6 states and 3
+# actions, a tabular softmax policy pi(a|s) proportional to exp(theta[s, a]), gamma = 0.9.
+rng = np.random.default_rng(0)
+nS, nA, gamma = 6, 3, 0.9
+P = rng.dirichlet(np.ones(nS), (nS, nA))                          # P[s, a, s']
+R = rng.normal(0, 1, (nS, nA))
+mu0 = np.full(nS, 1 / nS)
+
+def policy(theta):
+    e = np.exp(theta - theta.max(1, keepdims=True)); return e / e.sum(1, keepdims=True)
+def J_and_parts(theta):
+    pi = policy(theta)
+    P_pi = np.einsum("sa,sat-&gt;st", pi, P); r_pi = (pi * R).sum(1)
+    M = np.linalg.inv(np.eye(nS) - gamma * P_pi)
+    V = M @ r_pi
+    Q = R + gamma * P @ V
+    return mu0 @ V, pi, Q, V, mu0 @ M                               # J, pi, Q, V, discounted visits
+theta = rng.normal(0, 1, (nS, nA))
+J, pi, Q, V, visits = J_and_parts(theta)
+# The theorem: dJ/dtheta[s, a] = sum_s visits(s) sum_b dpi(b|s)/dtheta[s, a] Q(s, b)
+#            = visits(s) pi(a|s) (Q(s, a) - V(s))      for the softmax: the advantage appears.
+grad_thm = visits[:, None] * pi * (Q - V[:, None])
+grad_fd = np.zeros_like(theta); h = 1e-6
+for s in range(nS):
+    for a in range(nA):
+        tp, tm = theta.copy(), theta.copy(); tp[s, a] += h; tm[s, a] -= h
+        grad_fd[s, a] = (J_and_parts(tp)[0] - J_and_parts(tm)[0]) / (2 * h)
+print(f"J = {J:.4f}; max |theorem - finite differences| = {np.abs(grad_thm - grad_fd).max():.2e}"
+      f" (largest gradient entry {np.abs(grad_fd).max():.3f})")
+
+# REINFORCE estimates the same gradient from sampled episodes. Sample truncated at 100 steps
+# (gamma^100 = 3e-5), with and without a baseline b(s) = V(s).
+def reinforce_sample(theta, rng, baseline):
+    pi = policy(theta); g = np.zeros_like(theta)
+    s = rng.choice(nS, p=mu0); traj = []
+    for t in range(100):
+        a = rng.choice(nA, p=pi[s]); traj.append((s, a, R[s, a])); s = rng.choice(nS, p=P[s, a])
+    G = 0.0
+    for t in range(99, -1, -1):
+        s, a, r = traj[t]; G = r + gamma * G
+        score = -pi[s].copy(); score[a] += 1                        # grad of log pi(a|s) w.r.t. theta[s, :]
+        g[s] += gamma ** t * (G - (V[s] if baseline else 0.0)) * score
+    return g
+for baseline in [False, True]:
+    samples = np.array([reinforce_sample(theta, np.random.default_rng(i), baseline) for i in range(4000)])
+    mean, sd = samples.mean(0), samples.std(0)
+    print(f"REINFORCE, {'baseline V(s)' if baseline else 'no baseline  '}: max |mean of 4,000 estimates - theorem| = "
+          f"{np.abs(mean - grad_thm).max():.3f}; average standard deviation of one estimate {sd.mean():.3f}")
+
+# ---- Part 2: the short corridor (Sutton and Barto, example 13.1), where the best policy is
+# stochastic. Three states look identical to the agent; in the second, the actions are reversed.
+# Reward -1 per step. The policy is one number: the probability p of choosing "right".
+def corridor_value(p):
+    # states 0, 1, 2 (then the goal): V = -1 + transitions; solve the 3 x 3 linear system
+    T = np.array([[1 - p, p, 0], [p, 0, 1 - p], [0, 1 - p, 0]])     # from state 2, "right" reaches the goal
+    return np.linalg.solve(np.eye(3) - T, -np.ones(3))[0]
+ps = np.linspace(0.01, 0.99, 9801)
+vals = np.array([corridor_value(p) for p in ps])
+p_best = ps[np.argmax(vals)]
+print(f"short corridor: best p(right) = {p_best:.3f}, value {vals.max():.2f};"
+      f" an epsilon-greedy policy (epsilon = 0.1) gets {corridor_value(0.95):.1f} or {corridor_value(0.05):.1f}")
+
+def corridor_run(alpha, baseline_alpha=None, episodes=1000, seed=0):
+    rng = np.random.default_rng(seed)
+    theta = np.array([0.0, np.log(19)])                             # preferences for (right, left): p(right) = 0.05 at first
+    w = 0.0                                                         # state-value baseline (all states look alike)
+    returns = np.zeros(episodes)
+    for e in range(episodes):
+        s, traj = 0, []
+        while s != 3 and len(traj) &lt; 1000:
+            pr = 1 / (1 + np.exp(theta[1] - theta[0]))              # softmax over two preferences
+            right = rng.random() &lt; pr
+            traj.append((right, pr))
+            if s == 1:
+                s = 0 if right else 2
+            else:
+                s = s + 1 if right else max(s - 1, 0)
+        G = 0.0
+        for t in range(len(traj) - 1, -1, -1):
+            right, pr = traj[t]; G -= 1.0
+            score = np.array([1 - pr, -(1 - pr)]) if right else np.array([-pr, pr])
+            delta = G - (w if baseline_alpha else 0.0)
+            if baseline_alpha:
+                w += baseline_alpha * delta
+            theta += alpha * delta * score                          # gamma = 1
+        returns[e] = -len(traj)
+    return returns
+
+corr = {}
+for name, a, ab in [("REINFORCE, alpha = 2^-13", 2 ** -13, None), ("REINFORCE, alpha = 2^-12", 2 ** -12, None),
+                    ("with baseline, alpha = 2^-9", 2 ** -9, 2 ** -6)]:
+    corr[name] = np.mean([corridor_run(a, ab, seed=s) for s in range(100)], axis=0)
+    print(f"{name:28s}: average return, episodes 1-100: {corr[name][:100].mean():6.1f}; episodes 901-1000: {corr[name][900:].mean():6.1f}")
+
+# ---- Part 3: actor-critic on CartPole with a linear softmax policy and a small critic.
+# The critic is linear in hand-made features; the advantage is estimated with GAE(gamma, lambda).
+class CartPole:
+    g, mc, mp, l, F, dt = 9.8, 1.0, 0.1, 0.5, 10.0, 0.02
+    def __init__(self, rng): self.rng = rng
+    def reset(self):
+        self.s = self.rng.uniform(-0.05, 0.05, 4); self.t = 0; return self.s.copy()
+    def step(self, a):
+        x, xd, th, thd = self.s
+        f = self.F if a == 1 else -self.F
+        ct, st = np.cos(th), np.sin(th); m = self.mc + self.mp
+        tmp = (f + self.mp * self.l * thd ** 2 * st) / m
+        thacc = (self.g * st - ct * tmp) / (self.l * (4 / 3 - self.mp * ct ** 2 / m))
+        xacc = tmp - self.mp * self.l * thacc * ct / m
+        self.s = np.array([x + self.dt * xd, xd + self.dt * xacc, th + self.dt * thd, thd + self.dt * thacc]); self.t += 1
+        return self.s.copy(), 1.0, abs(self.s[0]) &gt; 2.4 or abs(self.s[2]) &gt; 12 * np.pi / 180, self.t &gt;= 500
+
+scale = np.array([2.4, 3.0, 0.21, 3.0])
+def phi(s):                                                         # critic features: quadratic in the scaled state
+    z = s / scale
+    return np.concatenate([[1.0], z, np.outer(z, z)[np.triu_indices(4)]])
+
+def actor_critic(lam, seed, episodes=600, lr_pi=10.0, lr_v=1.0, gamma=0.99, batch=5, baseline=True):
+    rng = np.random.default_rng(seed); env = CartPole(rng)
+    theta = np.zeros(5); w = np.zeros(15)
+    out = []
+    for e in range(0, episodes, batch):
+        g_theta, g_w = np.zeros(5), np.zeros(15)
+        for _ in range(batch):
+            s, done, xs, acts, rs, fs, terms = env.reset(), False, [], [], [], [], []
+            while not done:
+                x = np.append(s / scale, 1.0)
+                p1 = 1 / (1 + np.exp(-theta @ x))                   # probability of pushing right
+                a = int(rng.random() &lt; p1)
+                s2, r, term, trunc = env.step(a); done = term or trunc
+                xs.append(x); acts.append((a, p1)); rs.append(r); fs.append(phi(s)); terms.append(term)
+                s = s2
+            fs.append(phi(s))
+            v = np.array([f @ w for f in fs]); v[-1] = 0.0 if terms[-1] else v[-1]   # bootstrap only if truncated
+            T = len(rs); adv = np.zeros(T); gae = 0.0
+            for t in range(T - 1, -1, -1):                          # GAE: discounted sum of TD errors
+                delta = rs[t] + gamma * v[t + 1] - v[t]
+                gae = delta + gamma * lam * gae; adv[t] = gae
+            targets = adv + v[:-1]
+            for t in range(T):
+                a, p1 = acts[t]
+                score = (a - p1) * xs[t]                           # grad log pi for a Bernoulli-logistic policy
+                g_theta += score * (adv[t] if baseline else (targets[t]))
+                g_w += (targets[t] - v[t]) * fs[t]
+            out.append(T)
+        theta += lr_pi * g_theta / batch / 100                      # returns are O(100): scale the step
+        w += lr_v * g_w / batch / 100
+    return np.array(out)
+
+ac = {}
+for name, lam, base, lr in [("GAE lambda = 0 (one-step TD advantage)", 0.0, True, 10.0), ("GAE lambda = 0.95", 0.95, True, 10.0),
+                            ("GAE lambda = 1 (return minus V)", 1.0, True, 10.0), ("no critic (REINFORCE, return-to-go)", 1.0, False, 10.0),
+                            ("GAE lambda = 1, step size 1", 1.0, True, 1.0)]:
+    runs = [actor_critic(lam, seed, baseline=base, lr_pi=lr, lr_v=lr / 10) for seed in range(3)]
+    ac[name] = runs
+    print(f"{name:38s}: mean episode length, episodes 1-100: {np.mean([r[:100].mean() for r in runs]):6.1f};"
+          f" last 50 episodes, per seed: {' '.join(f'{r[-50:].mean():5.1f}' for r in runs)}")
+
+# J = -0.5859; max |theorem - finite differences| = 4.03e-10 (largest gradient entry 0.625)
+# REINFORCE, no baseline  : max |mean of 4,000 estimates - theorem| = 0.026; average standard deviation of one estimate 0.854
+# REINFORCE, baseline V(s): max |mean of 4,000 estimates - theorem| = 0.030; average standard deviation of one estimate 0.783
+# short corridor: best p(right) = 0.586, value -11.66; an epsilon-greedy policy (epsilon = 0.1) gets -44.2 or -82.1
+# REINFORCE, alpha = 2^-13    : average return, episodes 1-100:  -50.2; episodes 901-1000:  -12.5
+# REINFORCE, alpha = 2^-12    : average return, episodes 1-100:  -39.4; episodes 901-1000:  -11.7
+# with baseline, alpha = 2^-9 : average return, episodes 1-100:  -17.6; episodes 901-1000:  -12.0
+# GAE lambda = 0 (one-step TD advantage): mean episode length, episodes 1-100:   20.5; last 50 episodes, per seed:  10.5  62.4  48.8
+# GAE lambda = 0.95                     : mean episode length, episodes 1-100:  111.9; last 50 episodes, per seed: 500.0 500.0 500.0
+# GAE lambda = 1 (return minus V)       : mean episode length, episodes 1-100:   25.1; last 50 episodes, per seed:   9.3   9.6   9.3
+# no critic (REINFORCE, return-to-go)   : mean episode length, episodes 1-100:   20.3; last 50 episodes, per seed:   9.4   9.3  17.9
+# GAE lambda = 1, step size 1           : mean episode length, episodes 1-100:   30.9; last 50 episodes, per seed: 500.0 500.0 481.4</code></pre>
+    <p><b>Reading the output.</b> The theorem matches finite differences to $4\times10^{-10}$. Averaging 4,000 REINFORCE estimates recovers the exact gradient to within 0.03 in every component, with or without the baseline, as unbiasedness requires; in this small random MDP the baseline reduces the spread of a single estimate only modestly (0.85 to 0.78), because most of the noise comes from the rewards, which are random with standard deviation 1, rather than from the luck of the trajectory. The corridor and CartPole results are discussed above.</p>
+  </section>
+
+  <section id="exercises">
+    <h2>Exercises</h2>
+    <ol>
+      <li>Derive the score of a softmax policy, $\nabla_\theta\log\pi(a\mid s)$ for $\pi(a\mid s)\propto\exp(\theta^\top\mathbf{x}(s, a))$, and show that its expectation over $a$ is zero.</li>
+      <li>A one-step problem: two actions with rewards 1 and 0, policy $\pi(1) = \sigma(\theta)$. Compute $J(\theta)$, its derivative, and the REINFORCE estimate. Show that the estimate is unbiased, and compute its variance with no baseline and with the baseline $b = J$.</li>
+      <li>For a scalar parameter, show that the variance of $(G - b)\psi$ is minimised at $b^* = \mathbb{E}[G\psi^2]/\mathbb{E}[\psi^2]$, where $\psi$ is the score and $\mathbb{E}\psi = 0$.</li>
+      <li>Show that with $\lambda = 1$ the GAE estimate equals $G_t - \hat v(S_t)$ for an episode that terminates (with $\hat v = 0$ at the end), whatever $\hat v$ is.</li>
+      <li>Explain why the policy gradient theorem does not contain $\nabla\eta(s)$, even though $\eta$ depends on $\theta$. Where in the proof did the dependence go?</li>
+      <li>In RLHF (lesson 28), the "episode" is one response and the reward comes once, at the end. Write the REINFORCE gradient for the KL-regularised objective $\mathbb{E}[r(x, y)] - \beta\,\mathrm{KL}(\pi\|\pi_\text{ref})$, treating the response as a single action, and identify the baseline that lesson 28's group-mean method used.</li>
+    </ol>
+    <details>
+      <summary>Answers</summary>
+      <div>
+        <p><b>1.</b> $\log\pi(a\mid s) = \theta^\top\mathbf{x}(s, a) - \log\sum_be^{\theta^\top\mathbf{x}(s, b)}$, so $\nabla\log\pi(a\mid s) = \mathbf{x}(s, a) - \sum_b\pi(b\mid s)\mathbf{x}(s, b)$: the feature vector minus its average under the policy. Its expectation over $a\sim\pi$ is the average minus the average, zero.</p>
+        <p><b>2.</b> $J = \sigma(\theta)$, $J' = \sigma(1 - \sigma)$. Score: $1 - \sigma$ for action 1, $-\sigma$ for action 0. Estimate: $r\cdot\text{score}$, which is $1 - \sigma$ with probability $\sigma$ and 0 otherwise; mean $\sigma(1 - \sigma) = J'$. Variance without baseline: $\sigma(1 - \sigma)^2 - \sigma^2(1 - \sigma)^2 = \sigma(1 - \sigma)^3$. With $b = \sigma$: the estimate is $(1 - \sigma)(1 - \sigma)$ w.p. $\sigma$ and $(-\sigma)(-\sigma) = \sigma^2$ w.p. $1 - \sigma$; its mean is still $\sigma(1 - \sigma)$ and its variance is $\sigma(1 - \sigma)(1 - 2\sigma)^2$, smaller, and zero at $\sigma = \frac12$.</p>
+        <p><b>3.</b> $\mathrm{Var}[(G - b)\psi] = \mathbb{E}[(G - b)^2\psi^2] - (\mathbb{E}[G\psi])^2$, since $\mathbb{E}[b\psi] = 0$ leaves the mean unchanged. Differentiate in $b$: $-2\mathbb{E}[(G - b)\psi^2] = 0$, so $b^* = \mathbb{E}[G\psi^2]/\mathbb{E}[\psi^2]$. If $G$ and $\psi^2$ are nearly independent, $b^*\approx\mathbb{E}G$, which is why $V(s)$ is a good choice.</p>
+        <p><b>4.</b> With $\gamma\lambda = \gamma$: $\sum_l\gamma^l\big(R_{t+l+1} + \gamma\hat v(S_{t+l+1}) - \hat v(S_{t+l})\big) = \sum_l\gamma^lR_{t+l+1} - \hat v(S_t)$, because the $\hat v$ terms telescope and the last one is 0.</p>
+        <p><b>5.</b> In the proof, the state distribution never appears as something being differentiated: the recursion for $\nabla V^\pi$ propagates the effect of $\theta$ on future states through $\gamma P_\pi\nabla V^\pi(s')$, and solving that recursion produces $\eta$ as the weights. The effect of $\theta$ on which states are visited is accounted for by the $Q^\pi$ values of the actions that lead there.</p>
+        <p><b>6.</b> $\nabla J = \mathbb{E}_{y\sim\pi}\big[\big(r(x, y) - \beta\log\frac{\pi(y\mid x)}{\pi_\text{ref}(y\mid x)}\big)\nabla\log\pi(y\mid x)\big]$; the extra $-\beta\nabla\log\pi$ term from differentiating the $\log\pi$ inside the KL has zero mean and can be dropped. Lesson 28's group method subtracted the mean regularised reward of the other responses sampled for the same prompt: a baseline that depends on the prompt (the "state") but not on the response (the "action"), so it leaves the gradient unbiased.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="reading">
+    <h2>Further reading</h2>
+    <ul class="refs">
+      <li><b>Sutton &amp; Barto, <i>Reinforcement Learning: An Introduction</i></b> (2nd edition, 2018), chapter 13. The policy gradient theorem, REINFORCE, baselines, actor–critic and the short corridor.</li>
+      <li><b>Williams, "Simple statistical gradient-following algorithms for connectionist reinforcement learning"</b> (1992). REINFORCE.</li>
+      <li><b>Sutton, McAllester, Singh &amp; Mansour, "Policy gradient methods for reinforcement learning with function approximation"</b> (2000). The theorem and compatible function approximation.</li>
+      <li><b>Schulman, Moritz, Levine, Jordan &amp; Abbeel, "High-dimensional continuous control using generalized advantage estimation"</b> (2016).</li>
+      <li><b>Greensmith, Bartlett &amp; Baxter, "Variance reduction techniques for gradient estimates in reinforcement learning"</b> (2004). Optimal baselines.</li>
+      <li><b>Silver et al., "Deterministic policy gradient algorithms"</b> (2014).</li>
+    </ul>
+  </section>
+</article>

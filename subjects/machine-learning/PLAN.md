@@ -92,11 +92,11 @@ a from-scratch implementation on a small environment, and a problem set.
 | 34 ✅ | Dynamic programming | When the model is known, iterate the Bellman equation to the answer | Contraction mappings, Banach fixed point, policy evaluation, policy and value iteration, the policy improvement theorem |
 | 35 ✅ | Monte Carlo and temporal-difference learning | Learn values from experience: wait for the return (MC) or bootstrap from the next estimate (TD) | Stochastic approximation, bias vs variance of targets, n-step returns, TD(λ) and eligibility traces |
 | 36 ✅ | SARSA and Q-learning | Control without a model: on-policy vs off-policy learning of action values | Convergence conditions, maximisation bias, double Q-learning, the cliff-walking example |
-| 37 | Function approximation and deep Q-networks | Replace the table with a network, and stabilise the bootstrapping | Semi-gradient TD, the deadly triad, replay buffers, target networks, Double/Dueling DQN |
-| 38 | Policy gradients and actor–critic | Push up the log-probability of actions in proportion to their advantage | The policy gradient theorem, REINFORCE, baselines, actor–critic, GAE |
-| 39 | Trust regions and PPO | Improve the policy without stepping too far from the data that measured it | Importance sampling, the performance difference lemma, natural gradient, TRPO, PPO's clipped objective |
-| 40 | Model-based RL and planning | Learn a model of the world and plan inside it | Dyna, Monte Carlo tree search, UCT |
-| 41 | AlphaGo, AlphaZero and MuZero | Policy net + value net + tree search, improved by self-play | PUCT, search as policy improvement, learned latent models |
+| 37 ✅ | Function approximation and deep Q-networks | Replace the table with a network, and stabilise the bootstrapping | Semi-gradient TD, the deadly triad, replay buffers, target networks, Double/Dueling DQN |
+| 38 ✅ | Policy gradients and actor–critic | Push up the log-probability of actions in proportion to their advantage | The policy gradient theorem, REINFORCE, baselines, actor–critic, GAE |
+| 39 ✅ | Trust regions and PPO | Improve the policy without stepping too far from the data that measured it | Importance sampling, the performance difference lemma, natural gradient, TRPO, PPO's clipped objective |
+| 40 ✅ | Model-based RL and planning | Learn a model of the world and plan inside it | Dyna, Monte Carlo tree search, UCT |
+| 41 ✅ | AlphaGo, AlphaZero and MuZero | Policy net + value net + tree search, improved by self-play | PUCT, search as policy improvement, learned latent models |
 
 RLHF and the RL used to train reasoning models are in stage 7 (lessons 28 and 30), which link back here.
 

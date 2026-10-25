@@ -99,6 +99,18 @@
       "where": "P1#9"
     },
     {
+      "id": "condition-number",
+      "title": "Feature scaling, measured",
+      "stars": 2,
+      "unlocks": "02",
+      "idea": "Gradient descent needs about κ = λₘₐₓ/λₘᵢₙ steps per factor of e. Unscaled features make κ huge; standardising can make it 1.",
+      "visual": "Contours before and after scaling, with the GD paths drawn on them.",
+      "source": "Classic",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#10"
+    },
+    {
       "id": "sigmoid-mse",
       "title": "Why not squared error for classification?",
       "stars": 2,
@@ -135,6 +147,18 @@
       "where": "P2#3"
     },
     {
+      "id": "double-descent",
+      "title": "Double descent",
+      "stars": 4,
+      "unlocks": "04",
+      "idea": "Add features past the number of data points and test error rises, peaks at p = n, then falls again. The minimum-norm interpolator explains the peak.",
+      "visual": "Test error against number of features, with the spike at p = n.",
+      "source": "Belkin, Hsu, Ma & Mandal (2019)",
+      "status": "planned",
+      "notes": "",
+      "where": "H2#7"
+    },
+    {
       "id": "ridge-shrinkage",
       "title": "What ridge really does",
       "stars": 3,
@@ -156,30 +180,6 @@
       "source": "Tibshirani (1996)",
       "status": "planned",
       "notes": ""
-    },
-    {
-      "id": "double-descent",
-      "title": "Double descent",
-      "stars": 4,
-      "unlocks": "04",
-      "idea": "Add features past the number of data points and test error rises, peaks at p = n, then falls again. The minimum-norm interpolator explains the peak.",
-      "visual": "Test error against number of features, with the spike at p = n.",
-      "source": "Belkin, Hsu, Ma & Mandal (2019)",
-      "status": "planned",
-      "notes": "",
-      "where": "H2#7"
-    },
-    {
-      "id": "condition-number",
-      "title": "Feature scaling, measured",
-      "stars": 2,
-      "unlocks": "02",
-      "idea": "Gradient descent needs about κ = λₘₐₓ/λₘᵢₙ steps per factor of e. Unscaled features make κ huge; standardising can make it 1.",
-      "visual": "Contours before and after scaling, with the GD paths drawn on them.",
-      "source": "Classic",
-      "status": "planned",
-      "notes": "",
-      "where": "P1#10"
     },
     {
       "id": "softmax-gradient",
@@ -404,7 +404,7 @@
       "after": "03",
       "build": "Logistic regression from scratch on separable and non-separable 2D data.",
       "check": "On separable data ‖w‖ grows like log t and the boundary drifts to the max-margin line; on overlapping data it settles.",
-      "visual": "The boundary every 1,000 steps, and ‖w‖ against log t.",
+      "visual": "The decision line at t = 10 to 100,000 rotating towards the max-margin line, and ‖w‖ against log t.",
       "status": "written",
       "notes": ""
     },
@@ -413,9 +413,9 @@
       "title": "Overfit on purpose",
       "time": "90 min",
       "after": "05",
-      "build": "Fit polynomials of degree 0–20 to 20 noisy points; add ridge and sweep λ.",
+      "build": "Fit polynomials of degree 0 to 19 to 20 noisy points, then try two cures: a ridge penalty chosen by leave-one-out, and letting leave-one-out choose the degree. Then add data.",
       "check": "Degree 19 fits the 20 points exactly and scores about 1e14 on test data; ridge chosen by leave-one-out brings it to 0.23, and letting leave-one-out pick the degree gives degree 3 at 0.099.",
-      "visual": "Train and test error against degree; the wiggly degree-15 fit with and without ridge.",
+      "visual": "The degree-1, 3 and 19 fits over the data; train and test error against degree; error against λ.",
       "status": "written",
       "notes": ""
     },
@@ -430,6 +430,18 @@
       "status": "planned",
       "notes": "",
       "where": "A2"
+    },
+    {
+      "id": "trees-forests-boosting",
+      "title": "One tree, a forest, a boosted ensemble",
+      "time": "90 min",
+      "after": "11",
+      "build": "Decision tree, random forest and gradient boosting on one tabular dataset; vary depth and number of trees.",
+      "check": "One deep tree overfits; the forest fixes variance; boosting fixes bias and then overfits if you let it.",
+      "visual": "Test error against number of trees for both ensembles.",
+      "status": "planned",
+      "notes": "",
+      "where": "A3"
     },
     {
       "id": "micrograd",
@@ -489,16 +501,15 @@
       "where": "A6"
     },
     {
-      "id": "trees-forests-boosting",
-      "title": "One tree, a forest, a boosted ensemble",
-      "time": "90 min",
-      "after": "11",
-      "build": "Decision tree, random forest and gradient boosting on one tabular dataset; vary depth and number of trees.",
-      "check": "One deep tree overfits; the forest fixes variance; boosting fixes bias and then overfits if you let it.",
-      "visual": "Test error against number of trees for both ensembles.",
-      "status": "planned",
-      "notes": "",
-      "where": "A3"
+      "id": "diffusion-spiral",
+      "title": "A diffusion model draws a spiral",
+      "time": "2 hours",
+      "after": "24",
+      "build": "DDPM in NumPy on 500 points of a spiral: first with the exact optimal denoiser of the training set, then with a small MLP that predicts the noise. Then break the sampler twice.",
+      "check": "The exact denoiser only redraws training points (3× closer to them than fresh data); the trained MLP draws new points on the spiral; dropping the sampling noise collapses everything to one spot.",
+      "visual": "Five scatter plots: data, exact denoiser, trained network, no-noise sampler, one-jump sampler.",
+      "status": "written",
+      "notes": ""
     },
     {
       "id": "bandit-casino",
@@ -522,6 +533,17 @@
       "status": "planned",
       "notes": "",
       "where": "A9"
+    },
+    {
+      "id": "tictactoe-mcts",
+      "title": "Monte Carlo tree search plays tic-tac-toe",
+      "time": "2 hours",
+      "after": "40",
+      "build": "Solve tic-tac-toe with minimax (5,478 positions, a draw), then build UCT with random rollouts and grade it against perfect play.",
+      "check": "Draws against a perfect opponent climb from 13% at 10 simulations per move to 100% at 3,000; with no exploration bonus the search misses the only safe reply to a corner opening.",
+      "visual": "Draw rate against simulations per move, on a log axis.",
+      "status": "written",
+      "notes": ""
     }
   ]
 }

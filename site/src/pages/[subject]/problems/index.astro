@@ -55,11 +55,12 @@ const whereOf = (w?: string) => {
   if (!w) return undefined;
   const [ch, n] = w.split("#");
   const c = chapters.find((x) => x.chapter === ch);
-  return c && { href: chapterUrl(c.id) + (n ? `#p-${n}` : ""), label: n ? `${ch} · problem ${n}` : `${ch} · ${c.title}` };
+  return c && { href: chapterUrl(c.id) + (n ? `#p-${n}` : ""), label: n ? `${ch} · problem ${n}` : `assignment ${ch}` };
 };
 const hard = (book?.hard ?? []).map((p) => ({ ...p, ch: chapterOf(p.unlocks), page: isWritten(p.status), at: whereOf(p.where) }));
 const builds = (book?.assignments ?? []).map((a) => ({ ...a, ch: chapterOf(a.after), page: isWritten(a.status), at: whereOf(a.where) }));
 const ready = hard.filter((p) => p.page || p.at).length;
+const evenings = builds.filter((a) => a.page).length;
 ---
 <Base title={`Problem book · ${title}`} subject={{ slug: subject, title }} crumb="Problem book" description={book?.intro ?? "Every problem set in one place: key problems, difficulty filters and your progress."}>
   {sets.length > 0 && <Fragment slot="head"><link rel="stylesheet" href={u(`/subjects/${subject}/assets/ml.css`)} /></Fragment>}
@@ -70,7 +71,7 @@ const ready = hard.filter((p) => p.page || p.at).length;
           <div class="pb-cover-text">
             <p class="kicker">{title} · Practice</p>
             <h1>The problem book</h1>
-            <p class="lede">{all.length} problems in {sets.length} sets, every one with a worked solution{book && <>, plus {hard.length} named classics, {builds.length} one-evening assignments and {book.books.length} key books</>}. Read a stage, then come here and test it. Mark what you solve, flag what you want to revisit, and the book keeps count in this browser.</p>
+            <p class="lede">{all.length} problems in {sets.length} sets, every one with a worked solution{book && <>, plus {hard.length} named classics, {evenings} one-evening assignments and {book.books.length} key books</>}. Read a stage, then come here and test it. Mark what you solve, flag what you want to revisit, and the book keeps count in this browser.</p>
             <div class="pb-progress" data-total={all.length}>
               <div class="pb-bar"><span class="solved"></span><span class="revisit"></span></div>
               <span class="mono" data-progress-text>Nothing marked yet</span>
@@ -107,8 +108,8 @@ const ready = hard.filter((p) => p.page || p.at).length;
               </a>
             )}
           </div>
-          {(assignments.length + builds.length) > 0 && (
-            <p class="pb-more">Want to build something instead? {builds.length > 0 && <>Try the <a href="#assignments">{builds.length} one-evening assignments</a>{assignments.length > 0 ? ", or the " : "."}</>}{assignments.length > 0 && <><a href={chapterUrl(assignments[0].id)}>{assignments.length} autograded assignments</a> (an afternoon each).</>}</p>
+          {(assignments.length + evenings) > 0 && (
+            <p class="pb-more">Want to build something instead? {evenings > 0 && <>Try the <a href="#assignments">{evenings} one-evening assignments</a>{assignments.length > 0 ? ", or the " : "."}</>}{assignments.length > 0 && <><a href={chapterUrl(assignments[0].id)}>{assignments.length} autograded assignments</a> (an afternoon each).</>}</p>
           )}
         </section>
 

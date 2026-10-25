@@ -137,7 +137,7 @@
 .ml .pb-stats dd { margin: 0; font: 600 30px/1 var(--f-display); font-variant-numeric: tabular-nums; }
 .ml .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .ml .pb-paths { display: grid; gap: 18px; }
-.ml .pb-path-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ml .pb-path-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
 .ml .pb-path { display: grid; gap: 6px; align-content: start; text-align: left; padding: 18px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--card); color: var(--ink); text-decoration: none; font-size: 15px; line-height: 1.45; transition: transform .15s, border-color .15s; }
 .ml .pb-path:hover { border-color: var(--accent); transform: translateY(-2px); color: var(--ink); }
@@ -184,7 +184,7 @@
 .ml .pb-num:hover { border-color: var(--accent); color: var(--accent); }
 .ml .pb-body { display: grid; gap: 6px; min-width: 0; }
 .ml .pb-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.ml .pb-section { font: 12px var(--f-mono); color: var(--muted); margin-left: 4px; }
+.ml .pb-where { font: 12px var(--f-mono); color: var(--muted); margin-left: 4px; }
 .ml .pb-stmt { font-size: 15.5px; line-height: 1.55; overflow-wrap: anywhere; }
 .ml .pb-stmt .katex-display { margin: 0.3em 0; overflow-x: auto; overflow-y: hidden; }
 .ml .pb-open { font-size: 13.5px; justify-self: start; }
@@ -211,3 +211,6 @@
   .ml .pb-body { grid-column: 1 / -1; grid-row: 2; }
   .ml .pb-marks { flex-direction: row; grid-column: 2; grid-row: 1; }
 }
+
+/* Problem-book shelves inside the ML page grid: the grid gap already spaces them. */
+.ml.pb .pb-section { margin: 0; }

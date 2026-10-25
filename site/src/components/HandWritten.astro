@@ -3,6 +3,7 @@
 import { u } from "../subjects";
 interface Props { subject: string; }
 const { subject } = Astro.props;
+const book = u(`/${subject}/problems/`);
 ---
 <script is:inline src={u(`/subjects/${subject}/assets/learn.js`)} defer></script>
 <script>
@@ -13,4 +14,47 @@ const { subject } = Astro.props;
     ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
     throwOnError: false,
   });
+</script>
+<script is:inline define:vars={{ book }}>
+  // On a problem set: solved / revisit buttons under each problem, shared with the problem book
+  // through localStorage ("learn-problems": { "<set id>#<n>": "solved" | "revisit" }).
+  (() => {
+    const main = document.querySelector("main[data-entry]");
+    const items = [...document.querySelectorAll(".problems li[data-problem]")];
+    if (!main || !items.length) return;
+    const set = main.dataset.entry, KEY = "learn-problems";
+    let marks = {};
+    try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch {}
+    const meta = document.querySelector(".lesson-head .meta");
+    const tally = document.createElement("span");
+    if (meta) {
+      const s = document.createElement("span");
+      s.innerHTML = `<b>Problem book:</b> <a href="${book}">all sets and your progress</a>`;
+      meta.append(s, tally);
+    }
+    function paint() {
+      let solved = 0;
+      for (const li of items) {
+        const m = marks[`${set}#${li.dataset.problem}`];
+        if (m === "solved") solved++;
+        li.classList.toggle("is-solved", m === "solved");
+        for (const b of li.querySelectorAll(":scope > .pb-marks-inline button")) b.setAttribute("aria-pressed", String(b.dataset.mark === m));
+      }
+      tally.innerHTML = solved ? `<b>Solved here:</b> ${solved} of ${items.length}` : "";
+    }
+    for (const li of items) {
+      const bar = document.createElement("div");
+      bar.className = "pb-marks-inline";
+      bar.innerHTML = `<button type="button" data-mark="solved" aria-pressed="false">✓ Solved</button><button type="button" data-mark="revisit" aria-pressed="false">⚑ Revisit later</button>`;
+      li.append(bar);
+      bar.addEventListener("click", (e) => {
+        const b = e.target.closest("button"); if (!b) return;
+        const id = `${set}#${li.dataset.problem}`;
+        if (marks[id] === b.dataset.mark) delete marks[id]; else marks[id] = b.dataset.mark;
+        try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch {}
+        paint();
+      });
+    }
+    paint();
+  })();
 </script>

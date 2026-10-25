@@ -1,8 +1,8 @@
 <header class="lesson-head">
   <div class="eyebrow">Problem set P3 · Stage 3: trees and ensembles</div>
   <h1>Problem set: stage 3</h1>
-  <p class="lede">Twenty problems on lessons 09–11: how trees choose splits, why averaging and boosting work, and what the knobs do. Try each one on paper before opening its solution. Problems marked <span class="tag">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
-  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/09-decision-trees/">09</a>, <a href="/machine-learning/10-random-forests/">10</a>, <a href="/machine-learning/11-gradient-boosting/">11</a></span><span><b>Difficulty:</b> <span class="tag">warm-up</span> <span class="tag">core</span> <span class="tag">hard</span></span></div>
+  <p class="lede">Twenty problems on lessons 09–11: how trees choose splits, why averaging and boosting work, and what the knobs do. Try each one on paper before opening its solution. Problems marked <span class="tag code">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/09-decision-trees/">09</a>, <a href="/machine-learning/10-random-forests/">10</a>, <a href="/machine-learning/11-gradient-boosting/">11</a></span><span><b>Difficulty:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
 </header>
 
 <article class="lesson problems">
@@ -10,7 +10,7 @@
     <h2>Decision trees</h2>
     <ol>
       <li>
-        <p><span class="tag">warm-up</span> A node holds 30 points of class 1 and 10 of class 0. Split A sends (20, 0) left and (10, 10) right. Split B sends (25, 5) left and (5, 5) right. Compute the decrease in weighted Gini impurity and in weighted misclassification rate for each split. Which split does each criterion prefer?</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> A node holds 30 points of class 1 and 10 of class 0. Split A sends (20, 0) left and (10, 10) right. Split B sends (25, 5) left and (5, 5) right. Compute the decrease in weighted Gini impurity and in weighted misclassification rate for each split. Which split does each criterion prefer?</p>
         <details><summary>Solution</summary><div>
           <p>Parent: Gini $2\cdot0.75\cdot0.25 = 0.375$, misclassification $0.25$.</p>
           <p>A: Gini $\frac{20}{40}\cdot0 + \frac{20}{40}\cdot0.5 = 0.25$, decrease $0.125$. Misclassification $\frac{0 + 10}{40} = 0.25$, decrease $0$.</p>
@@ -19,27 +19,27 @@
         </div></details>
       </li>
       <li>
-        <p><span class="tag">warm-up</span> A node has class proportions $p_1, \dots, p_K$. Show that the Gini impurity $1 - \sum_kp_k^2$ is the probability that two labels drawn independently (with replacement) from the node disagree. Show also that it is the expected error rate of a classifier that, instead of predicting the majority class, predicts a random class drawn from $p$.</p>
+        <p><span class="tag warm-up">warm-up</span> A node has class proportions $p_1, \dots, p_K$. Show that the Gini impurity $1 - \sum_kp_k^2$ is the probability that two labels drawn independently (with replacement) from the node disagree. Show also that it is the expected error rate of a classifier that, instead of predicting the majority class, predicts a random class drawn from $p$.</p>
         <details><summary>Solution</summary><div>
           <p>The two draws agree with probability $\sum_kp_k\cdot p_k$, so they disagree with probability $1 - \sum_kp_k^2$. For the random classifier: the true label is $k$ with probability $p_k$, and the prediction is wrong with probability $1 - p_k$, so the error is $\sum_kp_k(1 - p_k) = 1 - \sum_kp_k^2$. The same number answers both questions.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A node holds $n$ points with $d$ features. Show that the best split over all features and thresholds can be found in $O(dn\log n)$ time for both Gini and squared error. Which running sums do you need? If every level of a depth-$D$ tree splits the data into disjoint nodes, what is the cost of growing the whole tree?</p>
+        <p><span class="tag core">core</span> A node holds $n$ points with $d$ features. Show that the best split over all features and thresholds can be found in $O(dn\log n)$ time for both Gini and squared error. Which running sums do you need? If every level of a depth-$D$ tree splits the data into disjoint nodes, what is the cost of growing the whole tree?</p>
         <details><summary>Solution</summary><div>
           <p>For each feature, sort the points ($O(n\log n)$). Every candidate threshold lies between consecutive sorted values, and moving it one step moves one point from right to left. Keep prefix sums: class counts for Gini, and $\sum y$ and $\sum y^2$ (or just $\sum y$, using $\Delta = \frac{n_Ln_R}{n}(\bar y_L - \bar y_R)^2$) for squared error. Each threshold's impurity then costs $O(1)$, so a feature costs $O(n\log n)$ and a node $O(dn\log n)$.</p>
           <p>The nodes at one level partition the $n$ points, so each level costs at most $O(dn\log n)$ and the tree costs $O(Ddn\log n)$. Sorting each feature once at the root and keeping the order when splitting removes the $\log n$ from the lower levels.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Inputs are uniform on $[0, 1]^2$ and the label is $y = [x_2 &gt; x_1]$, with no noise. An axis-aligned tree approximates the diagonal boundary with a staircase: it cuts $[0, 1]$ into $k$ columns of width $1/k$ and makes one horizontal cut in each. Show that the best such staircase has error rate $1/(4k)$, so reaching error $\varepsilon$ needs about $1/(2\varepsilon)$ leaves. What single new feature would make the problem need one split?</p>
+        <p><span class="tag core">core</span> Inputs are uniform on $[0, 1]^2$ and the label is $y = [x_2 &gt; x_1]$, with no noise. An axis-aligned tree approximates the diagonal boundary with a staircase: it cuts $[0, 1]$ into $k$ columns of width $1/k$ and makes one horizontal cut in each. Show that the best such staircase has error rate $1/(4k)$, so reaching error $\varepsilon$ needs about $1/(2\varepsilon)$ leaves. What single new feature would make the problem need one split?</p>
         <details><summary>Solution</summary><div>
           <p>In the column $[a, a + 1/k]$ the boundary is the line $x_2 = x_1$. A cut at height $a + t$ misclassifies the region between the line and the cut, of area $\int_a^{a+1/k}|x_1 - a - t|\,dx_1 = \frac{t^2}{2} + \frac{(1/k - t)^2}{2}$. This is smallest at $t = \frac{1}{2k}$, where it equals $\frac{1}{4k^2}$. Over $k$ columns the error is $\frac{1}{4k}$, using $2k$ leaves ($k - 1$ vertical splits and one horizontal split per column). Error $\varepsilon$ needs $k = \frac{1}{4\varepsilon}$, so about $\frac{1}{2\varepsilon}$ leaves: halving the error doubles the tree.</p>
           <p>With the feature $x_2 - x_1$, one split at 0 is exact. Trees are poor at boundaries that are not aligned with the axes, which is one reason feature engineering (and rotations, as in oblique trees) helps them.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A categorical feature takes four values. Class-1 counts are: a 8 of 10, b 2 of 10, c 6 of 10, d 1 of 10. How many ways are there to split the four values into two non-empty groups? A classical result (Breiman et al., 1984) says that for two classes the best Gini split is one of the $K - 1$ splits of the values sorted by their class-1 proportion. Use it to find the best split, and check its Gini against the other two candidates.</p>
+        <p><span class="tag core">core</span> A categorical feature takes four values. Class-1 counts are: a 8 of 10, b 2 of 10, c 6 of 10, d 1 of 10. How many ways are there to split the four values into two non-empty groups? A classical result (Breiman et al., 1984) says that for two classes the best Gini split is one of the $K - 1$ splits of the values sorted by their class-1 proportion. Use it to find the best split, and check its Gini against the other two candidates.</p>
         <details><summary>Solution</summary><div>
           <p>$2^{K-1} - 1 = 7$ splits. Sorted by proportion: d (0.1), b (0.2), c (0.6), a (0.8). The candidates:</p>
           <p>{d} | {b, c, a}: $\frac{10}{40}\cdot0.18 + \frac{30}{40}\cdot2\cdot\frac{16}{30}\cdot\frac{14}{30} = 0.045 + 0.373 = 0.418$.</p>
@@ -49,7 +49,7 @@
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> Cost-complexity pruning minimises $R_\alpha(T) = R(T) + \alpha|T|$, where $R(T)$ is the total training error and $|T|$ the number of leaves. For an internal node $t$ with subtree $T_t$, show that collapsing $t$ into a leaf lowers $R_\alpha$ exactly when $\alpha &gt; g(t) = \frac{R(t) - R(T_t)}{|T_t| - 1}$. A tree has two internal nodes: $t_1$ with $R(t_1) = 10$, $R(T_{t_1}) = 4$ and 3 leaves; and $t_2$ (inside $T_{t_1}$) with $R(t_2) = 6$, $R(T_{t_2}) = 4$ and 2 leaves. In what order are they pruned as $\alpha$ grows?</p>
+        <p><span class="tag hard">hard</span> Cost-complexity pruning minimises $R_\alpha(T) = R(T) + \alpha|T|$, where $R(T)$ is the total training error and $|T|$ the number of leaves. For an internal node $t$ with subtree $T_t$, show that collapsing $t$ into a leaf lowers $R_\alpha$ exactly when $\alpha &gt; g(t) = \frac{R(t) - R(T_t)}{|T_t| - 1}$. A tree has two internal nodes: $t_1$ with $R(t_1) = 10$, $R(T_{t_1}) = 4$ and 3 leaves; and $t_2$ (inside $T_{t_1}$) with $R(t_2) = 6$, $R(T_{t_2}) = 4$ and 2 leaves. In what order are they pruned as $\alpha$ grows?</p>
         <details><summary>Solution</summary><div>
           <p>Collapsing $t$ changes $R$ by $R(t) - R(T_t)$ and the leaf count by $1 - |T_t|$, so $R_\alpha$ changes by $R(t) - R(T_t) - \alpha(|T_t| - 1)$, which is negative exactly when $\alpha &gt; g(t)$.</p>
           <p>$g(t_1) = 6/2 = 3$ and $g(t_2) = 2/1 = 2$. The weakest link is $t_2$, pruned at $\alpha = 2$. After that, $T_{t_1}$ has 2 leaves with $R = 6$ (its other leaf contributes 0 here, since $R(T_{t_1}) = 4 = R(T_{t_2})$), so $g(t_1) = (10 - 6)/1 = 4$, and $t_1$ goes at $\alpha = 4$. The sequence of subtrees is nested, and cross-validation picks one $\alpha$ from it.</p>
@@ -62,37 +62,37 @@
     <h2>Bagging and random forests</h2>
     <ol start="7">
       <li>
-        <p><span class="tag">warm-up</span> For a bootstrap sample of size $n = 10$, what is the probability that a given point is left out? What is the expected number of distinct points in the sample? What do both tend to as $n\to\infty$?</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> For a bootstrap sample of size $n = 10$, what is the probability that a given point is left out? What is the expected number of distinct points in the sample? What do both tend to as $n\to\infty$?</p>
         <details><summary>Solution</summary><div>
           <p>$(1 - 1/10)^{10} = 0.349$. The expected number of distinct points is $n\big(1 - (1 - 1/n)^n\big) = 6.51$. As $n\to\infty$, $(1 - 1/n)^n\to e^{-1} = 0.368$, so about 63.2% of the points appear in each sample.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> 25 classifiers vote; each is right with probability 0.6, independently of the others. What is the probability the majority is right? Repeat with 0.45. What assumption makes these numbers too optimistic for a real forest?</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> 25 classifiers vote; each is right with probability 0.6, independently of the others. What is the probability the majority is right? Repeat with 0.45. What assumption makes these numbers too optimistic for a real forest?</p>
         <details><summary>Solution</summary><div>
           <p>$P(\text{Bin}(25, 0.6) \ge 13) = 0.846$, and $P(\text{Bin}(25, 0.45)\ge 13) = 0.306$. Voting amplifies whatever side of $\frac12$ the members are on. Trees grown on the same data make correlated mistakes, so the votes are far from independent; that correlation is the floor in $\rho\sigma^2 + (1-\rho)\sigma^2/B$, and it is what random feature subsets attack.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> $B$ random variables have equal variance $\sigma^2$ and equal pairwise correlation $\rho$. Show that $\rho \ge -1/(B - 1)$. What does this say about how much negative correlation a large ensemble can have, and so about the variance floor?</p>
+        <p><span class="tag core">core</span> $B$ random variables have equal variance $\sigma^2$ and equal pairwise correlation $\rho$. Show that $\rho \ge -1/(B - 1)$. What does this say about how much negative correlation a large ensemble can have, and so about the variance floor?</p>
         <details><summary>Solution</summary><div>
           <p>The variance of the average is $\rho\sigma^2 + (1 - \rho)\sigma^2/B \ge 0$. Multiply by $B/\sigma^2$: $B\rho + 1 - \rho\ge 0$, so $\rho\ge -1/(B - 1)$. For a large ensemble the common correlation can't be meaningfully negative, so the floor $\rho\sigma^2$ is essentially nonnegative: averaging alone can never remove all the variance unless the models are uncorrelated. The way down is to make $\rho$ small, not negative.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> In lesson 10's code, the OOB accuracies (0.768, 0.786) are slightly below the test accuracies with 100 trees (0.785, 0.800). Give a reason the OOB estimate should be slightly pessimistic, using the accuracy-against-trees curve in that lesson's figure.</p>
+        <p><span class="tag core">core</span> In lesson 10's code, the OOB accuracies (0.768, 0.786) are slightly below the test accuracies with 100 trees (0.785, 0.800). Give a reason the OOB estimate should be slightly pessimistic, using the accuracy-against-trees curve in that lesson's figure.</p>
         <details><summary>Solution</summary><div>
           <p>Each point's OOB prediction is a vote of only the trees that left it out, about $0.368\times100\approx37$ of them. So the OOB accuracy estimates the accuracy of a forest of about 37 trees, not 100, and the curve is still rising slightly between 37 and 100 trees. With many trees the gap disappears. (The test set is also a different random sample, so part of the gap is noise.)</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> You add a column of row IDs (all distinct numbers, unrelated to the label) to a dataset and grow a random forest of deep trees. Explain why the ID can get a large impurity-based importance. Would its permutation importance on held-out data be large?</p>
+        <p><span class="tag core">core</span> You add a column of row IDs (all distinct numbers, unrelated to the label) to a dataset and grow a random forest of deep trees. Explain why the ID can get a large impurity-based importance. Would its permutation importance on held-out data be large?</p>
         <details><summary>Solution</summary><div>
           <p>A feature with $n$ distinct values offers $n - 1$ thresholds, so deep in a tree, where nodes are small and noisy, it can almost always find a split that separates a few points and reduces training impurity. Impurity importance sums those decreases on the training data, so it rewards the ID for memorising noise. On held-out data the ID carries no information: shuffling it changes nothing on average, so its permutation importance is near 0. Impurity importance is biased toward high-cardinality features; permutation importance on held-out data is not.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Using <a href="/machine-learning/10-random-forests/">lesson 10's code</a>, grow forests of 100 trees with $m = 1, 2, 3, 5, 10$ features per split and report the test accuracy of each. Explain the shape of the curve.</p>
+        <p><span class="tag code">code</span> Using <a href="/machine-learning/10-random-forests/">lesson 10's code</a>, grow forests of 100 trees with $m = 1, 2, 3, 5, 10$ features per split and report the test accuracy of each. Explain the shape of the curve.</p>
         <details><summary>Solution</summary><div>
           <p>With the lesson's seeds: 0.760, 0.794, 0.801, 0.802, 0.785. With $m = 1$ a split often has to use one of the six useless features, so each tree is much weaker (its bias rises). With $m = 10$ (bagging) trees are strong but correlated. In between, $m\approx\sqrt{d}$ to $d/2$, the two effects balance. The curve is flat near its top, which is why $m$ rarely needs careful tuning.</p>
         </div></details>
@@ -104,13 +104,13 @@
     <h2>Boosting</h2>
     <ol start="13">
       <li>
-        <p><span class="tag">warm-up</span> Write the gradient $g = \partial\ell/\partial F$ and second derivative $h = \partial^2\ell/\partial F^2$ for: the squared loss $\frac12(y - F)^2$; the absolute loss $|y - F|$; and the exponential loss $e^{-yF}$ with $y\in\{-1, 1\}$.</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> Write the gradient $g = \partial\ell/\partial F$ and second derivative $h = \partial^2\ell/\partial F^2$ for: the squared loss $\frac12(y - F)^2$; the absolute loss $|y - F|$; and the exponential loss $e^{-yF}$ with $y\in\{-1, 1\}$.</p>
         <details><summary>Solution</summary><div>
           <p>Squared: $g = F - y$, $h = 1$. Absolute: $g = -\operatorname{sign}(y - F)$, $h = 0$ (away from $F = y$, where it doesn't exist). Exponential: $g = -ye^{-yF}$, $h = y^2e^{-yF} = e^{-yF}$. For the exponential loss, $h$ is the weight AdaBoost puts on a point: misclassified points ($yF &lt; 0$) get exponentially more.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A node holds four points, sorted by a feature, with $g = (-0.4, -0.3, 0.2, 0.5)$ and $h = (0.24, 0.21, 0.16, 0.25)$, and $\lambda = 1$, $\gamma = 0$. Compute the gain of each of the three splits, and the leaf values $w^*$ of the best one.</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> A node holds four points, sorted by a feature, with $g = (-0.4, -0.3, 0.2, 0.5)$ and $h = (0.24, 0.21, 0.16, 0.25)$, and $\lambda = 1$, $\gamma = 0$. Compute the gain of each of the three splits, and the leaf values $w^*$ of the best one.</p>
         <details><summary>Solution</summary><div>
           <p>$G = 0$, $H = 0.86$, so the parent term $G^2/(H + \lambda)$ is 0 and the gain is $\frac12\big(G_L^2/(H_L + 1) + G_R^2/(H_R + 1)\big)$.</p>
           <p>After point 1: $G_L = -0.4$, $H_L = 0.24$, $G_R = 0.4$, $H_R = 0.62$: gain $0.114$.</p>
@@ -120,39 +120,39 @@
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> For the absolute loss, $h = 0$, so the Newton leaf value $-G/(H + \lambda)$ becomes $-G/\lambda$, which depends on the arbitrary $\lambda$. Friedman's fix: fit the tree's structure to the negative gradients $\operatorname{sign}(y_i - F_i)$, then set each leaf to the value that minimises the actual loss over the points in it. Show that this value is the median of the residuals $y_i - F_i$ in the leaf.</p>
+        <p><span class="tag core">core</span> For the absolute loss, $h = 0$, so the Newton leaf value $-G/(H + \lambda)$ becomes $-G/\lambda$, which depends on the arbitrary $\lambda$. Friedman's fix: fit the tree's structure to the negative gradients $\operatorname{sign}(y_i - F_i)$, then set each leaf to the value that minimises the actual loss over the points in it. Show that this value is the median of the residuals $y_i - F_i$ in the leaf.</p>
         <details><summary>Solution</summary><div>
           <p>The leaf adds $w$ to each of its points, so it minimises $\phi(w) = \sum_i|r_i - w|$ with $r_i = y_i - F_i$. $\phi$ is convex and piecewise linear, with slope $\#\{r_i &lt; w\} - \#\{r_i &gt; w\}$. The slope changes sign where half the residuals lie on each side: at the median. This "line search per leaf" is how gradient boosting handles any loss whose Newton step is useless; a single outlier moves a median far less than a mean, which is why this loss is robust.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> For $K$ classes, the model keeps $K$ scores $F_1, \dots, F_K$, with $p = \operatorname{softmax}(F)$ and loss $-\log p_y$. Show that $g_k = p_k - [y = k]$ and $\partial^2\ell/\partial F_k^2 = p_k(1 - p_k)$. Why do multiclass boosting libraries grow $K$ trees per round?</p>
+        <p><span class="tag core">core</span> For $K$ classes, the model keeps $K$ scores $F_1, \dots, F_K$, with $p = \operatorname{softmax}(F)$ and loss $-\log p_y$. Show that $g_k = p_k - [y = k]$ and $\partial^2\ell/\partial F_k^2 = p_k(1 - p_k)$. Why do multiclass boosting libraries grow $K$ trees per round?</p>
         <details><summary>Solution</summary><div>
           <p>$\ell = -F_y + \log\sum_je^{F_j}$, so $\partial\ell/\partial F_k = -[y = k] + p_k$, and differentiating $p_k$ again in $F_k$ gives $p_k(1 - p_k)$ (lesson 06's softmax Jacobian, diagonal entry). Each score $F_k$ is a separate function of $\mathbf{x}$ with its own gradients, so each gets its own tree, fitted with the second-order formulas using the diagonal Hessian (the off-diagonal terms $-p_jp_k$ are ignored).</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> <b>Boosting as regularisation.</b> Use squared loss, start from $F_0 = 0$, and let the weak learner be any fixed linear smoother: fitting residuals $\mathbf{r}$ returns $S\mathbf{r}$. Each round sets $F_{m+1} = F_m + \nu S(\mathbf{y} - F_m)$. Show that $F_M = \big(I - (I - \nu S)^M\big)\mathbf{y}$. If $S$ is symmetric with eigenvalues $s_j\in[0, 1]$, how much of each eigen-direction of $\mathbf{y}$ is fitted after $M$ rounds? Compare with ridge's shrinkage factors $d_j^2/(d_j^2 + \lambda)$ from lesson 05.</p>
+        <p><span class="tag hard">hard</span> <b>Boosting as regularisation.</b> Use squared loss, start from $F_0 = 0$, and let the weak learner be any fixed linear smoother: fitting residuals $\mathbf{r}$ returns $S\mathbf{r}$. Each round sets $F_{m+1} = F_m + \nu S(\mathbf{y} - F_m)$. Show that $F_M = \big(I - (I - \nu S)^M\big)\mathbf{y}$. If $S$ is symmetric with eigenvalues $s_j\in[0, 1]$, how much of each eigen-direction of $\mathbf{y}$ is fitted after $M$ rounds? Compare with ridge's shrinkage factors $d_j^2/(d_j^2 + \lambda)$ from lesson 05.</p>
         <details><summary>Solution</summary><div>
           <p>The residual obeys $\mathbf{y} - F_{m+1} = (I - \nu S)(\mathbf{y} - F_m)$, so $\mathbf{y} - F_M = (I - \nu S)^M\mathbf{y}$, which rearranges to the claim.</p>
           <p>In the eigenbasis of $S$, direction $j$ is multiplied by $1 - (1 - \nu s_j)^M$. Directions with large $s_j$ are fitted within a few rounds; directions with small $s_j$ (the wiggly, noisy ones) are fitted only slowly, about $M\nu s_j$ at first, and fully only as $M\to\infty$. So the number of rounds plays the role of $1/\lambda$: like ridge, boosting keeps strong directions and shrinks weak ones, and stopping early is the regulariser. Small $\nu$ makes the shrinkage change smoothly with $M$, so the stopping point matters less, which matches lesson 11's figure.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> XGBoost grows each tree to its maximum depth and then prunes splits whose gain is below $\gamma$, from the bottom up, rather than stopping as soon as a split's gain is small. Using the XOR example from lesson 09's exercises, explain why.</p>
+        <p><span class="tag core">core</span> XGBoost grows each tree to its maximum depth and then prunes splits whose gain is below $\gamma$, from the bottom up, rather than stopping as soon as a split's gain is small. Using the XOR example from lesson 09's exercises, explain why.</p>
         <details><summary>Solution</summary><div>
           <p>On XOR the first split of either feature has zero gain, because each child still has the same mix of classes. But the second-level splits separate the classes perfectly and have large gain. A rule that stops at the first small gain never finds them. Growing first and then pruning bottom-up keeps a weak split if it enables strong ones below it: a node is pruned only when it and everything under it is not worth $\gamma$ per leaf.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Using <a href="/machine-learning/11-gradient-boosting/">lesson 11's code</a>, train 400 rounds with $\nu = 0.1$ and tree depths 1, 2, 3 and 6. Report the final test log-loss and the best one over the rounds (with the round it occurs). Explain the depth-1 result using the problem's label function.</p>
+        <p><span class="tag code">code</span> Using <a href="/machine-learning/11-gradient-boosting/">lesson 11's code</a>, train 400 rounds with $\nu = 0.1$ and tree depths 1, 2, 3 and 6. Report the final test log-loss and the best one over the rounds (with the round it occurs). Explain the depth-1 result using the problem's label function.</p>
         <details><summary>Solution</summary><div>
           <p>Final (best, round): depth 1: 0.505 (0.501, 237); depth 2: 0.443 (0.439, 297); depth 3: 0.427 (0.421, 333); depth 6: 0.513 (0.440, 47).</p>
           <p>The label depends on $x_1^2 + x_2^2 + x_3x_4$ (in the code's 0-based indexing, columns 0 to 3). Stumps build a sum of functions of single features, which can represent the squares but not the product $x_3x_4$, so depth 1 is stuck with high bias however long it runs. Depth 2 can represent pairwise interactions. Depth 6 trees are so flexible that the model overfits after about 50 rounds. Depth controls the order of interactions, and is the most important tree parameter in boosting.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> <b>Stochastic gradient boosting.</b> Modify lesson 11's code so each round fits its tree on a random half of the training rows: keep each row with probability ½, drawn afresh each round with <code>np.random.default_rng(0)</code>, computing the gradients on all rows and passing only the kept ones to <code>build</code>. With depth 3, $\nu = 0.1$ and 400 rounds, what are the final and best test log-loss? Why might subsampling help this much?</p>
+        <p><span class="tag code">code</span> <b>Stochastic gradient boosting.</b> Modify lesson 11's code so each round fits its tree on a random half of the training rows: keep each row with probability ½, drawn afresh each round with <code>np.random.default_rng(0)</code>, computing the gradients on all rows and passing only the kept ones to <code>build</code>. With depth 3, $\nu = 0.1$ and 400 rounds, what are the final and best test log-loss? Why might subsampling help this much?</p>
         <details><summary>Solution</summary><div>
           <p>Final 0.387, best 0.363 at round 196, test accuracy 0.828; compare 0.427, 0.421 and 0.815 without subsampling. Each tree sees a different half of the data, so successive trees are less correlated and individual noisy points are fitted less often: the same decorrelation idea as the random forest, applied to boosting. It also halves the cost of each round. Your exact numbers will differ with the random draws, but the improvement should be clear.</p>
         </div></details>

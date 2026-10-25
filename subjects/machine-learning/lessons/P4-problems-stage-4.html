@@ -1,8 +1,8 @@
 <header class="lesson-head">
   <div class="eyebrow">Problem set P4 · Stage 4: neural networks</div>
   <h1>Problem set: stage 4</h1>
-  <p class="lede">Nineteen problems on lessons 12–14: what networks can represent, how gradients flow through them, and how to keep training stable. Try each one on paper before opening its solution. Problems marked <span class="tag">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
-  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/12-neurons-and-mlps/">12</a>, <a href="/machine-learning/13-backpropagation/">13</a>, <a href="/machine-learning/14-training-deep-networks/">14</a></span><span><b>Difficulty:</b> <span class="tag">warm-up</span> <span class="tag">core</span> <span class="tag">hard</span></span></div>
+  <p class="lede">Nineteen problems on lessons 12–14: what networks can represent, how gradients flow through them, and how to keep training stable. Try each one on paper before opening its solution. Problems marked <span class="tag code">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/12-neurons-and-mlps/">12</a>, <a href="/machine-learning/13-backpropagation/">13</a>, <a href="/machine-learning/14-training-deep-networks/">14</a></span><span><b>Difficulty:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
 </header>
 
 <article class="lesson problems">
@@ -10,31 +10,31 @@
     <h2>What networks can represent</h2>
     <ol>
       <li>
-        <p><span class="tag">warm-up</span> A network for $32\times32$ colour images maps $3072\to1024\to512\to10$. How many parameters does it have? About how many multiply-adds does one forward pass cost per image?</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> A network for $32\times32$ colour images maps $3072\to1024\to512\to10$. How many parameters does it have? About how many multiply-adds does one forward pass cost per image?</p>
         <details><summary>Solution</summary><div>
           <p>$1024\cdot3073 + 512\cdot1025 + 10\cdot513 = 3{,}146{,}752 + 524{,}800 + 5{,}130 = 3{,}676{,}682$. Each weight is used in exactly one multiply-add per example, so a forward pass costs about 3.7 million multiply-adds (the biases add only additions). This "one multiply-add per weight per example" rule holds for every fully connected network.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A one-hidden-layer ReLU network on $\mathbb{R}^2$ has $m$ hidden units. Each unit is linear on either side of a line. Show that the plane is cut into at most $1 + m + \binom m2$ regions on which the network is affine. How many for $m = 8$? Compare with the $m + 1$ pieces in one dimension.</p>
+        <p><span class="tag core">core</span> A one-hidden-layer ReLU network on $\mathbb{R}^2$ has $m$ hidden units. Each unit is linear on either side of a line. Show that the plane is cut into at most $1 + m + \binom m2$ regions on which the network is affine. How many for $m = 8$? Compare with the $m + 1$ pieces in one dimension.</p>
         <details><summary>Solution</summary><div>
           <p>Add the lines one at a time. The $k$-th line crosses the previous $k - 1$ lines in at most $k - 1$ points, which cut it into at most $k$ pieces, and each piece splits one existing region in two. So the count grows by at most $k$: $1 + \sum_{k=1}^m k = 1 + m + \binom m2$. For $m = 8$, 37 regions. In $d$ dimensions the bound is $\sum_{i=0}^{d}\binom mi$, which grows like $m^d$: width buys polynomially many regions, while depth (lesson 12's sawtooth) can buy exponentially many.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Show that $\operatorname{hat}(x) = \operatorname{ReLU}(x) - 2\operatorname{ReLU}(x - 1) + \operatorname{ReLU}(x - 2)$ is the "tent" that rises from 0 at $x = 0$ to 1 at $x = 1$ and falls back to 0 at $x = 2$, and is 0 outside $[0, 2]$. Use it to give a second proof of the one-dimensional universal approximation theorem.</p>
+        <p><span class="tag core">core</span> Show that $\operatorname{hat}(x) = \operatorname{ReLU}(x) - 2\operatorname{ReLU}(x - 1) + \operatorname{ReLU}(x - 2)$ is the "tent" that rises from 0 at $x = 0$ to 1 at $x = 1$ and falls back to 0 at $x = 2$, and is 0 outside $[0, 2]$. Use it to give a second proof of the one-dimensional universal approximation theorem.</p>
         <details><summary>Solution</summary><div>
           <p>For $x \le 0$ all three terms are 0. On $[0, 1]$: $x$. On $[1, 2]$: $x - 2(x - 1) = 2 - x$. For $x \ge 2$: $x - 2(x - 1) + (x - 2) = 0$. With knots $x_k = a + k\delta$, the function $\sum_kf(x_k)\operatorname{hat}\big((x - x_k)/\delta + 1\big)$ equals $f$ at every knot and is linear in between: it is the piecewise-linear interpolant, which lesson 12 showed is within $\varepsilon$ of $f$ once $\delta$ is small enough. Each tent uses 3 ReLUs, so this proof is less economical (about $3m$ units against $m$) but makes the "sum of local bumps" picture explicit, and it generalises to higher dimensions with bumps built from more units.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> <b>Rescaling symmetry and weight decay.</b> In a one-hidden-layer ReLU network, multiply unit $j$'s incoming weights $\mathbf{w}_j$ (and bias) by $a &gt; 0$ and its outgoing weight $v_j$ by $1/a$. Show that the function is unchanged. Weight decay adds $\lambda\big(\lVert\mathbf{w}_j\rVert^2 + v_j^2\big)$ for each unit. Show that at a minimum of the penalised loss, $\lVert\mathbf{w}_j\rVert = |v_j|$, and that the penalty then equals $2\lambda\sum_j\lVert\mathbf{w}_j\rVert\,|v_j|$. What does that suggest about how many units a weight-decayed network uses?</p>
+        <p><span class="tag hard">hard</span> <b>Rescaling symmetry and weight decay.</b> In a one-hidden-layer ReLU network, multiply unit $j$'s incoming weights $\mathbf{w}_j$ (and bias) by $a &gt; 0$ and its outgoing weight $v_j$ by $1/a$. Show that the function is unchanged. Weight decay adds $\lambda\big(\lVert\mathbf{w}_j\rVert^2 + v_j^2\big)$ for each unit. Show that at a minimum of the penalised loss, $\lVert\mathbf{w}_j\rVert = |v_j|$, and that the penalty then equals $2\lambda\sum_j\lVert\mathbf{w}_j\rVert\,|v_j|$. What does that suggest about how many units a weight-decayed network uses?</p>
         <details><summary>Solution</summary><div>
           <p>$\operatorname{ReLU}(a z) = a\operatorname{ReLU}(z)$ for $a &gt; 0$, so $\frac1av_j\operatorname{ReLU}(a\mathbf{w}_j^\top\mathbf{x} + ab_j) = v_j\operatorname{ReLU}(\mathbf{w}_j^\top\mathbf{x} + b_j)$. The data term doesn't depend on $a$, so at a minimum $a$ must minimise $a^2\lVert\mathbf{w}_j\rVert^2 + v_j^2/a^2$. By AM–GM this is at least $2\lVert\mathbf{w}_j\rVert|v_j|$, with equality when $a^2\lVert\mathbf{w}_j\rVert^2 = v_j^2/a^2$, i.e. when the rescaled norms are equal. So the effective penalty is $2\lambda\sum_j\lVert\mathbf{w}_j\rVert|v_j|$, a sum of norms per unit, like the group lasso. Like the lasso (lesson 05), it tends to switch whole units off: weight decay on a wide network prefers to use few units.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Using <a href="/machine-learning/12-neurons-and-mlps/">lesson 12's code</a>, train one-hidden-layer networks of widths 4, 16 and 32 on the spirals. Report training and test accuracy, and place them alongside the lesson's results for widths 2, 8 and 64.</p>
+        <p><span class="tag code">code</span> Using <a href="/machine-learning/12-neurons-and-mlps/">lesson 12's code</a>, train one-hidden-layer networks of widths 4, 16 and 32 on the spirals. Report training and test accuracy, and place them alongside the lesson's results for widths 2, 8 and 64.</p>
         <details><summary>Solution</summary><div>
           <p>With the lesson's seeds (train / test): width 4: 0.790 / 0.728; width 16: 0.963 / 0.926; width 32: 0.990 / 0.949. Together with the lesson's widths 2 (0.693 / 0.646), 8 (0.858 / 0.810) and 64 (0.995 / 0.948), test accuracy climbs steeply up to about 32 units and then flattens, while training accuracy keeps creeping toward 1. Past that point extra width buys memorisation of the 400 training points, not a better boundary.</p>
         </div></details>
@@ -46,43 +46,43 @@
     <h2>Backpropagation</h2>
     <ol start="6">
       <li>
-        <p><span class="tag">warm-up</span> A tiny network computes $h = \tanh(w_1x)$, $F = w_2h$, with log-loss $\ell = \log(1 + e^F) - yF$. At $x = 1$, $w_1 = 0.5$, $w_2 = -1$, $y = 1$, run the forward pass and backpropagate by hand to get $\partial\ell/\partial w_1$ and $\partial\ell/\partial w_2$.</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> A tiny network computes $h = \tanh(w_1x)$, $F = w_2h$, with log-loss $\ell = \log(1 + e^F) - yF$. At $x = 1$, $w_1 = 0.5$, $w_2 = -1$, $y = 1$, run the forward pass and backpropagate by hand to get $\partial\ell/\partial w_1$ and $\partial\ell/\partial w_2$.</p>
         <details><summary>Solution</summary><div>
           <p>Forward: $h = \tanh 0.5 = 0.4621$, $F = -0.4621$, $p = \sigma(F) = 0.3865$, $\ell = 0.9507$. Backward: $\bar F = p - y = -0.6135$; $\bar w_2 = \bar Fh = -0.2835$; $\bar h = \bar Fw_2 = 0.6135$; through tanh, $\bar z = \bar h(1 - h^2) = 0.4825$; $\bar w_1 = \bar zx = 0.4825$. Both updates push $F$ up, toward the label $y = 1$: $w_2$ increases (it multiplies a positive $h$), and $w_1$ decreases, which makes $h$ smaller and so $F = -h$ larger.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> For $\mathbf{p} = \operatorname{softmax}(\mathbf{z})$, show that the vector–Jacobian product is $\bar{\mathbf{z}} = \mathbf{p}\odot\big(\bar{\mathbf{p}} - (\bar{\mathbf{p}}^\top\mathbf{p})\mathbf{1}\big)$. Then show that combining it with $\ell = -\log p_y$ gives $\bar{\mathbf{z}} = \mathbf{p} - \mathbf{e}_y$. Why do frameworks fuse softmax and cross-entropy into one operation?</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> For $\mathbf{p} = \operatorname{softmax}(\mathbf{z})$, show that the vector–Jacobian product is $\bar{\mathbf{z}} = \mathbf{p}\odot\big(\bar{\mathbf{p}} - (\bar{\mathbf{p}}^\top\mathbf{p})\mathbf{1}\big)$. Then show that combining it with $\ell = -\log p_y$ gives $\bar{\mathbf{z}} = \mathbf{p} - \mathbf{e}_y$. Why do frameworks fuse softmax and cross-entropy into one operation?</p>
         <details><summary>Solution</summary><div>
           <p>$\partial p_i/\partial z_k = p_i(\delta_{ik} - p_k)$, so $\bar z_k = \sum_i\bar p_ip_i(\delta_{ik} - p_k) = p_k\bar p_k - p_k\sum_i\bar p_ip_i$. With $\ell = -\log p_y$, $\bar{\mathbf{p}} = -\mathbf{e}_y/p_y$ and $\bar{\mathbf{p}}^\top\mathbf{p} = -1$, so $\bar z_k = p_k(-[k = y]/p_y + 1) = p_k - [k = y]$. Separately, $\bar{\mathbf{p}}$ involves $1/p_y$, which overflows when $p_y$ underflows to 0; the fused form $\mathbf{p} - \mathbf{e}_y$ never does, and its forward pass can use log-sum-exp.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Derive the backward rule for $\mathbf{y} = \mathbf{x}/\lVert\mathbf{x}\rVert$ (used in contrastive losses, lesson 21). Show that $\bar{\mathbf{x}}$ is orthogonal to $\mathbf{y}$, and explain why that is expected.</p>
+        <p><span class="tag core">core</span> Derive the backward rule for $\mathbf{y} = \mathbf{x}/\lVert\mathbf{x}\rVert$ (used in contrastive losses, lesson 21). Show that $\bar{\mathbf{x}}$ is orthogonal to $\mathbf{y}$, and explain why that is expected.</p>
         <details><summary>Solution</summary><div>
           <p>$\partial y_i/\partial x_j = \delta_{ij}/r - x_ix_j/r^3$ with $r = \lVert\mathbf{x}\rVert$, i.e. $J = (I - \mathbf{y}\mathbf{y}^\top)/r$, which is symmetric. So $\bar{\mathbf{x}} = J^\top\bar{\mathbf{y}} = (\bar{\mathbf{y}} - \mathbf{y}(\mathbf{y}^\top\bar{\mathbf{y}}))/r$, and $\mathbf{y}^\top\bar{\mathbf{x}} = (\mathbf{y}^\top\bar{\mathbf{y}} - \mathbf{y}^\top\bar{\mathbf{y}})/r = 0$. Expected because $\mathbf{y}$ is scale invariant in $\mathbf{x}$: lesson 14's exercise 3.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A linear layer multiplies an $N\times k$ batch by a $k\times m$ weight matrix. Count the multiply-adds of the forward pass and of the backward pass. Why is the first layer of a network a little cheaper to backpropagate through than the others?</p>
+        <p><span class="tag core">core</span> A linear layer multiplies an $N\times k$ batch by a $k\times m$ weight matrix. Count the multiply-adds of the forward pass and of the backward pass. Why is the first layer of a network a little cheaper to backpropagate through than the others?</p>
         <details><summary>Solution</summary><div>
           <p>Forward: $Nkm$. Backward: $\bar X = \bar YW^\top$ costs $Nmk$ and $\bar W = X^\top\bar Y$ costs $kNm$: $2Nkm$, twice the forward pass, for a total of $3\times$ the forward cost per training step. The first layer's input is the data, which needs no gradient, so $\bar X$ is skipped there: only $Nkm$.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> <b>Forward mode with dual numbers.</b> Extend real numbers with a symbol $\varepsilon$ such that $\varepsilon^2 = 0$. Show that $(a + b\varepsilon)(c + d\varepsilon) = ac + (ad + bc)\varepsilon$ and that $f(x + \varepsilon) = f(x) + f'(x)\varepsilon$ for any polynomial $f$. Evaluate $x e^x$ at $x = 2 + \varepsilon$, using $e^{a + b\varepsilon} = e^a(1 + b\varepsilon)$, and read off the derivative.</p>
+        <p><span class="tag core">core</span> <b>Forward mode with dual numbers.</b> Extend real numbers with a symbol $\varepsilon$ such that $\varepsilon^2 = 0$. Show that $(a + b\varepsilon)(c + d\varepsilon) = ac + (ad + bc)\varepsilon$ and that $f(x + \varepsilon) = f(x) + f'(x)\varepsilon$ for any polynomial $f$. Evaluate $x e^x$ at $x = 2 + \varepsilon$, using $e^{a + b\varepsilon} = e^a(1 + b\varepsilon)$, and read off the derivative.</p>
         <details><summary>Solution</summary><div>
           <p>Expand and drop $\varepsilon^2$. For $f(x) = x^n$, $(x + \varepsilon)^n = x^n + nx^{n-1}\varepsilon$ by the binomial theorem with $\varepsilon^2 = 0$; linearity extends it to polynomials. Then $(2 + \varepsilon)e^2(1 + \varepsilon) = e^2(2 + 3\varepsilon)$, so the derivative is $3e^2 = 22.17$, matching $(1 + x)e^x$. Forward mode carries one such derivative alongside each value: one pass per input direction.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> <b>Hessian–vector products.</b> For a scalar $f(\mathbf{x})$ and a fixed vector $\mathbf{v}$, define $g(\mathbf{x}) = \nabla f(\mathbf{x})^\top\mathbf{v}$. Show that $\nabla g(\mathbf{x}) = \nabla^2f(\mathbf{x})\,\mathbf{v}$. Why does this give $H\mathbf{v}$ for about the cost of two gradient evaluations, even when $H$ has $10^{18}$ entries? Check it on $f = \tfrac12\mathbf{x}^\top A\mathbf{x}$ with $A$ symmetric.</p>
+        <p><span class="tag hard">hard</span> <b>Hessian–vector products.</b> For a scalar $f(\mathbf{x})$ and a fixed vector $\mathbf{v}$, define $g(\mathbf{x}) = \nabla f(\mathbf{x})^\top\mathbf{v}$. Show that $\nabla g(\mathbf{x}) = \nabla^2f(\mathbf{x})\,\mathbf{v}$. Why does this give $H\mathbf{v}$ for about the cost of two gradient evaluations, even when $H$ has $10^{18}$ entries? Check it on $f = \tfrac12\mathbf{x}^\top A\mathbf{x}$ with $A$ symmetric.</p>
         <details><summary>Solution</summary><div>
           <p>$\partial g/\partial x_i = \sum_j\frac{\partial^2f}{\partial x_i\partial x_j}v_j = (H\mathbf{v})_i$. Computing $g$ costs one backward pass (a gradient, then a dot product), and the cheap gradient principle applies to $g$ too, so $\nabla g$ costs a constant multiple of that. $H$ is never formed. For $f = \tfrac12\mathbf{x}^\top A\mathbf{x}$: $\nabla f = A\mathbf{x}$, $g = \mathbf{v}^\top A\mathbf{x}$, $\nabla g = A\mathbf{v}$. This trick (Pearlmutter, 1994) powers second-order analysis of networks: power iteration with $H\mathbf{v}$ finds the largest eigenvalue, which lesson 02 says sets the largest stable learning rate.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Using <a href="/machine-learning/13-backpropagation/">lesson 13's</a> <code>Value</code> class, compute $\log(e^{a} + e^{b} + e^{c})$ at $(a, b, c) = (1, 2, 3)$ and its gradient. What function of $(a, b, c)$ is the gradient? What goes wrong if you try $(1000, 1001, 1002)$, and how would you fix the operation?</p>
+        <p><span class="tag code">code</span> Using <a href="/machine-learning/13-backpropagation/">lesson 13's</a> <code>Value</code> class, compute $\log(e^{a} + e^{b} + e^{c})$ at $(a, b, c) = (1, 2, 3)$ and its gradient. What function of $(a, b, c)$ is the gradient? What goes wrong if you try $(1000, 1001, 1002)$, and how would you fix the operation?</p>
         <details><summary>Solution</summary><div>
           <p>The value is $3.4076$ and the gradient is $(0.0900, 0.2447, 0.6652)$: the softmax of $(a, b, c)$, since $\partial/\partial a\log\sum e^{\cdot} = e^a/\sum e^{\cdot}$. At $(1000, 1001, 1002)$, <code>math.exp</code> overflows. The fix is lesson 06's log-sum-exp trick: subtract the maximum first, $m + \log\sum e^{z - m}$. It changes the forward computation but not the derivative, because the gradient flowing back to $m$ cancels exactly (and $m$ can be treated as a constant).</p>
         </div></details>
@@ -94,43 +94,43 @@
     <h2>Training deep networks</h2>
     <ol start="13">
       <li>
-        <p><span class="tag">warm-up</span> What weight standard deviation do He and LeCun ($1/n_{\text{in}}$) initialisation give for a layer with fan-in 1024? With a batch-normalised layer after it, does the choice still matter at the start of training?</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> What weight standard deviation do He and LeCun ($1/n_{\text{in}}$) initialisation give for a layer with fan-in 1024? With a batch-normalised layer after it, does the choice still matter at the start of training?</p>
         <details><summary>Solution</summary><div>
           <p>He: $\sqrt{2/1024} = 0.0442$. LeCun: $\sqrt{1/1024} = 0.03125$. Batch normalisation divides by the batch standard deviation, so it cancels any overall scale of the weights in the forward pass; the scale still matters through the gradient (it shrinks as $1/a$, lesson 14 exercise 3), which acts like a change of learning rate.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> <b>Depth with tanh.</b> With $\sigma_w^2 = 1/n$ and tanh activations, the variance of the pre-activations obeys $q_{\ell+1} = \mathbb{E}\big[\tanh(\sqrt{q_\ell}\,z)^2\big]$ with $z\sim\mathcal{N}(0, 1)$, in the wide-network limit. Using $\tanh u = u - u^3/3 + O(u^5)$ and $\mathbb{E}z^4 = 3$, show that for small $q$, $q_{\ell+1}\approx q_\ell - 2q_\ell^2$, and hence $q_\ell\approx\frac1{2\ell}$ for large $\ell$. Compare with ReLU under the same initialisation.</p>
+        <p><span class="tag hard">hard</span> <b>Depth with tanh.</b> With $\sigma_w^2 = 1/n$ and tanh activations, the variance of the pre-activations obeys $q_{\ell+1} = \mathbb{E}\big[\tanh(\sqrt{q_\ell}\,z)^2\big]$ with $z\sim\mathcal{N}(0, 1)$, in the wide-network limit. Using $\tanh u = u - u^3/3 + O(u^5)$ and $\mathbb{E}z^4 = 3$, show that for small $q$, $q_{\ell+1}\approx q_\ell - 2q_\ell^2$, and hence $q_\ell\approx\frac1{2\ell}$ for large $\ell$. Compare with ReLU under the same initialisation.</p>
         <details><summary>Solution</summary><div>
           <p>$\tanh^2u = u^2 - \tfrac23u^4 + O(u^6)$, so $\mathbb{E}\tanh^2(\sqrt qz) = q\,\mathbb{E}z^2 - \tfrac23q^2\mathbb{E}z^4 + O(q^3) = q - 2q^2 + O(q^3)$. Treat it as $dq/d\ell = -2q^2$: $1/q$ grows by 2 per layer, so $q_\ell\approx1/(2\ell)$. The signal decays, but only polynomially: after 50 layers the variance is about 0.01, not $10^{-15}$. ReLU with $\sigma_w^2 = 1/n$ halves the variance every layer, $q_\ell = 2^{-\ell}q_0$: exponential decay. That is why the factor 2 in He initialisation matters so much more than the details of Xavier for tanh.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A ReLU unit receives $a\,m_1/(1-p) + b\,m_2/(1-p)$ under dropout with $p = \tfrac12$, where $m_1, m_2$ are independent Bernoulli($\tfrac12$) masks. With $a = 1$, $b = -1$, compute the expected output over the masks, and the output of the test-time network (no masks). Is inverted dropout's "average over sub-networks" exact? When is it exact for a single ReLU?</p>
+        <p><span class="tag core">core</span> A ReLU unit receives $a\,m_1/(1-p) + b\,m_2/(1-p)$ under dropout with $p = \tfrac12$, where $m_1, m_2$ are independent Bernoulli($\tfrac12$) masks. With $a = 1$, $b = -1$, compute the expected output over the masks, and the output of the test-time network (no masks). Is inverted dropout's "average over sub-networks" exact? When is it exact for a single ReLU?</p>
         <details><summary>Solution</summary><div>
           <p>The four masks give $\operatorname{ReLU}(0) = 0$, $\operatorname{ReLU}(2) = 2$, $\operatorname{ReLU}(-2) = 0$ and $0$: the expected output is $0.5$. The test-time network outputs $\operatorname{ReLU}(1 - 1) = 0$. So the test network only approximates the average of the sub-networks, because ReLU is not linear (Jensen's inequality, since ReLU is convex, says the average is at least the test output). With a single input it is exact: $\mathbb{E}[\operatorname{ReLU}(xm/(1-p))] = (1-p)\operatorname{ReLU}(x/(1-p)) = \operatorname{ReLU}(x)$ by positive homogeneity.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">warm-up</span> Show that a bias added just before a batch-normalisation layer has no effect on the output and receives zero gradient. What do architectures do about it?</p>
+        <p><span class="tag warm-up">warm-up</span> Show that a bias added just before a batch-normalisation layer has no effect on the output and receives zero gradient. What do architectures do about it?</p>
         <details><summary>Solution</summary><div>
           <p>Adding $b$ to every example's $z$ adds $b$ to the batch mean, and $z - \mu_B$ is unchanged; the variance is unchanged too. The output doesn't depend on $b$, so its gradient is 0. Layers followed by batch norm are usually built without a bias; the shift $\beta$ in the normalisation layer plays its role.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A gradient is $\mathbf{g} = (10, 0.1)$. Clip it with threshold 1 in two ways: by value (clip each coordinate to $[-1, 1]$) and by norm ($\mathbf{g}\cdot\min(1, 1/\lVert\mathbf{g}\rVert)$). Compare the directions. Which is usually preferred, and why?</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> A gradient is $\mathbf{g} = (10, 0.1)$. Clip it with threshold 1 in two ways: by value (clip each coordinate to $[-1, 1]$) and by norm ($\mathbf{g}\cdot\min(1, 1/\lVert\mathbf{g}\rVert)$). Compare the directions. Which is usually preferred, and why?</p>
         <details><summary>Solution</summary><div>
           <p>By value: $(1, 0.1)$, which points in a noticeably different direction (angle $5.7°$ from the $x$-axis instead of $0.57°$): the small coordinate's share has grown tenfold. By norm: $(0.99995, 0.0099995)$, same direction, length 1. Clipping by norm is usually preferred because it only limits the step size and keeps the descent direction.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> The training loss at step 0 of a 10-class classifier is 7.4. What does that tell you, and what would you check first?</p>
+        <p><span class="tag core">core</span> The training loss at step 0 of a 10-class classifier is 7.4. What does that tell you, and what would you check first?</p>
         <details><summary>Solution</summary><div>
           <p>With small output logits the loss should be $\log 10 = 2.30$. A loss of 7.4 means the initial logits are large, so the softmax is confidently wrong on many examples: the output layer's initialisation is too big (or inputs aren't normalised, so activations blow up through the layers), or the loss is applied to something other than raw logits (for example a softmax applied twice, or labels in the wrong format). Check the input scale, the logit magnitudes at step 0, and the loss function, before tuning anything.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Using <a href="/machine-learning/14-training-deep-networks/">lesson 14's code</a>, train the He-initialised 20-layer network with learning rates 0.001, 0.003 (the lesson's), 0.01 and 0.03. Report the training loss after 250 and 1,000 steps, the largest loss seen, and the test accuracy. What do you conclude?</p>
+        <p><span class="tag code">code</span> Using <a href="/machine-learning/14-training-deep-networks/">lesson 14's code</a>, train the He-initialised 20-layer network with learning rates 0.001, 0.003 (the lesson's), 0.01 and 0.03. Report the training loss after 250 and 1,000 steps, the largest loss seen, and the test accuracy. What do you conclude?</p>
         <details><summary>Solution</summary><div>
           <p>Loss after 250 / 1,000 steps, largest loss, test accuracy: $\eta = 0.001$: 0.530 / 0.007, 0.73, 0.958. $\eta = 0.003$: 0.147 / 0.000, 1.89, 0.947. $\eta = 0.01$: 0.348 / 0.000, 4.93, 0.949. $\eta = 0.03$: 0.689 / 0.690, 6.8, 0.496. The smallest rate is slow but smooth and ends with the best test accuracy; the middle two get to zero training loss faster but with large spikes along the way (the momentum overshoots); at 0.03 the network blows up early and never recovers, ending at chance. The usable range spans about a factor of 10, and its top end is close to where training breaks, which is why lesson 14's recipe starts by finding the rate where the loss blows up and backing off.</p>
           <p>Your exact numbers depend on the random draws, so expect the same pattern rather than the same digits.</p>

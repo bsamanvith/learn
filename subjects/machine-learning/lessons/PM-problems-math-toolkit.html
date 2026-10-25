@@ -1,8 +1,8 @@
 <header class="lesson-head">
   <div class="eyebrow">Problem set PM · The math toolkit</div>
   <h1>Problem set: the math toolkit</h1>
-  <p class="lede">Thirty-two problems on lessons M1–M6: eigenvectors, the SVD and PCA; gradients of matrix expressions; conditioning, estimators and priors; entropy and KL; convexity, Lagrange multipliers and convergence rates; and Monte Carlo, importance, rejection and Gibbs sampling. Most are short calculations you can do on paper. Several reappear in the main lessons as the step that is usually skipped, and the solutions say where. Problems marked <span class="tag">code</span> need a few lines of NumPy; their solutions give the numbers you should get.</p>
-  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/M1-linear-algebra/">M1</a>, <a href="/machine-learning/M2-matrix-calculus/">M2</a>, <a href="/machine-learning/M3-probability/">M3</a>, <a href="/machine-learning/M4-information-theory/">M4</a>, <a href="/machine-learning/M5-optimisation/">M5</a>, <a href="/machine-learning/M6-sampling-and-monte-carlo/">M6</a></span><span><b>Tags:</b> <span class="tag">warm-up</span> <span class="tag">core</span> <span class="tag">hard</span> <span class="tag">code</span></span></div>
+  <p class="lede">Thirty-two problems on lessons M1–M6: eigenvectors, the SVD and PCA; gradients of matrix expressions; conditioning, estimators and priors; entropy and KL; convexity, Lagrange multipliers and convergence rates; and Monte Carlo, importance, rejection and Gibbs sampling. Most are short calculations you can do on paper. Several reappear in the main lessons as the step that is usually skipped, and the solutions say where. Problems marked <span class="tag code">code</span> need a few lines of NumPy; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/M1-linear-algebra/">M1</a>, <a href="/machine-learning/M2-matrix-calculus/">M2</a>, <a href="/machine-learning/M3-probability/">M3</a>, <a href="/machine-learning/M4-information-theory/">M4</a>, <a href="/machine-learning/M5-optimisation/">M5</a>, <a href="/machine-learning/M6-sampling-and-monte-carlo/">M6</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span> <span class="tag code">code</span></span></div>
 </header>
 
 <article class="lesson problems">
@@ -10,37 +10,37 @@
     <h2>Linear algebra</h2>
     <ol>
       <li>
-        <p><span class="tag">warm-up</span> Find the eigenvalues and unit eigenvectors of $A = \begin{pmatrix}2 &amp; 1\\1 &amp; 2\end{pmatrix}$, and use them to compute $A^{10}\begin{pmatrix}1\\0\end{pmatrix}$ without multiplying ten matrices.</p>
+        <p><span class="tag warm-up">warm-up</span> Find the eigenvalues and unit eigenvectors of $A = \begin{pmatrix}2 &amp; 1\\1 &amp; 2\end{pmatrix}$, and use them to compute $A^{10}\begin{pmatrix}1\\0\end{pmatrix}$ without multiplying ten matrices.</p>
         <details><summary>Solution</summary><div>
           <p>$\det(A - \lambda I) = (2-\lambda)^2 - 1 = 0$ gives $\lambda = 3$ and $1$, with eigenvectors $q_1 = (1, 1)/\sqrt2$ and $q_2 = (1, -1)/\sqrt2$. Write $(1, 0) = \tfrac{1}{\sqrt2}(q_1 + q_2)$. Then $A^{10}(1, 0) = \tfrac{1}{\sqrt2}(3^{10}q_1 + q_2) = \tfrac12(3^{10} + 1,\ 3^{10} - 1) = (29525, 29524)$. The direction is almost exactly $q_1$: repeated multiplication amplifies the top eigenvector, which is the idea behind problem 6.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Compute the SVD of $A = \begin{pmatrix}3 &amp; 0\\4 &amp; 5\end{pmatrix}$ by hand. Write down the best rank-1 approximation and its error in the Frobenius norm, and check $|\det A| = \sigma_1\sigma_2$.</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> Compute the SVD of $A = \begin{pmatrix}3 &amp; 0\\4 &amp; 5\end{pmatrix}$ by hand. Write down the best rank-1 approximation and its error in the Frobenius norm, and check $|\det A| = \sigma_1\sigma_2$.</p>
         <details><summary>Solution</summary><div>
           <p>$A^\top A = \begin{pmatrix}25 &amp; 20\\20 &amp; 25\end{pmatrix}$ has eigenvalues 45 and 5 with eigenvectors $v_1 = (1, 1)/\sqrt2$, $v_2 = (1, -1)/\sqrt2$, so $\sigma_1 = \sqrt{45} = 3\sqrt5 \approx 6.708$ and $\sigma_2 = \sqrt5 \approx 2.236$. The left singular vectors are $u_i = Av_i/\sigma_i$: $u_1 = (3, 9)/(\sqrt2\cdot3\sqrt5) = (1, 3)/\sqrt{10}$ and $u_2 = (3, -1)/\sqrt{10}$. The best rank-1 approximation is $\sigma_1u_1v_1^\top = \begin{pmatrix}1.5 &amp; 1.5\\4.5 &amp; 4.5\end{pmatrix}$, and the residual $\begin{pmatrix}1.5 &amp; -1.5\\-0.5 &amp; 0.5\end{pmatrix}$ has Frobenius norm $\sqrt{5} = \sigma_2$, as problem 3 predicts. Finally $\sigma_1\sigma_2 = 3\sqrt5\cdot\sqrt5 = 15 = \det A$.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> (Eckart–Young.) Let $A$ have singular values $\sigma_1 \ge \sigma_2 \ge \dots$. Show that every matrix $B$ of rank at most $k$ satisfies $\|A - B\|_F^2 \ge \sum_{i&gt;k}\sigma_i^2$, so the truncated SVD is optimal. You may use Weyl's inequality for singular values, $\sigma_{i+j-1}(X + Y) \le \sigma_i(X) + \sigma_j(Y)$.</p>
+        <p><span class="tag hard">hard</span> (Eckart–Young.) Let $A$ have singular values $\sigma_1 \ge \sigma_2 \ge \dots$. Show that every matrix $B$ of rank at most $k$ satisfies $\|A - B\|_F^2 \ge \sum_{i&gt;k}\sigma_i^2$, so the truncated SVD is optimal. You may use Weyl's inequality for singular values, $\sigma_{i+j-1}(X + Y) \le \sigma_i(X) + \sigma_j(Y)$.</p>
         <details><summary>Solution</summary><div>
           <p>Apply Weyl with $X = A - B$, $Y = B$ and $j = k + 1$: $\sigma_{i+k}(A) \le \sigma_i(A - B) + \sigma_{k+1}(B) = \sigma_i(A - B)$, because a matrix of rank at most $k$ has $\sigma_{k+1} = 0$. Square and sum over $i \ge 1$: $\|A - B\|_F^2 = \sum_i \sigma_i(A - B)^2 \ge \sum_i \sigma_{i+k}(A)^2 = \sum_{i&gt;k}\sigma_i^2$. The truncated SVD $A_k = \sum_{i\le k}\sigma_iu_iv_i^\top$ achieves this bound, since $A - A_k = \sum_{i&gt;k}\sigma_iu_iv_i^\top$. This is why PCA, LoRA's low-rank updates and low-rank compression all start from the SVD.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Centred 2D data has covariance $\Sigma = \begin{pmatrix}4 &amp; 2\\2 &amp; 3\end{pmatrix}$. Find the first principal direction and the fraction of the variance it explains. What is the variance of the projection onto $(1, 0)$, and why is it smaller?</p>
+        <p><span class="tag core">core</span> Centred 2D data has covariance $\Sigma = \begin{pmatrix}4 &amp; 2\\2 &amp; 3\end{pmatrix}$. Find the first principal direction and the fraction of the variance it explains. What is the variance of the projection onto $(1, 0)$, and why is it smaller?</p>
         <details><summary>Solution</summary><div>
           <p>The eigenvalues are $\tfrac{7 \pm \sqrt{17}}{2} = 5.562$ and $1.438$. The first principal direction is the eigenvector of 5.562: from $(4 - 5.562)a + 2b = 0$, $b = 0.781a$, so it points along $(1, 0.781)$, about 38° above the $x$-axis. It explains $5.562/7 = 79.5\%$ of the total variance $\operatorname{tr}\Sigma = 7$. The projection onto $(1, 0)$ has variance $e_1^\top\Sigma e_1 = 4$. Since $u^\top\Sigma u$ over unit vectors is maximised by the top eigenvector (the Rayleigh quotient), every other direction gives less.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Let $X$ be $n \times d$ with singular values $\sigma_1 \ge \dots \ge \sigma_d \ge 0$. Show that $X^\top X + \lambda I$ is invertible for every $\lambda &gt; 0$ and find its condition number. What does this say about ridge regression when $d &gt; n$?</p>
+        <p><span class="tag core">core</span> Let $X$ be $n \times d$ with singular values $\sigma_1 \ge \dots \ge \sigma_d \ge 0$. Show that $X^\top X + \lambda I$ is invertible for every $\lambda &gt; 0$ and find its condition number. What does this say about ridge regression when $d &gt; n$?</p>
         <details><summary>Solution</summary><div>
           <p>With $X = U S V^\top$, $X^\top X + \lambda I = V(S^\top S + \lambda I)V^\top$, whose eigenvalues are $\sigma_i^2 + \lambda \ge \lambda &gt; 0$. So it is positive definite and invertible, with condition number $(\sigma_1^2 + \lambda)/(\sigma_d^2 + \lambda)$. When $d &gt; n$, $\sigma_d = 0$ and least squares has no unique solution, but ridge does, and its condition number is at most $(\sigma_1^2 + \lambda)/\lambda$. Larger $\lambda$ makes the problem better conditioned and the solution more biased (lesson 05).</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Power iteration repeats $x \leftarrow Ax/\|Ax\|$. Run it on the $10\times10$ tridiagonal matrix with 2 on the diagonal and $-1$ beside it, whose eigenvalues are $2 - 2\cos(k\pi/11)$. Starting from $e_1$, how many iterations until $x$ is within $10^{-6}$ of the top eigenvector, and what does the ratio $\lambda_2/\lambda_1$ predict? Then start from the all-ones vector and explain what happens.</p>
+        <p><span class="tag code">code</span> Power iteration repeats $x \leftarrow Ax/\|Ax\|$. Run it on the $10\times10$ tridiagonal matrix with 2 on the diagonal and $-1$ beside it, whose eigenvalues are $2 - 2\cos(k\pi/11)$. Starting from $e_1$, how many iterations until $x$ is within $10^{-6}$ of the top eigenvector, and what does the ratio $\lambda_2/\lambda_1$ predict? Then start from the all-ones vector and explain what happens.</p>
         <details><summary>Solution</summary><div>
           <p>$\lambda_1 = 2 - 2\cos(10\pi/11) = 3.919$ and $\lambda_2 = 3.683$, so the error shrinks by $\lambda_2/\lambda_1 = 0.940$ per step and $\ln 10^{-6}/\ln 0.940 \approx 222$ steps are predicted; the run from $e_1$ takes 233 (the constant depends on how much of $e_1$ lies along the top eigenvector). From the all-ones vector it converges to $\lambda_2 = 3.683$ instead. The top eigenvector, $\sin(10j\pi/11)$, is antisymmetric under $j \to 11 - j$ and the all-ones vector is symmetric, so they are orthogonal and power iteration never sees the top direction. In floating point, rounding seeds a component of about $10^{-16}$ that grows by $1/0.940$ per step, and the Rayleigh quotient finally jumps above 3.8 at iteration 638. Random starting vectors avoid the trap with probability 1.</p>
         </div></details>
@@ -52,31 +52,31 @@
     <h2>Matrix calculus</h2>
     <ol start="7">
       <li>
-        <p><span class="tag">warm-up</span> Find $\nabla_x$ of $x^\top Ax$ for a general square $A$, and of $\|Ax - b\|^2$. Set the second to zero.</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> Find $\nabla_x$ of $x^\top Ax$ for a general square $A$, and of $\|Ax - b\|^2$. Set the second to zero.</p>
         <details><summary>Solution</summary><div>
           <p>$d(x^\top Ax) = dx^\top Ax + x^\top A\,dx = x^\top(A + A^\top)dx$, so the gradient is $(A + A^\top)x$, which is $2Ax$ when $A$ is symmetric. $d\|Ax - b\|^2 = 2(Ax - b)^\top A\,dx$, so the gradient is $2A^\top(Ax - b)$, and setting it to zero gives the normal equations $A^\top Ax = A^\top b$ of lesson 01.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Show that $\nabla_X \log\det X = X^{-\top}$ for invertible $X$ with positive determinant, and $\nabla_X \operatorname{tr}(AXB) = A^\top B^\top$. (Use $\det(I + \epsilon E) = 1 + \epsilon\operatorname{tr}E + O(\epsilon^2)$.)</p>
+        <p><span class="tag core">core</span> Show that $\nabla_X \log\det X = X^{-\top}$ for invertible $X$ with positive determinant, and $\nabla_X \operatorname{tr}(AXB) = A^\top B^\top$. (Use $\det(I + \epsilon E) = 1 + \epsilon\operatorname{tr}E + O(\epsilon^2)$.)</p>
         <details><summary>Solution</summary><div>
           <p>$\det(X + dX) = \det X\det(I + X^{-1}dX) = \det X\,(1 + \operatorname{tr}(X^{-1}dX) + \dots)$, so $d\log\det X = \operatorname{tr}(X^{-1}dX)$. A differential $\operatorname{tr}(G^\top dX)$ means the gradient is $G$, so $G = X^{-\top}$. For the trace, $d\operatorname{tr}(AXB) = \operatorname{tr}(A\,dX\,B) = \operatorname{tr}(BA\,dX)$ by cycling, so $G^\top = BA$ and $G = A^\top B^\top$. The first identity is how the Gaussian's log-likelihood is maximised over its covariance.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Let $p = \operatorname{softmax}(z)$. Show that $\partial p/\partial z = \operatorname{diag}(p) - pp^\top$, that this matrix is singular, and that it is positive semi-definite.</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> Let $p = \operatorname{softmax}(z)$. Show that $\partial p/\partial z = \operatorname{diag}(p) - pp^\top$, that this matrix is singular, and that it is positive semi-definite.</p>
         <details><summary>Solution</summary><div>
           <p>$\partial p_i/\partial z_j = p_i(\delta_{ij} - p_j)$, which is the stated matrix $J$. $J\mathbf 1 = p - p(p^\top\mathbf 1) = 0$, so $J$ is singular: adding a constant to every logit does not change $p$. For any $v$, $v^\top Jv = \sum_ip_iv_i^2 - (\sum_ip_iv_i)^2$, which is the variance of $v$ under the distribution $p$, hence $\ge 0$. Since $J$ is also the Hessian of $\log\sum_j e^{z_j}$, this proves that log-sum-exp is convex (problem 23).</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Find the gradient of $f(W) = \tfrac12\|XW - Y\|_F^2$, where $X$ is $n\times d$, $W$ is $d\times k$ and $Y$ is $n \times k$. Check the shapes, and say how it relates to backpropagation through a linear layer.</p>
+        <p><span class="tag core">core</span> Find the gradient of $f(W) = \tfrac12\|XW - Y\|_F^2$, where $X$ is $n\times d$, $W$ is $d\times k$ and $Y$ is $n \times k$. Check the shapes, and say how it relates to backpropagation through a linear layer.</p>
         <details><summary>Solution</summary><div>
           <p>$df = \operatorname{tr}\big((XW - Y)^\top X\,dW\big)$, so $\nabla_Wf = X^\top(XW - Y)$, which is $d\times k$ like $W$. In backprop terms, with $\delta = \partial f/\partial(XW) = XW - Y$, the weight gradient is $X^\top\delta$ and the gradient passed back to the inputs is $\delta W^\top$: the two rules of lesson 13 for a linear layer.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> Let $y = x/\|x\|$ for $x \in \mathbb R^n$, $x \ne 0$. Show that the Jacobian is $(I - yy^\top)/\|x\|$, find its eigenvalues, and explain why the gradient that flows back through a normalisation layer is orthogonal to its input.</p>
+        <p><span class="tag hard">hard</span> Let $y = x/\|x\|$ for $x \in \mathbb R^n$, $x \ne 0$. Show that the Jacobian is $(I - yy^\top)/\|x\|$, find its eigenvalues, and explain why the gradient that flows back through a normalisation layer is orthogonal to its input.</p>
         <details><summary>Solution</summary><div>
           <p>With $r = \|x\|$, $dr = x^\top dx/r$, so $dy = dx/r - x\,dr/r^2 = (I - yy^\top)dx/r$. The matrix $I - yy^\top$ projects onto the hyperplane orthogonal to $y$, so the Jacobian has eigenvalue 0 along $y$ and $1/r$ (with multiplicity $n - 1$) on the orthogonal complement. It is symmetric, so a downstream gradient $g$ becomes $(I - yy^\top)g/r$, which is orthogonal to $x$: no gradient can change the input's length, because the output does not depend on it. RMSNorm, and layer norm after centring, behave the same way, and the $1/r$ factor makes large inputs learn slowly.</p>
         </div></details>
@@ -88,37 +88,37 @@
     <h2>Probability</h2>
     <ol start="12">
       <li>
-        <p><span class="tag">warm-up</span> A disease has prevalence 1%. A test detects it 95% of the time and gives a false positive 10% of the time. Given a positive test, what is the probability of the disease?</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> A disease has prevalence 1%. A test detects it 95% of the time and gives a false positive 10% of the time. Given a positive test, what is the probability of the disease?</p>
         <details><summary>Solution</summary><div>
           <p>$P(D\mid +) = \frac{0.95\cdot0.01}{0.95\cdot0.01 + 0.10\cdot0.99} = \frac{0.0095}{0.1085} = 0.088$. Most positives are false because healthy people outnumber sick ones 99 to 1. The same base-rate effect is why precision collapses on rare classes even when recall and the false-positive rate look good (lesson 08).</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> $(X, Y)$ is bivariate normal with means 0, variances 1 and correlation $\rho$. Find $E[Y\mid X = x]$ and $\operatorname{Var}(Y\mid X = x)$ by writing $Y = \rho X + Z$.</p>
+        <p><span class="tag core">core</span> $(X, Y)$ is bivariate normal with means 0, variances 1 and correlation $\rho$. Find $E[Y\mid X = x]$ and $\operatorname{Var}(Y\mid X = x)$ by writing $Y = \rho X + Z$.</p>
         <details><summary>Solution</summary><div>
           <p>Let $Z = Y - \rho X$. Then $\operatorname{Cov}(Z, X) = \rho - \rho = 0$, and since $(Z, X)$ is jointly Gaussian, $Z$ is independent of $X$, with variance $1 - 2\rho^2 + \rho^2 = 1 - \rho^2$. So $Y \mid X = x$ is $N(\rho x, 1 - \rho^2)$. The conditional mean is a straight line, the regression line of lesson 01, and the conditional variance does not depend on $x$. Problem 31 uses this to build a Gibbs sampler.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Show that the maximum-likelihood estimate of a Gaussian's variance, $\hat\sigma^2 = \frac1n\sum(x_i - \bar x)^2$, has expectation $\frac{n-1}{n}\sigma^2$.</p>
+        <p><span class="tag core">core</span> Show that the maximum-likelihood estimate of a Gaussian's variance, $\hat\sigma^2 = \frac1n\sum(x_i - \bar x)^2$, has expectation $\frac{n-1}{n}\sigma^2$.</p>
         <details><summary>Solution</summary><div>
           <p>Expand around the true mean: $\sum(x_i - \bar x)^2 = \sum(x_i - \mu)^2 - n(\bar x - \mu)^2$. The first term has expectation $n\sigma^2$, and $\operatorname{Var}(\bar x) = \sigma^2/n$ gives the second expectation $\sigma^2$. So $E[\hat\sigma^2] = (n - 1)\sigma^2/n$. The sample mean is fitted to the same data, so the spread around it is smaller than the spread around $\mu$; dividing by $n - 1$ removes the bias. It is the simplest example of training error underestimating test error.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A coin has a Beta(2, 2) prior on its probability of heads and shows 7 heads in 10 flips. Give the posterior, its mean, the MAP estimate and the MLE. Which two of them agree as the number of flips grows?</p>
+        <p><span class="tag core">core</span> A coin has a Beta(2, 2) prior on its probability of heads and shows 7 heads in 10 flips. Give the posterior, its mean, the MAP estimate and the MLE. Which two of them agree as the number of flips grows?</p>
         <details><summary>Solution</summary><div>
           <p>The Beta prior is conjugate, so the posterior is Beta(2 + 7, 2 + 3) = Beta(9, 5). Its mean is $9/14 = 0.643$; its mode, the MAP estimate, is $(9 - 1)/(14 - 2) = 0.667$; the MLE is $0.7$. The prior acts like 2 extra heads and 2 extra tails (1 of each for the mode), pulling the estimate towards 0.5. As the number of flips grows, all three converge to the observed frequency: the prior's pseudo-counts become negligible.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> With $y = Xw + \varepsilon$, $\varepsilon \sim N(0, \sigma^2 I)$, show that the MAP estimate under a prior $w_j \sim N(0, \tau^2)$ is ridge regression, and under a Laplace prior $p(w_j) \propto e^{-|w_j|/b}$ it is the lasso. Give the penalty weight in each case, for the objective $\|y - Xw\|^2 + \lambda\cdot\text{penalty}$.</p>
+        <p><span class="tag core">core</span> With $y = Xw + \varepsilon$, $\varepsilon \sim N(0, \sigma^2 I)$, show that the MAP estimate under a prior $w_j \sim N(0, \tau^2)$ is ridge regression, and under a Laplace prior $p(w_j) \propto e^{-|w_j|/b}$ it is the lasso. Give the penalty weight in each case, for the objective $\|y - Xw\|^2 + \lambda\cdot\text{penalty}$.</p>
         <details><summary>Solution</summary><div>
           <p>The negative log posterior is $\frac{1}{2\sigma^2}\|y - Xw\|^2 - \log p(w) + \text{const}$. With the Gaussian prior, $-\log p(w) = \frac{1}{2\tau^2}\|w\|^2$; multiplying by $2\sigma^2$ gives $\|y - Xw\|^2 + \frac{\sigma^2}{\tau^2}\|w\|^2$, so $\lambda = \sigma^2/\tau^2$. With the Laplace prior, $-\log p(w) = \|w\|_1/b$, giving $\|y - Xw\|^2 + \frac{2\sigma^2}{b}\|w\|_1$. A tighter prior (smaller $\tau$ or $b$) or noisier data (larger $\sigma$) means stronger regularisation. The Laplace density has a corner at 0, which is why the lasso sets weights exactly to zero.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> $\bar X$ is the mean of 100 independent Uniform(0, 1) draws. Bound or estimate $P(|\bar X - 0.5| &gt; 0.05)$ three ways: Chebyshev, Hoeffding, and the central limit theorem. Which is tightest here, and which would you trust for $|\bar X - 0.5| &gt; 0.2$?</p>
+        <p><span class="tag core">core</span> $\bar X$ is the mean of 100 independent Uniform(0, 1) draws. Bound or estimate $P(|\bar X - 0.5| &gt; 0.05)$ three ways: Chebyshev, Hoeffding, and the central limit theorem. Which is tightest here, and which would you trust for $|\bar X - 0.5| &gt; 0.2$?</p>
         <details><summary>Solution</summary><div>
           <p>$\operatorname{Var}\bar X = \frac{1}{12\cdot100} = 8.33\times10^{-4}$. Chebyshev: $P \le 8.33\times10^{-4}/0.05^2 = 0.333$. Hoeffding: $P \le 2e^{-2\cdot100\cdot0.05^2} = 2e^{-0.5} = 1.21$, which says nothing. CLT: $\bar X$ is approximately normal with standard deviation 0.0289, and $0.05/0.0289 = 1.73$ standard deviations gives $P \approx 0.083$. The CLT is the sharpest, but it is an approximation, not a bound. At 0.2, Hoeffding gives $2e^{-8} = 6.7\times10^{-4}$, a guaranteed bound, while Chebyshev gives 0.021; Hoeffding's exponential tail wins far out, and is the kind of bound used in lesson 04's generalisation arguments. (The truth there is astronomically small: 0.2 is 6.9 standard deviations, where the CLT gives $4\times10^{-12}$, and the real tail is lighter still because $\bar X$ is bounded. Chebyshev and Hoeffding are valid but loose; the CLT is sharp but carries no guarantee that far out.)</p>
         </div></details>
@@ -130,13 +130,13 @@
     <h2>Information theory</h2>
     <ol start="18">
       <li>
-        <p><span class="tag">warm-up</span> Find the entropy in bits of the distribution $(\tfrac12, \tfrac14, \tfrac18, \tfrac18)$ and a prefix code whose average length equals it.</p>
+        <p><span class="tag warm-up">warm-up</span> Find the entropy in bits of the distribution $(\tfrac12, \tfrac14, \tfrac18, \tfrac18)$ and a prefix code whose average length equals it.</p>
         <details><summary>Solution</summary><div>
           <p>$H = \tfrac12\cdot1 + \tfrac14\cdot2 + \tfrac18\cdot3 + \tfrac18\cdot3 = 1.75$ bits. The code 0, 10, 110, 111 has lengths $-\log_2p_i$ exactly, so its average length is 1.75 bits. A code that achieves the entropy exists whenever every probability is a power of 2; otherwise the best code is within 1 bit of it.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Derive $\mathrm{KL}\big(N(\mu_1, \sigma_1^2)\,\|\,N(\mu_2, \sigma_2^2)\big)$ and evaluate it both ways for $N(0, 1)$ and $N(1, 4)$. Explain which direction is larger.</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> Derive $\mathrm{KL}\big(N(\mu_1, \sigma_1^2)\,\|\,N(\mu_2, \sigma_2^2)\big)$ and evaluate it both ways for $N(0, 1)$ and $N(1, 4)$. Explain which direction is larger.</p>
         <details><summary>Solution</summary><div>
           <p>$\log\frac{p}{q} = \log\frac{\sigma_2}{\sigma_1} - \frac{(x - \mu_1)^2}{2\sigma_1^2} + \frac{(x - \mu_2)^2}{2\sigma_2^2}$. Under $p$, $E(x - \mu_1)^2 = \sigma_1^2$ and $E(x - \mu_2)^2 = \sigma_1^2 + (\mu_1 - \mu_2)^2$, so</p>
           <div class="eq">$$\mathrm{KL}(p\,\|\,q) = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2\sigma_2^2} - \frac12.$$</div>
@@ -144,19 +144,19 @@
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Show that the cross-entropy $H(p, q) = -\sum p\log q$ equals $H(p) + \mathrm{KL}(p\,\|\,q)$, and conclude that minimising average log loss on samples from $p$ is maximum likelihood.</p>
+        <p><span class="tag core">core</span> Show that the cross-entropy $H(p, q) = -\sum p\log q$ equals $H(p) + \mathrm{KL}(p\,\|\,q)$, and conclude that minimising average log loss on samples from $p$ is maximum likelihood.</p>
         <details><summary>Solution</summary><div>
           <p>$-\sum p\log q = -\sum p\log p + \sum p\log(p/q)$. $H(p)$ does not depend on $q$, so minimising the cross-entropy over $q$ minimises $\mathrm{KL}(p\,\|\,q)$, with the minimum at $q = p$. With samples $x_1, \dots, x_n$ from $p$, the cross-entropy is estimated by $-\frac1n\sum\log q(x_i)$, the negative average log-likelihood of the model $q$. So the loss of lessons 03, 06 and 26 is maximum likelihood, and its floor is the entropy of the data.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A bit $X$, uniform on $\{0, 1\}$, is sent through a channel that flips it with probability 0.1. Find the mutual information $I(X; Y)$ in bits.</p>
+        <p><span class="tag core">core</span> A bit $X$, uniform on $\{0, 1\}$, is sent through a channel that flips it with probability 0.1. Find the mutual information $I(X; Y)$ in bits.</p>
         <details><summary>Solution</summary><div>
           <p>$Y$ is also uniform, so $H(Y) = 1$. Given $X$, $Y$ is a coin with bias 0.1, so $H(Y\mid X) = H_2(0.1) = -0.1\log_20.1 - 0.9\log_20.9 = 0.469$. Then $I(X; Y) = H(Y) - H(Y\mid X) = 0.531$ bits: each noisy bit carries about half a bit of information.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> Prove $\mathrm{KL}(p\,\|\,q) \ge 0$, with equality only when $p = q$, using Jensen's inequality.</p>
+        <p><span class="tag hard">hard</span> Prove $\mathrm{KL}(p\,\|\,q) \ge 0$, with equality only when $p = q$, using Jensen's inequality.</p>
         <details><summary>Solution</summary><div>
           <p>Sum over the support $S$ of $p$. Since $\log$ is concave, $-\mathrm{KL}(p\,\|\,q) = \sum_{x\in S}p(x)\log\frac{q(x)}{p(x)} \le \log\sum_{x\in S}p(x)\frac{q(x)}{p(x)} = \log\sum_{x\in S}q(x) \le \log1 = 0$. Equality in Jensen requires $q/p$ to be constant on $S$, and equality in the last step requires $q$ to put no mass outside $S$; together they force $q = p$. The same argument gives $I(X; Y) \ge 0$ and shows that the ELBO is a lower bound.</p>
         </div></details>
@@ -168,25 +168,25 @@
     <h2>Optimisation</h2>
     <ol start="23">
       <li>
-        <p><span class="tag">warm-up</span> Show that the softmax-regression loss $L(W) = \frac1n\sum_i\big(\log\sum_ke^{w_k^\top x_i} - w_{y_i}^\top x_i\big)$ is convex in $W$.</p>
+        <p><span class="tag warm-up">warm-up</span> Show that the softmax-regression loss $L(W) = \frac1n\sum_i\big(\log\sum_ke^{w_k^\top x_i} - w_{y_i}^\top x_i\big)$ is convex in $W$.</p>
         <details><summary>Solution</summary><div>
           <p>By problem 9, log-sum-exp has a positive semi-definite Hessian, so it is convex. Composing a convex function with a linear map ($W \mapsto (w_k^\top x_i)_k$) keeps it convex, subtracting a linear term keeps it convex, and so does averaging. So $L$ is convex, every local minimum is global, and gradient descent cannot get stuck, as lesson 06 claimed. It is not <em>strictly</em> convex: adding the same vector to every $w_k$ leaves $L$ unchanged.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A die is known to have mean 4.5. Find the maximum-entropy distribution over its faces using a Lagrange multiplier for each constraint, and compute it numerically.</p>
+        <p><span class="tag core">core</span> A die is known to have mean 4.5. Find the maximum-entropy distribution over its faces using a Lagrange multiplier for each constraint, and compute it numerically.</p>
         <details><summary>Solution</summary><div>
           <p>Maximise $-\sum p_i\log p_i$ subject to $\sum p_i = 1$ and $\sum ip_i = 4.5$. Setting the derivative of the Lagrangian to zero gives $-\log p_i - 1 + \alpha + \lambda i = 0$, so $p_i \propto e^{\lambda i}$: an exponential family, the same form as softmax and the Boltzmann distribution. Solving $\sum ie^{\lambda i}/\sum e^{\lambda i} = 4.5$ by bisection gives $\lambda = 0.371$ and $p = (0.054, 0.079, 0.114, 0.165, 0.240, 0.347)$, with entropy 1.614 nats against $\ln6 = 1.792$ for the fair die. It is the least committal distribution consistent with the mean.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> $f$ is $\mu$-strongly convex and $L$-smooth, and gradient descent with step $1/L$ satisfies $f(x_t) - f^\star \le (1 - \mu/L)^t\big(f(x_0) - f^\star\big)$. How many steps reduce the gap by $10^6$ when $\kappa = L/\mu = 100$? What changes with heavy-ball momentum on a quadratic?</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> $f$ is $\mu$-strongly convex and $L$-smooth, and gradient descent with step $1/L$ satisfies $f(x_t) - f^\star \le (1 - \mu/L)^t\big(f(x_0) - f^\star\big)$. How many steps reduce the gap by $10^6$ when $\kappa = L/\mu = 100$? What changes with heavy-ball momentum on a quadratic?</p>
         <details><summary>Solution</summary><div>
           <p>$t \ge \ln10^6/(-\ln0.99) = 1{,}375$ steps, roughly $\kappa\ln(1/\epsilon)$. On a quadratic, tuned heavy-ball momentum contracts the distance to the optimum by $(\sqrt\kappa - 1)/(\sqrt\kappa + 1) = 0.818$ per step instead of about $1 - 1/\kappa$, so the dependence becomes $\sqrt\kappa\ln(1/\epsilon)$. On $\kappa = 100$ from $(1, 1)$, assignment <a href="/machine-learning/A2-optimiser-zoo/">A2</a> measures 81 steps to $f &lt; 10^{-8}$ against 463 for SGD at rate 0.019.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> Find the Euclidean projection of $v = (0.5, 1.2, -0.3)$ onto the probability simplex $\{p : p_i \ge 0, \sum p_i = 1\}$ from the KKT conditions.</p>
+        <p><span class="tag hard">hard</span> Find the Euclidean projection of $v = (0.5, 1.2, -0.3)$ onto the probability simplex $\{p : p_i \ge 0, \sum p_i = 1\}$ from the KKT conditions.</p>
         <details><summary>Solution</summary><div>
           <p>Minimise $\tfrac12\|p - v\|^2$ subject to $\sum p_i = 1$ and $p_i \ge 0$. Stationarity gives $p_i - v_i + \tau - \nu_i = 0$ with multipliers $\nu_i \ge 0$ and complementary slackness $\nu_ip_i = 0$. So $p_i = v_i - \tau$ where it is positive and $p_i = 0$ where $v_i \le \tau$: $p_i = \max(v_i - \tau, 0)$. Choose $\tau$ so the result sums to 1. If only the two largest entries stay positive, $(1.2 - \tau) + (0.5 - \tau) = 1$ gives $\tau = 0.35$, and $-0.3 &lt; 0.35$ confirms the third is clipped. So $p = (0.15, 0.85, 0)$. The same thresholding appears in sparsemax and in projected gradient methods.</p>
         </div></details>
@@ -198,37 +198,37 @@
     <h2>Sampling and Monte Carlo</h2>
     <ol start="27">
       <li>
-        <p><span class="tag">warm-up</span> Estimate $\pi$ as 4 times the fraction of uniform points in the unit square that land inside the quarter circle. How many points give a standard error of 0.01?</p>
+        <p><span class="tag warm-up">warm-up</span> Estimate $\pi$ as 4 times the fraction of uniform points in the unit square that land inside the quarter circle. How many points give a standard error of 0.01?</p>
         <details><summary>Solution</summary><div>
           <p>Each point contributes $4B$ with $B \sim \text{Bernoulli}(\pi/4)$, whose variance is $16\cdot\frac\pi4(1 - \frac\pi4) = 2.697$. The standard error with $n$ points is $\sqrt{2.697/n}$, which equals 0.01 at $n \approx 27{,}000$. Each extra decimal digit costs 100 times as many points.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> To estimate $I = E_p[f(x)]$ with $f \ge 0$ by importance sampling from $q$, show that $q^\star(x) = f(x)p(x)/I$ gives an estimator with zero variance. Why is this not a practical method, and what does it suggest?</p>
+        <p><span class="tag core">core</span> To estimate $I = E_p[f(x)]$ with $f \ge 0$ by importance sampling from $q$, show that $q^\star(x) = f(x)p(x)/I$ gives an estimator with zero variance. Why is this not a practical method, and what does it suggest?</p>
         <details><summary>Solution</summary><div>
           <p>The estimator averages $f(x)p(x)/q(x)$ with $x \sim q$. With $q = q^\star$, every sample gives exactly $f(x)p(x)\cdot I/(f(x)p(x)) = I$, so the variance is zero. But writing down $q^\star$ requires $I$, the quantity we wanted. What it suggests is to make $q$ roughly proportional to $f\cdot p$: put samples where the integrand is large. That is why lesson M6's proposal centred at 4 beat the naive estimate of $P(Z &gt; 4)$ by orders of magnitude, and why one centred at 6 did worse.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Show that if $U \sim \text{Uniform}(0, 1)$ and $F$ is a continuous, strictly increasing CDF, then $F^{-1}(U)$ has CDF $F$. Use it to sample an exponential with rate $\lambda$ and a standard Cauchy.</p>
+        <p><span class="tag core">core</span> Show that if $U \sim \text{Uniform}(0, 1)$ and $F$ is a continuous, strictly increasing CDF, then $F^{-1}(U)$ has CDF $F$. Use it to sample an exponential with rate $\lambda$ and a standard Cauchy.</p>
         <details><summary>Solution</summary><div>
           <p>$P(F^{-1}(U) \le x) = P(U \le F(x)) = F(x)$. The exponential has $F(x) = 1 - e^{-\lambda x}$, so $x = -\ln(1 - u)/\lambda$ (or $-\ln u/\lambda$, since $1 - U$ is also uniform). The Cauchy has $F(x) = \tfrac12 + \arctan(x)/\pi$, so $x = \tan(\pi(u - \tfrac12))$. The reparameterisation trick of lessons 22 and M6 is this idea: write the sample as a deterministic function of fixed noise.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Sample the half-normal density $p(x) = \sqrt{2/\pi}\,e^{-x^2/2}$ on $x \ge 0$ by rejection from the proposal $q(x) = e^{-x}$. Find the smallest $M$ with $p \le Mq$, the overall acceptance rate, and the acceptance probability of a proposed $x$.</p>
+        <p><span class="tag core">core</span> Sample the half-normal density $p(x) = \sqrt{2/\pi}\,e^{-x^2/2}$ on $x \ge 0$ by rejection from the proposal $q(x) = e^{-x}$. Find the smallest $M$ with $p \le Mq$, the overall acceptance rate, and the acceptance probability of a proposed $x$.</p>
         <details><summary>Solution</summary><div>
           <p>$p(x)/q(x) = \sqrt{2/\pi}\,e^{x - x^2/2}$ is largest at $x = 1$, so $M = \sqrt{2/\pi}\,e^{1/2} = \sqrt{2e/\pi} = 1.316$. Accept $x$ with probability $p(x)/(Mq(x)) = e^{-(x - 1)^2/2}$. Since both densities are normalised, the overall acceptance rate is $1/M = 0.760$. Flipping a random sign then gives standard normal samples.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> A Gibbs sampler for the bivariate normal of problem 13 alternates $x \sim N(\rho y, 1 - \rho^2)$ and $y \sim N(\rho x, 1 - \rho^2)$. Show that the sequence of $x$ values is an AR(1) process, find its autocorrelation at lag $k$, and compute the effective sample size of 10,000 steps when $\rho = 0.99$, using $\tau = 1 + 2\sum_{k\ge1}\rho_k$.</p>
+        <p><span class="tag hard">hard</span> A Gibbs sampler for the bivariate normal of problem 13 alternates $x \sim N(\rho y, 1 - \rho^2)$ and $y \sim N(\rho x, 1 - \rho^2)$. Show that the sequence of $x$ values is an AR(1) process, find its autocorrelation at lag $k$, and compute the effective sample size of 10,000 steps when $\rho = 0.99$, using $\tau = 1 + 2\sum_{k\ge1}\rho_k$.</p>
         <details><summary>Solution</summary><div>
           <p>$x_{t+1} = \rho y_t + \text{noise} = \rho(\rho x_t + \text{noise}) + \text{noise}$, so $x_{t+1} = \rho^2x_t + \eta_t$ with independent Gaussian $\eta_t$: AR(1) with coefficient $\rho^2$, and lag-$k$ autocorrelation $\rho^{2k}$. Then $\tau = 1 + 2\sum_{k\ge1}\rho^{2k} = \frac{1 + \rho^2}{1 - \rho^2}$, which is 99.5 at $\rho = 0.99$, so 10,000 steps are worth about 100 independent samples. Strong correlation forces tiny axis-aligned moves along a narrow diagonal ridge. Rotating to $u = (x + y)/\sqrt2$ and $v = (x - y)/\sqrt2$, which are independent, removes the problem entirely: the sampler's efficiency depends on the coordinates it updates.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Run the Gibbs sampler of problem 31 with $\rho = 0.99$ for 200,000 steps. Measure the lag-1 autocorrelation of $x$, and estimate $\tau$ by batch means: split the chain into 100 batches of 2,000, and use $\tau \approx 2000\cdot\operatorname{Var}(\text{batch means})/\operatorname{Var}(x)$.</p>
+        <p><span class="tag code">code</span> Run the Gibbs sampler of problem 31 with $\rho = 0.99$ for 200,000 steps. Measure the lag-1 autocorrelation of $x$, and estimate $\tau$ by batch means: split the chain into 100 batches of 2,000, and use $\tau \approx 2000\cdot\operatorname{Var}(\text{batch means})/\operatorname{Var}(x)$.</p>
         <details><summary>Solution</summary><div>
           <p>With NumPy's <code>default_rng(0)</code> the lag-1 autocorrelation is 0.980 (theory $\rho^2 = 0.9801$), and batch means estimates $\tau \approx 88$, an effective sample size of about 114 per 10,000 steps, against the exact 99.5. The gap is noise in the estimate itself: 100 batches give a variance estimate with a relative standard error of about $\sqrt{2/99} \approx 14\%$. Your seed will give a different value in roughly the range 75–125. Estimates of the effective sample size need long chains of their own, which is one reason to run several chains and compare them.</p>
         </div></details>

@@ -1,0 +1,140 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P1 · Stage 1: learning from data</div>
+  <h1>Problem set: stage 1</h1>
+  <p class="lede">Nineteen problems on lessons 01–03. They cover fitting a line by hand, the geometry of least squares, what $R^2$ does and does not tell you, why gradient descent converges and how fast, the delta rule, logistic regression's gradient and convexity, and what happens when the classes can be separated perfectly. Try each one on paper before opening its solution. Problems marked <span class="tag code">code</span> need a few lines of NumPy; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/01-linear-regression/">01</a>, <a href="/machine-learning/02-gradient-descent/">02</a>, <a href="/machine-learning/03-logistic-regression/">03</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span> <span class="tag code">code</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="least-squares">
+    <h2>Least squares</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> Fit $\hat y = wx + b$ by least squares to the points $(0, 1)$, $(1, 3)$, $(2, 4)$, $(3, 8)$. Give the residuals, check that they sum to zero, and compute $R^2$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\bar x = 1.5$ and $\bar y = 4$. $S_{xy} = \sum(x_i - \bar x)(y_i - \bar y) = 4.5 + 0.5 + 0 + 6 = 11$ and $S_{xx} = 2.25 + 0.25 + 0.25 + 2.25 = 5$, so $w = 11/5 = 2.2$ and $b = \bar y - w\bar x = 0.7$. The predictions are $0.7, 2.9, 5.1, 7.3$, the residuals $0.3, 0.1, -1.1, 0.7$, which sum to 0. The residual sum of squares is $0.09 + 0.01 + 1.21 + 0.49 = 1.8$; the total sum of squares around $\bar y$ is $9 + 1 + 0 + 16 = 26$, so $R^2 = 1 - 1.8/26 = 0.931$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Show from the normal equations that, when the model has an intercept, the residuals sum to zero, are uncorrelated with every input column, and are orthogonal to the fitted values. Why does the fitted line pass through $(\bar x, \bar y)$?</p>
+        <details><summary>Solution</summary><div>
+          <p>The normal equations say $X^\top(\mathbf y - X\hat{\mathbf w}) = \mathbf 0$: the residual vector $\mathbf r$ is orthogonal to every column of $X$. The intercept's column is all ones, so $\mathbf 1^\top\mathbf r = \sum r_i = 0$. For any other column $\mathbf x_j$, $\mathbf x_j^\top\mathbf r = 0$ together with $\sum r_i = 0$ means the sample covariance of $\mathbf x_j$ and $\mathbf r$ is zero. Fitted values $X\hat{\mathbf w}$ are a combination of the columns, so $\hat{\mathbf y}^\top\mathbf r = 0$. Averaging $y_i = \hat w x_i + \hat b + r_i$ over $i$ gives $\bar y = \hat w\bar x + \hat b$: the line passes through the mean point.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Let $H = X(X^\top X)^{-1}X^\top$ for an $n\times p$ matrix $X$ of full column rank. Show that $H$ is symmetric and idempotent with trace $p$. If $\mathbf y = X\mathbf w + \boldsymbol\varepsilon$ with $\operatorname{Cov}(\boldsymbol\varepsilon) = \sigma^2I$, show that the expected residual sum of squares is $(n - p)\sigma^2$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$H^\top = H$ is immediate, and $H^2 = X(X^\top X)^{-1}X^\top X(X^\top X)^{-1}X^\top = H$. By the cyclic property, $\operatorname{tr}H = \operatorname{tr}\big((X^\top X)^{-1}X^\top X\big) = \operatorname{tr}I_p = p$. The residuals are $(I - H)\mathbf y = (I - H)\boldsymbol\varepsilon$, since $(I - H)X = 0$. So $E\|\mathbf r\|^2 = E[\boldsymbol\varepsilon^\top(I - H)\boldsymbol\varepsilon] = \sigma^2\operatorname{tr}(I - H) = (n - p)\sigma^2$, using $(I - H)^\top(I - H) = I - H$. Dividing the residual sum of squares by $n - p$ rather than $n$ gives an unbiased estimate of $\sigma^2$: each fitted parameter uses up one dimension of the noise.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Two variables have equal standard deviations and correlation $r = 0.5$. Find the least-squares slope for predicting $y$ from $x$, and for predicting $x$ from $y$. Why are these two lines not the same, and what is "regression to the mean"?</p>
+        <details><summary>Solution</summary><div>
+          <p>The slope of $y$ on $x$ is $r\,s_y/s_x = 0.5$, and of $x$ on $y$ it is $r\,s_x/s_y = 0.5$. Drawn in the same $(x, y)$ plane, the second line has slope $1/0.5 = 2$, so they differ. Each line minimises vertical errors in its own response, and both slopes are pulled towards zero by the factor $r$. In general the product of the two slopes is $r^2$, which is 1 only when the points lie exactly on a line. Regression to the mean is this shrinkage: an $x$ one standard deviation above average predicts a $y$ only $r$ standard deviations above average. Very tall parents have tall children, but less extreme on average, and the effect appears whenever the correlation is imperfect, with no causal force behind it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Suppose the noise variance differs between examples: $y_i = \mathbf x_i^\top\mathbf w + \varepsilon_i$ with $\varepsilon_i\sim N(0, \sigma_i^2)$ independent and the $\sigma_i$ known. Derive the maximum-likelihood estimate of $\mathbf w$, and the MLE of a common $\sigma^2$ when all the $\sigma_i$ are equal but unknown.</p>
+        <details><summary>Solution</summary><div>
+          <p>The negative log-likelihood is $\sum_i\frac{(y_i - \mathbf x_i^\top\mathbf w)^2}{2\sigma_i^2} + \text{const}$, a weighted least-squares problem. With $\Omega = \operatorname{diag}(1/\sigma_i^2)$, setting the gradient $-X^\top\Omega(\mathbf y - X\mathbf w)$ to zero gives $\hat{\mathbf w} = (X^\top\Omega X)^{-1}X^\top\Omega\mathbf y$: noisy points get less weight. When all $\sigma_i = \sigma$, the weights cancel and $\hat{\mathbf w}$ is ordinary least squares. The negative log-likelihood is then $\frac{\text{RSS}}{2\sigma^2} + \frac n2\log\sigma^2$, minimised at $\hat\sigma^2 = \text{RSS}/n$, which is biased by the factor $(n - p)/n$ of problem 3.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> A data set accidentally contains the same feature twice, so $X = [\mathbf x, \mathbf x]$, and the truth is $\mathbf y = 2\mathbf x$. Describe all least-squares solutions. Which one has the smallest norm, and which one does gradient descent from $\mathbf w = \mathbf 0$ find?</p>
+        <details><summary>Solution</summary><div>
+          <p>$X\mathbf w = (w_1 + w_2)\mathbf x$, so every $\mathbf w$ with $w_1 + w_2 = 2$ fits exactly: a whole line of solutions, because $X^\top X$ is singular and the normal equations do not pin down $\mathbf w$. The smallest-norm solution is $(1, 1)$. Gradient descent from $\mathbf 0$ finds it: every gradient $X^\top(X\mathbf w - \mathbf y)$ has equal components, so the iterates stay on the line $w_1 = w_2$, which meets the solution set at $(1, 1)$. In general, gradient descent from zero on least squares converges to the minimum-norm solution, the pseudo-inverse's answer (lesson M1).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag code">code</span> Generate $n = 50$ responses that are pure noise, $y_i\sim N(0, 1)$, and fit least squares with an intercept and $p = 10$ features that are also pure noise. Average $R^2$ over 2,000 repetitions. Compare with $p/(n - 1)$, and explain why training $R^2$ can never fall when a feature is added.</p>
+        <details><summary>Solution</summary><div>
+          <p>With <code>default_rng(0)</code> the average is 0.208, close to the theoretical mean $p/(n - 1) = 10/49 = 0.204$ (under the null, $R^2$ follows a Beta$(p/2, (n - p - 1)/2)$ distribution). Ten useless features "explain" a fifth of the variance. Adding a column enlarges the subspace that $\mathbf y$ is projected onto, so the projection can only get closer to $\mathbf y$ and the residual sum of squares can only fall. That is why training $R^2$ cannot select features, and why lesson 04 judges models on held-out data.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="gradient-descent">
+    <h2>Gradient descent</h2>
+    <ol start="8">
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> Minimise $f(w) = (w - 3)^2$ by gradient descent from $w_0 = 0$ with $\eta = 0.1$. Find $w_t$ in closed form and $w_3$. For which $\eta$ does one step land exactly on the minimum, and for which does the iteration diverge?</p>
+        <details><summary>Solution</summary><div>
+          <p>$f'(w) = 2(w - 3)$, so $w_{t+1} - 3 = (1 - 2\eta)(w_t - 3)$ and $w_t = 3\big(1 - (1 - 2\eta)^t\big)$. With $\eta = 0.1$, $w_t = 3(1 - 0.8^t)$ and $w_3 = 3(1 - 0.512) = 1.464$. One step is exact when $1 - 2\eta = 0$, at $\eta = 0.5$, which is $1/f''$. The error grows when $|1 - 2\eta| &gt; 1$, that is $\eta &gt; 1 = 2/f''$. For $0.5 &lt; \eta &lt; 1$ it still converges, but overshooting the minimum and oscillating.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> A quadratic loss has Hessian eigenvalues 1 and 100. What is the largest learning rate for which gradient descent converges? Which fixed rate gives the fastest worst-case convergence, and at what rate does the error then shrink per step? About how many steps reduce the error by a factor of 1,000?</p>
+        <details><summary>Solution</summary><div>
+          <p>Along an eigenvector with eigenvalue $\lambda$, the error is multiplied by $1 - \eta\lambda$ each step. Convergence needs $|1 - \eta\lambda| &lt; 1$ for both, so $\eta &lt; 2/100 = 0.02$. The worst factor $\max(|1 - \eta|, |1 - 100\eta|)$ is smallest when the two are equal, at $\eta = 2/101$, giving $\frac{100 - 1}{100 + 1} = 0.980$ per step. Reducing the error 1,000-fold needs $\ln1000/(-\ln0.980) \approx 345$ steps. The step size is limited by the steepest direction and progress by the flattest one, so the condition number $\kappa = 100$ sets the speed.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> You fit house prices from floor area. Measured in square metres, the feature ranges up to 300; then you switch to square millimetres. What happens to the Hessian of the squared error, to the largest stable learning rate, and to the condition number if the model also has an intercept? Why does standardising features help?</p>
+        <details><summary>Solution</summary><div>
+          <p>The Hessian is $\frac2n X^\top X$. Multiplying a column by $c = 10^6$ multiplies its diagonal entry by $c^2 = 10^{12}$ and its off-diagonal entries by $c$. The largest eigenvalue grows by about $10^{12}$, so the largest stable learning rate shrinks by the same factor, and the intercept's direction, whose curvature is unchanged, now moves about $10^{12}$ times more slowly: the condition number explodes. Standardising each feature to mean 0 and variance 1 makes the diagonal of $X^\top X/n$ all ones and, by centring, removes the coupling with the intercept, so the bowl is as round as the correlations between features allow.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> The delta rule updates $\mathbf w \leftarrow \mathbf w + \eta(y - \mathbf w^\top\mathbf x)\mathbf x$ after each example. Show it is stochastic gradient descent on $\tfrac12(y - \mathbf w^\top\mathbf x)^2$. Then show that with $\eta = 1/\|\mathbf x\|^2$, the updated weights predict this example's $y$ exactly. Why is that not a good learning rate in general?</p>
+        <details><summary>Solution</summary><div>
+          <p>The gradient of $\tfrac12(y - \mathbf w^\top\mathbf x)^2$ is $-(y - \mathbf w^\top\mathbf x)\mathbf x$, so a step against it is the delta rule. After the update, $\mathbf w'^\top\mathbf x = \mathbf w^\top\mathbf x + \eta(y - \mathbf w^\top\mathbf x)\|\mathbf x\|^2$, which equals $y$ when $\eta\|\mathbf x\|^2 = 1$. This is normalised LMS (the Kaczmarz method): each step projects $\mathbf w$ onto the set of weights that fit the current example. With noisy labels, fitting each example exactly means chasing the noise: the weights jump to wherever the last example puts them. A smaller step averages over many examples.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> $f$ is $L$-smooth: $\|\nabla f(\mathbf u) - \nabla f(\mathbf v)\| \le L\|\mathbf u - \mathbf v\|$, which implies $f(\mathbf v) \le f(\mathbf u) + \nabla f(\mathbf u)^\top(\mathbf v - \mathbf u) + \frac L2\|\mathbf v - \mathbf u\|^2$. Show that a gradient step with $\eta = 1/L$ decreases $f$ by at least $\|\nabla f\|^2/(2L)$, and deduce that after $T$ steps some iterate has $\|\nabla f\|^2 \le 2L(f(\mathbf w_0) - f^\star)/T$, without assuming convexity.</p>
+        <details><summary>Solution</summary><div>
+          <p>Put $\mathbf v = \mathbf u - \eta\nabla f(\mathbf u)$ into the bound: $f(\mathbf v) \le f(\mathbf u) - \eta\|\nabla f\|^2 + \frac{L\eta^2}{2}\|\nabla f\|^2 = f(\mathbf u) - \eta(1 - \tfrac{L\eta}{2})\|\nabla f\|^2$. At $\eta = 1/L$ the decrease is $\|\nabla f(\mathbf u)\|^2/(2L)$. Summing over $T$ steps, $\frac1{2L}\sum_{t&lt;T}\|\nabla f(\mathbf w_t)\|^2 \le f(\mathbf w_0) - f(\mathbf w_T) \le f(\mathbf w_0) - f^\star$, and the smallest term is at most the average. This guarantees only an approximately stationary point, which for a non-convex $f$ can be a saddle or a local minimum, but it is the starting point of every convergence proof for training neural networks.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag code">code</span> Run full-batch gradient descent on the mean squared error for problem 1's data, from $(w, b) = (0, 0)$ with $\eta = 0.1$. How many steps until both parameters are within $10^{-6}$ of $(2.2, 0.7)$? Compute the Hessian's eigenvalues and use them to explain the count, and find the largest stable $\eta$.</p>
+        <details><summary>Solution</summary><div>
+          <p>It takes 204 steps. The Hessian of $\frac1n\|X\mathbf w - \mathbf y\|^2$ is $\frac2nX^\top X$, with eigenvalues 0.595 and 8.405. The slow direction shrinks by $1 - 0.1\cdot0.595 = 0.941$ per step, and the initial error of about 2.3 needs $\ln(2.3\times10^6)/(-\ln0.941) \approx 240$ steps by this crude bound, the same order as the 204 observed (the error's component along the slow direction is smaller than its full size). The largest stable rate is $2/8.405 = 0.238$. Centring $x$ would make the Hessian diagonal, $\operatorname{diag}(2.5, 2)$, and cut the condition number from 14.1 to 1.25.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="logistic">
+    <h2>Logistic regression</h2>
+    <ol start="14">
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> A logistic model has $w = 2$, $b = -1$. Compute $p(y = 1\mid x)$ at $x = 0$, $0.5$ and $1$, and say what $w$ means in terms of odds.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\sigma(-1) = 0.269$, $\sigma(0) = 0.5$ and $\sigma(1) = 0.731$. The decision boundary is at $x = 0.5$. The log-odds $\log\frac p{1 - p} = 2x - 1$ is linear in $x$, so each unit increase in $x$ multiplies the odds by $e^2 = 7.39$. The probability itself does not change by a fixed amount: it changes fastest at the boundary, where the slope is $w/4 = 0.5$ per unit of $x$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> For the average log-loss $J(\mathbf w) = \frac1n\sum_i\big[-y_i\log p_i - (1 - y_i)\log(1 - p_i)\big]$ with $p_i = \sigma(\mathbf w^\top\mathbf x_i)$, derive the gradient and the Hessian, and show that $J$ is convex.</p>
+        <details><summary>Solution</summary><div>
+          <p>Using $\sigma'(z) = \sigma(z)(1 - \sigma(z))$, the derivative of one term with respect to $z_i = \mathbf w^\top\mathbf x_i$ is $-y_i(1 - p_i) + (1 - y_i)p_i = p_i - y_i$. By the chain rule, $\nabla J = \frac1n\sum_i(p_i - y_i)\mathbf x_i$: prediction minus truth, times input, the same shape as the delta rule. Differentiating again, $\nabla^2J = \frac1n\sum_ip_i(1 - p_i)\mathbf x_i\mathbf x_i^\top = \frac1nX^\top SX$ with $S = \operatorname{diag}(p_i(1 - p_i))$. For any $\mathbf v$, $\mathbf v^\top\nabla^2J\,\mathbf v = \frac1n\sum_ip_i(1 - p_i)(\mathbf v^\top\mathbf x_i)^2 \ge 0$, so $J$ is convex and every local minimum is global.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> For one example with $y = 1$ and $z = \mathbf w^\top\mathbf x$, compare the derivative with respect to $z$ of the log-loss $-\log\sigma(z)$ and of the squared error $(1 - \sigma(z))^2$, at $z = -5$. What does this say about training with squared error on a sigmoid?</p>
+        <details><summary>Solution</summary><div>
+          <p>The log-loss derivative is $\sigma(z) - 1 = -0.993$ at $z = -5$. The squared error's is $-2(1 - \sigma(z))\sigma(z)(1 - \sigma(z)) = -2(0.993)^2(0.00669) = -0.0132$, 75 times smaller. When the model is confidently wrong, the sigmoid is saturated, its slope $\sigma(1 - \sigma)$ is tiny, and squared error inherits that tiny slope: the worst mistakes learn the slowest. Log-loss's $-\log$ cancels the saturation exactly. Squared error on a sigmoid is also not convex in $\mathbf w$, so it can have flat regions and poor local minima.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> Two points, $x = -1$ with $y = 0$ and $x = 1$ with $y = 1$, are fitted by logistic regression without an intercept. Write the loss as a function of $w$ and show that it has no minimum. What happens to $w$ under gradient descent, and what is one fix?</p>
+        <details><summary>Solution</summary><div>
+          <p>Both points give the same term: $J(w) = \log(1 + e^{-w})$, which decreases strictly for all $w$ and tends to 0 as $w\to\infty$, so no finite $w$ minimises it. Gradient descent increases $w$ forever, ever more slowly, because the gradient $-1/(1 + e^{w})$ shrinks like $e^{-w}$; $w$ grows like $\log t$ (problem 19). The predicted probabilities approach 0 and 1, overconfident about any new point. An L2 penalty $\frac\lambda2w^2$ makes the loss strictly convex with a finite minimiser; early stopping also caps $w$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> The two classes are Gaussian with a shared variance: $x\mid y = 0\sim N(\mu_0, \sigma^2)$, $x\mid y = 1\sim N(\mu_1, \sigma^2)$, and $P(y = 1) = \pi$. Show that $P(y = 1\mid x) = \sigma(wx + b)$ and find $w$ and $b$. Evaluate them for $\mu_0 = 0$, $\mu_1 = 2$, $\sigma = 1$, $\pi = 0.5$.</p>
+        <details><summary>Solution</summary><div>
+          <p>By Bayes' rule, the log-odds is $\log\frac{\pi\,N(x; \mu_1, \sigma^2)}{(1 - \pi)N(x; \mu_0, \sigma^2)} = \frac{(x - \mu_0)^2 - (x - \mu_1)^2}{2\sigma^2} + \log\frac{\pi}{1 - \pi}$. The $x^2$ terms cancel because the variances are equal, leaving $wx + b$ with $w = \frac{\mu_1 - \mu_0}{\sigma^2}$ and $b = \frac{\mu_0^2 - \mu_1^2}{2\sigma^2} + \log\frac\pi{1 - \pi}$. For the example, $w = 2$ and $b = -2$, with the boundary half-way between the means at $x = 1$. With unequal variances the $x^2$ term survives and the boundary is quadratic. Logistic regression assumes only this form of the posterior, not Gaussian classes, which is why it is more robust when the classes are not Gaussian.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag code">code</span> Train logistic regression without an intercept on the separable data $x = (-2, -1, 1, 2)$, $y = (0, 0, 1, 1)$ by full-batch gradient descent with $\eta = 0.5$ from $w = 0$. Record $w$ after $10, 10^2, \dots, 10^5$ steps. How does $w$ grow, and why?</p>
+        <details><summary>Solution</summary><div>
+          <p>The solution gets $w = 1.56, 3.38, 5.55, 7.83, 10.13$: each tenfold increase in steps adds about $2.3 = \ln10$, so $w \approx \ln t + c$. Once the points are classified correctly, the gradient is dominated by the two points closest to the boundary ($x = \pm1$) and is about $-\frac12e^{-w}$, so $\dot w \propto e^{-w}$, whose solution grows like $\log t$. In more dimensions, the weight vector's norm grows like $\log t$ while its direction converges to the maximum-margin separator (Soudry et al., 2018): gradient descent has an implicit bias even when the loss has no minimum.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

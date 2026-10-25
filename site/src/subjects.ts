@@ -134,7 +134,8 @@ const withFigures = (html: string, subject: string) =>
       .replace(/<\?xml[^>]*>\s*/, "") ?? all);
 const fragment = (files: Record<string, string>, subject: string, dir: string, file: string) =>
   withBase(withFigures(Object.entries(files).find(([p]) => p.endsWith(`/subjects/${subject}/${dir}/${file}.html`))?.[1] ?? "", subject));
-export const lessonBody = (id: string) => fragment(lessonHtml, subjectOf(id), "lessons", slugIn(id));
+const rawLessonBody = (id: string) => fragment(lessonHtml, subjectOf(id), "lessons", slugIn(id));
+export const lessonBody = (id: string) => withProblemIds(rawLessonBody(id));
 export const pageBody = (subject: string, file: string) => fragment(pageHtml, subject, "pages", file);
 
 // Section headings of a hand-written lesson, for its "On this page" list.
@@ -150,4 +151,59 @@ export async function recentlyAdded(limit = 8) {
     ...SUBJECTS.flatMap((s) => pagesOf(s.slug).map((p) => ({ date: p.added ?? today, subject: s.slug, href: u(`/${s.slug}/${p.file}/`), label: p.title }))),
   ];
   return items.sort((a, b) => b.date.localeCompare(a.date) || b.label.localeCompare(a.label)).slice(0, limit);
+}
+
+// ---------- the problem book ----------
+// A problem set is a lesson whose article has class "problems". Each problem is an <li> whose first
+// paragraph opens with tag spans (<span class="tag key">key</span><span class="tag core">core</span> ...);
+// <ol start="n"> continues the numbering across sections. Problems get ids p-1, p-2, ... so the
+// problem book can link to them, and the scan below is the single definition of what a problem is.
+export type Problem = { n: number; tags: string[]; html: string; text: string; section: string };
+export type ProblemSet = { id: string; chapter: string; title: string; part: number; blurb?: string; problems: Problem[] };
+
+const PROBLEM_TOKENS = /<h2>([\s\S]*?)<\/h2>|<ol(?: start="(\d+)")?>|<li>(?=\s*<p>\s*<span class="tag)/g;
+const isProblemSet = (html: string) => /<article class="lesson problems"/.test(html);
+
+function scanProblems(html: string) {
+  const found: { n: number; at: number; section: string }[] = [];
+  let n = 0, section = "";
+  for (const m of html.matchAll(PROBLEM_TOKENS)) {
+    if (m[1] !== undefined) { section = m[1].replace(/<[^>]+>/g, "").trim(); continue; }
+    if (m[0].startsWith("<ol")) {
+      // Only lists of problems reset the count; a list inside a solution does not start with tags.
+      if (m[2]) n = Number(m[2]) - 1;
+      else if (/^\s*<li>\s*<p>\s*<span class="tag/.test(html.slice(m.index! + m[0].length, m.index! + m[0].length + 120))) n = 0;
+      continue;
+    }
+    found.push({ n: ++n, at: m.index!, section });
+  }
+  return found;
+}
+
+function withProblemIds(html: string) {
+  if (!isProblemSet(html)) return html;
+  let out = "", pos = 0;
+  for (const p of scanProblems(html)) {
+    out += html.slice(pos, p.at) + `<li id="p-${p.n}" data-problem="${p.n}">`;
+    pos = p.at + "<li>".length;
+  }
+  return out + html.slice(pos);
+}
+
+export async function problemSets(subject: string): Promise<ProblemSet[]> {
+  const sets: ProblemSet[] = [];
+  for (const e of await chaptersOf(subject)) {
+    if (e.kind !== "html") continue;
+    const html = rawLessonBody(e.id);
+    if (!isProblemSet(html)) continue;
+    const problems = scanProblems(html).map(({ n, at, section }) => {
+      const first = html.slice(at).match(/<p>([\s\S]*?)<\/p>/)![1];
+      const tags = [...first.matchAll(/<span class="tag[^"]*">([^<]*)<\/span>/g)].map((t) => t[1].trim());
+      const body = first.replace(/<span class="tag[^"]*">[^<]*<\/span>\s*/g, "").trim();
+      const text = body.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ");
+      return { n, tags, html: body, text, section };
+    });
+    sets.push({ id: e.id, chapter: e.chapter, title: e.title, part: e.part, blurb: e.blurb, problems });
+  }
+  return sets;
 }

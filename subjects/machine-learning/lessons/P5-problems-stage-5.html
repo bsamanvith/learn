@@ -1,8 +1,8 @@
 <header class="lesson-head">
   <div class="eyebrow">Problem set P5 · Stage 5: deep architectures</div>
   <h1>Problem set: stage 5</h1>
-  <p class="lede">Twenty-one problems on lessons 15–21: convolutions and residual networks, recurrent networks and their gradients, word embeddings, attention, the Transformer, and contrastive learning. Try each one on paper before opening its solution. Problems marked <span class="tag">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
-  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/15-convolutional-networks/">15</a>, <a href="/machine-learning/16-modern-cnns/">16</a>, <a href="/machine-learning/17-recurrent-networks/">17</a>, <a href="/machine-learning/18-word-embeddings/">18</a>, <a href="/machine-learning/19-attention/">19</a>, <a href="/machine-learning/20-transformer/">20</a>, <a href="/machine-learning/21-vision-transformers-and-clip/">21</a></span><span><b>Difficulty:</b> <span class="tag">warm-up</span> <span class="tag">core</span> <span class="tag">hard</span></span></div>
+  <p class="lede">Twenty-one problems on lessons 15–21: convolutions and residual networks, recurrent networks and their gradients, word embeddings, attention, the Transformer, and contrastive learning. Try each one on paper before opening its solution. Problems marked <span class="tag code">code</span> build on the lessons' code; their solutions give the numbers you should get.</p>
+  <div class="meta"><span><b>Covers:</b> <a href="/machine-learning/15-convolutional-networks/">15</a>, <a href="/machine-learning/16-modern-cnns/">16</a>, <a href="/machine-learning/17-recurrent-networks/">17</a>, <a href="/machine-learning/18-word-embeddings/">18</a>, <a href="/machine-learning/19-attention/">19</a>, <a href="/machine-learning/20-transformer/">20</a>, <a href="/machine-learning/21-vision-transformers-and-clip/">21</a></span><span><b>Difficulty:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
 </header>
 
 <article class="lesson problems">
@@ -10,37 +10,37 @@
     <h2>Convolutions and residual networks</h2>
     <ol>
       <li>
-        <p><span class="tag">warm-up</span> A convolutional layer maps a $32\times32\times3$ input to 64 channels with $5\times5$ kernels, stride 2 and padding 2. What is the output size? How many parameters does it have, and how many would a fully connected layer with the same input and output sizes have?</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> A convolutional layer maps a $32\times32\times3$ input to 64 channels with $5\times5$ kernels, stride 2 and padding 2. What is the output size? How many parameters does it have, and how many would a fully connected layer with the same input and output sizes have?</p>
         <details><summary>Solution</summary><div>
           <p>Each spatial side is $\lfloor(32 + 2\cdot2 - 5)/2\rfloor + 1 = 16$, so the output is $16\times16\times64$. Parameters: $64\cdot(5\cdot5\cdot3) + 64 = 4{,}864$. A fully connected layer from $3{,}072$ inputs to $16{,}384$ outputs has $3072\cdot16384 + 16384 = 50{,}348{,}032$, more than ten thousand times as many. Weight sharing and locality account for the whole difference.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> What is the receptive field of a unit after $L$ stacked $3\times3$ convolutions with stride 1? After a $3\times3$ convolution with stride 2 followed by $L$ more with stride 1? Compare two stacked $3\times3$ layers with one $5\times5$ layer, both mapping $C$ channels to $C$: receptive field, parameters, nonlinearities.</p>
+        <p><span class="tag core">core</span> What is the receptive field of a unit after $L$ stacked $3\times3$ convolutions with stride 1? After a $3\times3$ convolution with stride 2 followed by $L$ more with stride 1? Compare two stacked $3\times3$ layers with one $5\times5$ layer, both mapping $C$ channels to $C$: receptive field, parameters, nonlinearities.</p>
         <details><summary>Solution</summary><div>
           <p>Each stride-1 $3\times3$ layer adds 2 to the receptive field: $2L + 1$. After a stride-2 layer, every later step of one unit corresponds to 2 input pixels, so each later $3\times3$ layer adds 4: $3 + 4L$. In general the receptive field grows by $(k - 1)$ times the product of all earlier strides. Two $3\times3$ layers see $5\times5$, like one $5\times5$ layer, with $2\cdot9C^2 = 18C^2$ weights against $25C^2$, and with two nonlinearities instead of one. This is VGG's argument for building everything from $3\times3$ convolutions.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> In one dimension, $z_i = \sum_{a=0}^{k-1}w_ax_{i+a}$ (cross-correlation, "valid" mode). Show that the gradient of the loss with respect to the input is $\bar x_j = \sum_a w_a\bar z_{j-a}$, a "full" convolution of $\bar{\mathbf{z}}$ with the kernel, and that $\bar w_a = \sum_i\bar z_ix_{i+a}$ is a cross-correlation of the input with $\bar{\mathbf{z}}$.</p>
+        <p><span class="tag core">core</span> In one dimension, $z_i = \sum_{a=0}^{k-1}w_ax_{i+a}$ (cross-correlation, "valid" mode). Show that the gradient of the loss with respect to the input is $\bar x_j = \sum_a w_a\bar z_{j-a}$, a "full" convolution of $\bar{\mathbf{z}}$ with the kernel, and that $\bar w_a = \sum_i\bar z_ix_{i+a}$ is a cross-correlation of the input with $\bar{\mathbf{z}}$.</p>
         <details><summary>Solution</summary><div>
           <p>$x_j$ appears in $z_i$ exactly when $i + a = j$ for some $a\in\{0, \dots, k-1\}$, with coefficient $w_a$. So $\bar x_j = \sum_i\bar z_i\,\partial z_i/\partial x_j = \sum_a w_a\bar z_{j-a}$, where $\bar z_{j-a}$ is taken as 0 outside the output's range. That is a convolution (the kernel flipped relative to the forward cross-correlation) with zero padding of $k - 1$ on each side: a "full" convolution, and its output has the input's length. Similarly $\partial z_i/\partial w_a = x_{i+a}$, so $\bar w_a = \sum_i\bar z_ix_{i+a}$. Both backward operations are convolutions, which is why the backward pass of a CNN costs about twice its forward pass.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A <b>depthwise separable convolution</b> (MobileNet) replaces a $k\times k$ convolution from $C$ to $C'$ channels by a $k\times k$ convolution applied to each channel separately, followed by a $1\times1$ convolution from $C$ to $C'$. Count the weights of both for $k = 3$, $C = C' = 256$. What does the factorisation give up?</p>
+        <p><span class="tag core">core</span> A <b>depthwise separable convolution</b> (MobileNet) replaces a $k\times k$ convolution from $C$ to $C'$ channels by a $k\times k$ convolution applied to each channel separately, followed by a $1\times1$ convolution from $C$ to $C'$. Count the weights of both for $k = 3$, $C = C' = 256$. What does the factorisation give up?</p>
         <details><summary>Solution</summary><div>
           <p>Ordinary: $k^2CC' = 9\cdot256\cdot256 = 589{,}824$. Separable: $k^2C + CC' = 2{,}304 + 65{,}536 = 67{,}840$, 8.7 times fewer, and the same factor in multiply-adds. In general the ratio is $1/C' + 1/k^2$. It gives up kernels that mix space and channels jointly: the full kernel is a general $k\times k\times C\times C'$ tensor, while the separable one is a product in which each input channel has a single spatial filter, shared by all output channels.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">warm-up</span> At test time a batch-norm layer computes $\gamma(z - \mu)/\sigma + \beta$ with fixed running statistics. Show that a convolution followed by batch norm can be replaced by a single convolution, and give its weights and bias.</p>
+        <p><span class="tag warm-up">warm-up</span> At test time a batch-norm layer computes $\gamma(z - \mu)/\sigma + \beta$ with fixed running statistics. Show that a convolution followed by batch norm can be replaced by a single convolution, and give its weights and bias.</p>
         <details><summary>Solution</summary><div>
           <p>For output channel $c$, $z_c = \mathbf{w}_c * \mathbf{x} + b_c$, so $\gamma_c(z_c - \mu_c)/\sigma_c + \beta_c = (\gamma_c\mathbf{w}_c/\sigma_c) * \mathbf{x} + \gamma_c(b_c - \mu_c)/\sigma_c + \beta_c$. The fused convolution has weights $\gamma_c\mathbf{w}_c/\sigma_c$ and bias $\beta_c + \gamma_c(b_c - \mu_c)/\sigma_c$. Inference libraries do this automatically, so batch norm costs nothing at deployment.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> A network is $\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + F_\ell(\mathbf{x}_\ell)$ for $\ell = 0, \dots, L-1$, where at initialisation each Jacobian $J_\ell = \partial F_\ell/\partial\mathbf{x}_\ell$ has independent entries of mean 0 and variance $\sigma^2/n$ (dimension $n$), independent across layers. Show that $\mathbb{E}\lVert\partial\mathbf{x}_L/\partial\mathbf{x}_0\,\mathbf{g}\rVert^2 = (1 + \sigma^2)^L\lVert\mathbf{g}\rVert^2$ for a fixed vector $\mathbf{g}$. What does this say about residual networks with $\sigma^2 = 1$, and why do they scale the residual branches down (to $\sigma^2\sim1/L$) or initialise them at zero?</p>
+        <p><span class="tag hard">hard</span> A network is $\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + F_\ell(\mathbf{x}_\ell)$ for $\ell = 0, \dots, L-1$, where at initialisation each Jacobian $J_\ell = \partial F_\ell/\partial\mathbf{x}_\ell$ has independent entries of mean 0 and variance $\sigma^2/n$ (dimension $n$), independent across layers. Show that $\mathbb{E}\lVert\partial\mathbf{x}_L/\partial\mathbf{x}_0\,\mathbf{g}\rVert^2 = (1 + \sigma^2)^L\lVert\mathbf{g}\rVert^2$ for a fixed vector $\mathbf{g}$. What does this say about residual networks with $\sigma^2 = 1$, and why do they scale the residual branches down (to $\sigma^2\sim1/L$) or initialise them at zero?</p>
         <details><summary>Solution</summary><div>
           <p>Let $\mathbf{g}_\ell = (I + J_{\ell-1})\cdots(I + J_0)\mathbf{g}$. Then $\mathbf{g}_{\ell+1} = \mathbf{g}_\ell + J_\ell\mathbf{g}_\ell$, and conditional on $\mathbf{g}_\ell$, $\mathbb{E}[J_\ell\mathbf{g}_\ell] = 0$ and $\mathbb{E}\lVert J_\ell\mathbf{g}_\ell\rVert^2 = \sum_i\sum_j(\sigma^2/n)g_j^2 = \sigma^2\lVert\mathbf{g}_\ell\rVert^2$. The cross term has mean 0, so $\mathbb{E}\lVert\mathbf{g}_{\ell+1}\rVert^2 = (1 + \sigma^2)\mathbb{E}\lVert\mathbf{g}_\ell\rVert^2$. With $\sigma^2 = 1$ the gradient norm squared doubles with every block: $2^{50}$ for 50 blocks, an explosion, though a gentler one than in a plain network, where it is $\sigma^{2L}$ and the network only works if $\sigma^2$ is exactly 1. With $\sigma^2 = c/L$, $(1 + c/L)^L\to e^c$, bounded however deep the network. Zero-initialising the last layer of each branch (lesson 16, and "Fixup", Zhang et al. 2019) is the extreme case, $\sigma = 0$: the network starts as the identity.</p>
         </div></details>
@@ -52,19 +52,19 @@
     <h2>Recurrent networks and embeddings</h2>
     <ol start="7">
       <li>
-        <p><span class="tag">warm-up</span> How many parameters does an LSTM layer with input size 100 and hidden size 256 have? A GRU?</p>
+        <p><span class="tag warm-up">warm-up</span> How many parameters does an LSTM layer with input size 100 and hidden size 256 have? A GRU?</p>
         <details><summary>Solution</summary><div>
           <p>An LSTM has four gates, each with a weight matrix on $[\mathbf{h}_{t-1}; \mathbf{x}_t]$ and a bias: $4\,(256\cdot(256 + 100) + 256) = 4\cdot91{,}392 = 365{,}568$. A GRU has three: $3\cdot91{,}392 = 274{,}176$.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> For the recurrence $\mathbf{h}_t = \tanh(W\mathbf{h}_{t-1} + U\mathbf{x}_t)$, show that $\lVert\partial\mathbf{h}_T/\partial\mathbf{h}_0\rVert\le\sigma_\text{max}(W)^T$. If $\sigma_\text{max}(W) = 0.9$, how small can the gradient from 50 steps back be? For an LSTM, $\partial\mathbf{c}_t/\partial\mathbf{c}_{t-1}$ along the direct path is $\operatorname{diag}(\mathbf{f}_t)$. What forget-gate bias makes the factor over 50 steps at least 0.5, if the gate's input is otherwise near 0?</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> For the recurrence $\mathbf{h}_t = \tanh(W\mathbf{h}_{t-1} + U\mathbf{x}_t)$, show that $\lVert\partial\mathbf{h}_T/\partial\mathbf{h}_0\rVert\le\sigma_\text{max}(W)^T$. If $\sigma_\text{max}(W) = 0.9$, how small can the gradient from 50 steps back be? For an LSTM, $\partial\mathbf{c}_t/\partial\mathbf{c}_{t-1}$ along the direct path is $\operatorname{diag}(\mathbf{f}_t)$. What forget-gate bias makes the factor over 50 steps at least 0.5, if the gate's input is otherwise near 0?</p>
         <details><summary>Solution</summary><div>
           <p>$\partial\mathbf{h}_t/\partial\mathbf{h}_{t-1} = \operatorname{diag}(1 - \mathbf{h}_t^2)W$, and $|1 - h^2|\le1$, so each factor has norm at most $\sigma_\text{max}(W)$; the product of $T$ factors has norm at most $\sigma_\text{max}(W)^T$. With 0.9 and $T = 50$: $0.9^{50} = 0.0052$, and smaller still when the tanh saturates. For the LSTM we need $f^{50}\ge0.5$, so $f\ge0.5^{1/50} = 0.9862$, and $\sigma(b)\ge0.9862$ means $b\ge\log(0.9862/0.0138) = 4.27$. The common initialisation $b = 1$ gives $f = 0.73$ and $0.73^{50} = 1.5\times10^{-7}$: it helps compared with 0, but the forget gate has to learn to stay open for long dependencies.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> In a corpus of $10^5$ (word, context) pairs, the word "espresso" occurs in 200 pairs, the context word "coffee" in 500, and the two together in 20. What is their PMI? With $k = 5$ negative samples, what value of $\mathbf{w}^\top\mathbf{c}$ does skip-gram with negative sampling converge to for this pair, according to lesson 18?</p>
+        <p><span class="tag core">core</span> In a corpus of $10^5$ (word, context) pairs, the word "espresso" occurs in 200 pairs, the context word "coffee" in 500, and the two together in 20. What is their PMI? With $k = 5$ negative samples, what value of $\mathbf{w}^\top\mathbf{c}$ does skip-gram with negative sampling converge to for this pair, according to lesson 18?</p>
         <details><summary>Solution</summary><div>
           <p>$\operatorname{PMI} = \log\frac{p(w, c)}{p(w)p(c)} = \log\frac{20\cdot10^5}{200\cdot500} = \log20 = 3.00$. SGNS converges to $\operatorname{PMI} - \log k = 3.00 - 1.61 = 1.39$ (Levy and Goldberg's result), provided the embedding dimension is large enough to fit every pair.</p>
         </div></details>
@@ -76,43 +76,43 @@
     <h2>Attention and the Transformer</h2>
     <ol start="10">
       <li>
-        <p><span class="tag">warm-up</span> Compute scaled dot-product attention by hand for the query $\mathbf{q} = (1, 0)$, keys $(1, 0)$, $(0, 1)$, $(-1, 0)$ and scalar values 1, 2, 3.</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> Compute scaled dot-product attention by hand for the query $\mathbf{q} = (1, 0)$, keys $(1, 0)$, $(0, 1)$, $(-1, 0)$ and scalar values 1, 2, 3.</p>
         <details><summary>Solution</summary><div>
           <p>Scores $\mathbf{q}^\top\mathbf{k}_i/\sqrt2 = 0.707, 0, -0.707$. Exponentials 2.028, 1, 0.493, summing to 3.521; weights 0.576, 0.284, 0.140. Output $0.576 + 2\cdot0.284 + 3\cdot0.140 = 1.564$, pulled towards the value of the best-matching key, 1.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> <b>Linear attention.</b> Replace $\exp(\mathbf{q}^\top\mathbf{k})$ by $\phi(\mathbf{q})^\top\phi(\mathbf{k})$ for a feature map $\phi:\mathbb{R}^d\to\mathbb{R}^r_{\ge0}$. Show that all $n$ outputs can then be computed in $O(nrd)$ time instead of $O(n^2d)$. How does this change for causal attention, and what does it have in common with an RNN?</p>
+        <p><span class="tag core">core</span> <b>Linear attention.</b> Replace $\exp(\mathbf{q}^\top\mathbf{k})$ by $\phi(\mathbf{q})^\top\phi(\mathbf{k})$ for a feature map $\phi:\mathbb{R}^d\to\mathbb{R}^r_{\ge0}$. Show that all $n$ outputs can then be computed in $O(nrd)$ time instead of $O(n^2d)$. How does this change for causal attention, and what does it have in common with an RNN?</p>
         <details><summary>Solution</summary><div>
           <p>The output for query $i$ is $\sum_j\phi(\mathbf{q}_i)^\top\phi(\mathbf{k}_j)\mathbf{v}_j^\top/\sum_j\phi(\mathbf{q}_i)^\top\phi(\mathbf{k}_j) = \phi(\mathbf{q}_i)^\top S/\phi(\mathbf{q}_i)^\top\mathbf{z}$ with $S = \sum_j\phi(\mathbf{k}_j)\mathbf{v}_j^\top\in\mathbb{R}^{r\times d}$ and $\mathbf{z} = \sum_j\phi(\mathbf{k}_j)$. Computing $S$ and $\mathbf{z}$ once costs $O(nrd)$, and each output then costs $O(rd)$. For causal attention, use the prefix sums $S_i = S_{i-1} + \phi(\mathbf{k}_i)\mathbf{v}_i^\top$ and $\mathbf{z}_i = \mathbf{z}_{i-1} + \phi(\mathbf{k}_i)$: this is a recurrence with a fixed-size state $(S_i, \mathbf{z}_i)$, an RNN whose state is a matrix (Katharopoulos et al., 2020). The price is the RNN's: everything about the past must fit in an $r\times d$ state, and such models are worse than softmax attention at exact recall, the task of lesson 19.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A model has $L = 32$ layers, $d = 4096$ and 32 heads of size 128. Compute the KV cache per token in 16-bit floats. <b>Multi-query attention</b> shares one key and one value head among all query heads; <b>grouped-query attention</b> shares each key–value head among a group of query heads. What are the cache sizes with MQA, and with GQA using 8 key–value heads?</p>
+        <p><span class="tag key">key</span><span class="tag core">core</span> A model has $L = 32$ layers, $d = 4096$ and 32 heads of size 128. Compute the KV cache per token in 16-bit floats. <b>Multi-query attention</b> shares one key and one value head among all query heads; <b>grouped-query attention</b> shares each key–value head among a group of query heads. What are the cache sizes with MQA, and with GQA using 8 key–value heads?</p>
         <details><summary>Solution</summary><div>
           <p>Standard: keys and values, $2\cdot L\cdot d = 2\cdot32\cdot4096 = 262{,}144$ numbers, 512 KiB per token (so 2 GiB for 4,096 tokens). MQA: $2\cdot32\cdot128$ numbers, 16 KiB per token, 32 times smaller. GQA with 8 key–value heads: $2\cdot32\cdot8\cdot128$, 128 KiB, 4 times smaller. LLaMA 2 70B and most later models use GQA, which keeps nearly all of full attention's quality.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">warm-up</span> Use the $12Ld^2 + Vd$ rule to estimate the size of a Transformer with $L = 24$, $d = 1024$, $V = 50{,}257$ and tied input and output embeddings. Which GPT-2 is it?</p>
+        <p><span class="tag warm-up">warm-up</span> Use the $12Ld^2 + Vd$ rule to estimate the size of a Transformer with $L = 24$, $d = 1024$, $V = 50{,}257$ and tied input and output embeddings. Which GPT-2 is it?</p>
         <details><summary>Solution</summary><div>
           <p>$12\cdot24\cdot1024^2 = 302$ million, plus $50257\cdot1024 = 51.5$ million, about 353 million: GPT-2 medium, published as 355 million (positions, biases and layer norms make up the rest).</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> Show that in a causal Transformer, appending a token to the input doesn't change the keys, values or outputs at earlier positions. Using this, compare the cost of generating $T$ tokens one at a time with and without a KV cache, counting only attention score computations.</p>
+        <p><span class="tag core">core</span> Show that in a causal Transformer, appending a token to the input doesn't change the keys, values or outputs at earlier positions. Using this, compare the cost of generating $T$ tokens one at a time with and without a KV cache, counting only attention score computations.</p>
         <details><summary>Solution</summary><div>
           <p>By the induction in lesson 20's exercise 3, each layer's state at position $s$ depends only on tokens $1, \dots, s$, so adding token $T + 1$ changes nothing at $s\le T$, including the keys and values computed from those states. Without a cache, step $t$ reruns the whole prefix, computing about $t^2$ scores per layer and head; over $T$ steps, $\sum_tt^2\approx T^3/3$. With a cache, step $t$ computes only the new query against $t$ cached keys: $\sum_tt\approx T^2/2$. For $T = 1000$ that is $3.3\times10^8$ against $5\times10^5$, 667 times fewer.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> <b>How a causal Transformer can know positions without position embeddings.</b> Let $\mathbf{e}_1, \dots, \mathbf{e}_t$ be independent random vectors in $\mathbb{R}^d$ with mean 0 and covariance $I$. A head that attends uniformly outputs $\bar{\mathbf{e}}_t = \frac1t\sum_{s\le t}\mathbf{e}_s$ at position $t$. Compute $\mathbb{E}\lVert\bar{\mathbf{e}}_t\rVert^2$, and explain how a later layer could estimate $t$ from it. Relate this to lesson 20's exercise 4.</p>
+        <p><span class="tag hard">hard</span> <b>How a causal Transformer can know positions without position embeddings.</b> Let $\mathbf{e}_1, \dots, \mathbf{e}_t$ be independent random vectors in $\mathbb{R}^d$ with mean 0 and covariance $I$. A head that attends uniformly outputs $\bar{\mathbf{e}}_t = \frac1t\sum_{s\le t}\mathbf{e}_s$ at position $t$. Compute $\mathbb{E}\lVert\bar{\mathbf{e}}_t\rVert^2$, and explain how a later layer could estimate $t$ from it. Relate this to lesson 20's exercise 4.</p>
         <details><summary>Solution</summary><div>
           <p>$\mathbb{E}\lVert\bar{\mathbf{e}}_t\rVert^2 = \frac{1}{t^2}\sum_s\mathbb{E}\lVert\mathbf{e}_s\rVert^2 = d/t$, with relative fluctuations of order $1/\sqrt d$. So the squared norm of a uniform average reveals $t$ fairly precisely when $d$ is large, and an MLP after a layer norm, or a function of the pre-norm residual stream, can read it out. A token that appears once, such as a separator, gives a sharper landmark: attending to it with weight $1/t$ produces a component whose size encodes the distance. This is why lesson 20's GPT without position embeddings still reversed 74% of sequences, with the best accuracy near the ends; it is also why "NoPE" causal models train at all (Haviv et al., 2022). An unmasked encoder has no such signal: without positions it is exactly permutation equivariant.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Using <a href="/machine-learning/20-transformer/">lesson 20's code</a>, train the reversal model with one layer and one head, one layer and four heads, and two layers and one head (change the arguments to <code>GPT</code>; you can skip the gradient check). Report the final loss and the test accuracy. Which part of the default model is necessary?</p>
+        <p><span class="tag code">code</span> Using <a href="/machine-learning/20-transformer/">lesson 20's code</a>, train the reversal model with one layer and one head, one layer and four heads, and two layers and one head (change the arguments to <code>GPT</code>; you can skip the gradient check). Report the final loss and the test accuracy. Which part of the default model is necessary?</p>
         <details><summary>Solution</summary><div>
           <p>All three reach a training loss that prints as 0.000 by step 1,000 and reverse all 1,000 test sequences exactly: one layer with one head (30,203 parameters) is enough. The task needs only one operation, "copy the token at position $15 - t$", which a single head can do if it can compute that position from its own, and with learned position embeddings it can: the query at position $t$ and the key at position $s$ just need a large dot product when $s = 15 - t$. The figure in lesson 20 shows the default model doing exactly this with one of its eight heads, and leaving the rest of its capacity largely unused. Harder tasks, such as sorting or anything that needs to combine information from several positions before deciding where to look, need more layers (compare the induction heads of lesson 20, which need two).</p>
           <p>Your numbers may differ in the third decimal if you change the random seed, but every configuration should solve the task.</p>
@@ -125,31 +125,31 @@
     <h2>Vision transformers and contrastive learning</h2>
     <ol start="17">
       <li>
-        <p><span class="tag">warm-up</span> Show that the InfoNCE loss with $N = 2$ (one positive, one negative) is the logistic loss $-\log\sigma(s_{11} - s_{12})$.</p>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> Show that the InfoNCE loss with $N = 2$ (one positive, one negative) is the logistic loss $-\log\sigma(s_{11} - s_{12})$.</p>
         <details><summary>Solution</summary><div>
           <p>$-\log\frac{e^{s_{11}}}{e^{s_{11}} + e^{s_{12}}} = -\log\frac{1}{1 + e^{-(s_{11} - s_{12})}} = -\log\sigma(s_{11} - s_{12})$. Contrastive learning with one negative is logistic regression on the score difference; with $N - 1$ negatives it is softmax regression over $N$ candidates.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">hard</span> Show that as $\tau\to0$, $\tau\,\mathcal{L}_i\to\max\big(0, \max_{j\ne i}\mathbf{u}_i^\top\mathbf{v}_j - \mathbf{u}_i^\top\mathbf{v}_i\big)$, where $\mathcal{L}_i$ is the image-to-text InfoNCE term. What kind of loss is this, and what does it say about which negatives matter at low temperature?</p>
+        <p><span class="tag hard">hard</span> Show that as $\tau\to0$, $\tau\,\mathcal{L}_i\to\max\big(0, \max_{j\ne i}\mathbf{u}_i^\top\mathbf{v}_j - \mathbf{u}_i^\top\mathbf{v}_i\big)$, where $\mathcal{L}_i$ is the image-to-text InfoNCE term. What kind of loss is this, and what does it say about which negatives matter at low temperature?</p>
         <details><summary>Solution</summary><div>
           <p>Write $a_j = \mathbf{u}_i^\top\mathbf{v}_j$. Then $\tau\mathcal{L}_i = \tau\log\sum_je^{(a_j - a_i)/\tau}$. As $\tau\to0$, $\tau\log\sum_je^{b_j/\tau}\to\max_jb_j$ (the log-sum-exp is a smooth maximum: it lies between $\max_jb_j$ and $\max_jb_j + \tau\log N$). With $b_j = a_j - a_i$, and $b_i = 0$, the limit is $\max(0, \max_{j\ne i}(a_j - a_i))$: a hinge loss with zero margin on the single hardest negative. At low temperature only the hardest negative matters, which makes learning sharp but noisy, and sensitive to false negatives.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A ViT-L/14 processes $224\times224$ images with $14\times14$ patches, $d = 1024$ and 24 layers. How many tokens per image? Compare the attention score FLOPs per layer ($2N^2d$ for $QK^\top$ plus the same for $AV$) with the FLOPs of the weight matrices ($24Nd^2$, from $12d^2$ parameters per block). At what image size does attention cost as much as the weights?</p>
+        <p><span class="tag core">core</span> A ViT-L/14 processes $224\times224$ images with $14\times14$ patches, $d = 1024$ and 24 layers. How many tokens per image? Compare the attention score FLOPs per layer ($2N^2d$ for $QK^\top$ plus the same for $AV$) with the FLOPs of the weight matrices ($24Nd^2$, from $12d^2$ parameters per block). At what image size does attention cost as much as the weights?</p>
         <details><summary>Solution</summary><div>
           <p>$(224/14)^2 = 256$ patches, plus a class token, 257. Attention: $4N^2d = 4\cdot257^2\cdot1024 = 2.7\times10^8$ FLOPs per layer. Weights: $24Nd^2 = 24\cdot257\cdot1024^2 = 6.5\times10^9$, 24 times more. The two are equal when $4N^2d = 24Nd^2$, i.e. $N = 6d = 6{,}144$ tokens, an image of about $\sqrt{6144}\cdot14\approx1{,}100$ pixels on a side. For typical image sizes the MLPs and projections dominate; attention's quadratic cost only bites at high resolution or for long text.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">core</span> A batch of $N$ pairs is drawn from a world with only $K$ distinct captions, each equally likely, and images that determine their caption. Show that the mutual information between image and caption is $\log K$, and that for $N\gg K$ the best achievable InfoNCE loss is about $\log(N/K)$, so the bound $\log N - \mathcal{L}$ is about $\log K$: tight, despite the false negatives.</p>
+        <p><span class="tag core">core</span> A batch of $N$ pairs is drawn from a world with only $K$ distinct captions, each equally likely, and images that determine their caption. Show that the mutual information between image and caption is $\log K$, and that for $N\gg K$ the best achievable InfoNCE loss is about $\log(N/K)$, so the bound $\log N - \mathcal{L}$ is about $\log K$: tight, despite the false negatives.</p>
         <details><summary>Solution</summary><div>
           <p>The caption is a function of the image, so $H(Y\mid X) = 0$ and $I = H(Y) = \log K$. In a batch, each image's caption appears about $N/K$ times. A model can at best make the copies indistinguishable from each other and give them all the probability, so the loss per example is $\log(N/K)$, and $\log N - \log(N/K) = \log K$. False negatives don't make the bound wrong; they limit what the loss can reward, which here is exactly the information there is.</p>
         </div></details>
       </li>
       <li>
-        <p><span class="tag">code</span> Using <a href="/machine-learning/21-vision-transformers-and-clip/">lesson 21's code</a>, train for 3,000 steps with temperatures $\tau = 1$, 0.3, 0.07 and 0.01. Report the final loss, the bound $\log N - \mathcal{L}$, and zero-shot accuracy over the 24 (shape, quadrant) captions. Explain the results with lesson 21's temperature section.</p>
+        <p><span class="tag code">code</span> Using <a href="/machine-learning/21-vision-transformers-and-clip/">lesson 21's code</a>, train for 3,000 steps with temperatures $\tau = 1$, 0.3, 0.07 and 0.01. Report the final loss, the bound $\log N - \mathcal{L}$, and zero-shot accuracy over the 24 (shape, quadrant) captions. Explain the results with lesson 21's temperature section.</p>
         <details><summary>Solution</summary><div>
           <p>After 3,000 steps (final loss, bound $\log N - \mathcal{L}$, zero-shot accuracy over 24 captions): $\tau = 0.3$: 3.667, 1.88 nats, 0.751. $\tau = 0.07$: 3.061, 2.48 nats, 0.757. $\tau = 0.01$: 3.382, 2.16 nats, 0.655. $\tau = 1$ doesn't finish: at step 1,000 its loss is 4.78 (bound 0.76 nats; it has learned the quadrants, 98% zero-shot, but not the shapes, 21%), and at step 1,934 one image's 128 hidden units are all switched off, its embedding is the zero vector, and the normalisation computes $0/0$.</p>
           <p>The pattern follows from the floor on the loss. With about 11.6 correct captions per image in a batch and negatives at cosine similarity near 0 (they can't all be at $-1$; lesson 21, exercise 4), the best possible loss is about $\log(11.6 + 244e^{-1/\tau})$: 4.62 for $\tau = 1$, 3.01 for $\tau = 0.3$, 2.45 for $\tau = 0.07$. At $\tau = 1$ the floor is almost where the model already is, so the loss can't reward learning shapes; the gradient on every pair stays large, the weights keep moving, and eventually units die. At $\tau = 0.07$ the floor is low and the gradient focuses on hard negatives, the wrong captions closest to the image, which are mostly the same quadrant with a different shape. At $\tau = 0.01$ the softmax is nearly a hard maximum (problem 18): each step learns from one or two negatives, the gradients are larger and noisier, and it learns more slowly. A practical lesson too: normalise as $\mathbf{z}/(\lVert\mathbf{z}\rVert + \epsilon)$ in real code.</p>

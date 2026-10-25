@@ -1,0 +1,302 @@
+<header class="lesson-head">
+  <div class="eyebrow">Hard problems · Volume III, book 1</div>
+  <h1>Hard problems: mathematics</h1>
+  <p class="lede">Thirty-six problems for a second pass through the mathematics behind machine learning. They cover eigenvalue inequalities and random projections, matrix perturbation and implicit gradients, classic probability puzzles (coupon collectors, ballots, ruined gamblers, secretaries), the inequalities of information theory, convergence proofs for gradient methods, and Markov chains and samplers. Each one takes thought: there is a hint to open first, and a full solution after. Many of the results appear in the lessons as facts; here you prove them.</p>
+  <div class="meta"><span><b>Uses:</b> <a href="/machine-learning/M1-linear-algebra/">M1</a>–<a href="/machine-learning/M6-sampling-and-monte-carlo/">M6</a>, and the <a href="/probability/">probability course</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag hard">hard</span> <span class="tag code">code</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="linear-algebra">
+    <h2>Linear algebra</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Courant–Fischer and Weyl.) For a symmetric $A$ with eigenvalues $\lambda_1 \ge \dots \ge \lambda_n$, prove that $\lambda_k = \max_{\dim S = k}\ \min_{x\in S,\ \|x\| = 1} x^\top Ax$. Deduce Weyl's inequality $\lambda_k(A + B) \le \lambda_k(A) + \lambda_1(B)$ for symmetric $B$, and conclude that every eigenvalue moves by at most $\|E\|_2$ when $A$ is perturbed by $E$.</p>
+        <details><summary>Hint</summary><div><p>For "$\ge$", use the span of the top $k$ eigenvectors. For "$\le$", any $k$-dimensional subspace must meet the span of $v_k, \dots, v_n$, which has dimension $n - k + 1$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let $v_1, \dots, v_n$ be orthonormal eigenvectors. On $S_k = \operatorname{span}(v_1, \dots, v_k)$, a unit vector $x = \sum_{i\le k}c_iv_i$ has $x^\top Ax = \sum_{i\le k}\lambda_ic_i^2 \ge \lambda_k$, so the max-min is at least $\lambda_k$. Conversely, take any $S$ with $\dim S = k$ and $T = \operatorname{span}(v_k, \dots, v_n)$. Since $\dim S + \dim T = n + 1 &gt; n$, they share a unit vector $x = \sum_{i\ge k}c_iv_i$, with $x^\top Ax = \sum_{i\ge k}\lambda_ic_i^2 \le \lambda_k$. So the minimum over every $S$ is at most $\lambda_k$.</p>
+          <p>For Weyl: $x^\top(A + B)x \le x^\top Ax + \lambda_1(B)$ for every unit $x$, because $\lambda_1(B)$ is the largest value of $x^\top Bx$. Taking the min over $x \in S$ and then the max over $S$ on both sides gives $\lambda_k(A + B) \le \lambda_k(A) + \lambda_1(B)$. Applying it with $B = E$ and with $A + E$, $-E$ in place of $A$, $B$ gives $|\lambda_k(A + E) - \lambda_k(A)| \le \max(\lambda_1(E), \lambda_1(-E)) = \|E\|_2$. Eigenvalues are 1-Lipschitz in the operator norm, which is why the spectrum of a noisy covariance matrix is stable even when its eigenvectors are not (problem 7).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Johnson–Lindenstrauss.) Let $R$ be a $k\times d$ matrix of independent $N(0, 1)$ entries and $f(x) = Rx/\sqrt k$. Show that for a fixed unit vector $x$, $P\big(\big|\|f(x)\|^2 - 1\big| &gt; \varepsilon\big) \le 2e^{-k(\varepsilon^2 - \varepsilon^3)/4}$ for $0 &lt; \varepsilon &lt; 1$. Deduce how large $k$ must be so that all pairwise distances among $n$ points are preserved within a factor $1 \pm \varepsilon$ with positive probability, and evaluate it for $n = 10^6$ and $\varepsilon = 0.1$.</p>
+        <details><summary>Hint</summary><div><p>$\|Rx\|^2$ is a sum of $k$ squared standard normals, a $\chi^2_k$ variable with moment generating function $(1 - 2t)^{-k/2}$. Use a Chernoff bound for each tail and $\ln(1 + \varepsilon) \le \varepsilon - \varepsilon^2/2 + \varepsilon^3/3$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Each coordinate of $Rx$ is $N(0, \|x\|^2) = N(0, 1)$, independently, so $Q = \|Rx\|^2 \sim \chi^2_k$. Upper tail: for $0 &lt; t &lt; \frac12$, $P(Q \ge (1 + \varepsilon)k) \le (1 - 2t)^{-k/2}e^{-t(1 + \varepsilon)k}$. At $t = \frac{\varepsilon}{2(1 + \varepsilon)}$, $1 - 2t = \frac1{1 + \varepsilon}$ and the bound is $\big((1 + \varepsilon)e^{-\varepsilon}\big)^{k/2}$. Its logarithm is $\frac k2(\ln(1 + \varepsilon) - \varepsilon) \le \frac k2\big(-\frac{\varepsilon^2}{2} + \frac{\varepsilon^3}{3}\big) \le -\frac k4(\varepsilon^2 - \varepsilon^3)$. Lower tail: $P(Q \le (1 - \varepsilon)k) \le (1 + 2t)^{-k/2}e^{t(1 - \varepsilon)k}$, and $t = \frac{\varepsilon}{2(1 - \varepsilon)}$ gives $\big((1 - \varepsilon)e^{\varepsilon}\big)^{k/2} \le e^{-k\varepsilon^2/4}$, using $\ln(1 - \varepsilon) \le -\varepsilon - \varepsilon^2/2$. Adding the tails gives the claim.</p>
+          <p>Apply it to the $\binom n2 &lt; n^2/2$ unit vectors $(x_i - x_j)/\|x_i - x_j\|$; $f$ is linear, so preserving their norms preserves the distances. The union bound gives failure probability below $n^2e^{-k(\varepsilon^2 - \varepsilon^3)/4}$, which is below 1 once $k &gt; \frac{4\ln(n^2)}{\varepsilon^2 - \varepsilon^3} = \frac{8\ln n}{\varepsilon^2 - \varepsilon^3}$. For $n = 10^6$ and $\varepsilon = 0.1$ that is $k \approx 12{,}300$, whatever the original dimension $d$: a million points in $10^9$ dimensions can be squeezed into about twelve thousand. Random projections, random features and the success of high-dimensional nearest-neighbour search rest on this.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Sherman–Morrison.) Prove $(A + uv^\top)^{-1} = A^{-1} - \frac{A^{-1}uv^\top A^{-1}}{1 + v^\top A^{-1}u}$ when the denominator is non-zero, and $\det(A + uv^\top) = \det A\,(1 + v^\top A^{-1}u)$. Use it to update ridge regression's solution in $O(d^2)$ when one example $(x, y)$ arrives, and show that the update is $w \leftarrow w + P'x\,(y - x^\top w)$, where $P'$ is the updated inverse.</p>
+        <details><summary>Hint</summary><div><p>Multiply the claimed inverse by $A + uv^\top$. For the determinant, factor $A + uv^\top = A(I + A^{-1}uv^\top)$ and find the eigenvalues of a rank-one perturbation of $I$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Write $c = 1 + v^\top A^{-1}u$. Then $(A + uv^\top)\big(A^{-1} - A^{-1}uv^\top A^{-1}/c\big) = I + uv^\top A^{-1} - \frac{u(1 + v^\top A^{-1}u)v^\top A^{-1}}{c} = I$. For the determinant, $I + A^{-1}uv^\top$ has eigenvalue $1 + v^\top A^{-1}u$ on the vector $A^{-1}u$ and eigenvalue 1 on the $(n-1)$-dimensional space orthogonal to $v$, so its determinant is $c$.</p>
+          <p>For ridge, keep $P = (X^\top X + \lambda I)^{-1}$ and $b = X^\top\mathbf y$, so $w = Pb$. A new example adds $xx^\top$, so $P' = P - \frac{Pxx^\top P}{1 + x^\top Px}$, costing $O(d^2)$, against $O(d^3)$ for a fresh inverse. Note $P'x = \frac{Px}{1 + x^\top Px}$. Then $w' = P'(b + xy) = w - \frac{Px\,x^\top w}{1 + x^\top Px} + \frac{Px\,y}{1 + x^\top Px} = w + P'x\,(y - x^\top w)$. This is recursive least squares: a delta rule whose step is the matrix $P'$ instead of a scalar, and which gives exactly the batch answer after every example. The Kalman filter's update has the same form.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Schur product theorem.) Prove that if $A$ and $B$ are positive semi-definite, so is their elementwise product $A\circ B$. Deduce that the product of two kernels is a kernel, and hence that $(x^\top y + c)^p$ for $c \ge 0$ and the Gaussian kernel $e^{-\|x - y\|^2/2}$ are kernels.</p>
+        <details><summary>Hint</summary><div><p>Write $B = \sum_k b_kb_k^\top$ and look at $A\circ(bb^\top)$. For the Gaussian kernel, factor it as $e^{-\|x\|^2/2}e^{x^\top y}e^{-\|y\|^2/2}$ and expand $e^{x^\top y}$ as a power series.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>By the spectral theorem $B = \sum_k b_kb_k^\top$ with $b_k = \sqrt{\mu_k}q_k$. Then $A\circ(bb^\top) = D_bAD_b$ with $D_b = \operatorname{diag}(b)$, and $z^\top D_bAD_bz = (D_bz)^\top A(D_bz) \ge 0$. A sum of PSD matrices is PSD, so $A\circ B$ is. A kernel is a function whose Gram matrix on any finite set of points is PSD; the Gram matrix of $k_1k_2$ is the elementwise product of the two Gram matrices, so it is PSD too.</p>
+          <p>$x^\top y + c$ is a kernel (a linear kernel plus a constant, both PSD), so its $p$-th power is a kernel by induction. For the Gaussian, $e^{x^\top y} = \sum_m(x^\top y)^m/m!$ is a limit of non-negative combinations of kernels, hence a kernel, and $f(x)k(x, y)f(y)$ is a kernel for any function $f$ (its Gram matrix is $D_fKD_f$). Taking $f(x) = e^{-\|x\|^2/2}$ gives $e^{-\|x - y\|^2/2}$. The Gaussian kernel thus contains polynomial features of every degree, which is why its feature space is infinite-dimensional.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> A stochastic matrix $P$ ($n\times n$, rows summing to 1) has every entry at least $\delta &gt; 0$. Show that for any two distributions, $\|\mu P - \nu P\|_1 \le (1 - n\delta)\|\mu - \nu\|_1$. Deduce that $P$ has a unique stationary distribution, that every other eigenvalue satisfies $|\lambda| \le 1 - n\delta$, and what this gives for PageRank with teleport probability 0.15.</p>
+        <details><summary>Hint</summary><div><p>Split $P = n\delta\,U + (1 - n\delta)Q$, where every row of $U$ is uniform. What does $(\mu - \nu)U$ equal?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$P - \delta\mathbf 1\mathbf 1^\top$ has non-negative entries and rows summing to $1 - n\delta$, so $Q = (P - \delta\mathbf 1\mathbf 1^\top)/(1 - n\delta)$ is stochastic (if $n\delta = 1$, $P = U$ and everything is immediate). With $U = \frac1n\mathbf 1\mathbf 1^\top$, $P = n\delta U + (1 - n\delta)Q$. For $x = \mu - \nu$, $x^\top\mathbf 1 = 0$, so $xU = 0$, and $xP = (1 - n\delta)xQ$. A stochastic matrix does not increase the $\ell_1$ norm ($\sum_j|\sum_ix_iQ_{ij}| \le \sum_i|x_i|$), which proves the contraction. By Banach's fixed-point theorem on the (complete) set of distributions, $\mu\mapsto\mu P$ has a unique fixed point $\pi$, and $\|\mu P^t - \pi\|_1 \le 2(1 - n\delta)^t$.</p>
+          <p>For a left eigenvector $vP = \lambda v$ with $\lambda \ne 1$: $v\mathbf 1 = vP\mathbf 1 = \lambda v\mathbf 1$ forces $v\mathbf 1 = 0$, and the same holds for its real and imaginary parts $a$ and $b$. Then $|\lambda|^t\|v\|_1 = \|vP^t\|_1 \le \|aP^t\|_1 + \|bP^t\|_1 \le (1 - n\delta)^t(\|a\|_1 + \|b\|_1)$ for every $t$, so $|\lambda| \le 1 - n\delta$. PageRank uses $G = 0.85P + 0.15U$, whose entries are at least $0.15/n$, so $n\delta \ge 0.15$: power iteration converges at rate 0.85 per step whatever the web graph looks like, about 85 iterations for six digits.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Show that $\kappa(X^\top X) = \kappa(X)^2$ for the 2-norm condition number. Then take the Läuchli matrix $X = \begin{pmatrix}1 &amp; 1\\ \epsilon &amp; 0\\ 0 &amp; \epsilon\end{pmatrix}$ with $\epsilon = 10^{-8}$ and $y = (2, \epsilon, \epsilon)$, whose least-squares solution is $(1, 1)$. What happens in double precision if you solve the normal equations, and what if you use a QR factorisation?</p>
+        <details><summary>Hint</summary><div><p>Compute $X^\top X$ exactly and compare $\epsilon^2$ with the machine epsilon, $2.2\times10^{-16}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $X = USV^\top$, $X^\top X = VS^2V^\top$, whose singular values are the squares of $X$'s, so the ratio of the largest to the smallest is squared. For the Läuchli matrix, $X^\top X = \begin{pmatrix}1 + \epsilon^2 &amp; 1\\1 &amp; 1 + \epsilon^2\end{pmatrix}$, and $1 + 10^{-16}$ rounds to 1 in double precision, so the computed matrix is exactly singular and the normal equations fail (NumPy raises "Singular matrix"). $X$ itself has condition number $1.4\times10^8$, comfortably representable, and a QR or SVD-based solver (<code>np.linalg.lstsq</code>) returns $(1, 1)$ to full precision. Forming $X^\top X$ squares the condition number and can throw away half the digits before the solve begins; this is why libraries solve least squares by QR or SVD.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="calculus">
+    <h2>Calculus and perturbation</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag hard">hard</span> Let $A$ be symmetric with a simple eigenvalue $\lambda$ and unit eigenvector $v$. Show that under a perturbation $dA$, $d\lambda = v^\top(dA)v$ and $dv = (\lambda I - A)^+(dA)v$. For $A = \operatorname{diag}(1, 3)$ and $E = \begin{pmatrix}0 &amp; e\\e &amp; 0\end{pmatrix}$, compare the first-order prediction for the top eigenvalue of $A + E$ with the exact value, and explain why eigenvectors are fragile when eigenvalues are close.</p>
+        <details><summary>Hint</summary><div><p>Differentiate $Av = \lambda v$ and $v^\top v = 1$, then multiply by $v^\top$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Differentiating, $(dA)v + A\,dv = d\lambda\,v + \lambda\,dv$, and $v^\top v = 1$ gives $v^\top dv = 0$. Multiplying by $v^\top$ and using $v^\top A = \lambda v^\top$ cancels the $dv$ terms and leaves $d\lambda = v^\top(dA)v$. The rest reads $(\lambda I - A)dv = (dA)v - d\lambda\,v$. The right side is orthogonal to $v$, and $\lambda I - A$ is invertible on the orthogonal complement of $v$ (the eigenvalue is simple), so $dv = (\lambda I - A)^+(dA)v$; in the eigenbasis, $dv = \sum_{j:\,\lambda_j\ne\lambda}\frac{v_j^\top(dA)v}{\lambda - \lambda_j}v_j$.</p>
+          <p>For the example, $v = e_2$ and $v^\top Ev = 0$: no first-order change. Exactly, the top eigenvalue is $2 + \sqrt{1 + e^2} = 3 + e^2/2 + O(e^4)$, matching the second-order term $\frac{(v_1^\top Ev)^2}{\lambda - \lambda_1} = \frac{e^2}{2}$. The eigenvector moves by about $e/(\lambda - \lambda_j)$: with a gap of $10^{-3}$, a perturbation of $10^{-3}$ can rotate it completely, while the eigenvalues move by at most $10^{-3}$ (problem 1). PCA directions with nearly equal variances are not reproducible.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Show that $\nabla_X\log\det(X^\top X) = 2X(X^\top X)^{-1}$ for an $n\times p$ matrix of full column rank. What is this gradient for a square invertible $X$, and where does such a term appear in machine learning?</p>
+        <details><summary>Hint</summary><div><p>Use $d\log\det M = \operatorname{tr}(M^{-1}dM)$ with $M = X^\top X$, and the cyclic property of the trace.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$dM = dX^\top X + X^\top dX$, so $d\log\det M = \operatorname{tr}(M^{-1}dX^\top X) + \operatorname{tr}(M^{-1}X^\top dX)$. The first trace equals the second: transpose it and use $M^{-\top} = M^{-1}$. So $d\log\det M = \operatorname{tr}(2M^{-1}X^\top dX)$, and since $d f = \operatorname{tr}(G^\top dX)$ means the gradient is $G$, $G = 2XM^{-1}$. For square invertible $X$, $\log\det(X^\top X) = 2\log|\det X|$ and $2X(X^\top X)^{-1} = 2X^{-\top}$, matching PM problem 8. The term $\log|\det J|$ is the change-of-variables correction in normalising flows, and $\log\det$ of a Gram or Fisher matrix is the D-optimal design criterion for choosing informative experiments.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Implicit differentiation.) Let $w^\star(\lambda) = \arg\min_w L(w, \lambda)$ with $\nabla_wL(w^\star, \lambda) = 0$ and an invertible Hessian $H$. Show that $\frac{dw^\star}{d\lambda} = -H^{-1}\partial_\lambda\nabla_wL$. Apply it to ridge regression, $L = \frac12\|y - Xw\|^2 + \frac\lambda2\|w\|^2$, and write the gradient of a validation loss $V(w^\star(\lambda))$ with respect to $\lambda$.</p>
+        <details><summary>Hint</summary><div><p>Differentiate the identity $\nabla_wL(w^\star(\lambda), \lambda) = 0$ with respect to $\lambda$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Differentiating gives $H\frac{dw^\star}{d\lambda} + \partial_\lambda\nabla_wL = 0$, which is the claim (the implicit function theorem guarantees $w^\star$ is differentiable when $H$ is invertible). For ridge, $\nabla_wL = -X^\top(y - Xw) + \lambda w$, so $\partial_\lambda\nabla_wL = w$ and $H = X^\top X + \lambda I$, giving $\frac{dw^\star}{d\lambda} = -(X^\top X + \lambda I)^{-1}w^\star$. You can check it by differentiating $w^\star = (X^\top X + \lambda I)^{-1}X^\top y$ directly. Then $\frac{dV}{d\lambda} = -\nabla V(w^\star)^\top(X^\top X + \lambda I)^{-1}w^\star$, the "hypergradient". The same formula, with a Hessian-vector solve in place of the inverse, tunes many hyperparameters by gradient descent and underlies influence functions, which ask how $w^\star$ moves when one training point is up-weighted.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Show that the gradient of the average logistic loss $J(w) = \frac1n\sum_i\log(1 + e^{-y_iw^\top x_i})$, with labels $y_i = \pm1$, is Lipschitz with constant $L = \sigma_{\max}(X)^2/(4n)$, and that the bound is attained at $w = 0$. Explain why $J$ is not strongly convex on separable data.</p>
+        <details><summary>Hint</summary><div><p>The Hessian is $\frac1nX^\top SX$ with $S = \operatorname{diag}(p_i(1 - p_i))$. Bound $p(1 - p)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$p(1 - p) \le \frac14$, so $0 \preceq \nabla^2J \preceq \frac1{4n}X^\top X$, whose largest eigenvalue is $\sigma_{\max}(X)^2/(4n)$. A twice-differentiable function whose Hessian is bounded by $L$ in operator norm has an $L$-Lipschitz gradient (integrate the Hessian along the segment). At $w = 0$, every $p_i = \frac12$ and the Hessian equals $\frac1{4n}X^\top X$, so the constant cannot be improved. Gradient descent with $\eta &lt; 2/L = 8n/\sigma_{\max}^2$ is therefore safe everywhere. On separable data, along the separating direction $u$ every margin $y_iu^\top x_i$ is positive, so as $w = tu$ with $t\to\infty$ every $p_i(1 - p_i)\to0$ and the Hessian goes to zero: no constant $\mu &gt; 0$ bounds it from below, the infimum is not attained, and the convergence is only like $1/t$ in loss (and $\log t$ in $\|w\|$, P1 problem 19).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Stein's lemma.) For $X\sim N(\mu, \sigma^2)$ and differentiable $g$ with $E|g'(X)| &lt; \infty$, prove $E[g(X)(X - \mu)] = \sigma^2E[g'(X)]$. Use it to show that the score-function and reparameterisation estimators of $\frac{d}{d\mu}E[f(X)]$ have the same mean.</p>
+        <details><summary>Hint</summary><div><p>The Gaussian density satisfies $\phi'(x) = -\frac{x - \mu}{\sigma^2}\phi(x)$. Integrate by parts.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$E[g(X)(X - \mu)] = \int g(x)(x - \mu)\phi(x)\,dx = -\sigma^2\int g(x)\phi'(x)\,dx = \sigma^2\int g'(x)\phi(x)\,dx$, where the boundary term $g\phi$ vanishes at $\pm\infty$ under the integrability assumption. The score-function estimator is $f(X)\,\partial_\mu\log\phi(X) = f(X)(X - \mu)/\sigma^2$; by Stein's lemma its mean is $E[f'(X)]$. The reparameterisation estimator writes $X = \mu + \sigma Z$ and differentiates $f(\mu + \sigma Z)$, giving $f'(X)$, with the same mean. They differ only in variance, which PM problem 28 and lesson M6's part 5 show can differ by orders of magnitude.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="probability">
+    <h2>Probability and counting</h2>
+    <ol start="12">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Coupon collector.) Each cereal box holds one of $n$ equally likely coupons. Let $T$ be the number of boxes needed to collect all $n$. Show $E[T] = nH_n$, $\operatorname{Var}(T) \le \frac{\pi^2}{6}n^2$, and $P(T &gt; n\ln n + cn) \le e^{-c}$. Evaluate the mean for $n = 50$.</p>
+        <details><summary>Hint</summary><div><p>Split $T$ into waiting times for the $i$-th new coupon, each geometric. For the tail, bound the probability that one particular coupon is still missing.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Once $i - 1$ distinct coupons are held, each box is new with probability $p_i = \frac{n - i + 1}{n}$, so the wait $T_i$ is geometric with mean $1/p_i$ and variance $(1 - p_i)/p_i^2 \le 1/p_i^2$. Hence $E[T] = \sum_i\frac{n}{n - i + 1} = nH_n$ and, the $T_i$ being independent, $\operatorname{Var}(T) \le \sum_i\frac{n^2}{(n - i + 1)^2} \le n^2\sum_k\frac1{k^2} = \frac{\pi^2}{6}n^2$. For the tail, a given coupon is missing after $m$ boxes with probability $(1 - \frac1n)^m \le e^{-m/n}$; by the union bound over $n$ coupons, $P(T &gt; m) \le ne^{-m/n}$, which at $m = n\ln n + cn$ is $e^{-c}$. For $n = 50$, $E[T] = 50\times4.499 = 225$ boxes, and the standard deviation is about $\sqrt{3838} = 62$. The $n\ln n$ law also says how many random samples you need before every class, state or arm has been seen once.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The ballot problem.) In an election, A gets $a$ votes and B gets $b &lt; a$, counted in a uniformly random order. Prove that A is strictly ahead throughout the count with probability $\frac{a - b}{a + b}$. Evaluate it for $a = 6$, $b = 4$.</p>
+        <details><summary>Hint</summary><div><p>A good count must start with a vote for A. Among counts that start with A, reflect the part before the first tie to pair "bad" counts with counts that start with B.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Draw the count as a lattice path, up for A and down for B, from 0 to $a - b$. Good paths stay strictly above 0 after the start, so their first step is up. A bad path that starts up must touch 0 at some first time; reflecting the segment before that time (swapping up and down steps) gives a path that starts down. This is a bijection onto all paths that start down, because every path starting down must cross 0 to end at $a - b &gt; 0$, and reflecting its segment up to its first return to 0 inverts the map. Paths starting down number $\binom{a + b - 1}{a}$, and paths starting up $\binom{a + b - 1}{a - 1}$, so good paths number $\binom{a + b - 1}{a - 1} - \binom{a + b - 1}{a} = \frac{a - b}{a + b}\binom{a + b}{a}$. Dividing by the $\binom{a + b}{a}$ equally likely orders gives $\frac{a - b}{a + b}$; for 6 to 4 it is 0.2. The reflection principle also gives the distribution of the maximum of a random walk, used for hitting times in RL and in sequential tests.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Let $F$ be the number of fixed points of a uniformly random permutation of $n$ items. Show that $E[F] = \operatorname{Var}(F) = 1$ for every $n \ge 2$, that $P(F = 0) = \sum_{k=0}^n\frac{(-1)^k}{k!}$, and that this differs from $1/e$ by less than $\frac1{(n+1)!}$.</p>
+        <details><summary>Hint</summary><div><p>Write $F = \sum_iI_i$ and compute $E[I_iI_j]$. For $P(F = 0)$, use inclusion–exclusion over the events "item $i$ is fixed".</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$E[I_i] = \frac1n$, so $E[F] = 1$. For $i \ne j$, $E[I_iI_j] = \frac{1}{n(n-1)}$, so $\operatorname{Cov}(I_i, I_j) = \frac1{n(n-1)} - \frac1{n^2} = \frac{1}{n^2(n-1)}$. Then $\operatorname{Var}(F) = n\cdot\frac1n(1 - \frac1n) + n(n-1)\cdot\frac1{n^2(n-1)} = 1 - \frac1n + \frac1n = 1$. With $A_i$ = "$i$ is fixed", any $k$ given items are all fixed with probability $\frac{(n-k)!}{n!}$, so inclusion–exclusion gives $P(\bigcup A_i) = \sum_{k\ge1}(-1)^{k+1}\binom nk\frac{(n-k)!}{n!} = \sum_{k\ge1}\frac{(-1)^{k+1}}{k!}$ and $P(F = 0) = \sum_{k=0}^n\frac{(-1)^k}{k!}$. This is a partial sum of the alternating series for $e^{-1}$ with decreasing terms, so the error is below the first omitted term, $\frac1{(n+1)!}$: for $n = 10$, under $2.6\times10^{-8}$. $F$ is approximately Poisson(1), as the <a href="/probability/1.5-inclusion-exclusion/">hat-check chapter</a> of the probability course simulates.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Birthdays and hash collisions.) $k$ items are hashed uniformly into $d$ buckets. Show that $P(\text{no collision}) \le e^{-k(k-1)/(2d)}$, and hence that the chance of a collision passes $\frac12$ by about $k = 1.18\sqrt d$. What does this give for 365 days, and for 64-bit hashes?</p>
+        <details><summary>Hint</summary><div><p>Write the no-collision probability as a product and use $1 - x \le e^{-x}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$P(\text{no collision}) = \prod_{i=0}^{k-1}(1 - \frac id) \le \exp\big(-\sum_i\frac id\big) = e^{-k(k-1)/(2d)}$. This is at most $\frac12$ once $k(k-1) \ge 2d\ln2$, roughly $k \ge \sqrt{2\ln2}\sqrt d = 1.177\sqrt d$. For $d = 365$ that is 22.5, so 23 people suffice. For 64-bit hashes, $1.177\times2^{32} \approx 5.1\times10^9$ items already give an even chance of a collision, which is why deduplicating web-scale data needs more than 64 bits, and why a "birthday attack" on an $m$-bit hash costs only $2^{m/2}$ work. The bound is tight: for $x \le \frac12$, $1 - x \ge e^{-x - x^2}$, and the extra term is negligible when $k \ll d^{2/3}$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Gambler's ruin.) A gambler with $i$ units bets 1 unit at a time, winning with probability $p$ and losing with $q = 1 - p$, until reaching $N$ or 0. Find the probability of reaching $N$, and for $p = \frac12$ the expected duration. Evaluate the probability for $p = 0.49$, $i = 50$, $N = 100$.</p>
+        <details><summary>Hint</summary><div><p>Condition on the first bet to get a linear recurrence, and try $h_i = r^i$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$h_i = ph_{i+1} + qh_{i-1}$ with $h_0 = 0$, $h_N = 1$. Trying $r^i$ gives $pr^2 - r + q = 0$, with roots 1 and $q/p$. With $\rho = q/p \ne 1$, $h_i = \frac{1 - \rho^i}{1 - \rho^N}$; for $p = \frac12$ the roots coincide and $h_i = i/N$. For the duration $D_i = 1 + \frac12(D_{i+1} + D_{i-1})$ with $D_0 = D_N = 0$: the second difference is $-2$, so $D_i = i(N - i)$. With $p = 0.49$, $\rho = 51/49$ and $h_{50} = \frac{1 - \rho^{50}}{1 - \rho^{100}} = \frac1{1 + \rho^{50}} = \frac1{1 + 7.39} = 0.119$. A 1% edge per bet turns a fair 50% into 12% over a long game. Absorbing Markov chains of this kind, solved by first-step analysis, are the same computation as policy evaluation (lesson 33).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Pólya's urn.) An urn holds one red and one blue ball. Repeatedly draw a ball at random and return it together with another of the same colour. Show that the number of red draws among the first $n$ is uniform on $\{0, 1, \dots, n\}$, and explain the connection with a Beta(1, 1) prior on a coin.</p>
+        <details><summary>Hint</summary><div><p>Compute the probability of one particular sequence with $k$ reds. Does it depend on the order?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Before the $m$-th draw there are $m + 1$ balls. In a sequence with $k$ reds, the red draws see $1, 2, \dots, k$ red balls and the blue draws $1, 2, \dots, n - k$ blue balls, whatever the order, so the probability is $\frac{k!\,(n - k)!}{(n + 1)!}$. Multiplying by the $\binom nk$ orders gives $\frac1{n+1}$ for every $k$. The fraction of red balls is a bounded martingale, so it converges, and its limit is uniform on $[0, 1]$. Equivalently, the draws are exchangeable: they have the same distribution as flips of a coin whose bias was drawn from Beta(1, 1), the uniform prior, and the urn's rule "probability of red = (reds + 1)/(draws + 2)" is exactly Laplace's rule of succession, the posterior predictive of PM problem 15. Rich-get-richer dynamics like this also model preferential attachment in networks.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Chernoff.) For a sum $X$ of independent Bernoulli variables with mean $\mu$, prove $P(X \ge (1 + \delta)\mu) \le \big(\frac{e^\delta}{(1 + \delta)^{1+\delta}}\big)^\mu$. Evaluate the bound for $\mu = 100$, $\delta = 0.2$, and compare with the exact binomial tail $P(\text{Bin}(1000, 0.1) \ge 120)$.</p>
+        <details><summary>Hint</summary><div><p>Use $1 + x \le e^x$ to bound the moment generating function by $e^{\mu(e^t - 1)}$, then choose $t$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$E[e^{tX}] = \prod_i(1 + p_i(e^t - 1)) \le e^{\mu(e^t - 1)}$, so by Markov's inequality $P(X \ge (1 + \delta)\mu) \le e^{\mu(e^t - 1) - t(1 + \delta)\mu}$. The exponent is minimised at $t = \ln(1 + \delta)$, which gives the stated bound. For $\mu = 100$, $\delta = 0.2$: $100(0.2 - 1.2\ln1.2) = -1.879$, so the bound is 0.153. The exact tail is 0.022, seven times smaller: Chernoff bounds have the right exponential shape but loose constants at moderate $\mu$. Their value is that they hold for every $n$ and need only independence, which is what generalisation bounds, bandit confidence intervals (UCB) and randomised algorithms need.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The secretary problem.) $n$ candidates arrive in random order; after each interview you must hire or reject for good, and you want the best one. Show that the rule "reject the first $r - 1$, then hire the first who beats everyone so far" succeeds with probability $\frac{r - 1}{n}\sum_{i=r}^n\frac1{i - 1}$, that the best $r$ is about $n/e$, and that the success probability tends to $1/e$. Find the best $r$ for $n = 100$.</p>
+        <details><summary>Hint</summary><div><p>Condition on the position $i$ of the best candidate. The rule hires them if and only if the best of the first $i - 1$ is among the first $r - 1$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The best candidate is at position $i$ with probability $\frac1n$. For $i \ge r$, the rule picks them exactly when no one between $r$ and $i - 1$ beats all earlier candidates, that is, when the best of the first $i - 1$ is among the first $r - 1$, with probability $\frac{r - 1}{i - 1}$. Summing gives the formula. With $x = r/n$, it is a Riemann sum for $x\int_x^1\frac{dt}{t} = -x\ln x$, maximised at $x = 1/e$ with value $1/e$. For $n = 100$, a direct search gives $r = 38$ (reject 37) with success probability 0.371. It is an optimal-stopping problem: the threshold rule is optimal among all rules, which can be shown by backward induction, the dynamic programming of lesson 34.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="information">
+    <h2>Information theory</h2>
+    <ol start="20">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Data processing.) If $X\to Y\to Z$ is a Markov chain, prove $I(X; Z) \le I(X; Y)$. What does this say about features computed from data, and about the layers of a network?</p>
+        <details><summary>Hint</summary><div><p>Expand $I(X; Y, Z)$ with the chain rule in two orders.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$I(X; Y, Z) = I(X; Z) + I(X; Y\mid Z) = I(X; Y) + I(X; Z\mid Y)$. The Markov property makes $X$ and $Z$ independent given $Y$, so $I(X; Z\mid Y) = 0$, and therefore $I(X; Z) = I(X; Y) - I(X; Y\mid Z) \le I(X; Y)$, with equality when $Z$ is a sufficient statistic of $Y$ for $X$. No deterministic or random processing of the input can add information about the label: each layer $h_{\ell+1} = f(h_\ell)$ satisfies $I(Y; h_{\ell+1}) \le I(Y; h_\ell)$. What layers do is make the information easier for a simple (linear) read-out to use. The same inequality powers Pinsker's (problem 22) and Fano's (problem 23).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Show that among densities on $\mathbb R$ with variance $\sigma^2$, the Gaussian maximises differential entropy, with $h = \frac12\ln(2\pi e\sigma^2)$. Compare the uniform distribution on $[0, 1]$ with the Gaussian of the same variance.</p>
+        <details><summary>Hint</summary><div><p>Expand $0 \le \mathrm{KL}(f\,\|\,\phi)$, where $\phi$ is the Gaussian with $f$'s mean and variance.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$0 \le \mathrm{KL}(f\,\|\,\phi) = -h(f) - \int f\ln\phi = -h(f) + \frac12\ln(2\pi\sigma^2) + \frac{E_f(x - \mu)^2}{2\sigma^2} = -h(f) + \frac12\ln(2\pi e\sigma^2)$, because $\ln\phi$ is a quadratic and only its second moment under $f$ matters. Equality requires $f = \phi$. The uniform on $[0, 1]$ has $h = 0$ and variance $\frac1{12}$; the Gaussian with that variance has $h = \frac12\ln(2\pi e/12) = 0.176$ nats. This is why Gaussian noise is the "worst case" in channel capacity, and why the Gaussian is the natural default model when only a mean and variance are known.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Pinsker.) Prove $\mathrm{TV}(P, Q) \le \sqrt{\mathrm{KL}(P\,\|\,Q)/2}$, where $\mathrm{TV} = \sup_A|P(A) - Q(A)|$. First prove it for two Bernoulli distributions, then reduce the general case to that one.</p>
+        <details><summary>Hint</summary><div><p>For Bernoullis, show $g(q) = \mathrm{KL}(\mathrm{Ber}(p)\,\|\,\mathrm{Ber}(q)) - 2(p - q)^2$ has its minimum at $q = p$. For the reduction, use data processing with the indicator of the event $A = \{P &gt; Q\}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$g(p) = 0$ and $g'(q) = -\frac pq + \frac{1 - p}{1 - q} + 4(p - q) = (q - p)\big(\frac1{q(1-q)} - 4\big)$. Since $q(1 - q) \le \frac14$, the bracket is non-negative, so $g$ decreases for $q &lt; p$ and increases for $q &gt; p$: $g \ge 0$, which is $\mathrm{KL} \ge 2(p - q)^2$. In general, the supremum defining TV is attained at $A = \{x: P(x) &gt; Q(x)\}$. The map $x\mapsto\mathbb 1[x\in A]$ turns $P$ and $Q$ into Bernoullis with parameters $P(A)$ and $Q(A)$, and KL cannot increase under processing, so $\mathrm{KL}(P\,\|\,Q) \ge 2(P(A) - Q(A))^2 = 2\,\mathrm{TV}^2$. A small KL therefore guarantees that no event's probability changes much, which is how KL trust regions (TRPO, lesson 39) bound the change in a policy's behaviour.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Fano.) $X$ takes values in a set of size $M$ and $\hat X$ is any estimate of $X$ computed from $Y$, with error probability $P_e$. Prove $H(X\mid Y) \le H_2(P_e) + P_e\log_2(M - 1)$. If $X$ is uniform over 1,024 classes and $I(X; Y) \le 5$ bits, how small can $P_e$ be?</p>
+        <details><summary>Hint</summary><div><p>Let $E$ be the indicator of an error. Expand $H(E, X\mid\hat X)$ in two ways.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$E$ is a function of $(X, \hat X)$, so $H(E, X\mid\hat X) = H(X\mid\hat X)$. Also $H(E, X\mid\hat X) = H(E\mid\hat X) + H(X\mid E, \hat X) \le H_2(P_e) + (1 - P_e)\cdot0 + P_e\log_2(M - 1)$: without an error $X = \hat X$, and with one $X$ is among the other $M - 1$ values. By data processing ($X\to Y\to\hat X$), $H(X\mid Y) \le H(X\mid\hat X)$, which completes the proof. For the example, $H(X\mid Y) = H(X) - I(X; Y) \ge 10 - 5 = 5$ bits, so $5 \le 1 + P_e\log_2 1023 &lt; 1 + 10P_e$, giving $P_e &gt; 0.4$. No classifier, however large, can beat that from this $Y$. Fano's inequality is the standard tool for proving lower bounds on what can be learned from a given amount of data.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Kraft and source coding.) Prove that the codeword lengths $\ell_i$ of a binary prefix code satisfy $\sum_i2^{-\ell_i} \le 1$. Deduce that the expected length is at least the entropy in bits, and that lengths $\ell_i = \lceil-\log_2p_i\rceil$ give a prefix code with expected length below $H + 1$.</p>
+        <details><summary>Hint</summary><div><p>Place codewords as nodes in a binary tree of depth $\ell_{\max}$ and count the leaves below each one. For the lower bound, use Jensen on $\sum_ip_i\log_2\frac{2^{-\ell_i}}{p_i}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>In the complete binary tree of depth $L = \max\ell_i$, codeword $i$ is a node at depth $\ell_i$ with $2^{L - \ell_i}$ leaves below it. The prefix property means no codeword lies below another, so these leaf sets are disjoint, and $\sum_i2^{L - \ell_i} \le 2^L$. Then $E[\ell] - H = -\sum_ip_i\log_2\frac{2^{-\ell_i}}{p_i} \ge -\log_2\sum_i2^{-\ell_i} \ge 0$ by Jensen and Kraft. Conversely, lengths $\lceil-\log_2p_i\rceil$ satisfy $\sum2^{-\ell_i} \le \sum p_i = 1$, so a prefix code with those lengths exists (assign codewords in order of length, left to right in the tree), and $E[\ell] &lt; \sum p_i(-\log_2p_i + 1) = H + 1$. So entropy is exactly the price of describing an outcome, and the cross-entropy loss of a language model is its compression rate (lesson 26).</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="optimisation">
+    <h2>Optimisation</h2>
+    <ol start="25">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> Let $f$ be $\mu$-strongly convex and $L$-smooth. Prove the Polyak–Łojasiewicz inequality $\|\nabla f(x)\|^2 \ge 2\mu(f(x) - f^\star)$ and use it with the descent lemma (P1 problem 12) to show that gradient descent with $\eta = 1/L$ satisfies $f(x_t) - f^\star \le (1 - \mu/L)^t(f(x_0) - f^\star)$. Why is the PL inequality more useful than strong convexity for neural networks?</p>
+        <details><summary>Hint</summary><div><p>Minimise both sides of the strong-convexity lower bound $f(y) \ge f(x) + \nabla f(x)^\top(y - x) + \frac\mu2\|y - x\|^2$ over $y$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The right side of the hint is minimised at $y = x - \nabla f(x)/\mu$, with value $f(x) - \|\nabla f(x)\|^2/(2\mu)$; the left side's minimum is $f^\star$, so $f^\star \ge f(x) - \|\nabla f(x)\|^2/(2\mu)$, which is PL. The descent lemma gives $f(x_{t+1}) \le f(x_t) - \frac1{2L}\|\nabla f(x_t)\|^2 \le f(x_t) - \frac\mu L(f(x_t) - f^\star)$. Subtracting $f^\star$ gives the contraction by $1 - \mu/L$ per step. The proof never used convexity except to derive PL, so linear convergence holds for any $L$-smooth function satisfying PL, including non-convex ones such as $x^2 + 3\sin^2x$. Wide neural networks are known to satisfy PL-type conditions over large regions around their initialisation, one explanation for why gradient descent reaches zero training loss on them.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (SGD on convex functions.) $f$ is convex with minimiser $x^\star$, $\|x_0 - x^\star\| \le R$, and stochastic gradients satisfy $E[g_t\mid x_t] = \nabla f(x_t)$ and $E\|g_t\|^2 \le G^2$. Show that SGD with constant step $\eta$ satisfies $E f(\bar x_T) - f^\star \le \frac{R^2 + \eta^2G^2T}{2\eta T}$ for the average iterate, and choose $\eta$ to get $RG/\sqrt T$.</p>
+        <details><summary>Hint</summary><div><p>Expand $\|x_{t+1} - x^\star\|^2$, take expectations, use convexity $f(x_t) - f^\star \le \nabla f(x_t)^\top(x_t - x^\star)$, and telescope.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\|x_{t+1} - x^\star\|^2 = \|x_t - x^\star\|^2 - 2\eta g_t^\top(x_t - x^\star) + \eta^2\|g_t\|^2$. Taking the conditional expectation and using convexity, $E\|x_{t+1} - x^\star\|^2 \le E\|x_t - x^\star\|^2 - 2\eta\,E(f(x_t) - f^\star) + \eta^2G^2$. Summing over $t &lt; T$ and dropping the final non-negative distance: $2\eta\sum_tE(f(x_t) - f^\star) \le R^2 + \eta^2G^2T$. By Jensen, $f(\bar x_T) \le \frac1T\sum_tf(x_t)$, which gives the bound. It is minimised at $\eta = \frac{R}{G\sqrt T}$, where it equals $\frac{RG}{\sqrt T}$. The $1/\sqrt T$ rate cannot be improved for this class, and the two terms show the trade-off of lesson 07: a large step forgets the start fast but leaves a noise floor of $\eta G^2/2$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The SVM dual.) Derive the dual of the hard-margin SVM, $\min\frac12\|w\|^2$ subject to $y_i(w^\top x_i + b) \ge 1$, and use the KKT conditions to show that only points on the margin have non-zero multipliers. Solve the dual for the two points $x_1 = (1, 0)$, $y_1 = +1$ and $x_2 = (-1, 0)$, $y_2 = -1$, and check that the primal and dual optima agree.</p>
+        <details><summary>Hint</summary><div><p>Form the Lagrangian with multipliers $\alpha_i \ge 0$, minimise over $w$ and $b$, and substitute back.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\mathcal L = \frac12\|w\|^2 - \sum_i\alpha_i(y_i(w^\top x_i + b) - 1)$. Setting $\nabla_w\mathcal L = 0$ gives $w = \sum_i\alpha_iy_ix_i$, and $\partial_b\mathcal L = 0$ gives $\sum_i\alpha_iy_i = 0$. Substituting, the dual is $\max_{\alpha\ge0}\sum_i\alpha_i - \frac12\sum_{ij}\alpha_i\alpha_jy_iy_jx_i^\top x_j$ subject to $\sum\alpha_iy_i = 0$. It depends on the data only through inner products, so $x_i^\top x_j$ can be replaced by a kernel. Complementary slackness, $\alpha_i(y_i(w^\top x_i + b) - 1) = 0$, forces $\alpha_i = 0$ for every point strictly outside the margin: only the support vectors define $w$.</p>
+          <p>For the example, $\alpha_1 = \alpha_2 = a$ by the equality constraint, and $y_1y_2x_1^\top x_2 = (-1)(-1) = 1$, so the dual objective is $2a - \frac12(a^2 + a^2 + 2a^2) = 2a - 2a^2$, maximised at $a = \frac12$ with value $\frac12$. Then $w = \frac12(1, 0) + \frac12(-1)(-1, 0) = (1, 0)$ and $b = 0$ (from $y_1(w^\top x_1 + b) = 1$). The primal value is $\frac12\|w\|^2 = \frac12$, equal to the dual's: strong duality holds, and the margin $2/\|w\| = 2$ is the distance between the points.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Hedge.) Each round you spread probability $p_t$ over $n$ experts, then see their losses $\ell_t\in[0, 1]^n$ and pay $p_t^\top\ell_t$. Hedge sets $p_{t,i}\propto e^{-\eta L_{t-1,i}}$, where $L$ is each expert's cumulative loss. Prove that its regret against the best expert after $T$ rounds is at most $\frac{\ln n}{\eta} + \frac{\eta T}{8}$, which is $\sqrt{(T\ln n)/2}$ at the best $\eta$.</p>
+        <details><summary>Hint</summary><div><p>Track $\Phi_t = \ln\sum_ie^{-\eta L_{t,i}}$. Hoeffding's lemma says $\ln E[e^{sX}] \le sE[X] + s^2/8$ for $X\in[0, 1]$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\Phi_t - \Phi_{t-1} = \ln\sum_ip_{t,i}e^{-\eta\ell_{t,i}} \le -\eta\,p_t^\top\ell_t + \frac{\eta^2}{8}$ by Hoeffding's lemma applied to the loss of an expert drawn from $p_t$. Summing, $\Phi_T - \Phi_0 \le -\eta\sum_tp_t^\top\ell_t + \frac{\eta^2T}{8}$. Also $\Phi_0 = \ln n$ and $\Phi_T \ge -\eta\min_iL_{T,i}$. Combining, $\sum_tp_t^\top\ell_t - \min_iL_{T,i} \le \frac{\ln n}{\eta} + \frac{\eta T}{8}$, and $\eta = \sqrt{8\ln n/T}$ gives $\sqrt{(T\ln n)/2}$. The regret per round goes to zero, against any sequence of losses, even an adversarial one. Hedge's softmax over negative cumulative losses is mirror descent with the entropy regulariser (problem 30), the same multiplicative update behind softmax policy iteration and boosting's reweighting.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Newton's method.) For minimising a smooth function of one variable, let $g = f'$ with $|g''| \le M$ and $|g'| \ge m &gt; 0$ near the minimiser $x^\star$. Show that the Newton error $e_k = x_k - x^\star$ satisfies $|e_{k+1}| \le \frac{M}{2m}e_k^2$. Then run Newton on $f(x) = x - \ln x$ and find the exact error recursion and the set of starting points from which it converges.</p>
+        <details><summary>Hint</summary><div><p>Expand $0 = g(x^\star)$ around $x_k$ to second order.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Taylor's theorem gives $0 = g(x_k) - g'(x_k)e_k + \frac12g''(\xi)e_k^2$, so $\frac{g(x_k)}{g'(x_k)} = e_k - \frac{g''(\xi)e_k^2}{2g'(x_k)}$ and $e_{k+1} = e_k - \frac{g(x_k)}{g'(x_k)} = \frac{g''(\xi)}{2g'(x_k)}e_k^2$, which gives the bound: the number of correct digits roughly doubles each step. For $f = x - \ln x$, $g = 1 - 1/x$ and $g' = 1/x^2$, so $x_{k+1} = x_k - (1 - 1/x_k)x_k^2 = 2x_k - x_k^2$. With $x_k = 1 - e_k$ this is $1 - e_k^2$: exactly $e_{k+1} = e_k^2$. From $x_0 = 0.5$ the iterates are 0.75, 0.9375, 0.99609, 0.9999847. It converges if and only if $|e_0| &lt; 1$, that is $0 &lt; x_0 &lt; 2$; from $x_0 = 2.5$ the first step goes to $-1.25$, outside the domain. Fast near the answer and unreliable far from it: this is why second-order methods are damped or combined with line searches.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Compute the convex conjugate $f^*(p) = \sup_z(p^\top z - f(z))$ of log-sum-exp, $f(z) = \ln\sum_ie^{z_i}$. Deduce that $\ln\sum_ie^{z_i} = \max_{p\in\Delta}(p^\top z + H(p))$, attained at $p = \operatorname{softmax}(z)$, and state the version with a temperature $\tau$.</p>
+        <details><summary>Hint</summary><div><p>Treat three cases: $p$ in the simplex, a negative coordinate, and coordinates that do not sum to 1. In the first, set the gradient to zero.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>If some $p_i &lt; 0$, sending $z_i\to-\infty$ makes $p^\top z - f(z)\to\infty$. If $\sum p_i \ne 1$, adding $c\mathbf 1$ to $z$ changes the objective by $c(\sum p_i - 1)$, unbounded. For $p$ in the simplex the objective is concave in $z$, and its gradient $p - \operatorname{softmax}(z)$ vanishes when $\operatorname{softmax}(z) = p$, e.g. $z = \ln p$ (with $z_i\to-\infty$ where $p_i = 0$), giving $f^*(p) = \sum_ip_i\ln p_i = -H(p)$. Since $f$ is convex and closed, $f = f^{**}$: $\ln\sum e^{z_i} = \max_{p\in\Delta}(p^\top z + H(p))$, with maximiser $\operatorname{softmax}(z)$. With temperature, $\tau\ln\sum_ie^{z_i/\tau} = \max_p(p^\top z + \tau H(p))$, maximised by $\operatorname{softmax}(z/\tau)$. Softmax is the entropy-regularised argmax; as $\tau\to0$ it becomes the argmax and the left side becomes $\max_iz_i$. Soft Q-learning, maximum-entropy RL and the KL-regularised RLHF solution (P9 problem 12) all use this identity.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="markov">
+    <h2>Markov chains and sampling</h2>
+    <ol start="31">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Convergence by coupling.) Let $P$ be an irreducible, aperiodic chain on a finite set, with stationary distribution $\pi$. Using the fact that $P^m$ has all entries positive for some $m$, prove that $\|P^t(x, \cdot) - \pi\|_\mathrm{TV} \to 0$ from every start $x$, at a geometric rate.</p>
+        <details><summary>Hint</summary><div><p>Run $X$ from $x$ and $Y$ from $\pi$ independently until they meet, then move them together. Show $P(X_t \ne Y_t)$ bounds the TV distance.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let $X_0 = x$ and $Y_0\sim\pi$, moving independently by $P$ until the first time $\tau$ that $X_\tau = Y_\tau$, and identically afterwards. Each process on its own is a Markov chain with kernel $P$, so $X_t\sim P^t(x, \cdot)$ and $Y_t\sim\pi$ for all $t$. For any event $A$, $P(X_t\in A) - P(Y_t\in A) \le P(X_t \ne Y_t) = P(\tau &gt; t)$, so $\mathrm{TV} \le P(\tau &gt; t)$. Let $\delta = \min_{u,v}P^m(u, v) &gt; 0$. Whatever the current pair, the probability that both are at the same fixed state $v$ after $m$ more steps of independent moves is at least $\delta^2$, so $P(\tau &gt; km) \le (1 - \delta^2)^k$. Aperiodicity matters: on a bipartite graph two walkers started on opposite sides never meet at the same time, and the chain oscillates instead of converging. Coupling arguments like this one bound the mixing times of MCMC samplers.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Show that a single-coordinate Gibbs update is a Metropolis–Hastings step with acceptance probability 1 and satisfies detailed balance. Does the systematic scan, which updates coordinates $1, 2, \dots, d$ in order, satisfy detailed balance? Does it leave $\pi$ invariant?</p>
+        <details><summary>Hint</summary><div><p>The proposal for coordinate $i$ is $q(y\mid x) = \pi(y_i\mid x_{-i})$ with $y_{-i} = x_{-i}$. Compute the MH ratio.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The MH ratio is $\frac{\pi(y)\pi(x_i\mid x_{-i})}{\pi(x)\pi(y_i\mid x_{-i})} = \frac{\pi(x_{-i})\pi(y_i\mid x_{-i})\pi(x_i\mid x_{-i})}{\pi(x_{-i})\pi(x_i\mid x_{-i})\pi(y_i\mid x_{-i})} = 1$, using $y_{-i} = x_{-i}$. Detailed balance follows because $\pi(x)K_i(x, y) = \pi(x_{-i})\pi(x_i\mid x_{-i})\pi(y_i\mid x_{-i})$ is symmetric in $x_i$ and $y_i$. A product $K_1K_2\cdots K_d$ of reversible kernels leaves $\pi$ invariant (each one does), but it is generally not reversible: its time reverse is $K_d\cdots K_1$, a different kernel. Random-scan Gibbs, which picks a coordinate uniformly, is the average $\frac1d\sum_iK_i$ and is reversible. Both are valid samplers; reversibility matters for some theory (spectral gaps) rather than for correctness.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> A simple random walk on $\{0, 1, \dots, n\}$ reflects at 0 (from 0 it always steps to 1). Show that the expected time to reach $n$ from 0 is exactly $n^2$. What does this imply for a random-walk Metropolis sampler with step size $s$ that must cross a region of width $L$?</p>
+        <details><summary>Hint</summary><div><p>Let $h_k$ be the expected time from $k$, and work with the differences $d_k = h_k - h_{k+1}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$h_n = 0$, $h_0 = 1 + h_1$ and $h_k = 1 + \frac12(h_{k-1} + h_{k+1})$ for $0 &lt; k &lt; n$. The last equation rearranges to $d_k = d_{k-1} + 2$, and the reflection gives $d_0 = 1$, so $d_k = 2k + 1$ and $h_0 = \sum_{k=0}^{n-1}(2k + 1) = n^2$. Random walks are diffusive: covering distance $n$ takes $n^2$ steps. A random-walk sampler with step $s$ needs about $(L/s)^2$ steps to cross a region of width $L$; the narrow chain in lesson M6's figure never crossed between modes for this reason. Hamiltonian Monte Carlo and Langevin dynamics with momentum reduce the cost by moving ballistically, in about $L/s$ steps.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> Importance sampling for the target $N(0, 1)$ uses the proposal $N(0, \sigma^2)$. Compute $E_q[w^2]$ for the weight $w = p/q$, show that it is infinite for $\sigma^2 \le \frac12$, and find the $\sigma$ that minimises it. What fraction of the samples is effectively used at $\sigma = 0.8$?</p>
+        <details><summary>Hint</summary><div><p>$E_q[w^2] = \int p^2/q$. Collect the exponents and integrate a Gaussian.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\frac{p(x)^2}{q(x)} = \frac{\sigma}{\sqrt{2\pi}}\exp\big(-x^2(1 - \frac1{2\sigma^2})\big)$. The integral is finite only if $1 - \frac1{2\sigma^2} &gt; 0$, that is $\sigma^2 &gt; \frac12$, and then equals $\frac{\sigma}{\sqrt{2\pi}}\sqrt{\frac{\pi}{1 - 1/(2\sigma^2)}} = \frac{\sigma^2}{\sqrt{2\sigma^2 - 1}}$. With $s = \sigma^2$, $\frac{d}{ds}\frac{s}{\sqrt{2s - 1}} = \frac{s - 1}{(2s - 1)^{3/2}}$, so the minimum is at $\sigma = 1$, the target itself, where $E[w^2] = 1$. The effective sample size is about $n/E_q[w^2]$: at $\sigma = 0.8$, $E[w^2] = 0.64/\sqrt{0.28} = 1.21$, so 83% of the samples count; at $\sigma^2 = 0.504$ it is 5.6, so 18%; below $\sigma^2 = \frac12$ the variance is infinite and estimates are dominated by rare huge weights. A proposal with lighter tails than the target is dangerous; a heavier-tailed one only wastes samples.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> The unadjusted Langevin algorithm for a target $p$ iterates $x \leftarrow x + \eta\nabla\log p(x) + \sqrt{2\eta}\,z$ with $z\sim N(0, 1)$. For $p = N(0, 1)$, find its exact stationary distribution and the step sizes for which it exists. How large is the bias at $\eta = 0.1$, and how is it removed?</p>
+        <details><summary>Hint</summary><div><p>The update is linear: $x' = (1 - \eta)x + \sqrt{2\eta}z$. Find the variance $v$ with $v = (1 - \eta)^2v + 2\eta$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\nabla\log p = -x$, so $x' = (1 - \eta)x + \sqrt{2\eta}z$, an AR(1) process. It has a stationary distribution if and only if $|1 - \eta| &lt; 1$, that is $0 &lt; \eta &lt; 2$, and it is Gaussian with mean 0 and variance $v = \frac{2\eta}{1 - (1 - \eta)^2} = \frac{2}{2 - \eta}$. At $\eta = 0.1$, $v = 1.053$: 5% too wide, a bias that shrinks with $\eta$ but never vanishes for a fixed step. Adding a Metropolis–Hastings accept/reject step with the Langevin proposal (MALA) makes $p$ exactly stationary. Diffusion models' samplers and score-based Langevin sampling (lesson 25) live with this discretisation bias, which is one reason they use many small steps or a final denoising step.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag code">code</span> Check four of the answers above by simulation: the coupon collector's mean for $n = 50$ (problem 12), the ballot probability for $a = 6$, $b = 4$ (problem 13), the secretary rule with $r = 38$ for $n = 100$ (problem 19), and ULA's stationary variance at $\eta = 0.1$ (problem 35). Use $10^5$ trials each, and say how far each estimate may be from the truth by chance.</p>
+        <details><summary>Solution</summary><div>
+          <p>Expect, up to Monte Carlo error: about 225 boxes (the standard error with $10^5$ trials is $62/\sqrt{10^5} \approx 0.2$); about 0.200 for the ballot (standard error $\sqrt{0.2\cdot0.8/10^5} \approx 0.0013$); about 0.371 for the secretary rule (standard error 0.0015); and about 1.053 for ULA's variance, measured on a long chain after a burn-in, where the effective sample size is lower than the number of steps because consecutive values are correlated with coefficient $1 - \eta = 0.9$, so the standard error is roughly $\sqrt{19}$ times the naive one. An estimate several standard errors away from the answer means a bug, in the simulation or in the derivation.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

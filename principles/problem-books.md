@@ -12,7 +12,7 @@ book holds that. It has four shelves:
 | **Assignments** | Small builds for one sitting (60–180 min) that end in something you made: a plot, a working program, a measured number | 8–15 | `problems/index.json` → `assignments`, written ones in `problems/<id>.md` |
 | Chapter exercises | Already exist, per chapter | — | `exercises/` or the lesson notes |
 
-The site shows the four shelves at `/<subject>/problems/`, and each written problem at
+The site shows the first three shelves at `/<subject>/problems/`, and each written problem at
 `/<subject>/problems/<id>/`.
 
 ## Keep it fun

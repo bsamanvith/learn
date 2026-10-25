@@ -25,7 +25,7 @@ const VOLUMES = [
   { key: "stage", n: "I", title: "Stage by stage", blurb: "One set per stage of the course, from warm-ups to hard proofs, each with worked solutions. Do a stage's set after its lessons." },
   { key: "toolkit", n: "II", title: "The math toolkit", blurb: "Linear algebra, matrix calculus, probability, information theory, optimisation and sampling, the tools every stage leans on." },
   { key: "hard", n: "III", title: "Hard problems", blurb: "Longer problems that take an evening each: proofs, constructions and derivations from the research literature. Each has a hint and a full solution. For a second pass." },
-].filter((v) => sets.some((s) => volumeOf(s) === v.key));
+].map((v) => ({ ...v, ...book?.volumes?.[v.key] })).filter((v) => sets.some((s) => volumeOf(s) === v.key));
 
 const all = sets.flatMap((s) => s.problems.map((p) => ({ set: s, p })));
 const count = (t: string) => all.filter(({ p }) => p.tags.includes(t)).length;
@@ -71,14 +71,14 @@ const evenings = builds.filter((a) => a.page).length;
           <div class="pb-cover-text">
             <p class="kicker">{title} · Practice</p>
             <h1>The problem book</h1>
-            <p class="lede">{all.length} problems in {sets.length} sets, every one with a worked solution{book && <>, plus {hard.length} named classics, {evenings} one-evening assignments and {book.books.length} key books</>}. Read a stage, then come here and test it. Mark what you solve, flag what you want to revisit, and the book keeps count in this browser.</p>
+            <p class="lede">{all.length} problems in {sets.length} sets, every one with a worked solution{book && <>, plus {hard.length} named classics{evenings > 0 && <>, {evenings} one-evening assignments</>} and {book.books.length} key books</>}. {book?.lede ?? "Read a stage, then come here and test it."} Mark what you solve, flag what you want to revisit, and the book keeps count in this browser.</p>
             <div class="pb-progress" data-total={all.length}>
               <div class="pb-bar"><span class="solved"></span><span class="revisit"></span></div>
               <span class="mono" data-progress-text>Nothing marked yet</span>
             </div>
           </div>
           <dl class="pb-stats">
-            {TAGS.map(({ t, label }) => <div><dt><span class={`tag ${t}`}>{t}</span></dt><dd>{count(t)}</dd><dd class="sr">{label}</dd></div>)}
+            {TAGS.filter(({ t }) => count(t) > 0).map(({ t, label }) => <div><dt><span class={`tag ${t}`}>{t}</span></dt><dd>{count(t)}</dd><dd class="sr">{label}</dd></div>)}
           </dl>
         </header>
 
@@ -88,17 +88,17 @@ const evenings = builds.filter((a) => a.page).length;
             <button type="button" class="pb-path" data-go-tag="key">
               <span class="pb-path-n">{count("key")}</span>
               <b>Key problems</b>
-              <span>The shortest path: four to six per set. If you can do these, you have the stage.</span>
+              <span>The shortest path: four to six per set. If you can do these, you have the {book?.volumes ? "topic" : "stage"}.</span>
             </button>
             <a class="pb-path" href="#volumes">
               <span class="pb-path-n">{sets.filter((s) => volumeOf(s) !== "hard").length}</span>
-              <b>Stage by stage</b>
-              <span>Work through a whole set after its lessons, warm-ups first.</span>
+              <b>{VOLUMES[0]?.title ?? "Stage by stage"}</b>
+              <span>{book?.volumes ? "Work through a whole set, warm-ups first." : "Work through a whole set after its lessons, warm-ups first."}</span>
             </a>
             <button type="button" class="pb-path" data-go-tag="hard">
               <span class="pb-path-n">{count("hard")}</span>
               <b>Hard problems</b>
-              <span>Proofs and derivations for a second pass, across every set and the hard volumes.</span>
+              <span>Proofs and derivations for a second pass, across every set{VOLUMES.some((v) => v.key === "hard") && " and the hard volumes"}.</span>
             </button>
             {hard.length > 0 && (
               <a class="pb-path" href="#hard">
@@ -189,7 +189,7 @@ const evenings = builds.filter((a) => a.page).length;
           </div>
         </section>
 
-        <section class="pb-section" id="assignments">
+        {builds.length > 0 && <section class="pb-section" id="assignments">
           <div class="part-label">
             <div class="n">Assignments</div>
             <h2>Build it, break it, watch it work</h2>
@@ -213,7 +213,7 @@ const evenings = builds.filter((a) => a.page).length;
               );
             })}
           </div>
-        </section>
+        </section>}
 
         <section class="pb-section" id="books">
           <div class="part-label">
@@ -241,7 +241,7 @@ const evenings = builds.filter((a) => a.page).length;
           <div class="pb-filters" role="group" aria-label="Filter problems">
             <div class="seg" role="group" aria-label="Difficulty">
               <button type="button" data-tag="" aria-pressed="true">All</button>
-              {TAGS.map(({ t, label, hint }) => <button type="button" data-tag={t} aria-pressed="false" title={hint}>{label}</button>)}
+              {TAGS.filter(({ t }) => count(t) > 0).map(({ t, label, hint }) => <button type="button" data-tag={t} aria-pressed="false" title={hint}>{label}</button>)}
             </div>
             <select data-filter-set aria-label="Problem set">
               <option value="">All sets</option>
@@ -253,7 +253,7 @@ const evenings = builds.filter((a) => a.page).length;
               <option value="solved">Solved</option>
               <option value="revisit">Flagged to revisit</option>
             </select>
-            <input type="search" data-filter-text placeholder="Search: Bellman, softmax, KL…" aria-label="Search problems" />
+            <input type="search" data-filter-text placeholder={book?.search ?? "Search: Bellman, softmax, KL…"} aria-label="Search problems" />
           </div>
           <p class="pb-showing mono" data-showing>{all.length} problems</p>
         </div>

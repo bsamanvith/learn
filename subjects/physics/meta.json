@@ -1,0 +1,13 @@
+{
+  "title": "Physics",
+  "tagline": "Phenomenon → model → prediction → measurement.",
+  "intro": "Physics starts here with practice: four problem sets with worked solutions, from Newton's laws to quantum tunnelling. Each problem asks you to guess first, then work it out, then check the number against something you know. Lessons for each topic will follow, and the problem sets will stay as their practice.",
+  "partLabel": "Part",
+  "parts": {
+    "1": {
+      "title": "Problems with worked solutions",
+      "blurb": "Mechanics, waves and electromagnetism, heat and statistical physics, relativity and quantum physics.",
+      "label": "Practice"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "_about": "Hand-written HTML lessons for mathematics. Each is lessons/<file>.html (the header and article only; the site adds navigation, contents and the pager). Problem sets are lessons whose article has class \"lesson problems\"; the problem book gathers them. Links inside them are written from the site root, like /mathematics/P1-numbers-and-counting/.",
+  "lessons": [
+    {"file": "P1-numbers-and-counting", "chapter": "P1", "part": 1, "title": "Problem set: numbers and counting", "added": "2026-10-25", "prerequisites": [], "blurb": "Fourteen problems: √2 and non-constructive proofs, primes of the form 4k + 3, Fermat by necklaces, Wilson, the divergence of Σ1/p, Fibonacci gcds, every Pythagorean triple, Catalan numbers by reflection, Erdős–Szekeres, the party problem and the Platonic solids."},
+    {"file": "P2-analysis-and-the-infinite", "chapter": "P2", "part": 1, "title": "Problem set: analysis and the infinite", "added": "2026-10-25", "prerequisites": ["P1"], "blurb": "Thirteen problems: Euler's constant, e is irrational, Cantor's diagonal, the Basel problem by trigonometry, rearranging series, the Gaussian integral, Stirling's formula, fixed points, the universal chord theorem, AM–GM, the Gibbs overshoot, Cauchy's equation and Newton's method."},
+    {"file": "P3-geometry-symmetry-and-puzzles", "chapter": "P3", "part": 1, "title": "Problem set: geometry, symmetry and puzzles", "added": "2026-10-25", "prerequisites": ["P1"], "blurb": "Thirteen problems: Pythagoras by similarity, Heron and the best triangle, Buffon's needle, spherical triangles, polygon diagonals, the Koch snowflake, Lagrange's theorem, the cube's rotations, Burnside colourings, the fifteen puzzle, Fibonacci matrices, a hundred prisoners and Cayley–Hamilton."}
+  ]
+}

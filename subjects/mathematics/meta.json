@@ -1,0 +1,13 @@
+{
+  "title": "Mathematics",
+  "tagline": "Proofs you can enjoy: numbers, the infinite, shape and symmetry.",
+  "intro": "Mathematics for its own sake, beside the probability course and the math toolkit for machine learning. It starts with practice: three problem sets of classic results, each with a hint and a full proof, chosen because each one turns on a single good idea. Lessons will follow.",
+  "partLabel": "Part",
+  "parts": {
+    "1": {
+      "title": "Problems with worked solutions",
+      "blurb": "Numbers and counting, analysis and the infinite, geometry, symmetry and puzzles.",
+      "label": "Practice"
+    }
+  }
+}

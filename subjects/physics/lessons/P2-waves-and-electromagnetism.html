@@ -1,0 +1,124 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P2 · Waves and electromagnetism</div>
+  <h1>Problem set: waves and electromagnetism</h1>
+  <p class="lede">Thirteen problems on vibrating strings, sound and light, and the fields of charges and currents. Among them: a tunnel through the Earth that takes exactly as long as an orbit, a capacitor that always wastes half its energy no matter how you charge it, an infinite grid of resistors, the speed of light falling out of Maxwell's equations, and the classical atom that collapses in a hundredth of a nanosecond. Try each problem on paper before opening its solution.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/physics/P1-mechanics/">P1</a>, partial derivatives, and Maxwell's equations in integral form (in differential form for problem 9)</span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="waves">
+    <h2>Waves and sound</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Tuning a guitar.) Derive the wave equation $\partial_t^2y = (T/\mu)\,\partial_x^2y$ for small transverse waves on a string of tension $T$ and mass per length $\mu$. A guitar's low E string has scale length $L = 0.65$ m, frequency 82.4 Hz and $\mu = 6.0$ g/m. What tension holds it?</p>
+        <details><summary>Solution</summary><div>
+          <p>Take a short piece of string from $x$ to $x + dx$. The tension pulls along the string at each end, and its vertical component is $T\sin\theta \approx T\,\partial_xy$ for small slopes. The net vertical force is $T\,\partial_xy\big|_{x + dx} - T\,\partial_xy\big|_x = T\,\partial_x^2y\,dx$, and Newton's law for the mass $\mu\,dx$ gives $\mu\,\partial_t^2y = T\,\partial_x^2y$. The wave speed is $v = \sqrt{T/\mu}$.</p>
+          <p>Fixed ends allow standing waves with $L = n\lambda/2$, so the fundamental is $f = v/2L$. Then $T = \mu(2Lf)^2 = 0.006\times(107.1\text{ m/s})^2 = 69$ N, about the weight of 7 kg. Six strings at that sort of tension load a guitar neck with several hundred newtons, which is why it has a steel truss rod.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Every wave is two travelling pulses.) Show that the general solution of $\partial_t^2y = v^2\partial_x^2y$ is $y = f(x - vt) + g(x + vt)$. A string is held at rest in a triangular shape and let go: describe the motion. A pulse runs into a fixed end at $x = 0$: show that it comes back upside down.</p>
+        <details><summary>Solution</summary><div>
+          <p>In the variables $\xi = x - vt$, $\eta = x + vt$, the chain rule gives $\partial_t^2 - v^2\partial_x^2 = -4v^2\,\partial_\xi\partial_\eta$. So the equation is $\partial_\xi\partial_\eta y = 0$, whose solutions are exactly $f(\xi) + g(\eta)$ (d'Alembert).</p>
+          <p>Released from rest in shape $y_0(x)$: $f + g = y_0$ and $-vf' + vg' = 0$ at $t = 0$, so $f = g = \tfrac12y_0$. The triangle splits into two half-height triangles running apart in opposite directions. At a fixed end we need $y(0, t) = 0$ for all $t$, so $g(vt) = -f(-vt)$: the reflected wave is $g(x + vt) = -f(-x - vt)$, the incoming pulse mirrored in space and flipped in sign. On a string fixed at both ends the reflections repeat, and the motion is periodic with period $2L/v$, which is the fundamental of problem 1.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (The Doppler siren.) Derive $f' = f\,\dfrac{c + v_o}{c - v_s}$ for a source approaching at $v_s$ and an observer approaching at $v_o$, with sound speed $c$ in still air. A 700 Hz siren passes you at 30 m/s; what pitches do you hear before and after? Why is the formula not symmetric in $v_s$ and $v_o$?</p>
+        <details><summary>Solution</summary><div>
+          <p>A moving source emits crests every $1/f$ seconds, but moves $v_s/f$ between them, so the wavelength in the air ahead of it is $\lambda' = (c - v_s)/f$. An observer moving towards the source meets crests at relative speed $c + v_o$, so hears $f' = (c + v_o)/\lambda'$. With $c = 343$ m/s, approaching gives $700\times343/313 = 767$ Hz and receding $700\times343/373 = 644$ Hz, a drop of about a minor third.</p>
+          <p>The asymmetry is real: sound travels in a medium, and moving the source changes the wavelength in the air while moving the observer only changes how fast you meet the waves. A source approaching at $v_s \to c$ piles its crests into a shock (the sonic boom), while an observer approaching at $c$ only doubles the pitch. For light there is no medium, and the relativistic formula depends only on the relative speed (P4).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Why the sky is blue.) Small molecules scatter light with power proportional to $\omega^4$, the Rayleigh law, because an oscillating dipole radiates power $\propto\ddot p^2$. How much more strongly is blue light (450 nm) scattered than red (700 nm)? Why is the sunset red, and why is the sky not violet?</p>
+        <details><summary>Solution</summary><div>
+          <p>Driven well below its resonance (in the ultraviolet), a molecule's induced dipole follows the field, $p \propto E_0\cos\omega t$, so $\ddot p \propto \omega^2$ and the radiated power is $\propto\omega^4 \propto\lambda^{-4}$. Blue is scattered $(700/450)^4 = 5.9$ times more than red. Looking away from the Sun you see mostly scattered blue light; at sunset sunlight crosses about 40 times more air, the blue has been scattered out of the direct beam, and what reaches you is red. Violet is scattered even more, but sunlight has less of it, some is absorbed high in the atmosphere, and our eyes are much less sensitive to it. The mix the eye receives looks sky blue.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="fields">
+    <h2>Fields and circuits</h2>
+    <ol start="5">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (A tunnel through the Earth.) Use Gauss's law to show that inside a uniform ball of mass $M$ and radius $R$, gravity at radius $r$ is $g\,r/R$ towards the centre. Drop a stone into a straight frictionless tunnel through the Earth, along any chord. Show that it oscillates harmonically, and that the trip to the other side takes 42 minutes whatever the chord. Compare with the period of an orbit skimming the surface.</p>
+        <details><summary>Solution</summary><div>
+          <p>Gauss's law for gravity says the flux of $\mathbf g$ through a closed surface is $-4\pi G$ times the mass inside. A sphere of radius $r$ encloses $M(r/R)^3$, and by symmetry $\mathbf g$ is radial with constant size on it, so $4\pi r^2g(r) = 4\pi GMr^3/R^3$, giving $g(r) = (GM/R^2)(r/R) = g\,r/R$.</p>
+          <p>Along a chord, let $x$ be the distance from the chord's midpoint. The force component along the tunnel is $-mg(r/R)\cdot(x/r) = -mgx/R$, which is Hooke's law with $\omega^2 = g/R$, independent of the chord. The period is $2\pi\sqrt{R/g} = 2\pi\sqrt{6.37\times10^6/9.81}$ s $= 84.4$ min, and the trip across takes half of that, 42 min. A satellite skimming the surface has $v^2/R = g$, so its period $2\pi R/v = 2\pi\sqrt{R/g}$ is the same 84.4 minutes. That is no coincidence: each coordinate of a circular orbit oscillates harmonically at $\omega$, and the stone in the tunnel is one projection of it. (For the real Earth, which is denser at its centre, the straight-through trip takes about 38 minutes.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A charge and its mirror image.) A charge $q$ sits at height $d$ above an infinite grounded conducting plane. Show that above the plane the field is that of $q$ together with an image charge $-q$ at depth $d$. Find the force on $q$, the induced surface charge density on the plane, and check that the total induced charge is $-q$.</p>
+        <details><summary>Solution</summary><div>
+          <p>The potential of $q$ at $(0, 0, d)$ plus $-q$ at $(0, 0, -d)$ vanishes on the plane $z = 0$ and satisfies Laplace's equation above it, apart from the real charge. By the uniqueness theorem it is the solution. The force is the attraction to the image, $F = \dfrac{q^2}{4\pi\varepsilon_0(2d)^2}$ towards the plane.</p>
+          <p>At distance $\rho$ from the foot of the perpendicular, the two charges' vertical fields add: $E_z = -\dfrac{2qd}{4\pi\varepsilon_0(\rho^2 + d^2)^{3/2}}$, and the conductor's surface charge is $\sigma = \varepsilon_0E_z = -\dfrac{qd}{2\pi(\rho^2 + d^2)^{3/2}}$. In total, $\int_0^\infty\sigma\,2\pi\rho\,d\rho = -qd\int_0^\infty\frac{\rho\,d\rho}{(\rho^2 + d^2)^{3/2}} = -qd\cdot\frac1d = -q$. Every field line leaving $q$ ends on the plane. The work needed to pull $q$ away to infinity is $q^2/(16\pi\varepsilon_0d)$, half what the image picture naively suggests, because the image moves as $q$ does.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The half-energy tax.) A capacitor $C$ is charged from zero to $V$ by a battery through a resistor $R$. Show that exactly half the energy the battery delivers is dissipated in the resistor, whatever the value of $R$. Then charge it in $N$ equal steps, using batteries of $V/N, 2V/N, \dots, V$ in turn: show that the loss falls to $\tfrac12CV^2/N$.</p>
+        <details><summary>Hint</summary><div><p>Don't solve for the current. The battery moves charge $Q = CV$ through a voltage $V$; how much energy ends up in the capacitor?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The battery delivers $QV = CV^2$ and the capacitor ends up storing $\tfrac12CV^2$; the rest, $\tfrac12CV^2$, became heat. To see that it really is the resistor: the current is $I = (V/R)e^{-t/RC}$ and $\int_0^\infty I^2R\,dt = \frac{V^2}{R}\cdot\frac{RC}{2} = \tfrac12CV^2$, with $R$ cancelling. A smaller resistor gives a bigger current for a shorter time; with $R \to 0$ the energy goes into radiation and sparks instead, but it is still lost.</p>
+          <p>In steps, each one raises the capacitor by $V/N$ from a battery only $V/N$ above it, losing $\tfrac12C(V/N)^2$. Over $N$ steps the loss is $\tfrac12CV^2/N$, which goes to zero as $N\to\infty$. The loss comes from the voltage difference across the resistor; charging slowly through small differences is the electrical version of a reversible process (P3). Adiabatic logic circuits and energy-recovery chargers use exactly this idea.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The infinite resistor grid.) Every edge of an infinite square grid is a resistor $R$. Guess first, then show by symmetry and superposition that the resistance between two adjacent nodes is exactly $R/2$.</p>
+        <details><summary>Hint</summary><div><p>Inject current $I$ at node $A$ and let it spread out to infinity. By symmetry, how much flows along each of $A$'s four edges? Now superpose this with a current $I$ drawn out at $B$ and collected from infinity.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Inject $I$ at $A$ and remove it at infinity. The grid looks the same along all four edges from $A$, so each carries $I/4$, and in particular $I/4$ flows from $A$ to its neighbour $B$. Now remove $I$ at $B$ and inject it at infinity: by the same symmetry, $I/4$ flows from $A$ to $B$ along that edge again. Superpose the two (the circuit is linear): current $I$ enters at $A$, leaves at $B$, nothing happens at infinity, and the current in the edge $AB$ is $I/4 + I/4 = I/2$. The voltage across it is $IR/2$, and so is the voltage between $A$ and $B$. So $R_{AB} = R/2$.</p>
+          <p>The argument needs care: the injected current must spread out with finite, well-defined potentials, which is true in two dimensions only for the difference of potentials, and that is all we use. On any lattice where each node has $z$ equivalent neighbours the same argument gives $2R/z$: $R/3$ for the triangular lattice and the simple cubic lattice ($z = 6$), and $2R/3$ for the honeycomb ($z = 3$). Diagonal neighbours on the square grid are harder: the answer, $2R/\pi$, needs a lattice Green's function, an integral over the Brillouin zone.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Light from Maxwell.) From Maxwell's equations in vacuum, $\nabla\cdot\mathbf E = 0$, $\nabla\cdot\mathbf B = 0$, $\nabla\times\mathbf E = -\partial_t\mathbf B$ and $\nabla\times\mathbf B = \mu_0\varepsilon_0\partial_t\mathbf E$, derive the wave equation for $\mathbf E$ and its speed. Evaluate it with $\mu_0 = 4\pi\times10^{-7}$ and $\varepsilon_0 = 8.854\times10^{-12}$ in SI units. Show also that a plane wave is transverse, with $\mathbf E \perp \mathbf B$ and $|\mathbf B| = |\mathbf E|/c$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Take the curl of Faraday's law: $\nabla\times(\nabla\times\mathbf E) = -\partial_t\nabla\times\mathbf B = -\mu_0\varepsilon_0\partial_t^2\mathbf E$. The identity $\nabla\times(\nabla\times\mathbf E) = \nabla(\nabla\cdot\mathbf E) - \nabla^2\mathbf E$ and $\nabla\cdot\mathbf E = 0$ turn this into $\nabla^2\mathbf E = \mu_0\varepsilon_0\,\partial_t^2\mathbf E$, a wave equation with speed $c = 1/\sqrt{\mu_0\varepsilon_0} = 2.998\times10^8$ m/s. Maxwell computed this from bench measurements of electric and magnetic forces in 1862, saw that it matched the measured speed of light, and concluded that light is an electromagnetic wave.</p>
+          <p>For $\mathbf E = \mathbf E_0e^{i(kz - \omega t)}$, $\nabla\cdot\mathbf E = ikE_{0z} = 0$ forces $E_{0z} = 0$: transverse. Faraday's law gives $i\mathbf k\times\mathbf E = i\omega\mathbf B$, so $\mathbf B = \hat{\mathbf z}\times\mathbf E/c$, perpendicular to both $\mathbf E$ and the direction of travel, with $|\mathbf B| = |\mathbf E|/c$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The homopolar generator.) A copper disc of radius $a$ spins at angular velocity $\omega$ in a uniform magnetic field $B$ along its axis. Sliding contacts touch the axle and the rim. Find the EMF. Is there anything wrong with saying "the flux through the circuit doesn't change, so there is no EMF"?</p>
+        <details><summary>Solution</summary><div>
+          <p>A charge at radius $r$ moves at speed $\omega r$ and feels the magnetic force $q\omega rB$ along the radius. The EMF is the work per unit charge from axle to rim: $\mathcal E = \int_0^a\omega rB\,dr = \tfrac12B\omega a^2$. A disc of radius 10 cm at 3000 rpm in a 1 T field gives $\tfrac12\times1\times314\times0.01 = 1.6$ V, at very large currents. Faraday built the first one in 1831.</p>
+          <p>The flux rule $\mathcal E = -d\Phi/dt$ fails here, or rather it is ambiguous: the "circuit" includes a part of the disc whose material changes from moment to moment. The reliable statement is the Lorentz force $q(\mathbf E + \mathbf v\times\mathbf B)$ on the actual charges. When the circuit moves as a thin wire the two agree; for sliding contacts and spinning conductors use the force.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="radiation">
+    <h2>Light carries energy and momentum</h2>
+    <ol start="11">
+      <li>
+        <p><span class="tag core">core</span> (A solar sail.) Light of intensity $I$ carries momentum flux $I/c$. Sunlight at the Earth's distance has $I = 1361$ W/m². Find the pressure on a perfect mirror facing the Sun, and how large a square sail must be to give a 100 kg spacecraft an acceleration of 1 mm/s².</p>
+        <details><summary>Solution</summary><div>
+          <p>A mirror reverses the light's momentum, so it receives twice the incoming momentum flux: $p = 2I/c = 2\times1361/3.00\times10^8 = 9.1\ \mu$Pa, about a ten-billionth of atmospheric pressure. The force needed is $100\times10^{-3} = 0.1$ N, so the area is $0.1/9.1\times10^{-6} = 1.1\times10^4$ m², a square 105 m on a side. That's why sails like JAXA's IKAROS are made of film a few micrometres thick: the sail's own mass per area must stay below about 10 g/m² to be worthwhile. The thrust is tiny but never runs out, and it falls only as $1/r^2$ with distance from the Sun, the same as gravity.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The classical atom collapses.) An accelerating charge radiates power $P = \dfrac{e^2a^2}{6\pi\varepsilon_0c^3}$ (Larmor's formula). Treat a hydrogen atom as an electron in a slowly shrinking circular orbit. Show that it spirals from the Bohr radius $a_0 = 5.29\times10^{-11}$ m into the nucleus in time $t = \dfrac{a_0^3}{4r_e^2c}$, where $r_e = e^2/(4\pi\varepsilon_0m_ec^2) = 2.82\times10^{-15}$ m, and evaluate it.</p>
+        <details><summary>Hint</summary><div><p>On a circular orbit $E = -\dfrac{e^2}{8\pi\varepsilon_0r}$ and $a = \dfrac{e^2}{4\pi\varepsilon_0m_er^2}$. Set $dE/dt = -P$ and solve for $dr/dt$. Writing everything in terms of $r_e$ keeps the algebra short.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let $\kappa = e^2/4\pi\varepsilon_0 = r_em_ec^2$. Then $E = -\kappa/2r$, $a = \kappa/(m_er^2) = r_ec^2/r^2$, and $P = \frac{2}{3}\frac{\kappa a^2}{c^3} = \frac23\frac{r_e m_ec^2\,r_e^2c^4}{c^3r^4} = \frac{2r_e^3m_ec^3}{3r^4}$. Energy balance gives $\frac{\kappa}{2r^2}\frac{dr}{dt} = -P$, so</p>
+          $$\frac{dr}{dt} = -\frac{2r^2}{r_em_ec^2}\cdot\frac{2r_e^3m_ec^3}{3r^4} = -\frac{4r_e^2c}{3r^2},\qquad t = \int_0^{a_0}\frac{3r^2\,dr}{4r_e^2c} = \frac{a_0^3}{4r_e^2c}.$$
+          <p>Numerically, $t = (5.29\times10^{-11})^3/(4\times(2.82\times10^{-15})^2\times3.00\times10^8) = 1.6\times10^{-11}$ s. The slow-spiral assumption holds: an orbit takes $1.5\times10^{-16}$ s, so the electron goes round about $10^5$ times on its way in, radiating a rising chirp. Classical physics predicts that every atom in the universe collapses in sixteen picoseconds, giving off a flash of ultraviolet and X-rays. That atoms exist at all is evidence for quantum mechanics; P4 problem 9 shows how the uncertainty principle sets their size.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Critical damping.) A series RLC circuit is the electrical twin of a mass on a spring with friction. Write its equation, identify the "mass", "spring" and "friction", and show that it returns to rest fastest, without overshooting, when $R = 2\sqrt{L/C}$. Why does a car's suspension aim for slightly less damping than this?</p>
+        <details><summary>Solution</summary><div>
+          <p>Kirchhoff's voltage law for the charge $q$ is $L\ddot q + R\dot q + q/C = 0$: inductance is inertia, $1/C$ is stiffness, resistance is friction. Trying $q = e^{st}$ gives $Ls^2 + Rs + 1/C = 0$, so $s = \frac{-R \pm\sqrt{R^2 - 4L/C}}{2L}$. For $R &lt; 2\sqrt{L/C}$ the roots are complex: oscillation decaying at rate $R/2L$. For $R &gt; 2\sqrt{L/C}$ both roots are real and negative, and the slower one, $s_+ = \frac{-R + \sqrt{R^2 - 4L/C}}{2L}$, gets closer to zero as $R$ grows: heavy damping is sluggish. At $R = 2\sqrt{L/C}$ the roots meet at $s = -1/\sqrt{LC}$, the fastest non-oscillating decay, $q = (A + Bt)e^{-t/\sqrt{LC}}$.</p>
+          <p>A suspension tuned slightly below critical (damping ratio around 0.3–0.7) responds faster to bumps and accepts a small overshoot. Measuring instruments like galvanometers use critical damping, so the needle settles quickly without swinging past the reading.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Purcell and Morin's <i>Electricity and Magnetism</i> and Griffiths's <i>Introduction to Electrodynamics</i> carry these ideas much further, with excellent problems; the infinite grid's harder cousins are worked out in Cserti's paper <i>Application of the lattice Green's function for calculating the resistance of an infinite network of resistors</i> (American Journal of Physics, 2000).</p>
+  </section>
+</article>

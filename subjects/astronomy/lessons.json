@@ -1,0 +1,8 @@
+{
+  "_about": "Hand-written HTML lessons for astronomy. Each is lessons/<file>.html (the header and article only; the site adds navigation, contents and the pager). Problem sets are lessons whose article has class \"lesson problems\"; the problem book gathers them. Links inside them are written from the site root, like /astronomy/P1-orbits-and-the-sky/.",
+  "lessons": [
+    {"file": "P1-orbits-and-the-sky", "chapter": "P1", "part": 1, "title": "Problem set: orbits and the sky", "added": "2026-10-25", "prerequisites": [], "blurb": "Thirteen problems: parallax and the parsec, sidereal days, synodic periods, eclipses, weighing the Sun and Jupiter, conic orbits from the Runge–Lenz vector, vis-viva, a Hohmann trip to Mars, the Hill sphere, slingshots, the Roche limit and the lengthening day."},
+    {"file": "P2-light-and-the-stars", "chapter": "P2", "part": 1, "title": "Problem set: light and the stars", "added": "2026-10-25", "prerequisites": ["P1"], "blurb": "Thirteen problems: magnitudes, the Sun's power and temperature, the Earth's temperature, telescope resolution, the central pressure bound, the Sun's age, fusion by tunnelling, a photon's random walk, mass and lifetime, the Eddington limit, white dwarfs, pulsars and black holes."},
+    {"file": "P3-galaxies-and-the-universe", "chapter": "P3", "part": 1, "title": "Problem set: planets, galaxies and the universe", "added": "2026-10-25", "prerequisites": ["P1", "P2"], "blurb": "Thirteen problems: radial velocities and transits, Olbers's paradox, rotation curves and dark matter, lensing, Hubble's law, Friedmann's equation, the age of the universe, the CMB, matter–radiation equality, the horizon problem, GPS and gravitational waves."}
+  ]
+}

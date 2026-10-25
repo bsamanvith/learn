@@ -1,0 +1,131 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P2 · Analysis and the infinite</div>
+  <h1>Problem set: analysis and the infinite</h1>
+  <p class="lede">Thirteen problems about limits, series and the sizes of infinity. You will show that the harmonic series diverges and leaves behind Euler's constant, prove that $e$ is irrational and that most real numbers can't be listed, sum $1 + \frac14 + \frac19 + \dots$ exactly with nothing but trigonometry, compute the Gaussian integral and Stirling's formula, rearrange a series to change its sum, and watch Fourier series overshoot a jump by 9% however many terms you take. Try each problem on paper before opening its solution.</p>
+  <div class="meta"><span><b>Needs:</b> limits and series, the mean value theorem, integration (double integrals for problem 6), and <a href="/mathematics/P1-numbers-and-counting/">P1</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="series">
+    <h2>Series and numbers</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (The harmonic series and Euler's constant.) Prove that $H_n = 1 + \frac12 + \dots + \frac1n$ grows without bound. Then show that $\gamma_n = H_n - \ln n$ is decreasing and stays positive, so it converges to a limit $\gamma$ (Euler's constant, $0.5772\ldots$). Roughly how many terms would you need for the sum to pass 100?</p>
+        <details><summary>Solution</summary><div>
+          <p>Oresme's grouping (about 1350): $1 + \frac12 + \big(\frac13 + \frac14\big) + \big(\frac15 + \dots + \frac18\big) + \dots$, where each bracket has $2^{k - 1}$ terms each at least $2^{-k}$, so it is at least $\frac12$. Hence $H_{2^k}\ge1 + \frac k2\to\infty$.</p>
+          <p>Since $1/x$ is decreasing, $\frac1{k + 1} &lt; \int_k^{k + 1}\frac{dx}x &lt; \frac1k$. Then $\gamma_n - \gamma_{n + 1} = \ln(n + 1) - \ln n - \frac1{n + 1} = \int_n^{n + 1}\frac{dx}x - \frac{1}{n + 1} &gt; 0$: decreasing. And $H_n &gt; \int_1^{n + 1}\frac{dx}x = \ln(n + 1) &gt; \ln n$, so $\gamma_n &gt; 0$. A decreasing sequence bounded below converges. So $H_n\approx\ln n + 0.5772$, and $H_n &gt; 100$ needs $n\approx e^{99.42}\approx1.5\times10^{43}$ terms. A computer adding a billion terms a second would need $10^{26}$ years. (Nobody knows whether $\gamma$ is irrational.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> ($e$ is irrational.) Using $e = \sum_{k\ge0}1/k!$, suppose $e = p/q$ with integers $p, q &gt; 0$. Show that $x = q!\big(e - \sum_{k = 0}^q\frac1{k!}\big)$ would be an integer with $0 &lt; x &lt; 1$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$q!\,e = q!\,p/q$ is an integer, and so is $q!\sum_{k\le q}1/k!$, since each $q!/k!$ is. So $x$ is an integer, and it is positive because the left-out terms are positive. But $x = \sum_{k &gt; q}\frac{q!}{k!} = \frac1{q + 1} + \frac1{(q + 1)(q + 2)} + \dots &lt; \frac1{q + 1} + \frac1{(q + 1)^2} + \dots = \frac1q\le1$. No integer lies strictly between 0 and 1. So $e$ is irrational. The proof works because the series converges so fast that its tail, scaled by $q!$, is smaller than one. Hermite proved in 1873 that $e$ is transcendental, the first number not specially built for the purpose shown to be so.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Sizes of infinity.) Show that the positive rationals can be listed as a sequence, but the real numbers in $(0, 1)$ cannot (Cantor's diagonal argument). Deduce that transcendental numbers exist, given that the algebraic numbers (roots of polynomials with integer coefficients) can be listed.</p>
+        <details><summary>Solution</summary><div>
+          <p>List the rationals $p/q$ by increasing $p + q$, and within that by $p$, skipping fractions not in lowest terms: $\frac11, \frac12, \frac21, \frac13, \frac31, \frac14, \frac23, \frac32, \frac41, \dots$. Every positive rational appears exactly once.</p>
+          <p>Suppose $x_1, x_2, \dots$ listed all reals in $(0, 1)$, written as decimals (choosing the expansion not ending in 9s). Build $y = 0.d_1d_2d_3\ldots$ by letting $d_n = 5$ if the $n$th digit of $x_n$ isn't 5, and $d_n = 4$ if it is. Then $y$ differs from $x_n$ in the $n$th digit, so $y\ne x_n$ for every $n$, and $y$ (having no 9s or 0s) has a unique expansion. Contradiction. Each polynomial of degree $d$ with integer coefficients of size at most $h$ has at most $d$ roots, and there are finitely many such polynomials for each $d + h$, so the algebraic numbers can be listed in order of $d + h$. A list can't cover $(0, 1)$, so most reals are transcendental, although it took until Liouville in 1844 to exhibit one, and showing that a given number like $\pi$ is transcendental is hard (Lindemann, 1882).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The Basel problem.) Prove that $\sum_{k\ge1}\frac1{k^2} = \frac{\pi^2}6$ using only trigonometry. Use the inequality $\cot^2x &lt; \frac1{x^2} &lt; 1 + \cot^2x$ for $0 &lt; x &lt; \frac\pi2$, and the identity $\sum_{k = 1}^m\cot^2\frac{k\pi}{2m + 1} = \frac{m(2m - 1)}{3}$, which you should also prove.</p>
+        <details><summary>Hint</summary><div><p>For the identity, take the imaginary part of de Moivre's formula $(\cos\theta + i\sin\theta)^{2m + 1} = \cos(2m + 1)\theta + i\sin(2m + 1)\theta$, divide by $\sin^{2m + 1}\theta$, and find a polynomial of degree $m$ whose roots are the numbers $\cot^2\frac{k\pi}{2m + 1}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p><b>The inequality.</b> For $0 &lt; x &lt; \frac\pi2$, $\sin x &lt; x &lt; \tan x$. Squaring and inverting: $\cot^2x &lt; \frac1{x^2} &lt; \frac{1}{\sin^2x} = 1 + \cot^2x$.</p>
+          <p><b>The identity.</b> The imaginary part of $(\cos\theta + i\sin\theta)^{2m + 1}$ is $\sum_j(-1)^j\binom{2m + 1}{2j + 1}\cos^{2m - 2j}\theta\,\sin^{2j + 1}\theta = \sin(2m + 1)\theta$. Dividing by $\sin^{2m + 1}\theta$: $\frac{\sin(2m + 1)\theta}{\sin^{2m + 1}\theta} = P(\cot^2\theta)$, with $P(t) = \binom{2m + 1}1t^m - \binom{2m + 1}3t^{m - 1} + \dots$. At $\theta_k = \frac{k\pi}{2m + 1}$, $k = 1, \dots, m$, the left side vanishes, and the $m$ values $\cot^2\theta_k$ are distinct (cot is decreasing and positive on $(0, \frac\pi2)$). So they are all $m$ roots of $P$, and their sum is $\binom{2m + 1}3\big/\binom{2m + 1}1 = \frac{2m(2m - 1)}{6} = \frac{m(2m - 1)}{3}$.</p>
+          <p><b>Squeeze.</b> Put $x = \theta_k$ in the inequality and sum over $k$, with $\frac1{\theta_k^2} = \frac{(2m + 1)^2}{\pi^2k^2}$: $\frac{m(2m - 1)}3 &lt; \frac{(2m + 1)^2}{\pi^2}\sum_{k = 1}^m\frac1{k^2} &lt; m + \frac{m(2m - 1)}3 = \frac{m(2m + 2)}3$. Multiply by $\frac{\pi^2}{(2m + 1)^2}$ and let $m\to\infty$: both bounds tend to $\frac{\pi^2}{3}\cdot\frac{2}{4} = \frac{\pi^2}6$. Euler first found this sum in 1734 by treating $\frac{\sin x}{x}$ as an infinite polynomial with roots $\pm k\pi$; it took a century to make that rigorous. The proof here is due to Cauchy.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Changing a sum by reordering it.) The alternating harmonic series $1 - \frac12 + \frac13 - \frac14 + \dots$ converges to $\ln2$. Rearrange it as one positive term followed by two negative ones: $1 - \frac12 - \frac14 + \frac13 - \frac16 - \frac18 + \frac15 - \dots$. Show that the new series converges to $\frac12\ln2$. State Riemann's rearrangement theorem and explain why it is true.</p>
+        <details><summary>Solution</summary><div>
+          <p>Group in threes: $\frac1{2k - 1} - \frac1{4k - 2} - \frac1{4k} = \frac1{4k - 2} - \frac1{4k} = \frac12\big(\frac1{2k - 1} - \frac1{2k}\big)$. Summing over $k$ gives half the original series, $\frac12\ln2$. (The terms go to zero, so grouping in threes doesn't change the limit of the partial sums.) The same terms, the same signs, half the sum.</p>
+          <p>Riemann's theorem: if $\sum a_n$ converges but $\sum|a_n|$ doesn't, then for any target $S$ (even $\pm\infty$) some rearrangement converges to $S$. Reason: the positive terms alone sum to $+\infty$ and the negative ones to $-\infty$ (otherwise the series would converge absolutely), while the terms themselves tend to 0. Take positive terms until you pass $S$, then negative ones until you drop below it, and repeat. You never run out, and each overshoot is at most the size of the last term used, which tends to 0. Absolutely convergent series, by contrast, have the same sum in any order. Infinite sums are not just long finite ones.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The Gaussian integral.) Show that $I = \int_{-\infty}^\infty e^{-x^2}dx = \sqrt\pi$ by computing $I^2$ as a double integral in polar coordinates. Deduce $\Gamma(\frac12) = \sqrt\pi$ and that the normal density $\frac1{\sqrt{2\pi}}e^{-x^2/2}$ integrates to 1.</p>
+        <details><summary>Solution</summary><div>
+          <p>The integrand is positive and decays fast, so by Tonelli's theorem $I^2 = \int\!\!\int_{\mathbb R^2}e^{-(x^2 + y^2)}dx\,dy$ is a legitimate double integral, which we may compute in any coordinates. In polar coordinates, $dx\,dy = r\,dr\,d\theta$: $I^2 = \int_0^{2\pi}\!\!\int_0^\infty e^{-r^2}r\,dr\,d\theta = 2\pi\big[-\tfrac12e^{-r^2}\big]_0^\infty = \pi$. Since $I &gt; 0$, $I = \sqrt\pi$. The extra $r$ is what makes it work: $e^{-r^2}r$ has an elementary antiderivative, while $e^{-x^2}$ does not.</p>
+          <p>$\Gamma(\frac12) = \int_0^\infty t^{-1/2}e^{-t}dt$; with $t = x^2$, $dt = 2x\,dx$, this is $2\int_0^\infty e^{-x^2}dx = \sqrt\pi$. And substituting $x = u/\sqrt2$, $\int e^{-u^2/2}du = \sqrt2\,I = \sqrt{2\pi}$, which is where the $\sqrt{2\pi}$ in the normal distribution comes from.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Stirling's formula.) Prove $n!\sim\sqrt{2\pi n}\,(n/e)^n$. First show that $a_n = \frac{n!\,e^n}{n^{n + 1/2}}$ is decreasing and bounded below by a positive number, so $a_n\to C &gt; 0$. Then use Wallis's product, $\lim\frac{2^{4n}(n!)^4}{((2n)!)^2(2n + 1)} = \frac\pi2$, to show $C = \sqrt{2\pi}$. How accurate is the formula for $n = 10$?</p>
+        <details><summary>Hint</summary><div><p>$\ln\frac{a_n}{a_{n + 1}} = (n + \frac12)\ln(1 + \frac1n) - 1$. Expand $\ln\frac{1 + x}{1 - x}$ with $x = \frac{1}{2n + 1}$ and compare with a geometric series.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $x = \frac1{2n + 1}$, $1 + \frac1n = \frac{1 + x}{1 - x}$ and $n + \frac12 = \frac{1}{2x}$, so $\ln\frac{a_n}{a_{n + 1}} = \frac1{2x}\ln\frac{1 + x}{1 - x} - 1 = \frac{x^2}3 + \frac{x^4}5 + \dots$. This is positive, so $a_n$ decreases, and it is less than $\frac{x^2}3(1 + x^2 + x^4 + \dots) = \frac{x^2}{3(1 - x^2)} = \frac{1}{12n(n + 1)} = \frac1{12n} - \frac1{12(n + 1)}$. So $a_ne^{-1/12n}$ is increasing, and $a_n &gt; a_1e^{-1/12} &gt; 0$. Hence $a_n\to C &gt; 0$, with $C\le a_n\le Ce^{1/12n}$.</p>
+          <p>Now put $n!\approx Cn^{n + 1/2}e^{-n}$ into Wallis's product. $\frac{2^{2n}(n!)^2}{(2n)!}\approx\frac{2^{2n}C^2n^{2n + 1}e^{-2n}}{C(2n)^{2n + 1/2}e^{-2n}} = C\sqrt{n/2}$. Squaring and dividing by $2n + 1$ gives $\frac{C^2n/2}{2n + 1}\to\frac{C^2}4$. Wallis says this limit is $\frac\pi2$, so $C^2 = 2\pi$. For $n = 10$: $\sqrt{20\pi}(10/e)^{10} = 3\,598\,696$ against $10! = 3\,628\,800$, low by 0.83%, and the bound above says the relative error is below $e^{1/120} - 1 = 0.84\%$. The correction factor $e^{1/12n}$ is nearly exact: $3\,598\,696\times e^{1/120} = 3\,628\,810$.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="functions">
+    <h2>Functions, fixed points and inequalities</h2>
+    <ol start="8">
+      <li>
+        <p><span class="tag core">core</span> (Press cos until it stops.) Start a calculator (in radians) at any number and press cos repeatedly. Prove that the values converge to the unique solution of $\cos x = x$, about $0.739085$, whatever the starting number. How many correct digits does each press add?</p>
+        <details><summary>Solution</summary><div>
+          <p>After one press the value lies in $[-1, 1]$, and after two in $[\cos1, 1]\subset[0, 1]$. On $[0, 1]$, the mean value theorem gives $|\cos x - \cos y| = |\sin\xi|\,|x - y|\le\sin1\cdot|x - y|$ with $\sin1 = 0.841 &lt; 1$. So cos is a contraction of the closed interval $[0, 1]$ into itself, and the Banach fixed-point theorem applies: the iterates form a Cauchy sequence (the gaps shrink geometrically), converge to some $x^*$, and by continuity $\cos x^* = x^*$. Two fixed points would satisfy $|x^* - y^*|\le0.841|x^* - y^*|$, so there is only one. Near the fixed point the error is multiplied each time by $|\sin x^*| = 0.674$, so each press gains $-\log_{10}0.674 = 0.17$ digits: about six presses per digit. The same theorem guarantees solutions of differential equations (Picard) and the convergence of value iteration in reinforcement learning.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Hot spots and chords.) Prove that at any moment there are two diametrically opposite points on the equator with exactly the same temperature (assume temperature varies continuously). Then prove the universal chord theorem: if $f$ is continuous on $[0, 1]$ with $f(0) = f(1)$, then for every $n$ there is an $x$ with $f(x + \frac1n) = f(x)$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $T(\theta)$ be the temperature at longitude $\theta$ and $g(\theta) = T(\theta) - T(\theta + \pi)$. Then $g$ is continuous and $g(\theta + \pi) = -g(\theta)$. If $g(0) = 0$ we are done; otherwise $g(0)$ and $g(\pi)$ have opposite signs, and the intermediate value theorem gives a zero in between.</p>
+          <p>For the chord, let $h(x) = f(x + \frac1n) - f(x)$ on $[0, 1 - \frac1n]$. The sum $h(0) + h(\frac1n) + \dots + h(\frac{n - 1}n)$ telescopes to $f(1) - f(0) = 0$. So the terms can't all be positive or all negative: some $h(k/n)\ge0$ and some $h(j/n)\le0$, and $h$ has a zero between them. Surprisingly, lengths other than $1/n$ can fail: Lévy's example $f(x) = \sin^2(\pi x/a) - x\sin^2(\pi/a)$ has no horizontal chord of length $a$ when $1/a$ is not an integer. (The two-dimensional version, Borsuk–Ulam, says that at any moment some antipodal pair on Earth has the same temperature <i>and</i> the same pressure.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (AM–GM in two lines.) Use $e^{t - 1}\ge t$ for all real $t$ to prove that for positive reals, $\sqrt[n]{x_1\cdots x_n}\le\frac{x_1 + \dots + x_n}n$, with equality only when all are equal (Pólya's proof). Then cut equal squares from the corners of a unit square sheet and fold up the sides: show that the largest open box has volume $\frac{2}{27}$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $A$ be the arithmetic mean. Applying $t\le e^{t - 1}$ to each $t_i = x_i/A$ and multiplying: $\frac{x_1\cdots x_n}{A^n}\le e^{\sum(x_i/A - 1)} = e^{n - n} = 1$. So the geometric mean is at most $A$. The inequality $e^{t - 1}\ge t$ is strict unless $t = 1$ (the curve is strictly convex and touches its tangent line $t$ only at $t = 1$), so equality needs every $x_i = A$.</p>
+          <p>Cut squares of side $x$: the box has volume $V = x(1 - 2x)^2$ for $0 &lt; x &lt; \frac12$. Write $4V = 4x\cdot(1 - 2x)\cdot(1 - 2x)$; the three factors sum to 2, a constant, so by AM–GM $4V\le\big(\frac23\big)^3$, with equality when $4x = 1 - 2x$, i.e. $x = \frac16$. So $V_{\max} = \frac{8}{27}\cdot\frac14 = \frac2{27}\approx0.074$, with no calculus. The trick is to choose the weights so that the sum is constant.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Gibbs's overshoot.) The square wave $\operatorname{sgn}(x)$ on $(-\pi, \pi)$ has Fourier series $\frac4\pi\big(\sin x + \frac{\sin3x}3 + \frac{\sin5x}5 + \dots\big)$. Guess first: as you add terms, does the overshoot next to the jump shrink to zero? Show that the partial sum $S_N$ with $N$ terms has its first maximum at $x = \frac{\pi}{2N}$, and that the height there tends to $\frac2\pi\int_0^\pi\frac{\sin u}u\,du = 1.1790$, not 1. Try the slider below.</p>
+        <figure class="plate wide" data-scene="gibbs">
+          <div class="stage">
+            <canvas aria-label="The square wave and the sum of its first N Fourier terms, with the overshoot next to the jump marked"></canvas>
+            <div class="toolbar">
+              <div class="sliders">
+                <label for="gb-n">terms N <input id="gb-n" type="range" data-k="n" min="1" max="80" step="1"><output data-out="n"></output></label>
+                <div class="seg" data-opt="zoom" role="group"><button type="button" data-v="0">whole wave</button><button type="button" data-v="1">zoom on the jump</button></div>
+              </div>
+              <div class="readout" data-role="readout"></div>
+            </div>
+          </div>
+        </figure>
+        <details><summary>Hint</summary><div><p>Differentiate term by term: $S_N'(x) = \frac4\pi\sum_{k = 1}^N\cos(2k - 1)x$. Sum this with $2\sin x\cos(2k - 1)x = \sin2kx - \sin(2k - 2)x$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Multiplying by $2\sin x$ and telescoping, $\sum_{k = 1}^N\cos(2k - 1)x = \frac{\sin2Nx}{2\sin x}$, so $S_N'(x) = \frac2\pi\frac{\sin2Nx}{\sin x}$. On $(0, \pi)$ its first zero is at $x = \frac\pi{2N}$, where $S_N'$ changes from positive to negative: the first maximum. Since $S_N(0) = 0$,</p>
+          $$S_N\Big(\frac\pi{2N}\Big) = \frac2\pi\int_0^{\pi/2N}\frac{\sin2Nx}{\sin x}dx = \frac2\pi\int_0^\pi\frac{\sin u}{2N\sin(u/2N)}du\ \longrightarrow\ \frac2\pi\int_0^\pi\frac{\sin u}{u}du,$$
+          <p>substituting $u = 2Nx$ and using $2N\sin(u/2N)\to u$ uniformly on $[0, \pi]$. The integral is $\operatorname{Si}(\pi) = 1.85194$, so the limit is $1.17898$: the partial sums overshoot by $0.179$, about 9% of the jump of 2, no matter how large $N$ is. The overshoot gets narrower (it sits at $\frac\pi{2N}$) but never lower. There is no contradiction with convergence: at each fixed $x\ne0$, $S_N(x)\to\operatorname{sgn}x$, but the convergence is not uniform. The ringing in a JPEG near a sharp edge, and in an audio filter that cuts frequencies sharply, is this phenomenon. Wilbraham found it in 1848; Gibbs's name came after Michelson's harmonic analyser drew it in 1898.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Cauchy's functional equation.) Find all continuous $f:\mathbb R\to\mathbb R$ with $f(x + y) = f(x) + f(y)$ for all $x, y$. Show that the conclusion survives if continuity is replaced by "$f$ is bounded above on some interval", and say what happens with no condition at all.</p>
+        <details><summary>Solution</summary><div>
+          <p>$f(0) = 2f(0)$ gives $f(0) = 0$, and $f(-x) = -f(x)$. By induction $f(nx) = nf(x)$ for integers $n$; with $x = \frac mn$ this gives $nf(\frac mn) = f(m) = mf(1)$, so $f(q) = cq$ for every rational $q$, with $c = f(1)$. A continuous function agreeing with $cx$ on the dense set of rationals equals $cx$ everywhere.</p>
+          <p>If $f\le M$ on an interval $(a, b)$, then $g(x) = f(x) - cx$ is additive, zero on rationals, and bounded above on $(a, b)$. Since $g(x + q) = g(x)$ for rational $q$, $g$ is bounded above on every interval of length $b - a$, hence everywhere by covering. But then $g(nx) = ng(x)\le M'$ for all $n$ forces $g(x)\le0$, and $g(-x) = -g(x)$ forces $g(x)\ge0$. So $g = 0$. Without any condition there are wild solutions: viewing $\mathbb R$ as a vector space over $\mathbb Q$, choose a basis (a Hamel basis, which needs the axiom of choice) and define $f$ linearly with arbitrary values on it. Such $f$ have graphs dense in the plane and are not measurable, which is why no explicit example can be written down.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Newton's method doubles the digits.) For a function with $f(r) = 0$ and $f'(r)\ne0$, Newton's method is $x_{n + 1} = x_n - f(x_n)/f'(x_n)$. Show that the errors $e_n = x_n - r$ satisfy $e_{n + 1}\approx\frac{f''(r)}{2f'(r)}e_n^2$. Apply it to $f(x) = x^2 - 2$ from $x_0 = 1$ and watch the number of correct digits of $\sqrt2$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Taylor's theorem around $x_n$: $0 = f(r) = f(x_n) - f'(x_n)e_n + \frac12f''(\xi)e_n^2$ for some $\xi$ between $r$ and $x_n$. Dividing by $f'(x_n)$: $x_n - \frac{f(x_n)}{f'(x_n)} - r = \frac{f''(\xi)}{2f'(x_n)}e_n^2$, i.e. $e_{n + 1} = \frac{f''(\xi)}{2f'(x_n)}e_n^2\approx\frac{f''(r)}{2f'(r)}e_n^2$. Quadratic convergence: once the error is small, squaring it roughly doubles the number of correct digits each step.</p>
+          <p>For $x^2 - 2$ the step is $x_{n + 1} = \frac12\big(x_n + \frac2{x_n}\big)$, the Babylonian method: $1, 1.5, 1.41\overline{6}, 1.414215686, 1.41421356237469$, with errors $0.086$, $2.5\times10^{-3}$, $2.1\times10^{-6}$ and $1.6\times10^{-12}$ after the first four steps: 1, 3, 6 and 12 correct significant figures. The constant here is $\frac{f''}{2f'} = \frac{1}{2\sqrt2}$, and indeed $e_{n + 1} = e_n^2/2x_n$ exactly. Newton's method is how computers compute square roots and divisions, and why they need only a handful of steps for full precision.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Pólya and Szegő's <i>Problems and Theorems in Analysis</i> is the great classic collection; Abbott's <i>Understanding Analysis</i> builds the theory behind these problems gently and well. Havil's <i>Gamma</i> tells the story of Euler's constant from problem 1, and Körner's <i>Fourier Analysis</i> has a delightful chapter on the Gibbs phenomenon.</p>
+  </section>
+</article>

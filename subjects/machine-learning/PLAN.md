@@ -110,7 +110,7 @@ RLHF and the RL used to train reasoning models are in stage 7 (lessons 28 and 30
 
 Every lesson ends with short exercises and answers. On top of that:
 
-- **Problem sets**, one per stage (P2 … P9, plus one for the math toolkit; P2 ✅, P3 ✅, P4 ✅, P5 ✅, P6 ✅, P7 ✅ and P8 ✅ are written): 15–25 problems each, a mix of
+- **Problem sets**, one per stage (P2 … P9, plus one for the math toolkit; P2 ✅, P3 ✅, P4 ✅, P5 ✅, P6 ✅, P7 ✅, P8 ✅ and the math toolkit set PM ✅ are written): 15–25 problems each, a mix of
   derivations, proofs, "compute this by hand" and short coding questions, graded easy → hard, with full
   worked solutions hidden behind a click. Together they form the problems book.
 - **Assignments** for the important topics: a real programming project with starter code

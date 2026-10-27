@@ -1,0 +1,18 @@
+{
+  "title": "Astronomy",
+  "tagline": "What the light tells us, across forty powers of ten.",
+  "intro": "Astronomy starts here with practice: a ladder of four levels from first problems to olympiad problems, then three topic sets that move outwards from the Solar System to the whole universe. Every problem has a full worked solution, written so you can learn the method from it. Lessons for each topic will follow, and the problems will stay as their practice.",
+  "partLabel": "Part",
+  "parts": {
+    "1": {
+      "title": "The ladder",
+      "blurb": "Four levels of problems, from basics through intermediate and advanced to olympiad. Climb in order.",
+      "label": "Ladder"
+    },
+    "2": {
+      "title": "Topic sets",
+      "blurb": "Orbits and the sky, light and the stars, planets, galaxies and the universe.",
+      "label": "Topics"
+    }
+  }
+}

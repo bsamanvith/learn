@@ -1,0 +1,176 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 1 of 4 · Basics</div>
+  <h1>Level 1: basics</h1>
+  <p class="lede">Twenty-four first problems: motion in a straight line and through the air, Newton's laws, energy and momentum, circles and springs, floating and pressure, heat, circuits, sound and light. Each one uses a single idea and a few lines of algebra. If you are new to physics, start here and do them in order; every solution shows each step, so you can learn the method from it. Use $g = 9.8$ m/s² throughout.</p>
+  <div class="meta"><span><b>Needs:</b> algebra, a little trigonometry, and nothing else</span><span><b>Next:</b> <a href="/physics/L2-intermediate/">Level 2</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="motion">
+    <h2>Motion</h2>
+    <ol>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (The average-speed trap.) You drive 60 km at 30 km/h, then another 60 km at 90 km/h. Guess first: is your average speed 60 km/h? Work it out.</p>
+        <details><summary>Solution</summary><div>
+          <p>Average speed is total distance over total time. The first leg takes $60/30 = 2$ h and the second $60/90 = \frac23$ h, so the average is $120/(2 + \frac23) = 45$ km/h, not 60. You spend much longer at the slow speed, so it counts for more. For equal distances the average is the harmonic mean $\frac{2v_1v_2}{v_1 + v_2}$; for equal times it would be the ordinary mean.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Units.) Convert 100 km/h to metres per second. A light-year is the distance light travels in a year at $3.00\times10^8$ m/s: how many metres is it?</p>
+        <details><summary>Solution</summary><div>
+          <p>$100\text{ km/h} = \frac{100\,000\text{ m}}{3600\text{ s}} = 27.8$ m/s. (Divide km/h by 3.6.) A year is $365.25\times24\times3600 = 3.156\times10^7$ s, so a light-year is $3.00\times10^8\times3.156\times10^7 = 9.46\times10^{15}$ m. Always carry units through a calculation: if they don't come out right, the formula is wrong.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Dropping a stone.) A stone is dropped from rest from a 45 m tower. How long does it take to land, and how fast is it going? Ignore air resistance.</p>
+        <details><summary>Solution</summary><div>
+          <p>With constant acceleration $g$ from rest, the distance fallen is $h = \frac12gt^2$, so $t = \sqrt{2h/g} = \sqrt{90/9.8} = 3.0$ s. The speed is $v = gt = 29.7$ m/s, or directly $v = \sqrt{2gh}$. Notice that the time grows only as $\sqrt h$: a drop four times higher takes twice as long.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Throwing a ball straight up.) A ball is thrown upwards at 20 m/s. How high does it go, and how long until it comes back to your hand?</p>
+        <details><summary>Solution</summary><div>
+          <p>At the top the velocity is zero. From $v^2 = u^2 - 2gh$ with $v = 0$: $h = u^2/2g = 400/19.6 = 20.4$ m. Going up takes $u/g = 2.04$ s, and the motion is symmetric, so the round trip is 4.08 s, and the ball comes back at 20 m/s, downwards. At the top the velocity is zero but the acceleration is still $g$ downwards: if it were zero, the ball would stay there.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Off a cliff.) A ball is thrown horizontally at 15 m/s from a cliff 20 m high. How long is it in the air, and how far from the base of the cliff does it land?</p>
+        <details><summary>Solution</summary><div>
+          <p>Horizontal and vertical motions are independent. Vertically, the ball falls 20 m from zero vertical speed: $t = \sqrt{2\times20/9.8} = 2.02$ s, exactly as if it were dropped. Horizontally there is no force, so it keeps its 15 m/s: $x = 15\times2.02 = 30.3$ m. A bullet fired horizontally and one dropped at the same moment hit the ground together.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Braking distance.) A car at 25 m/s (90 km/h) brakes with a deceleration of 5 m/s². How far does it travel, and for how long? How much further would it go from 50 m/s?</p>
+        <details><summary>Solution</summary><div>
+          <p>$v^2 = u^2 - 2as$ with $v = 0$ gives $s = u^2/2a = 625/10 = 62.5$ m, and $t = u/a = 5$ s. Distance grows with the square of speed: at 50 m/s it is $2500/10 = 250$ m, four times as far. This is why a small increase in speed makes a large difference to stopping distance.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="forces">
+    <h2>Forces</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Newton's second law.) A 1200 kg car goes from 0 to 27 m/s in 9 s at constant acceleration. Find the acceleration and the net force on it.</p>
+        <details><summary>Solution</summary><div>
+          <p>$a = \Delta v/\Delta t = 27/9 = 3$ m/s², and $F = ma = 1200\times3 = 3600$ N. That net force comes from the road pushing forwards on the tyres (friction), minus air resistance. The engine turns the wheels, but without friction from the road the car would go nowhere, as on ice.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Sliding down a slope.) A block slides down a slope at $30^\circ$. Find its acceleration if the slope is frictionless, and if the coefficient of kinetic friction is $\mu = 0.2$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Split gravity $mg$ into $mg\sin\theta$ along the slope and $mg\cos\theta$ into it. The normal force balances the second, $N = mg\cos\theta$. Without friction, $a = g\sin30^\circ = 4.9$ m/s². With friction $\mu N$ opposing the motion, $a = g(\sin\theta - \mu\cos\theta) = 9.8(0.5 - 0.2\times0.866) = 3.2$ m/s². The mass cancels both times. If $\tan\theta &lt; \mu$ the block won't slide at all.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Atwood's machine.) Masses of 3 kg and 2 kg hang from the two ends of a light string over a frictionless pulley. Find their acceleration and the tension in the string.</p>
+        <details><summary>Solution</summary><div>
+          <p>Take the 3 kg mass moving down. For it, $3g - T = 3a$; for the 2 kg one going up, $T - 2g = 2a$. Adding: $g = 5a$, so $a = g/5 = 1.96$ m/s². Then $T = 2(g + a) = 23.5$ N, between the two weights (19.6 N and 29.4 N), as it must be. In general $a = \frac{m_1 - m_2}{m_1 + m_2}g$, which is how Atwood measured $g$ in 1784 with a slow, easily timed motion.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Starting and sliding.) A 10 kg box rests on a floor with static friction coefficient 0.5 and kinetic coefficient 0.3. What horizontal push starts it moving, and what push keeps it moving at constant speed?</p>
+        <details><summary>Solution</summary><div>
+          <p>The normal force is $mg = 98$ N. Static friction can resist up to $\mu_sN = 49$ N, so you need just over 49 N to start it. Once it slides, friction is $\mu_kN = 29.4$ N, and pushing with exactly that gives zero net force, so constant velocity. That's why a heavy box suddenly "gives" and lurches forward once it starts moving.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Uniform circular motion.) A car takes a flat curve of radius 50 m at 20 m/s. Find its acceleration and the smallest coefficient of friction that keeps it on the road.</p>
+        <details><summary>Solution</summary><div>
+          <p>Moving in a circle at constant speed means accelerating towards the centre at $v^2/r = 400/50 = 8$ m/s². On a flat road only friction can provide it: $\mu mg\ge mv^2/r$, so $\mu\ge v^2/(rg) = 0.82$. Dry asphalt manages about 0.8; on a wet road the car slides outwards, in a straight line along the tangent, not "flung out" by any outward force.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Gravity on the Moon.) The Moon has mass $7.35\times10^{22}$ kg and radius 1737 km. With $G = 6.67\times10^{-11}$ N m² kg⁻², find the acceleration due to gravity at its surface and the weight there of a 70 kg astronaut.</p>
+        <details><summary>Solution</summary><div>
+          <p>$g = GM/R^2 = 6.67\times10^{-11}\times7.35\times10^{22}/(1.737\times10^6)^2 = 1.62$ m/s², about a sixth of the Earth's. The astronaut's weight is $70\times1.62 = 114$ N, while their mass is still 70 kg: just as hard to push sideways, but much easier to lift.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="energy-momentum">
+    <h2>Energy, momentum and oscillations</h2>
+    <ol start="13">
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Roller coaster.) A frictionless roller coaster starts from rest and drops 20 m. How fast is it going at the bottom? Does the shape of the track matter?</p>
+        <details><summary>Solution</summary><div>
+          <p>Energy is conserved: $mgh = \frac12mv^2$, so $v = \sqrt{2gh} = \sqrt{2\times9.8\times20} = 19.8$ m/s. The shape of the track doesn't matter, because the normal force is always perpendicular to the motion and does no work. Only the height dropped counts. (The shape does decide how long the trip takes; see the brachistochrone in Level 3.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Running upstairs.) A 70 kg person runs up a 3 m flight of stairs in 4 s. What is their power output, at least?</p>
+        <details><summary>Solution</summary><div>
+          <p>Work against gravity is $mgh = 70\times9.8\times3 = 2058$ J, and power is work per time: $2058/4 = 515$ W, about two-thirds of a horsepower (746 W). Muscles are about 25% efficient, so the body is burning food at about 2 kW to do it, which is why it makes you hot.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (A sticky collision.) A 2 kg trolley moving at 3 m/s hits a 1 kg trolley at rest, and they stick together. Find their common speed. How much kinetic energy was lost, and where did it go?</p>
+        <details><summary>Solution</summary><div>
+          <p>Momentum is conserved in every collision: $2\times3 = (2 + 1)v$, so $v = 2$ m/s. Kinetic energy before: $\frac12\times2\times9 = 9$ J; after: $\frac12\times3\times4 = 6$ J. So 3 J was lost, to heat, sound and deformation. Energy is still conserved in total, but kinetic energy alone is conserved only in elastic collisions.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Mass on a spring.) A 0.5 kg mass hangs on a spring of stiffness 200 N/m. Find the period of oscillation. If it is pulled 0.1 m from equilibrium and released, what is the maximum speed and the energy of the oscillation?</p>
+        <details><summary>Solution</summary><div>
+          <p>$T = 2\pi\sqrt{m/k} = 2\pi\sqrt{0.5/200} = 0.314$ s, whatever the amplitude. The energy is $\frac12kA^2 = \frac12\times200\times0.01 = 1$ J. At the centre it is all kinetic: $\frac12mv^2 = 1$ J gives $v = 2$ m/s, which is also $\omega A$ with $\omega = \sqrt{k/m} = 20$ s⁻¹. Gravity only shifts the equilibrium point down; it doesn't change the period.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (A seconds pendulum.) How long must a simple pendulum be so that each swing (half a period) takes exactly one second?</p>
+        <details><summary>Solution</summary><div>
+          <p>The period is 2 s, and $T = 2\pi\sqrt{L/g}$ gives $L = gT^2/4\pi^2 = 9.8\times4/39.48 = 0.993$ m. Almost exactly a metre. In 1791 the French nearly defined the metre this way, but $g$ varies with latitude, so they chose a fraction of the Earth's meridian instead.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="matter-heat-electricity">
+    <h2>Fluids, heat, electricity, waves and light</h2>
+    <ol start="18">
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (The tip of the iceberg.) Ice has density 917 kg/m³ and seawater 1025 kg/m³. What fraction of an iceberg is underwater?</p>
+        <details><summary>Solution</summary><div>
+          <p>A floating body displaces its own weight of fluid (Archimedes). If a fraction $f$ of volume $V$ is submerged, $1025\,fVg = 917\,Vg$, so $f = 917/1025 = 0.89$. Nine-tenths is hidden. When floating sea ice melts, the sea level doesn't change, but ice melting off land into the sea raises it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Diving pressure.) Water has density 1000 kg/m³. By how much does the pressure rise at a depth of 10 m? Compare with atmospheric pressure, $1.01\times10^5$ Pa.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\Delta p = \rho gh = 1000\times9.8\times10 = 9.8\times10^4$ Pa, almost exactly one more atmosphere. A diver at 10 m feels 2 atmospheres, at 30 m 4. Pressure depends only on depth, not on the shape of the container, which is why a dam must be thick at the bottom whatever the size of the lake behind it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Boiling the kettle.) How much energy does it take to heat 1 litre of water from 20 °C to boiling? The specific heat of water is 4186 J/(kg K). How long does a 2 kW kettle take?</p>
+        <details><summary>Solution</summary><div>
+          <p>$Q = mc\Delta T = 1\times4186\times80 = 3.35\times10^5$ J. At 2000 W, $t = 335\,000/2000 = 168$ s, just under three minutes, if no heat is lost. Boiling it all away would take another $2.26\times10^6$ J (the latent heat), almost seven times more.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Light bulbs in series.) A bulb is rated 60 W at 230 V. Find its current and resistance. Two such bulbs are connected in series across 230 V. What power does each now use, assuming the resistance doesn't change?</p>
+        <details><summary>Solution</summary><div>
+          <p>$I = P/V = 60/230 = 0.26$ A and $R = V^2/P = 230^2/60 = 882\ \Omega$. In series the total resistance is $1764\ \Omega$, the current halves to 0.13 A, and each bulb gets 115 V. Each uses $P = I^2R = (0.13)^2\times882 = 15$ W, a quarter of its rating, since power goes as $V^2$. (A real filament is colder and so has lower resistance; it would use a little more.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Echoes and notes.) You shout towards a cliff and hear the echo 1.5 s later. With sound at 343 m/s, how far is the cliff? What is the wavelength of the note A (440 Hz)?</p>
+        <details><summary>Solution</summary><div>
+          <p>The sound goes there and back, $343\times1.5 = 515$ m in total, so the cliff is 257 m away. For a wave, speed = frequency × wavelength: $\lambda = 343/440 = 0.78$ m. Bats and dolphins use echoes to "see" with sounds of wavelength a few millimetres, small enough to reflect off insects.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Bending light.) A ray of light in air hits water ($n = 1.33$) at $30^\circ$ from the normal. Find the angle of refraction using Snell's law, $n_1\sin\theta_1 = n_2\sin\theta_2$. Then find the critical angle for light going from water into air.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\sin\theta_2 = \sin30^\circ/1.33 = 0.376$, so $\theta_2 = 22.1^\circ$: the ray bends towards the normal as it slows down. Going the other way, $\sin\theta_{\text{air}} = 1.33\sin\theta_{\text{water}}$ exceeds 1 when $\sin\theta_{\text{water}} &gt; 1/1.33$, i.e. beyond $48.8^\circ$. Past that angle no light escapes: total internal reflection, which traps light inside optical fibres.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (One photon of green light.) Find the energy of a photon of wavelength 500 nm, in joules and in electronvolts, using $E = hc/\lambda$ with $h = 6.63\times10^{-34}$ J s and $1\text{ eV} = 1.60\times10^{-19}$ J. How many such photons per second does a 1 mW laser pointer emit?</p>
+        <details><summary>Solution</summary><div>
+          <p>$E = 6.63\times10^{-34}\times3.00\times10^8/5.00\times10^{-7} = 3.98\times10^{-19}$ J $= 2.48$ eV. (A handy shortcut: $E[\text{eV}] = 1240/\lambda[\text{nm}]$.) At $10^{-3}$ J/s that is $10^{-3}/3.98\times10^{-19} = 2.5\times10^{15}$ photons per second. Light seems continuous because the photons are so many and each so small; a few eV is also the scale of chemical bonds, which is why light can drive photosynthesis and vision.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

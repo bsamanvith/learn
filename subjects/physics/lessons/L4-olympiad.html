@@ -1,0 +1,192 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 4 of 4 · Olympiad</div>
+  <h1>Level 4: olympiad</h1>
+  <p class="lede">Eighteen problems in the style of the physics olympiads. None needs physics beyond Level 3; what they need is an idea: the right frame, a hidden conservation law, a symmetry, a clever choice of variable, or the nerve to estimate. Expect to spend an hour on some of them. Each has a hint that gives away the idea and a solution that explains how you might have found it, which is the part worth learning.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/physics/L3-advanced/">Level 3</a>, and patience</span><span><b>Then:</b> the topic sets, starting with <a href="/physics/P1-mechanics/">mechanics</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag olympiad">olympiad</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="mechanics">
+    <h2>Mechanics</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (The cheapest throw.) What is the smallest launch speed that lets a ball reach a point a horizontal distance $d$ away and a height $h$ up? Find it, and the launch angle, for a window 30 m away and 10 m up.</p>
+        <details><summary>Hint</summary><div><p>Write the trajectory as $y = x\tan\theta - gx^2(1 + \tan^2\theta)/2v^2$ and treat it as a quadratic in $\tan\theta$. The point can be reached if this quadratic has a real root.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $u = \tan\theta$, the ball passes through $(d, h)$ when $\frac{gd^2}{2v^2}u^2 - du + h + \frac{gd^2}{2v^2} = 0$. A real $u$ exists when the discriminant is non-negative: $d^2 \ge 4\frac{gd^2}{2v^2}\big(h + \frac{gd^2}{2v^2}\big)$. Writing $s = gd^2/2v^2$, this is $d^2 \ge 4s(h + s)$, or $s \le \frac12(\sqrt{h^2 + d^2} - h)$, so</p>
+          $$v_{\min}^2 = g\left(h + \sqrt{h^2 + d^2}\right),\qquad \tan\theta = \frac{d}{2s} = \frac{h + \sqrt{h^2 + d^2}}{d}.$$
+          <p>For $d = 30$ m and $h = 10$ m: $v_{\min} = \sqrt{9.8\times41.6} = 20.2$ m/s, at $54.2^\circ$. The optimal direction bisects the angle between the vertical and the line to the target, a neat check. The boundary $s = \frac12(\sqrt{h^2 + d^2} - h)$, rewritten, is the "safety parabola" $y = v^2/2g - gx^2/2v^2$: the envelope of all trajectories at speed $v$, outside which nothing can be hit. With $h = 0$ it gives $45^\circ$ and $v^2 = gd$, as in Level 2.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Four bugs.) Four bugs sit at the corners of a square of side $a$. At the same moment each starts to walk at speed $v$ straight towards the bug on its left, always heading at it as it moves. When do they meet, and how far does each walk?</p>
+        <details><summary>Hint</summary><div><p>By symmetry the bugs always form a square, which shrinks and turns. Each bug's velocity is perpendicular to the velocity of the bug it is chasing. How fast does the distance between two neighbours shrink?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The four bugs stay at the corners of a square for all time, by symmetry. Bug A walks towards B at speed $v$, while B walks towards C, at right angles to the line AB. So B's motion neither adds to nor subtracts from the distance AB, and AB shrinks at exactly $v$. It started at $a$, so they meet after</p>
+          $$t = \frac av,\qquad\text{having walked a distance } a \text{ each.}$$
+          <p>Each bug walks a logarithmic spiral that winds infinitely often round the centre, yet has finite length $a$. The trick generalises: for $n$ bugs on a regular polygon, the angle between neighbouring velocities is $2\pi/n$, and the time is $a/v(1 - \cos(2\pi/n))$. For three bugs that is $2a/3v$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A rope round a post.) A rope is wrapped round a fixed post, with coefficient of friction $\mu$ between them. Show that the rope can hold a tension $T_1$ at one end against a much smaller pull $T_0$ at the other, as long as $T_1 \le T_0e^{\mu\theta}$, where $\theta$ is the total angle of contact. With $\mu = 0.3$, what force ratio do one turn and three turns give?</p>
+        <details><summary>Hint</summary><div><p>Look at a small piece of rope subtending angle $d\theta$. The tensions at its two ends are not parallel, so they press it against the post with a normal force $T\,d\theta$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>A small piece of rope covering angle $d\theta$ has tension $T$ at one end and $T + dT$ at the other. The two tensions are tilted by $d\theta$ from each other, and their components towards the post add up to $N = T\,d\theta$. On the point of slipping, friction is $\mu N$ and balances the difference in tension: $dT = \mu T\,d\theta$. Integrating,</p>
+          $$T_1 = T_0\,e^{\mu\theta}.$$
+          <p>One turn ($\theta = 2\pi$) gives $e^{0.6\pi} = 6.6$; three turns give $e^{1.8\pi} = 286$. A sailor holding 10 kg of force can stop nearly three tonnes. The exponential is why a few turns of rope on a bollard hold a ship, and why a knot holds at all: it is friction that multiplies itself.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The leaning tower of books.) Identical books of length 1 are stacked at the edge of a table, one on top of the other, each sliding out as far as it can. Show that with $n$ books the top one can overhang the table's edge by $\frac12(1 + \frac12 + \frac13 + \dots + \frac1n)$. How many books are needed for the top one to be completely past the edge? Is any overhang possible?</p>
+        <details><summary>Hint</summary><div><p>Build from the top down. The top $k$ books balance on book $k + 1$ when their combined centre of mass is exactly over its edge.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Put the top book's centre over the edge of the second: it overhangs by $\frac12$. The top two have their centre of mass at the edge of the second; put that over the edge of the third. Adding the third book, whose centre is $\frac12$ inward of its edge, the combined centre of three books moves inward by $\frac12\times\frac13$. In general, the top $k$ books have their centre of mass over the edge of book $k + 1$, and adding book $k + 1$ (mass 1, centre $\frac12$ inward) shifts the centre of the top $k + 1$ inward by $\frac{1}{2(k + 1)}$. That shift is the overhang of book $k + 1$ over book $k + 2$, so the total is</p>
+          $$\text{overhang} = \frac12\sum_{k=1}^n\frac1k = \frac12H_n.$$
+          <p>With four books, $\frac12(1 + \frac12 + \frac13 + \frac14) = \frac{25}{24} &gt; 1$: the top book is entirely beyond the table. Because the harmonic series diverges, any overhang is possible with enough books, though it grows only as $\frac12\ln n$: an overhang of 5 book-lengths needs more than 12 000 books. (Stacks that are not one-per-level can do much better, as Paterson and Zwick showed in 2006.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (The perfect billiard shot.) A billiard ball of radius $R$ is struck by a cue held horizontally. At what height above the table must it be struck so that it rolls without slipping straight away, with no sliding?</p>
+        <details><summary>Hint</summary><div><p>The cue gives an impulse $J$ at height $h$. It provides linear momentum $J$ and angular momentum about the centre $J(h - R)$. For a solid sphere $I = \frac25mR^2$. Friction from the cloth is small compared with the sharp blow, so ignore it during the impact.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Just after the blow, $mv = J$ and $I\omega = J(h - R)$. Rolling needs $v = \omega R$. So $J(h - R) = \frac25mR^2\cdot\frac{J}{mR}$, and</p>
+          $$h - R = \tfrac25R,\qquad h = \tfrac75R.$$
+          <p>Struck lower, the ball slides with too little spin and friction speeds up its spin until it rolls. Struck higher, it has topspin and friction accelerates it forwards. This height is the centre of percussion seen from the contact point, the same idea as the sweet spot of the rod in Level 2. A billiard table's cushions are built at about this height, so balls bounce off it without skidding.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A marble in a bowl.) A solid ball of radius $r$ rolls without slipping inside a spherical bowl of radius $R$. Find the period of small oscillations about the bottom. Compare with a bead sliding without friction.</p>
+        <details><summary>Hint</summary><div><p>The ball's centre moves on a circle of radius $R - r$. Write the energy in terms of the angle $\phi$ of that centre from the vertical. The rolling condition links the ball's own rotation rate to $\dot\phi$, and the centre's speed is $(R - r)\dot\phi$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The centre moves at speed $v = (R - r)\dot\phi$. Rolling without slipping on the bowl means the ball's spin is $\omega = v/r$ (the contact point is at rest). The energy is then</p>
+          $$E = \tfrac12mv^2 + \tfrac12\cdot\tfrac25mr^2\frac{v^2}{r^2} + mg(R - r)(1 - \cos\phi) = \tfrac{7}{10}m(R - r)^2\dot\phi^2 + \tfrac12mg(R - r)\phi^2$$
+          <p>for small $\phi$. An energy of the form $\frac12A\dot\phi^2 + \frac12B\phi^2$ means $\omega^2 = B/A$, so</p>
+          $$\omega^2 = \frac{5g}{7(R - r)},\qquad T = 2\pi\sqrt{\frac{7(R - r)}{5g}}.$$
+          <p>A sliding bead would have $\omega^2 = g/(R - r)$; rolling makes the ball slower by $\sqrt{7/5} = 1.18$, because a fixed amount of potential energy must now feed spin as well as motion. The energy method, reading off $\omega^2$ as stiffness over inertia, is the fastest way to any small-oscillation problem.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The wheel that will not fall.) A bicycle wheel of mass 2.0 kg and radius 0.30 m (treat it as a ring) spins at 5 revolutions per second. One end of its axle, 0.20 m from the wheel, rests on a pivot, with the axle horizontal. Instead of falling, the wheel slowly circles round the pivot. Find the rate and the period of this precession, and explain why it does not fall.</p>
+        <details><summary>Hint</summary><div><p>Torque is the rate of change of angular momentum: $\boldsymbol\tau = d\mathbf L/dt$. Gravity's torque about the pivot is horizontal and perpendicular to $\mathbf L$, so it changes the direction of $\mathbf L$ but not its size.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The spin angular momentum points along the axle, with size $L = I\omega = mR^2\omega$. Gravity's torque about the pivot has size $\tau = mgd$ and points horizontally, perpendicular to the axle. In time $dt$ it adds a sideways $d\mathbf L$ of size $\tau\,dt$, which swings $\mathbf L$ round by angle $\tau\,dt/L$. So the axle turns at</p>
+          $$\Omega = \frac{\tau}{L} = \frac{mgd}{mR^2\omega} = \frac{gd}{R^2\omega} = \frac{9.8\times0.2}{0.09\times31.4} = 0.69\text{ rad/s},$$
+          <p>a period of 9.1 s. The mass cancels. The wheel does not fall because the torque never has a chance to build up a downward rotation: it goes entirely into turning the axle sideways. (This is the slow-precession approximation, valid when $\Omega \ll \omega$; the small up-and-down wobble called nutation is the correction.) Spin it faster and the precession slows down, which surprises everyone.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A chain onto a scale.) A uniform chain of length $L$ and mass $M$ is held hanging vertically with its lower end just touching the pan of a scale, then released. Show that while it falls, the scale reads three times the weight of the chain already lying on the pan. What is the largest reading?</p>
+        <details><summary>Hint</summary><div><p>Two things push on the pan: the weight of the links at rest on it, and the force needed to stop each falling link. The links that haven't landed are in free fall, since a chain that is slack exerts no tension.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The links still in the air are in free fall, so after a length $x$ has landed, the rest is moving at $v = \sqrt{2gx}$. Links arrive at the rate $\lambda v$ per second, where $\lambda = M/L$, each carrying momentum $v$. Stopping them takes a force $\lambda v^2 = 2\lambda gx$. Adding the weight $\lambda gx$ of what is already on the pan:</p>
+          $$F = \lambda gx + \lambda v^2 = 3\lambda gx.$$
+          <p>Just before the last link lands, the reading is $3Mg$; then it drops abruptly to $Mg$. The impact force is a momentum flux, like the push of a jet of water on a wall, and it is always worth checking that it doesn't spoil a "simple" problem. (A real chain can do even stranger things: lift a chain out of a beaker quickly and it rises above the rim in a "chain fountain".)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The raindrop in the mist.) A raindrop falls through a still cloud of tiny droplets, collecting every droplet in its path, so it grows as it falls. The cloud has uniform density, the drop stays spherical, it starts with almost no size, and air resistance is negligible. Show that it falls with constant acceleration $g/7$.</p>
+        <details><summary>Hint</summary><div><p>Two equations: the mass collected per second is the cloud density times the area $\pi r^2$ times $v$; and Newton's law for a body gaining mass at rest is $d(mv)/dt = mg$. The first gives $dr/dt \propto v$. Then try a solution with $v = at$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let water have density $\rho$ and the cloud have mass density $\rho_c$. The drop sweeps up $\dot m = \rho_c\pi r^2v$. With $m = \frac43\pi\rho r^3$, $\dot m = 4\pi\rho r^2\dot r$, so $\dot r = (\rho_c/4\rho)v$: the radius grows in step with the distance fallen. The collected droplets were at rest, so the momentum equation is $d(mv)/dt = mg$.</p>
+          <p>Now try $v = at$. Then $r = \frac{\rho_c}{4\rho}\frac{at^2}{2} \propto t^2$, so $m \propto t^6$ and $mv \propto t^7$. Hence $d(mv)/dt = 7mv/t = 7ma$. Setting this equal to $mg$:</p>
+          $$a = \frac g7.$$
+          <p>A falling drop that starts at a finite size approaches this solution as it grows. The surprising number comes entirely from the powers: area grows as $t^4$, and each extra power of $t$ in the momentum costs one more share of the weight. Notice also that energy is not conserved: sticking collisions turn kinetic energy into heat, so an energy argument here gives the wrong answer.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="fields-and-waves">
+    <h2>Fields, waves and heat</h2>
+    <ol start="10">
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Earnshaw's theorem.) Prove that a charged particle cannot be held in stable equilibrium by electrostatic forces alone, from any fixed arrangement of other charges. What does this say about the stability of ordinary matter, and how do ion traps hold ions?</p>
+        <details><summary>Hint</summary><div><p>For a stable equilibrium the field would have to point inward from every direction around the point. Use Gauss's law on a tiny sphere around it, which contains no charge.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Suppose a positive test charge had a stable equilibrium at a point $P$ in empty space. Displaced a little in any direction, it would feel a restoring force, so the field on a small sphere around $P$ would point inward everywhere. The flux through the sphere would then be negative. But Gauss's law says the flux equals the enclosed charge over $\varepsilon_0$, and there is none at $P$ (the charges creating the field are elsewhere). Contradiction. Equivalently, the potential obeys Laplace's equation $\nabla^2V = 0$ in empty space, so it has no local minimum: its value at any point is the average over any sphere around it.</p>
+          <p>So matter cannot be a static arrangement of charges held by electric forces: it is quantum mechanics, through the uncertainty principle and the Pauli principle, that stabilises atoms and solids. Ion traps get round the theorem with time-varying fields (a Paul trap's field flips faster than the ion can escape, like a ball balanced on a rotating saddle) or by adding a magnetic field (a Penning trap). Gravity obeys the same inverse-square law, which is why no arrangement of stars can trap a planet at rest.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (Crossed fields.) A particle of charge $q$ and mass $m$ starts at rest at the origin in a uniform electric field $E$ along $y$ and a uniform magnetic field $B$ along $z$. Find its path. How far from the $x$ axis does it get, and what is its average velocity?</p>
+        <details><summary>Hint</summary><div><p>Change to a frame moving along $x$ at speed $E/B$. In that frame the electric field vanishes (for $E \ll cB$), and the particle just goes round in a circle.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>In a frame moving at $\mathbf u = (E/B)\hat x$, a particle with velocity $\mathbf v'$ feels $q(\mathbf E + (\mathbf v' + \mathbf u)\times\mathbf B) = q(\mathbf E + \mathbf u\times\mathbf B) + q\mathbf v'\times\mathbf B$. Since $\mathbf u\times\mathbf B = -(E/B)B\hat y = -\mathbf E$, the electric force cancels. In this frame the particle starts with velocity $-u\hat x$ and circles at speed $u$ with angular frequency $\omega = qB/m$, on a circle of radius $u/\omega$. Back in the lab, a circle plus a steady drift is a cycloid, the path of a point on a rolling wheel:</p>
+          $$x = \frac{E}{B\omega}(\omega t - \sin\omega t),\qquad y = \frac{E}{B\omega}(1 - \cos\omega t).$$
+          <p>The largest distance from the $x$ axis is $2E/B\omega = 2mE/qB^2$, and the average velocity is $E/B$ along $x$, perpendicular to both fields and independent of the charge and mass. Check with energy: at the top, $y = 2mE/qB^2$, the speed is $2E/B$, and indeed $\frac12m(2E/B)^2 = qEy$. This "E cross B drift" moves whole plasmas together and is the reason magnetrons in microwave ovens work.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The sonic boom.) A jet flies level at Mach 2 at a height of 18 km. Show that its shock wave is a cone of half-angle $\theta$ with $\sin\theta = 1/M$. How long after the plane passes directly overhead does an observer hear the boom? Take the speed of sound as 295 m/s throughout.</p>
+        <details><summary>Hint</summary><div><p>Sound emitted at each point of the path spreads as a sphere. The boom is where all these spheres pile up: their envelope. Then find where the cone crosses the ground when the plane is overhead.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Sound emitted a time $t$ ago, when the plane was a distance $vt$ back, has spread to a sphere of radius $ct$. All these spheres touch a cone with apex at the plane, and $\sin\theta = ct/vt = 1/M$. That cone is where the pressure pulses add up: the shock. For Mach 2, $\theta = 30^\circ$.</p>
+          <p>When the plane is overhead, the cone reaches the ground a horizontal distance $h/\tan\theta$ behind it. The plane must move that far before the cone sweeps over the observer, so the delay is</p>
+          $$t = \frac{h}{v\tan\theta} = \frac{18\,000}{590\times0.577} = 53\text{ s}.$$
+          <p>The common mistake is to say the boom is heard "when the plane breaks the sound barrier": in fact it is heard continuously along a strip of ground the whole time the plane flies supersonic. (In real air the sound speed rises towards the ground, which bends the cone and shortens the delay a little.) The wake of a boat and the Cherenkov light of a fast particle in water are the same cone.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Work from two hot bricks.) Two identical bodies, each of heat capacity $C$, start at temperatures $T_1$ and $T_2$. A heat engine runs between them until they reach a common temperature. What is the most work it can extract? Evaluate it for 1 kg of water at 100 °C and 1 kg at 0 °C, and compare with simply mixing them.</p>
+        <details><summary>Hint</summary><div><p>The most work comes from a reversible engine, which creates no entropy. So the final temperature is fixed by $\Delta S_1 + \Delta S_2 = 0$; then energy conservation gives the work.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>For a reversible engine the total entropy is unchanged: $C\ln(T_f/T_1) + C\ln(T_f/T_2) = 0$, so $T_f = \sqrt{T_1T_2}$, the geometric mean. The work is the heat taken from the hot body minus the heat given to the cold one:</p>
+          $$W = C(T_1 - T_f) - C(T_f - T_2) = C\left(\sqrt{T_1} - \sqrt{T_2}\right)^2.$$
+          <p>With $T_1 = 373$ K, $T_2 = 273$ K and $C = 4186$ J/K: $T_f = 319$ K (46 °C) and $W = 33$ kJ. Mixing would end at the arithmetic mean, 50 °C, with no work: the four degrees of difference are the energy the engine turned into work. Any real engine ends somewhere between 46 and 50 °C. Since the geometric mean is always below the arithmetic mean (the AM–GM inequality), the result is always positive.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (Why the rainbow is at 42°.) Sunlight enters a spherical raindrop, reflects once off the back and leaves. Show that its total deviation is $D = 180^\circ + 2i - 4r$, where $i$ is the angle of incidence and $\sin i = n\sin r$. Find the angle at which $D$ is smallest, and show that light piles up there. With $n = 1.333$ for red and $1.343$ for violet, find the angles of the rainbow and its width. Which colour is on the outside?</p>
+        <details><summary>Hint</summary><div><p>Refraction in turns the ray by $i - r$, the reflection by $180^\circ - 2r$, and refraction out by $i - r$ again. Set $dD/di = 0$ using $\cos i\,di = n\cos r\,dr$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Adding the three turns gives $D = 2(i - r) + (180^\circ - 2r) = 180^\circ + 2i - 4r$. Then $dD/di = 2 - 4\,dr/di = 2 - 4\cos i/(n\cos r)$, which vanishes when $2\cos i = n\cos r$. Squaring and using $n^2\cos^2r = n^2 - \sin^2i$: $4\cos^2i = n^2 - 1 + \cos^2i$, so</p>
+          $$\cos^2i = \frac{n^2 - 1}{3}.$$
+          <p>For $n = 1.333$, $i = 59.4^\circ$, $r = 40.2^\circ$ and $D_{\min} = 137.9^\circ$, so the light comes back at $180^\circ - 137.9^\circ = 42.1^\circ$ from the point directly opposite the Sun. Near a minimum, $D$ barely changes as $i$ varies, so rays entering over a wide band of the drop all leave close to this angle: the light concentrates there, which makes the bow bright. For violet, $n = 1.343$ gives $40.6^\circ$. Red is outside at $42.1^\circ$ and violet inside at $40.6^\circ$, so the bow is about $1.5^\circ$ wide, plus the Sun's own half-degree. Inside the bow the sky is brighter (all other rays land there); between the primary and the secondary bow, made by two reflections at about 51°, lies the darker Alexander's band.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A water clock.) A vessel with a small hole in its bottom is shaped as a surface of revolution. What shape, radius $r$ as a function of height $h$, makes the water level fall at a constant rate, so the vessel can be marked with an even scale of hours?</p>
+        <details><summary>Hint</summary><div><p>Torricelli's law: water leaves a small hole at depth $h$ at speed $\sqrt{2gh}$, the speed of a free fall from the surface.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The outflow is $a\sqrt{2gh}$ per second for a hole of area $a$, and it equals the rate the volume falls, $\pi r^2\,|dh/dt|$. For constant $|dh/dt| = k$:</p>
+          $$\pi r^2k = a\sqrt{2gh}\quad\Longrightarrow\quad r \propto h^{1/4},\qquad h \propto r^4.$$
+          <p>The vessel narrows towards the bottom as a quartic curve. Torricelli's law itself comes from Bernoulli's equation along a streamline from the slowly moving surface to the jet. Egyptian water clocks from about 1400 BC have sloping sides that partly correct for this effect, though not with exactly this shape.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="modern">
+    <h2>Relativity, quanta and estimates</h2>
+    <ol start="16">
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A year at one g.) A spaceship accelerates so that its crew always feels $g = 9.8$ m/s². After one year of ship time, how fast is it going, how much time has passed on Earth, and how far has it gone? Use rapidity: for velocities along a line, $\tanh^{-1}(v/c)$ adds like ordinary velocity.</p>
+        <details><summary>Hint</summary><div><p>In the ship's momentary rest frame, a small proper time $d\tau$ adds a small velocity $g\,d\tau$. Rapidities add, so the rapidity is $\phi = g\tau/c$. Then $v = c\tanh\phi$, $dt = \cosh\phi\,d\tau$ and $dx = c\sinh\phi\,d\tau$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Since rapidities add under boosts along one line, each $d\tau$ adds $g\,d\tau/c$ to it, and $\phi = g\tau/c$. With one year, $\tau = 3.156\times10^7$ s, $\phi = 1.03$. Then</p>
+          $$v = c\tanh\phi = 0.77c,\qquad t = \frac cg\sinh\phi = 1.19\text{ yr},\qquad x = \frac{c^2}{g}(\cosh\phi - 1) = 0.56\text{ light-years}.$$
+          <p>Conveniently, $c/g$ is almost exactly one year, and $c^2/g$ almost a light-year. Because $\cosh\phi$ grows exponentially, the ship covers enormous distances in modest proper time: accelerating for 10 ship years and decelerating for 10 more would reach about 29 000 light-years, a third of the way across the Galaxy, while about 29 000 years passed on Earth. The fuel is another matter: even a perfect photon rocket needs a mass ratio of $e^{\phi}$ for each leg, about 30 000 here.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A quantum bouncing ball.) A neutron bounces on a horizontal mirror under gravity. Using dimensional analysis on $\hbar$, $m$ and $g$, find the natural length and energy scale of its quantum states, and evaluate them. (The exact lowest state sits at $2.34$ times this length, as an Airy function shows.) The states were observed in 2002: what height did the experiment need to resolve?</p>
+        <details><summary>Hint</summary><div><p>Combine $\hbar$ (J s), $m$ (kg) and $g$ (m s⁻²) to make a length. Alternatively, ask when the zero-point kinetic energy $\hbar^2/2mz^2$ is comparable to the potential energy $mgz$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Balancing $\hbar^2/2mz^2$ against $mgz$ gives the length $\ell_0 = (\hbar^2/2m^2g)^{1/3}$. For a neutron, $m = 1.675\times10^{-27}$ kg, and $\ell_0 = 5.9$ μm. The lowest state is at $2.34\,\ell_0 = 14$ μm, with energy $mg\times14\ \mu\text{m} = 1.4\times10^{-12}$ eV.</p>
+          <p>The experiment at the Institut Laue–Langevin sent very slow neutrons through a narrow slit between a mirror and an absorber, and saw them pass only when the slit was wider than about 15 μm, in steps, as the quantum states predicted. It is the gravitational analogue of the hydrogen atom, and it has been used since to search for new short-range forces. A tennis ball's $\ell_0$ would be $6\times10^{-23}$ m, which is why you never see this.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The sliding ladder.) A uniform ladder stands against a frictionless wall on a frictionless floor, its top at height $h_0$, and is released from rest. Its foot slides out and its top slides down. Show that the top leaves the wall when it has fallen to two thirds of its starting height, whatever the length.</p>
+        <details><summary>Hint</summary><div><p>While the top touches the wall, the centre of the ladder moves on a circle of radius $L/2$ about the corner. The wall's push is the only horizontal force, so the top leaves the wall when the centre's horizontal acceleration becomes zero (and would turn negative).</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let $\theta$ be the angle from the vertical, so the centre is at $x = \frac L2\sin\theta$, $y = \frac L2\cos\theta$, a distance $L/2$ from the corner. Its speed is $\frac L2\dot\theta$, and the ladder spins at $\dot\theta$ about its centre with $I = mL^2/12$. Energy conservation from rest at $\theta_0$:</p>
+          $$\tfrac12m\tfrac{L^2}{4}\dot\theta^2 + \tfrac12\tfrac{mL^2}{12}\dot\theta^2 = mg\tfrac L2(\cos\theta_0 - \cos\theta)\quad\Longrightarrow\quad\dot\theta^2 = \frac{3g}{L}(\cos\theta_0 - \cos\theta).$$
+          <p>Differentiating, $\ddot\theta = \frac{3g}{2L}\sin\theta$. The wall's force equals $m\ddot x$, with $\ddot x = \frac L2(\ddot\theta\cos\theta - \dot\theta^2\sin\theta)$. Substituting both,</p>
+          $$\ddot x = \tfrac34g\sin\theta\,(3\cos\theta - 2\cos\theta_0).$$
+          <p>This is positive at first and reaches zero when $\cos\theta = \frac23\cos\theta_0$. The wall cannot pull, so contact ends there, with the top at height $L\cos\theta = \frac23h_0$. After that the ladder's horizontal momentum is fixed and the top drifts away from the wall as it falls. The neat trick is to work with the centre of mass, whose path is a simple circle while the ends do the complicated sliding.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

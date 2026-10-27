@@ -1,0 +1,124 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P1 · Numbers and counting</div>
+  <h1>Problem set: numbers and counting</h1>
+  <p class="lede">Fourteen problems on whole numbers and on counting things cleverly. You will prove that $\sqrt2$ is irrational and that there are infinitely many primes of a certain kind, prove Fermat's little theorem by counting necklaces, show that the sum of the reciprocals of the primes diverges with a proof that fits on a napkin, find every Pythagorean triple from one line through a circle, count paths that never cross a diagonal, and meet three gems of combinatorics: Erdős–Szekeres, the party problem and the five Platonic solids. Each one has an idea at its heart. Find it before you open the solution.</p>
+  <div class="meta"><span><b>Needs:</b> proof by contradiction and induction, modular arithmetic, binomial coefficients</span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="irrational-and-prime">
+    <h2>Irrational numbers and primes</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Two proofs about $\sqrt2$.) Prove that $\sqrt2$ is irrational. Then prove that there exist irrational numbers $a$ and $b$ with $a^b$ rational, without ever deciding whether $\sqrt2^{\sqrt2}$ is rational.</p>
+        <details><summary>Solution</summary><div>
+          <p>Suppose $\sqrt2 = p/q$ in lowest terms. Then $p^2 = 2q^2$, so $p^2$ is even, so $p$ is even (an odd number squared is odd). Write $p = 2r$: then $4r^2 = 2q^2$, $q^2 = 2r^2$, and $q$ is even too, contradicting lowest terms. The same argument shows $\sqrt n$ is irrational unless $n$ is a perfect square, using unique factorisation: in $p^2 = nq^2$ every prime appears to an even power on the left.</p>
+          <p>Consider $x = \sqrt2^{\sqrt2}$. If $x$ is rational, take $a = b = \sqrt2$. If $x$ is irrational, take $a = x$, $b = \sqrt2$: then $a^b = \sqrt2^{\sqrt2\cdot\sqrt2} = \sqrt2^2 = 2$. Either way such a pair exists, but the proof doesn't tell you which. (In fact $\sqrt2^{\sqrt2}$ is irrational, even transcendental, by the Gelfond–Schneider theorem of 1934.) Proofs like this, which show something exists without constructing it, are called non-constructive, and some mathematicians reject them.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Infinitely many primes, and more.) Prove Euclid's theorem that there are infinitely many primes. Then adapt the proof to show that there are infinitely many primes of the form $4k + 3$. Why doesn't the same trick work for primes of the form $4k + 1$?</p>
+        <details><summary>Hint</summary><div><p>For $4k + 3$, given primes $p_1, \dots, p_k$ of that form, look at $N = 4p_1p_2\cdots p_k - 1$. What can you say about a product of numbers that are all $1$ mod 4?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Given any finite list of primes $p_1, \dots, p_k$, the number $p_1\cdots p_k + 1$ leaves remainder 1 when divided by each of them, so any prime factor of it is new. No finite list contains every prime.</p>
+          <p>Now suppose $p_1, \dots, p_k$ are all the primes $\equiv 3 \pmod 4$, and let $N = 4p_1\cdots p_k - 1$. $N$ is odd and $N\equiv 3\pmod 4$. Every prime factor of $N$ is odd, so it is $1$ or $3$ mod 4. If all of them were $1$ mod 4, their product $N$ would be $1$ mod 4, which it isn't. So some prime $q\equiv3\pmod4$ divides $N$. But $q$ isn't any $p_i$, since $p_i$ divides $N + 1$ and cannot also divide $N$. Contradiction. For $4k + 1$ the trick fails because a number $\equiv 1\pmod 4$ can be a product of primes that are all $3$ mod 4 (like $21 = 3\times7$), so no prime $\equiv 1$ is forced. A different argument does work (using $4(p_1\cdots p_k)^2 + 1$ and the fact that $-1$ is a square mod $q$ only for $q\equiv1$), and Dirichlet proved in 1837 that every progression $a + nd$ with $\gcd(a, d) = 1$ contains infinitely many primes.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Fermat's little theorem by necklaces.) Let $p$ be prime and $a$ a positive integer. Prove that $p$ divides $a^p - a$ by counting necklaces: strings of $p$ beads, each one of $a$ colours, where two strings that are rotations of each other are the same necklace.</p>
+        <details><summary>Hint</summary><div><p>Rotating a string by one place, $p$ times, brings it back. What sizes can the set of distinct rotations of a string have, when $p$ is prime?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>There are $a^p$ strings. Exactly $a$ of them are single-coloured, and they are fixed by rotation. Take any other string $s$ and let $d$ be the smallest number of single-place rotations that brings $s$ back to itself. The rotations that fix $s$ are exactly the multiples of $d$ (if $r$ fixes it, so does $r \bmod d$), and $p$ fixes it, so $d$ divides $p$. Since $p$ is prime, $d = 1$ or $d = p$, and $d = 1$ would mean all beads are the same colour. So every non-constant string has exactly $p$ distinct rotations, and the $a^p - a$ non-constant strings fall into groups of $p$, one group per necklace. Hence $p\mid a^p - a$, and $\frac{a^p - a}{p}$ is the number of non-constant necklaces. For $p = 3$ and $a = 2$: $(8 - 2)/3 = 2$ necklaces, $\{001, 010, 100\}$ and $\{011, 101, 110\}$. If $p\nmid a$ you may cancel an $a$: $a^{p - 1}\equiv1\pmod p$, the form that RSA encryption relies on.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Wilson's theorem.) Prove that $(p - 1)!\equiv-1\pmod p$ for every prime $p$, and that $(n - 1)!\not\equiv-1\pmod n$ for every composite $n &gt; 4$ (so the congruence is a test for primality, if a hopelessly slow one). Check it for $p = 7$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Modulo a prime $p$, each of $1, \dots, p - 1$ has a unique inverse in the same range (Bézout: $\gcd(x, p) = 1$, so $xy\equiv1$ has a solution). An element is its own inverse when $x^2\equiv1$, i.e. $p\mid(x - 1)(x + 1)$, so $x\equiv\pm1$: only $1$ and $p - 1$. The other elements pair off with their inverses, each pair multiplying to 1. So $(p - 1)!\equiv1\cdot(p - 1)\equiv-1$. For $p = 7$: $6! = 720 = 7\times103 - 1$. ✓</p>
+          <p>If $n$ is composite, it has a divisor $d$ with $1 &lt; d &lt; n$, and $d$ appears among $1, \dots, n - 1$, so $d\mid(n - 1)!$. If $(n - 1)!\equiv-1\pmod n$, then $d$ would divide $(n - 1)! + 1$ as well, hence divide 1. Contradiction. (For $n &gt; 4$ composite one can say more: $(n - 1)!\equiv0\pmod n$. For $n = 4$, $3! = 6\equiv2$.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The primes are not too sparse.) Prove that $\sum_p 1/p$ over all primes diverges. Erdős's proof: suppose it converges, choose $k$ so that the primes after $p_k$ have $\sum_{i &gt; k}1/p_i &lt; \frac12$, and count the integers $n\le N$ in two ways.</p>
+        <details><summary>Hint</summary><div><p>Split $1, \dots, N$ into numbers with a prime factor larger than $p_k$ and numbers built only from $p_1, \dots, p_k$. Bound the first kind by $\sum_{i&gt;k}N/p_i$. For the second, write each such $n$ as $m^2s$ with $s$ square-free.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Numbers $n\le N$ divisible by a given prime $p_i$ number at most $N/p_i$, so those with some prime factor beyond $p_k$ number fewer than $N\sum_{i&gt;k}1/p_i &lt; N/2$. Now take $n\le N$ whose prime factors are all among $p_1, \dots, p_k$. Write $n = m^2s$ with $s$ square-free: $s$ is a product of a subset of $\{p_1, \dots, p_k\}$, so there are at most $2^k$ choices, and $m\le\sqrt N$. So there are at most $2^k\sqrt N$ of them. Every $n\le N$ is of one kind or the other, so $N &lt; 2^k\sqrt N + N/2$, i.e. $\sqrt N &lt; 2^{k + 1}$. That fails for $N = 2^{2k + 2}$: contradiction.</p>
+          <p>So $\sum 1/p$ diverges, although very slowly: $\sum_{p\le x}1/p\approx\ln\ln x + 0.2615$ (Mertens). Summing over all primes below a billion gives only about 3.3. It says the primes are much denser than the squares, whose reciprocals sum to $\pi^2/6$ (P2, problem 4).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Fibonacci's greatest common divisors.) The Fibonacci numbers are $F_1 = F_2 = 1$, $F_{n + 1} = F_n + F_{n - 1}$. Prove that $F_{m + n} = F_mF_{n + 1} + F_{m - 1}F_n$, that consecutive Fibonacci numbers are coprime, and deduce the surprising identity $\gcd(F_m, F_n) = F_{\gcd(m, n)}$. Check it with $\gcd(F_{12}, F_{18})$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Fix $m$ and induct on $n$, with $F_0 = 0$. For $n = 0$ it reads $F_m = F_m\cdot1 + F_{m - 1}\cdot0$, and for $n = 1$ it reads $F_{m + 1} = F_m + F_{m - 1}$. ✓ If the identity holds for $n - 1$ and $n$, adding the two gives it for $n + 1$, because both sides satisfy the Fibonacci recursion in $n$. Coprimality: $\gcd(F_{n + 1}, F_n) = \gcd(F_n + F_{n - 1}, F_n) = \gcd(F_n, F_{n - 1}) = \dots = \gcd(F_2, F_1) = 1$.</p>
+          <p>Now $\gcd(F_{m + n}, F_n) = \gcd(F_mF_{n + 1} + F_{m - 1}F_n, F_n) = \gcd(F_mF_{n + 1}, F_n) = \gcd(F_m, F_n)$, the last step because $F_{n + 1}$ shares no factor with $F_n$. So the pair of indices $(m + n, n)$ can be replaced by $(m, n)$ without changing the gcd of the Fibonacci numbers: exactly the step of Euclid's algorithm. Running Euclid on the indices ends at $(\gcd(m, n), 0)$, and $F_0 = 0$, so $\gcd(F_m, F_n) = \gcd(F_{\gcd(m, n)}, 0) = F_{\gcd(m, n)}$. Check: $F_{12} = 144$, $F_{18} = 2584$, and $\gcd(144, 2584) = 8 = F_6$. ✓ As a corollary, if $F_n$ is prime then $n$ is prime (or $n = 4$).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Sunzi's soldiers.) A general counts his soldiers in threes and two are left over, in fives and three are left over, in sevens and two are left over. What is the smallest possible number? State the Chinese remainder theorem that guarantees an answer, and prove it for two coprime moduli.</p>
+        <details><summary>Solution</summary><div>
+          <p>$x\equiv2\pmod3$ and $x\equiv2\pmod7$ give $x\equiv2\pmod{21}$: $x\in\{2, 23, 44, \dots\}$. The first that is $3\bmod5$ is $23$. The theorem: if $m_1, \dots, m_k$ are pairwise coprime, the system $x\equiv a_i\pmod{m_i}$ has exactly one solution modulo $M = m_1\cdots m_k$. For two moduli: by Bézout there are $u, v$ with $um_1 + vm_2 = 1$. Then $x = a_2um_1 + a_1vm_2$ works, since $vm_2\equiv1\pmod{m_1}$ and $um_1\equiv1\pmod{m_2}$. If $x$ and $x'$ both work, $m_1$ and $m_2$ both divide $x - x'$, so their product does: unique modulo $m_1m_2$. Induction handles more moduli. Computers use it to do arithmetic with huge numbers as several small, independent remainders.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Every Pythagorean triple.) Find all rational points on the unit circle $x^2 + y^2 = 1$ by drawing the line through $(-1, 0)$ with rational slope $t$. Deduce that every primitive Pythagorean triple $a^2 + b^2 = c^2$ is $(m^2 - n^2, 2mn, m^2 + n^2)$, up to swapping $a$ and $b$, with $m &gt; n &gt; 0$ coprime and not both odd.</p>
+        <details><summary>Solution</summary><div>
+          <p>The line $y = t(x + 1)$ meets the circle where $x^2 + t^2(x + 1)^2 = 1$, i.e. $(x + 1)\big((1 + t^2)x - (1 - t^2)\big) = 0$. Besides $x = -1$, the second point is $\Big(\dfrac{1 - t^2}{1 + t^2}, \dfrac{2t}{1 + t^2}\Big)$, rational when $t$ is. Conversely, any rational point other than $(-1, 0)$ lies on the line to $(-1, 0)$ with rational slope $t = y/(x + 1)$. So these are all of them.</p>
+          <p>A primitive triple gives a rational point $(a/c, b/c)$. With $t = n/m$ in lowest terms, the point is $\Big(\frac{m^2 - n^2}{m^2 + n^2}, \frac{2mn}{m^2 + n^2}\Big)$. If $m, n$ are coprime and of opposite parity, then $m^2 - n^2$, $2mn$ and $m^2 + n^2$ have no common factor (an odd common prime would divide $m^2$ and $n^2$), so the triple is exactly this. If both are odd, everything is even and halving gives the triple with $a$ and $b$ swapped. $m = 2, n = 1$ gives $(3, 4, 5)$; $m = 3, n = 2$ gives $(5, 12, 13)$; $m = 4, n = 1$ gives $(15, 8, 17)$. The method, rational points from one known point and lines, is where the modern theory of elliptic curves begins.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="counting">
+    <h2>Counting cleverly</h2>
+    <ol start="9">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Catalan numbers by reflection.) A lattice path from $(0, 0)$ to $(n, n)$ takes unit steps right or up. Show that the number of such paths that never go above the diagonal $y = x$ is $C_n = \frac{1}{n + 1}\binom{2n}{n}$. Explain why $C_n$ also counts the ways to write $n$ pairs of correctly matched brackets, and list them for $n = 3$.</p>
+        <details><summary>Hint</summary><div><p>Count the bad paths, those that touch the line $y = x + 1$. Reflect the part of a bad path after its first touch in that line. Where does it now end?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>All paths: $\binom{2n}{n}$. A bad path touches $y = x + 1$ somewhere; reflect everything after the first touch in that line (rights become ups and vice versa). The reflected path ends at the reflection of $(n, n)$, which is $(n - 1, n + 1)$. Conversely every path to $(n - 1, n + 1)$ must cross $y = x + 1$, and reflecting after its first touch gives a bad path to $(n, n)$. So bad paths are in bijection with all paths to $(n - 1, n + 1)$, of which there are $\binom{2n}{n - 1}$. Hence $C_n = \binom{2n}{n} - \binom{2n}{n - 1} = \binom{2n}{n}\big(1 - \frac{n}{n + 1}\big) = \frac{1}{n + 1}\binom{2n}{n}$.</p>
+          <p>Read a right step as "(" and an up step as ")". Staying on or below the diagonal means that at every point there have been at least as many opens as closes: exactly the matched-bracket condition. For $n = 3$, $C_3 = 5$: ((())), (()()), (())(), ()(()), ()()(). The sequence $1, 1, 2, 5, 14, 42, 132, \dots$ also counts triangulations of polygons, binary trees and hundreds of other things; Stanley's book lists over 200.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (One divides another.) Prove that among any $n + 1$ numbers chosen from $\{1, 2, \dots, 2n\}$, one divides another. Show that $n$ numbers are not enough.</p>
+        <details><summary>Solution</summary><div>
+          <p>Write each chosen number as $2^am$ with $m$ odd. The odd part $m$ is one of $1, 3, \dots, 2n - 1$: only $n$ possibilities. With $n + 1$ numbers, two share the same odd part (pigeonhole), say $2^am$ and $2^bm$ with $a &lt; b$, and the first divides the second. The $n$ numbers $n + 1, n + 2, \dots, 2n$ fail: the quotient of any two of them lies strictly between 1 and 2, so it isn't an integer.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Erdős–Szekeres.) Prove that every sequence of $n^2 + 1$ distinct real numbers contains an increasing subsequence of length $n + 1$ or a decreasing one of length $n + 1$. Show that $n^2$ numbers are not enough.</p>
+        <details><summary>Hint</summary><div><p>Label the $k$th term with the pair $(i_k, d_k)$: the lengths of the longest increasing and decreasing subsequences that end at it. Can two terms have the same label?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Take $j &lt; k$. If $a_j &lt; a_k$, any increasing subsequence ending at $a_j$ extends by $a_k$, so $i_k &gt; i_j$. If $a_j &gt; a_k$, similarly $d_k &gt; d_j$. Either way the labels differ. If every $i_k$ and $d_k$ were at most $n$, there would be only $n^2$ possible labels for $n^2 + 1$ terms, so two would coincide. Contradiction: some $i_k$ or $d_k$ is at least $n + 1$.</p>
+          <p>For $n^2$ numbers, take $n$ decreasing blocks, each block above the previous one: for $n = 3$, $3, 2, 1, 6, 5, 4, 9, 8, 7$. An increasing subsequence takes at most one term per block, so has length at most $n$; a decreasing one stays inside one block, so also at most $n$. The theorem is sharp. A random permutation of $N$ numbers has longest increasing subsequence close to $2\sqrt N$, with fluctuations described by the Tracy–Widom distribution from random matrix theory.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The party problem.) Prove that in any group of six people, there are three who all know each other or three who are all strangers. Show that five people are not enough. In Ramsey's notation, $R(3, 3) = 6$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Colour each pair red (acquainted) or blue (strangers). Pick a person $A$. Of the five pairs at $A$, at least three have the same colour (pigeonhole), say red, to $B$, $C$, $D$. If any pair among $B$, $C$, $D$ is red, it forms a red triangle with $A$. If none is, then $B$, $C$, $D$ form a blue triangle. For five people, sit them round a table and make neighbours acquainted and everyone else strangers: the red pairs form a pentagon and the blue pairs a pentagram, and neither contains a triangle. Ramsey numbers grow fast and are hard: $R(4, 4) = 18$, but $R(5, 5)$ is only known to lie between 43 and 46. Erdős joked that if aliens demanded $R(5, 5)$ we should put every computer to work; if they demanded $R(6, 6)$, we should attack.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Only five Platonic solids.) Prove Euler's formula $V - E + F = 2$ for a connected graph drawn in the plane without crossings, counting the outer region as a face. Then show that a convex polyhedron whose faces are all regular $p$-gons with $q$ meeting at each vertex must satisfy $\frac1p + \frac1q &gt; \frac12$, and list the five solutions.</p>
+        <details><summary>Hint</summary><div><p>For Euler, start with a spanning tree and add the remaining edges one by one. For the solids, count edges twice: once by faces and once by vertices.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>A spanning tree has $V$ vertices, $V - 1$ edges and one face, so $V - E + F = 2$. Each remaining edge joins two vertices already connected through the tree, so it closes a loop and (by the Jordan curve theorem) splits one face into two: $E$ and $F$ both go up by one and the sum is unchanged. A convex polyhedron projects onto the plane as such a graph, so it obeys the formula too.</p>
+          <p>Each face has $p$ edges and each edge borders two faces: $pF = 2E$. Each vertex has $q$ edges and each edge has two ends: $qV = 2E$. Substituting, $\frac{2E}{q} - E + \frac{2E}{p} = 2$, so $\frac1p + \frac1q = \frac12 + \frac1E &gt; \frac12$. With $p, q\ge3$: $(3, 3)$ tetrahedron ($E = 6$), $(4, 3)$ cube ($E = 12$), $(3, 4)$ octahedron ($E = 12$), $(5, 3)$ dodecahedron ($E = 30$), $(3, 5)$ icosahedron ($E = 30$). Any larger $p$ or $q$ gives $\frac1p + \frac1q\le\frac12$; equality gives the flat tilings by triangles, squares and hexagons. The pairs $(p, q)$ and $(q, p)$ are dual: put a vertex in each face of one to get the other.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (The mutilated chessboard.) Remove two diagonally opposite corner squares from a chessboard. Can the remaining 62 squares be covered by 31 dominoes, each covering two adjacent squares? What if you remove one black and one white square, anywhere?</p>
+        <details><summary>Solution</summary><div>
+          <p>No. Every domino covers one black and one white square, so 31 dominoes cover 31 of each. Opposite corners have the same colour, so the board has 32 squares of one colour and 30 of the other. The colouring is an invariant that settles in one line what no amount of trial and error could. If one black and one white square are removed, a tiling always exists (Gomory's theorem): the board's squares form a single closed loop that alternates colours, and removing one square of each colour cuts it into two paths of even length, each of which dominoes can cover in order.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Aigner and Ziegler's <i>Proofs from THE BOOK</i> collects the most beautiful proofs of several results here (Euclid, Erdős's sum, Euler's formula), and many more. Engel's <i>Problem-Solving Strategies</i> trains the invariant and pigeonhole ideas of problems 10–14; Davenport's <i>The Higher Arithmetic</i> is a gentle classic of number theory; Stanley's <i>Catalan Numbers</i> is a whole book about problem 9.</p>
+  </section>
+</article>

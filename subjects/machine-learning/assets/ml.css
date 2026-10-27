@@ -89,13 +89,13 @@
 .ml details { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; background: var(--card); }
 .ml details > summary { cursor: pointer; font-weight: 600; }
 .ml details[open] > summary { margin-bottom: 10px; }
-.ml details > div { display: grid; gap: 10px; }
+.ml details > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .ml .refs li { color: var(--muted); }
 .ml .refs li b { color: var(--ink); font-weight: 600; }
 
 
 /* problem sets: one problem per list item, each with its own solution */
-.ml .problems ol { display: grid; gap: 22px; padding-left: 1.6em; }
+.ml .problems ol { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; padding-left: 1.6em; }
 .ml .problems ol > li > p:first-child .tag { margin-right: 6px; }
 .ml .problems ol > li > details { margin-top: 10px; }
 .ml .problems ol > li::marker { font-family: var(--f-mono); color: var(--accent); font-weight: 600; }
@@ -107,6 +107,7 @@
 .ml .tag.core { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 35%, transparent); }
 .ml .tag.hard { color: var(--event-both); border-color: color-mix(in srgb, var(--event-both) 50%, transparent); }
 .ml .tag.code { color: var(--data); border-color: color-mix(in srgb, var(--data) 50%, transparent); }
+.ml .tag.olympiad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 55%, transparent); font-weight: 600; }
 
 /* marks under each problem on a problem-set page (added by script) */
 .ml .pb-marks-inline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -164,6 +165,7 @@
 .ml .pb-mix i.core { background: color-mix(in srgb, var(--ink) 55%, transparent); }
 .ml .pb-mix i.hard { background: var(--event-both); }
 .ml .pb-mix i.code { background: var(--data); }
+.ml .pb-mix i.olympiad { background: var(--bad); }
 .ml .pb-set-foot { display: flex; justify-content: space-between; gap: 8px; font: 12.5px var(--f-mono); color: var(--muted); }
 .ml .pb-set-foot [data-set-progress] { color: var(--good); }
 .ml .pb-index { display: grid; gap: 28px; }
@@ -177,6 +179,7 @@
 .ml .pb-group h3 a:hover { color: var(--accent); }
 .ml .pb-group h3 .mono { color: var(--accent); font-size: 15px; margin-right: 6px; }
 .ml .pb-row { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto; gap: 12px; padding: 14px 14px 14px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.ml .pb-row[hidden], .ml .pb-group[hidden] { display: none; }
 .ml .pb-row[data-status="solved"] { border-color: color-mix(in srgb, var(--good) 50%, var(--line)); }
 .ml .pb-row[data-status="solved"] .pb-num { background: var(--good); color: var(--bg); }
 .ml .pb-row[data-status="revisit"] { border-color: color-mix(in srgb, var(--event-both) 50%, var(--line)); }

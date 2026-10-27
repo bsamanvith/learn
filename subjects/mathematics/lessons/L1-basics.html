@@ -1,0 +1,188 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 1 of 4 · Basics</div>
+  <h1>Level 1: basics</h1>
+  <p class="lede">Twenty-four first problems from school mathematics: whole numbers and divisibility, fractions and percentages, equations, powers and logarithms, angles and areas, counting and chance, and a first proof by induction. None needs more than careful thought, but several have a trap or a surprise. Try each before opening the solution, and when you read it, look for the idea as well as the answer: the solutions are written to teach the method.</p>
+  <div class="meta"><span><b>Needs:</b> arithmetic and a little algebra</span><span><b>Next:</b> <a href="/mathematics/L2-intermediate/">Level 2</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="numbers">
+    <h2>Numbers</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Gauss's sum.) Find $1 + 2 + 3 + \dots + 100$ without adding the numbers one by one. Then find a formula for $1 + 2 + \dots + n$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Write the sum forwards and backwards, and add the two lines column by column:</p>
+          $$\begin{aligned} S &amp;= 1 + 2 + \dots + 100\\ S &amp;= 100 + 99 + \dots + 1\\ 2S &amp;= 101 + 101 + \dots + 101 = 100\times101.\end{aligned}$$
+          <p>So $S = 5050$. The same pairing gives $1 + 2 + \dots + n = n(n + 1)/2$. The story goes that Gauss found this at the age of eight, when his teacher set the class the sum to keep them quiet. The idea, to look at the same thing in two ways, is one of the most useful in mathematics.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Odd numbers make squares.) Work out $1$, $1 + 3$, $1 + 3 + 5$, $1 + 3 + 5 + 7$. Guess the pattern, and explain it with a picture.</p>
+        <details><summary>Solution</summary><div>
+          <p>The sums are $1, 4, 9, 16$: the sum of the first $n$ odd numbers is $n^2$. Picture an $n\times n$ square of dots. To grow it to $(n + 1)\times(n + 1)$, add an L-shaped border of $n$ dots along one side, $n$ along the other, and one in the corner: $2n + 1$ dots, the next odd number. Algebra agrees: $(n + 1)^2 - n^2 = 2n + 1$. A picture like this is a proof, as long as you can say why it works for every $n$, not only the ones you drew.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Up and down.) A price rises by 20%, then falls by 20%. Is it back where it started? A share falls by 50%: by what percentage must it rise to recover?</p>
+        <details><summary>Solution</summary><div>
+          <p>A rise of 20% multiplies by 1.2, a fall of 20% by 0.8, and $1.2\times0.8 = 0.96$: the price ends 4% lower. The fall is 20% of a larger amount. After a fall of 50% the share is worth half, and must double to recover: a rise of 100%. Percentage changes multiply, they don't add, which is why it is safer to work with the multipliers.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Casting out nines.) Prove that a number is divisible by 9 exactly when the sum of its digits is. Is 123 456 789 divisible by 9?</p>
+        <details><summary>Solution</summary><div>
+          <p>A number with digits $d_k\dots d_1d_0$ is $d_0 + 10d_1 + 100d_2 + \dots$. Each power of 10 is one more than a multiple of 9 ($10 = 9 + 1$, $100 = 99 + 1$, and so on), so $10^j - 1$ is divisible by 9. Subtracting,</p>
+          $$N - (d_0 + d_1 + \dots + d_k) = 9d_1 + 99d_2 + 999d_3 + \dots,$$
+          <p>which is a multiple of 9. So $N$ and its digit sum leave the same remainder on division by 9. For 123 456 789 the digit sum is 45, divisible by 9, so the number is too. The same argument with $10 = 11 - 1$ gives the test for 11, using the alternating sum of the digits.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Last digits.) What is the last digit of $7^{2026}$?</p>
+        <details><summary>Solution</summary><div>
+          <p>Only the last digit of each power matters for the next one. The last digits of $7, 7^2, 7^3, 7^4, 7^5$ are $7, 9, 3, 1, 7$: once a 1 appears the cycle repeats every 4 steps. $2026 = 4\times506 + 2$, so $7^{2026}$ ends like $7^2$, in 9. Looking for a cycle is the way into any question about remainders of large powers; Level 2 makes it precise with modular arithmetic.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Counting divisors.) How many positive whole numbers divide 360 exactly? Why did the Babylonians like 60 and 360?</p>
+        <details><summary>Solution</summary><div>
+          <p>Factorise into primes: $360 = 2^3\times3^2\times5$. A divisor is $2^a3^b5^c$ with $0 \le a \le 3$, $0 \le b \le 2$ and $0 \le c \le 1$, and each choice gives a different divisor (by unique factorisation). So there are $4\times3\times2 = 24$ divisors. 360 can be split evenly into halves, thirds, quarters, fifths, sixths, eighths, ninths, tenths and twelfths, which makes it convenient for dividing a circle or a year. Its divisors are why we have 60 minutes and 360 degrees.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Euclid's algorithm.) Find the greatest common divisor of 252 and 198 without factorising them, and then their least common multiple.</p>
+        <details><summary>Solution</summary><div>
+          <p>Any number that divides both 252 and 198 also divides their difference, and the other way round. So $\gcd(252, 198) = \gcd(198, 54)$, since $252 - 198 = 54$. Repeating, using remainders to save steps: $198 = 3\times54 + 36$, $54 = 1\times36 + 18$, $36 = 2\times18$. So the gcd is 18. Then $\operatorname{lcm} = 252\times198/18 = 2772$, because $\gcd\times\operatorname{lcm} = ab$. Euclid's algorithm, from about 300 BC, is still how computers find gcds, and it is fast even for numbers with hundreds of digits.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Repeating decimals.) Write $0.272727\dots$ as a fraction. Then show that $0.999\dots = 1$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $x = 0.2727\dots$. Then $100x = 27.2727\dots$, and subtracting, $99x = 27$, so $x = 27/99 = 3/11$. The same trick with $x = 0.999\dots$ gives $10x - x = 9$, so $x = 1$. If that seems wrong, ask what number lies between $0.999\dots$ and 1: there isn't one, so they are the same number, written two ways. Every repeating decimal is a fraction, and every fraction has a repeating (or ending) decimal.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="algebra">
+    <h2>Algebra</h2>
+    <ol start="9">
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (The quadratic formula.) Solve $x^2 - 6x + 5 = 0$ by completing the square. Then do the same for $ax^2 + bx + c = 0$ to derive the formula for its roots. When are there no real roots?</p>
+        <details><summary>Solution</summary><div>
+          <p>$x^2 - 6x = (x - 3)^2 - 9$, so the equation is $(x - 3)^2 = 4$, giving $x - 3 = \pm2$: $x = 5$ or $x = 1$. In general, divide by $a$ and complete the square:</p>
+          $$x^2 + \frac bax = \Big(x + \frac{b}{2a}\Big)^2 - \frac{b^2}{4a^2},\qquad\text{so}\qquad\Big(x + \frac{b}{2a}\Big)^2 = \frac{b^2 - 4ac}{4a^2},\qquad x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}.$$
+          <p>If the discriminant $b^2 - 4ac$ is negative, no real number squares to it, and there are no real roots: the parabola $y = ax^2 + bx + c$ never touches the axis. Completing the square is worth more than the formula, because it also finds the lowest point of the parabola, at $x = -b/2a$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Heads and legs.) A farmyard has chickens and rabbits: 35 heads and 94 legs. How many of each? Solve it once with algebra and once without.</p>
+        <details><summary>Solution</summary><div>
+          <p>With $c$ chickens and $r$ rabbits: $c + r = 35$ and $2c + 4r = 94$. Subtracting twice the first from the second, $2r = 24$, so $r = 12$ and $c = 23$. Without algebra: if all 35 animals were chickens there would be 70 legs. Each rabbit adds 2 more, and we need 24 more, so there are 12 rabbits. The second method is the same elimination, done in words. This puzzle appears in a Chinese text from about 400 AD.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (How long is $2^{100}$?) How many digits does $2^{100}$ have? Use $\log_{10}2 = 0.30103$.</p>
+        <details><summary>Solution</summary><div>
+          <p>A number $N$ has $d$ digits when $10^{d - 1} \le N &lt; 10^d$, that is when $d - 1 \le \log_{10}N &lt; d$. Here $\log_{10}2^{100} = 100\log_{10}2 = 30.103$, so $2^{100}$ lies between $10^{30}$ and $10^{31}$, and has 31 digits. Logarithms turn powers into multiplication, which is why they were invented: in 1614, to make astronomers' calculations quicker.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Doubling money.) At 7% interest a year, compounded yearly, how long does it take for money to double? Compare with the "rule of 72", which says about $72/7$ years.</p>
+        <details><summary>Solution</summary><div>
+          <p>After $n$ years the money has grown by $1.07^n$. Setting $1.07^n = 2$ and taking logs: $n = \ln2/\ln1.07 = 0.693/0.0677 = 10.2$ years. The rule of 72 gives $72/7 = 10.3$. It works because $\ln(1 + r) \approx r$ for small $r$, so $n \approx 0.693/r$; using 72 instead of 69.3 corrects for the approximation at typical rates and makes the division easy (72 has many divisors). Growth at a fixed percentage is exponential: in 72 years at 7% the money doubles about seven times, to 128 times its start.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Half, then half again.) Find $\frac12 + \frac14 + \frac18 + \dots$, with infinitely many terms. Then find a formula for $1 + r + r^2 + \dots + r^{n-1}$, and use it to find the infinite sum for any $|r| &lt; 1$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Walk halfway to a wall, then half the remaining distance, and so on: you approach the wall, so the sum is 1. In general let $S = 1 + r + \dots + r^{n-1}$. Then $rS = r + r^2 + \dots + r^n$, and subtracting, $S - rS = 1 - r^n$:</p>
+          $$1 + r + \dots + r^{n-1} = \frac{1 - r^n}{1 - r}.$$
+          <p>If $|r| &lt; 1$, $r^n \to 0$ and the infinite sum is $1/(1 - r)$. With $r = \frac12$, starting from $\frac12$, it is $\frac12\times2 = 1$, as the wall said. An infinite sum is defined as the limit of its finite partial sums; when the limit exists, the sum "converges".</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="geometry">
+    <h2>Geometry</h2>
+    <ol start="14">
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Angles of a polygon.) Prove that the angles of a triangle add up to $180^\circ$. Then find the angle sum of a polygon with $n$ sides, and each angle of a regular hexagon.</p>
+        <details><summary>Solution</summary><div>
+          <p>Draw a line through one corner parallel to the opposite side. The two angles it makes with the triangle's other sides equal the two far angles of the triangle (alternate angles), and together with the angle at the corner they make a straight line, $180^\circ$. A polygon with $n$ sides can be cut into $n - 2$ triangles by diagonals from one corner, so its angles add to $(n - 2)\times180^\circ$. A hexagon has $720^\circ$, so each angle of a regular one is $120^\circ$. That is why hexagons tile the plane: three of them fit round a point.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Inside a right triangle.) A right triangle has sides 3 and 4 next to the right angle. Find the hypotenuse, the area, and the height from the right angle to the hypotenuse.</p>
+        <details><summary>Solution</summary><div>
+          <p>Pythagoras: $\sqrt{3^2 + 4^2} = 5$. The area is half the product of the two legs, $\frac12\times3\times4 = 6$, since they are at right angles. The same area is also $\frac12\times\text{hypotenuse}\times\text{height}$, so the height is $2\times6/5 = 2.4$. Working out one quantity in two ways and setting them equal is the trick again, as in problem 1.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (A rope round the Earth.) A rope is tied tightly round the Earth's equator, 40 000 km long. It is made 1 metre longer and held up evenly all the way round. Guess first: could a mouse crawl under it? Then calculate the gap.</p>
+        <details><summary>Solution</summary><div>
+          <p>Circumference is $C = 2\pi r$, so $r = C/2\pi$, and adding 1 m to $C$ adds $1/2\pi$ m $= 16$ cm to $r$. A cat could walk under it. The striking part is that the answer does not depend on the size of the Earth at all: the same extra metre round a football also lifts the rope by 16 cm. Intuition says that one metre spread over 40 000 km must be negligible, but the question is about the radius, and the radius grows by the same amount whatever the size.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Measuring a tree.) A 1.5 m stick casts a 2 m shadow at the same moment that a tree casts a 24 m shadow. How tall is the tree?</p>
+        <details><summary>Solution</summary><div>
+          <p>The Sun's rays arrive parallel, so the stick, its shadow and the ray make a triangle with the same angles as the tree, its shadow and the ray. Similar triangles have their sides in the same ratio: $h/24 = 1.5/2$, so $h = 18$ m. Thales is said to have measured the height of the Great Pyramid this way, around 600 BC.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Coordinates.) Find the distance between the points $(1, 2)$ and $(4, 6)$, the point halfway between them, and the equation of the line through them.</p>
+        <details><summary>Solution</summary><div>
+          <p>Moving from one point to the other goes 3 across and 4 up, so by Pythagoras the distance is $\sqrt{3^2 + 4^2} = 5$. The midpoint averages the coordinates: $(2.5, 4)$. The slope is rise over run, $4/3$, so the line is $y - 2 = \frac43(x - 1)$, or $y = \frac43x + \frac23$. Check: at $x = 4$, $y = 6$. Coordinates turn geometry into algebra, Descartes's great idea of 1637.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="counting-and-chance">
+    <h2>Counting, chance and proof</h2>
+    <ol start="19">
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Handshakes.) At a party of 10 people, everyone shakes hands with everyone else once. How many handshakes are there? Find a formula for $n$ people.</p>
+        <details><summary>Solution</summary><div>
+          <p>Each person shakes $9$ hands, which counts $10\times9 = 90$, but every handshake has been counted twice, once by each person. So there are 45. For $n$ people, $n(n - 1)/2$, the number of ways to choose 2 people from $n$, written $\binom n2$. Notice it is the sum $1 + 2 + \dots + (n - 1)$ of problem 1: the last person to arrive shakes $n - 1$ hands, the one before $n - 2$, and so on. Counting the same set in two ways again.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Rearranging letters.) In how many different orders can the letters of WORD be arranged? And the letters of LEVEL?</p>
+        <details><summary>Solution</summary><div>
+          <p>For WORD there are 4 choices for the first letter, 3 for the second, 2 for the third and 1 for the last: $4! = 24$. LEVEL has 5 letters, giving $5! = 120$ orders if all were different, but swapping the two Ls or the two Es gives the same word. Each distinct word is counted $2!\times2! = 4$ times, so there are $120/4 = 30$. Dividing out the ways that give the same result is how to count when some things are identical.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (The gambler's question.) In the 1650s the Chevalier de Méré asked whether it was better to bet on getting at least one six in 4 throws of a die, or at least one double six in 24 throws of two dice. Work out both probabilities.</p>
+        <details><summary>Solution</summary><div>
+          <p>"At least one" is easiest through its opposite, "none". The chance of no six in 4 throws is $(5/6)^4 = 0.482$, so at least one six has probability $0.518$, a little better than even. For two dice, no double six in 24 throws has probability $(35/36)^{24} = 0.509$, so at least one has $0.491$, a little worse. De Méré had noticed this from experience and asked Pascal, whose letters with Fermat about it began probability theory.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Shared birthdays.) In a class of 23 people, what is the probability that two share a birthday? Ignore leap years and assume all days are equally likely. Guess first.</p>
+        <details><summary>Solution</summary><div>
+          <p>Again, work out the opposite. The second person avoids the first's birthday with probability $364/365$, the third avoids both with $363/365$, and so on, so all 23 are different with probability</p>
+          $$\frac{365\times364\times\dots\times343}{365^{23}} = 0.493,$$
+          <p>and a shared birthday has probability $0.507$: better than evens. Most people guess far lower, because they think of matches with their own birthday, whereas there are $\binom{23}{2} = 253$ pairs, each with a $1/365$ chance. With 70 people a match is 99.9% certain.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (The pigeonhole principle.) A drawer holds 10 black socks and 10 white socks, mixed up, and the room is dark. How many must you take out to be sure of a matching pair? Show that in any group of 13 people, two were born in the same month.</p>
+        <details><summary>Solution</summary><div>
+          <p>Three socks: there are only two colours, so among three socks two must match. Two are not enough (one of each). For the months, 13 people into 12 months means some month gets at least two. That is the pigeonhole principle: if more than $n$ objects go into $n$ boxes, some box gets two. It sounds trivial, but it proves surprising things, such as that two people in London have exactly the same number of hairs on their heads (there are more people than possible hair counts).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (A first proof by induction.) Check that $1^3 + 2^3 + \dots + n^3 = \big(n(n + 1)/2\big)^2$ for $n = 1, 2, 3$. Then prove it for every $n$ by induction.</p>
+        <details><summary>Solution</summary><div>
+          <p>For $n = 1, 2, 3$: $1 = 1^2$, $9 = 3^2$, $36 = 6^2$. To prove it for all $n$, show two things: it is true for $n = 1$ (done), and if it is true for some $n$, it is true for $n + 1$. Then it holds for 1, hence 2, hence 3, and so on forever, like dominoes. Assume it for $n$ and add the next cube:</p>
+          $$\Big(\frac{n(n + 1)}{2}\Big)^2 + (n + 1)^3 = (n + 1)^2\Big(\frac{n^2}{4} + n + 1\Big) = (n + 1)^2\frac{(n + 2)^2}{4} = \Big(\frac{(n + 1)(n + 2)}{2}\Big)^2,$$
+          <p>which is the formula for $n + 1$. So the sum of the first $n$ cubes is the square of the sum of the first $n$ numbers. Checking a few cases is evidence, not proof; induction turns the pattern into a certainty.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

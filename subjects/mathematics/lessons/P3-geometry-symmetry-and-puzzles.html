@@ -1,0 +1,128 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P3 · Geometry, symmetry and puzzles</div>
+  <h1>Problem set: geometry, symmetry and puzzles</h1>
+  <p class="lede">Thirteen problems where a picture, a symmetry or an invariant does the work. You will find the area of a triangle from its sides alone, estimate $\pi$ by dropping needles, measure a triangle drawn on a sphere by its angles, multiply the diagonals of a polygon, count the ways to colour a cube, prove that Sam Loyd's famous fifteen puzzle can't be solved, draw a snowflake with infinite perimeter and finite area, and save a hundred prisoners with a strategy that sounds impossible. Try each problem on paper before opening its solution.</p>
+  <div class="meta"><span><b>Needs:</b> school geometry and trigonometry, complex numbers, permutations, $2\times2$ matrices, and <a href="/mathematics/P1-numbers-and-counting/">P1</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="geometry">
+    <h2>Lengths, areas and angles</h2>
+    <ol>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Pythagoras from similar triangles.) In a right triangle with legs $a$, $b$ and hypotenuse $c$, drop the altitude from the right angle to the hypotenuse. Use the three similar triangles this makes to prove $a^2 + b^2 = c^2$. Then explain why the theorem is really a statement about areas of any similar shapes, not only squares, built on the three sides.</p>
+        <details><summary>Solution</summary><div>
+          <p>The altitude splits $c$ into pieces $x$ (next to $a$) and $c - x$ (next to $b$). Each small triangle shares an acute angle with the big one and has a right angle, so all three are similar. Comparing the small triangle on side $a$ with the big one, hypotenuse to adjacent side: $\frac{a}{c} = \frac{x}{a}$, so $a^2 = cx$. Likewise $b^2 = c(c - x)$. Adding, $a^2 + b^2 = c^2$.</p>
+          <p>More is true: the two small triangles exactly fill the big one, and each is similar to it with its own hypotenuse ($a$, $b$, $c$). Areas of similar figures scale as the square of a length, so area $= kc^2$, $ka^2$, $kb^2$ with the same $k$, and "the two pieces fill the whole" says $ka^2 + kb^2 = kc^2$. Any similar figures built outward on the three sides, semicircles or pentagons or portraits, obey the same law. Einstein reportedly found this proof as a boy.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Heron's formula.) Prove that a triangle with sides $a, b, c$ and semi-perimeter $s = \frac{a + b + c}{2}$ has area $A = \sqrt{s(s - a)(s - b)(s - c)}$. Then use it with AM–GM to show that among all triangles with a given perimeter, the equilateral one has the largest area.</p>
+        <details><summary>Solution</summary><div>
+          <p>$A = \frac12ab\sin\gamma$, so $16A^2 = 4a^2b^2(1 - \cos^2\gamma) = 4a^2b^2 - (2ab\cos\gamma)^2 = 4a^2b^2 - (a^2 + b^2 - c^2)^2$ by the law of cosines. This is a difference of squares, $\big(2ab - a^2 - b^2 + c^2\big)\big(2ab + a^2 + b^2 - c^2\big) = \big(c^2 - (a - b)^2\big)\big((a + b)^2 - c^2\big)$, and factoring again gives $(c - a + b)(c + a - b)(a + b - c)(a + b + c) = 16(s - a)(s - b)(s - c)s$. So $A^2 = s(s - a)(s - b)(s - c)$.</p>
+          <p>With $s$ fixed, AM–GM on the three positive numbers $s - a$, $s - b$, $s - c$, whose sum is $3s - 2s = s$, gives $(s - a)(s - b)(s - c)\le(s/3)^3$, with equality when $a = b = c$. So $A\le\sqrt{s\cdot s^3/27} = \frac{s^2}{3\sqrt3}$, attained only by the equilateral triangle. This is the triangle case of the isoperimetric inequality, whose full form says the circle beats every shape: $4\pi A\le P^2$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Buffon's needle.) A needle of length $\ell$ is dropped at random on a floor of parallel lines a distance $d\ge\ell$ apart. Show that it crosses a line with probability $\frac{2\ell}{\pi d}$. Do it the clever way (Barbier's): show that the expected number of crossings is proportional to the length for any shape of wire, then drop a circle of diameter $d$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $E(\ell)$ be the expected number of crossings of a straight needle of length $\ell$. Break a needle into two pieces: expectation is additive even though the pieces' crossings are dependent, so $E(\ell_1 + \ell_2) = E(\ell_1) + E(\ell_2)$, and $E$ is increasing, so $E(\ell) = k\ell$ (an increasing additive function is linear: P2, problem 12). Now bend the needle into any polygon or curve. Each small straight piece is still dropped uniformly at random, so by additivity the expected crossings of a wire of total length $L$ is $kL$ for any shape. A circle of diameter $d$ always crosses the lines exactly twice (or touches them, with probability zero), so $2 = k\pi d$, and $k = \frac{2}{\pi d}$.</p>
+          <p>For $\ell\le d$ a straight needle crosses at most once, so the expected number of crossings is the probability: $\frac{2\ell}{\pi d}$. Dropping $n$ needles and counting $c$ crossings gives the estimate $\pi\approx\frac{2\ell n}{cd}$. The error falls only as $1/\sqrt n$: to get $\pi$ to 3 decimal places you would need about a million drops, which is why Lazzarini's 1901 "result" of 3.1415929 from 3408 throws was almost certainly cooked.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Triangles on a sphere.) On a sphere of radius $R$, a triangle made of great-circle arcs has angles $\alpha$, $\beta$, $\gamma$. Prove Girard's theorem: its area is $R^2(\alpha + \beta + \gamma - \pi)$. What is the angle sum of a triangle with one vertex at the North Pole and two on the equator, a quarter of the way round from each other?</p>
+        <details><summary>Hint</summary><div><p>Two great circles through a vertex cut the sphere into four lunes. A lune with angle $\theta$ has area $2\theta R^2$ (it is the fraction $\theta/2\pi$ of the sphere's $4\pi R^2$). Extend the sides of the triangle into full great circles and count how often the triangle and its antipodal copy are covered.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Extend each side to a full great circle. At vertex $A$, the two great circles through it bound a lune of angle $\alpha$ containing the triangle, and the opposite lune, through the antipode of $A$, contains the antipodal triangle. Each pair has area $2\cdot2\alpha R^2$. Take the three pairs of lunes, at $A$, $B$ and $C$: together they cover the whole sphere, covering the triangle and its antipodal copy three times each and every other point exactly once. So $4R^2(\alpha + \beta + \gamma) = 4\pi R^2 + 2\cdot2T$, where $T$ is the triangle's area, giving $T = R^2(\alpha + \beta + \gamma - \pi)$.</p>
+          <p>The pole-and-equator triangle has three right angles: angle sum $270^\circ$. Its area is $R^2\cdot\frac\pi2$, one eighth of the sphere, as it should be. On a sphere the "angle excess" measures area, which is why a surveyor could in principle detect the Earth's curvature from angles alone (Gauss tried, with mountain peaks). It is the simplest case of the Gauss–Bonnet theorem, connecting curvature to topology.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The diagonals of a polygon.) A regular $n$-gon is inscribed in a circle of radius 1. Show that the product of the lengths of the $n - 1$ segments from one vertex to all the others is exactly $n$. Deduce $\prod_{k = 1}^{n - 1}\sin\frac{k\pi}n = \frac{n}{2^{n - 1}}$.</p>
+        <details><summary>Hint</summary><div><p>Put the vertices at the $n$th roots of unity $\omega^k$, $\omega = e^{2\pi i/n}$, and the chosen vertex at 1. Factor $z^n - 1$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The roots of $z^n - 1$ are $1, \omega, \dots, \omega^{n - 1}$, so $z^n - 1 = \prod_{k = 0}^{n - 1}(z - \omega^k)$, and dividing by $z - 1$: $1 + z + \dots + z^{n - 1} = \prod_{k = 1}^{n - 1}(z - \omega^k)$. At $z = 1$ the left side is $n$, so $\prod_{k = 1}^{n - 1}|1 - \omega^k| = n$. Each $|1 - \omega^k|$ is the distance from the vertex at 1 to the vertex at $\omega^k$. For the sine product, $|1 - e^{i\theta}| = 2\sin\frac\theta2$, so $|1 - \omega^k| = 2\sin\frac{k\pi}n$ and $2^{n - 1}\prod\sin\frac{k\pi}{n} = n$. For a square: the chords are $\sqrt2, 2, \sqrt2$, with product 4. ✓ For a hexagon: $1\cdot\sqrt3\cdot2\cdot\sqrt3\cdot1 = 6$. ✓</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The Koch snowflake.) Start with an equilateral triangle of area $A_0$. At each step, put a smaller equilateral triangle, one third the size, on the middle third of every edge. Show that the perimeter goes to infinity while the area tends to $\frac85A_0$. Why is the curve's "dimension" $\log4/\log3\approx1.26$?</p>
+        <details><summary>Solution</summary><div>
+          <p>Each step replaces every edge by 4 edges a third as long, so the number of edges after $n$ steps is $3\cdot4^n$ and the perimeter is $P_0(4/3)^n\to\infty$. Step $n$ (counting from 1) adds one triangle per edge of the previous stage, $3\cdot4^{n - 1}$ triangles, each of area $A_0/9^n$. So the total area is</p>
+          $$A_0\Big(1 + \sum_{n\ge1}\frac{3\cdot4^{n - 1}}{9^n}\Big) = A_0\Big(1 + \frac13\sum_{n\ge1}\Big(\frac49\Big)^{n - 1}\Big) = A_0\Big(1 + \frac13\cdot\frac95\Big) = \frac85A_0.$$
+          <p>A finite area, enclosed by a curve of infinite length. Each piece of the curve is made of 4 copies of itself scaled down by 3. For a line, $N$ copies scaled by $1/N$ make the whole: $N = (1/r)^1$; for a square, $N = (1/r)^2$. Solving $4 = 3^D$ gives $D = \log4/\log3 = 1.2619$, between a line and an area: the curve is too long to be a line but too thin to have area. Measuring a coastline with a shorter ruler finds it longer in the same way (Richardson and Mandelbrot); Britain's west coast has $D\approx1.25$.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="symmetry">
+    <h2>Symmetry and groups</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag core">core</span> (Lagrange's theorem.) Prove that the order of a subgroup $H$ of a finite group $G$ divides the order of $G$, by showing that the cosets $gH$ have equal size and don't overlap. Deduce that every group of prime order is cyclic, and use the group of non-zero remainders mod $p$ to give a second proof of Fermat's little theorem.</p>
+        <details><summary>Solution</summary><div>
+          <p>The map $h\mapsto gh$ is a bijection from $H$ to $gH$ (it has inverse $x\mapsto g^{-1}x$), so every coset has $|H|$ elements. If $gH$ and $g'H$ share an element, $gh_1 = g'h_2$, then $g' = gh_1h_2^{-1}$ and $g'H = gH$: cosets are equal or disjoint. Every $g$ lies in its own coset $gH$. So the cosets split $G$ into equal blocks of size $|H|$, and $|H|$ divides $|G|$.</p>
+          <p>For any $g$, the powers $\{1, g, g^2, \dots\}$ form a subgroup whose size is the order of $g$, so the order of every element divides $|G|$. If $|G| = p$ is prime and $g\ne1$, the order of $g$ is a divisor of $p$ other than 1, so it is $p$ and $g$ generates the whole group. The non-zero remainders mod $p$ form a group under multiplication with $p - 1$ elements, so for any $a$ not divisible by $p$, the order of $a$ divides $p - 1$, and $a^{p - 1}\equiv1\pmod p$: Fermat again, in one line, compared with the necklaces of P1 problem 3.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The rotations of a cube.) Show that the rotations of a cube form a group of order 24, by the orbit–stabiliser theorem. Classify them by type (axes through faces, vertices and edges, and the identity), and check that the counts add up. Then show that the group is the symmetric group $S_4$, by looking at what the rotations do to the four long diagonals.</p>
+        <details><summary>Solution</summary><div>
+          <p>A rotation can send a given face to any of the 6 faces, and the rotations fixing that face are the 4 turns about its axis. Orbit–stabiliser gives $6\times4 = 24$. By type: the identity, 1. Axes through opposite face centres, 3 axes, with turns of $90^\circ$, $180^\circ$, $270^\circ$: 9. Axes through opposite vertices, 4 axes with $120^\circ$, $240^\circ$: 8. Axes through midpoints of opposite edges, 6 axes with $180^\circ$: 6. Total $1 + 9 + 8 + 6 = 24$. ✓</p>
+          <p>Each rotation permutes the 4 long diagonals, giving a homomorphism to $S_4$. Only the identity fixes all four diagonals. A rotation other than the identity has one axis, and the only lines it maps to themselves are that axis and, for a half-turn, the lines perpendicular to it. So it could fix at most one diagonal as its axis, and the other three would all have to be perpendicular to that axis, hence lie in one plane, which no three long diagonals do. So the map is injective, and since both groups have 24 elements it is an isomorphism. Under it, the $90^\circ$ face turns are the 4-cycles, the $120^\circ$ vertex turns are the 3-cycles, the edge flips are the transpositions, and the $180^\circ$ face turns are the double transpositions.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Colouring a cube.) How many ways are there to colour the faces of a cube with 3 colours, if two colourings that differ by a rotation count as the same? Use Burnside's lemma: the number of distinct colourings is the average, over the group, of the number of colourings each rotation leaves unchanged. Check your method by doing it with 2 colours.</p>
+        <details><summary>Hint</summary><div><p>A rotation fixes a colouring exactly when the colouring is constant on each cycle of faces that the rotation permutes. So a rotation with $c$ cycles on the faces fixes $k^c$ colourings with $k$ colours. Count the cycles for each type in problem 8.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Cycles on the 6 faces: the identity has 6. A $90^\circ$ face turn fixes its two faces and cycles the other four: 3 cycles. A $180^\circ$ face turn fixes two and swaps two pairs: 4 cycles. A $120^\circ$ vertex turn cycles the three faces at each end: 2 cycles. A $180^\circ$ edge flip swaps three pairs: 3 cycles. With $k$ colours,</p>
+          $$\frac1{24}\Big(k^6 + 6k^3 + 3k^4 + 8k^2 + 6k^3\Big) = \frac{k^6 + 3k^4 + 12k^3 + 8k^2}{24}.$$
+          <p>For $k = 2$: $(64 + 48 + 96 + 32)/24 = 10$. Listing them by number of black faces: 0, 1, two adjacent, two opposite, three round a vertex, three in a band, and the complements of the 2- and 1-face ones, plus all black: 10. ✓ For $k = 3$: $(729 + 243 + 324 + 72)/24 = 1368/24 = 57$. Burnside's lemma holds because counting pairs (rotation, colouring it fixes) by colouring gives, for each colouring, the size of its stabiliser, which is 24 over the size of its orbit; summing over one orbit gives 24, so the total is 24 times the number of orbits.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The fifteen puzzle.) In the 15 puzzle, tiles 1–15 slide in a $4\times4$ frame with one empty square. Sam Loyd claimed to offer a thousand dollars in the 1880s for a way to start from the solved position with 14 and 15 swapped and reach the solved position. Prove that it can't be done, by finding a quantity that every move preserves.</p>
+        <details><summary>Hint</summary><div><p>Treat the blank as a sixteenth tile. Each move swaps the blank with a neighbour: what does that do to the parity of the permutation of 16 objects? And to the parity of the blank's taxicab distance from its home corner?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Label the blank 16. A position is a permutation of 16 objects relative to the solved one. A move swaps the blank with an adjacent tile: one transposition, which flips the permutation's parity. It also moves the blank one square, which flips the parity of the blank's taxicab distance from the bottom-right corner. So the quantity "permutation parity + distance parity, mod 2" never changes. In the solved position it is $0 + 0 = 0$. Loyd's position has the blank home (distance 0) and the tiles differ from solved by one transposition (odd), so it scores 1. No sequence of moves connects them, and the prize was safe.</p>
+          <p>The invariant is the whole story: every position with score 0 can be solved, so exactly half of the $16!$ arrangements are reachable. The same parity argument, a permutation's sign, governs Rubik's cube (you can't twist one corner alone) and is why the determinant changes sign when you swap two rows.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="algebra-and-puzzles">
+    <h2>Matrices and a puzzle</h2>
+    <ol start="11">
+      <li>
+        <p><span class="tag core">core</span> (Fibonacci from a matrix.) Show that $Q = \begin{pmatrix}1&amp;1\\1&amp;0\end{pmatrix}$ has $Q^n = \begin{pmatrix}F_{n + 1}&amp;F_n\\F_n&amp;F_{n - 1}\end{pmatrix}$. Taking determinants, prove Cassini's identity $F_{n + 1}F_{n - 1} - F_n^2 = (-1)^n$. Diagonalise $Q$ to get Binet's formula $F_n = \frac{\varphi^n - \psi^n}{\sqrt5}$, with $\varphi = \frac{1 + \sqrt5}2$ and $\psi = \frac{1 - \sqrt5}2$, and explain why $F_n$ is the nearest integer to $\varphi^n/\sqrt5$.</p>
+        <details><summary>Solution</summary><div>
+          <p>True for $n = 1$ (with $F_0 = 0$), and $Q^{n + 1} = Q^nQ = \begin{pmatrix}F_{n + 1} + F_n&amp;F_{n + 1}\\F_n + F_{n - 1}&amp;F_n\end{pmatrix}$, which is the claimed form for $n + 1$. Since $\det Q = -1$, $\det Q^n = (-1)^n = F_{n + 1}F_{n - 1} - F_n^2$. (This is behind the "missing square" puzzle where an $8\times8$ square is cut and rearranged into a $5\times13$ rectangle of area 65: Cassini says $5\times13 - 8^2 = 1$, and the extra unit hides in a thin sliver along the diagonal.)</p>
+          <p>The characteristic polynomial is $\lambda^2 - \lambda - 1$, with roots $\varphi$ and $\psi$ and eigenvectors $(\lambda, 1)$. Writing $(F_1, F_0) = (1, 0)$ in that basis, $\frac{1}{\sqrt5}\big[(\varphi, 1) - (\psi, 1)\big]$, and applying $Q^n$ multiplies each part by $\lambda^n$, giving $F_n = \frac{\varphi^n - \psi^n}{\sqrt5}$. Since $|\psi| = 0.618 &lt; 1$, the term $|\psi^n/\sqrt5| &lt; \frac12$ for all $n\ge0$, so $F_n$ is $\varphi^n/\sqrt5$ rounded. The ratio $F_{n + 1}/F_n\to\varphi$, with error shrinking like $(\psi/\varphi)^n$. Computing $Q^n$ by repeated squaring gives $F_n$ in $O(\log n)$ matrix multiplications.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (A hundred prisoners.) A hundred prisoners, numbered 1 to 100, each enter a room with 100 boxes holding their numbers in random order, and may open 50 boxes. They all go free only if every prisoner finds their own number; they may not communicate once it starts. Opening boxes at random, they succeed with probability $2^{-100}$. Guess first, then show that this strategy succeeds with probability about 31%: prisoner $k$ opens box $k$, then the box whose number was inside, and so on.</p>
+        <details><summary>Hint</summary><div><p>The boxes define a permutation, and each prisoner follows the cycle containing their own number. When does everyone succeed? Count the permutations of $n$ that have a cycle longer than $n/2$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Following the chain from box $k$ walks round the cycle of the permutation that contains $k$, and it reaches the box holding $k$ just before returning to the start. So prisoner $k$ succeeds exactly when $k$'s cycle has length at most 50. Everyone succeeds exactly when the random permutation has no cycle longer than 50.</p>
+          <p>Count permutations of $n = 100$ with a cycle of length $\ell &gt; 50$: choose its elements in $\binom n\ell$ ways, arrange them in a cycle in $(\ell - 1)!$ ways, and permute the rest in $(n - \ell)!$ ways, giving $\frac{n!}{\ell}$. At most one cycle can be longer than half, so there is no double counting, and the probability of failure is $\sum_{\ell = 51}^{100}\frac1\ell = H_{100} - H_{50} = 0.6882$. Success: $1 - 0.6882 = 0.3118$. As $n\to\infty$ the failure probability tends to $\ln2$, so success stays above $1 - \ln2 = 30.7\%$ for any number of prisoners. The trick works because the prisoners' fates are no longer independent: they all succeed or fail together, depending on one property of the permutation. This strategy is optimal (Curtin and Warshauer, 2006).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Cayley–Hamilton in two dimensions.) For a $2\times2$ matrix $A$ with trace $t$ and determinant $d$, prove that $A^2 - tA + dI = 0$. Use it to show that every power $A^n$ is a combination $p_nA + q_nI$, and find $A^{10}$ for $A = \begin{pmatrix}2&amp;1\\1&amp;1\end{pmatrix}$ with little effort. Deduce that $\begin{pmatrix}\cos\theta&amp;-\sin\theta\\\sin\theta&amp;\cos\theta\end{pmatrix}^n$ rotates by $n\theta$, using only the identity.</p>
+        <details><summary>Solution</summary><div>
+          <p>With $A = \begin{pmatrix}a&amp;b\\c&amp;e\end{pmatrix}$: $A^2 = \begin{pmatrix}a^2 + bc&amp;b(a + e)\\c(a + e)&amp;bc + e^2\end{pmatrix}$, and subtracting $(a + e)A$ leaves $\begin{pmatrix}bc - ae&amp;0\\0&amp;bc - ae\end{pmatrix} = -dI$. So $A^2 = tA - dI$. Multiplying $A^n = p_nA + q_nI$ by $A$ and replacing $A^2$ gives $p_{n + 1} = tp_n + q_n$ and $q_{n + 1} = -dp_n$: two numbers per power instead of four.</p>
+          <p>For $A = \begin{pmatrix}2&amp;1\\1&amp;1\end{pmatrix}$, $t = 3$, $d = 1$, so $p_{n + 1} = 3p_n - p_{n - 1}$ with $p_0 = 0$, $p_1 = 1$: $0, 1, 3, 8, 21, 55, 144, 377, 987, 2584, 6765$, every other Fibonacci number (indeed $A = Q^2$). Then $A^{10} = 6765A - 2584I = \begin{pmatrix}10946&amp;6765\\6765&amp;4181\end{pmatrix}$. For the rotation $R$, $t = 2\cos\theta$ and $d = 1$, so $p_{n + 1} = 2\cos\theta\,p_n - p_{n - 1}$, which is exactly the recurrence satisfied by $\frac{\sin n\theta}{\sin\theta}$ (from $\sin(n + 1)\theta + \sin(n - 1)\theta = 2\cos\theta\sin n\theta$). Then $R^n = \frac{\sin n\theta}{\sin\theta}R - \frac{\sin(n - 1)\theta}{\sin\theta}I$, whose top-left entry is $\frac{\sin n\theta\cos\theta - \sin(n - 1)\theta}{\sin\theta} = \cos n\theta$ and bottom-left $\sin n\theta$: rotation by $n\theta$, de Moivre's theorem in matrix form.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Coxeter's <i>Introduction to Geometry</i> and Needham's <i>Visual Complex Analysis</i> show what pictures can prove; Armstrong's <i>Groups and Symmetry</i> builds problems 7–10 into a theory, with many more counting problems like the cube. Winkler's <i>Mathematical Puzzles</i> is full of problems like the hundred prisoners, and Mandelbrot's <i>The Fractal Geometry of Nature</i> starts from the snowflake of problem 6.</p>
+  </section>
+</article>

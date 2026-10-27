@@ -1,0 +1,18 @@
+{
+  "title": "Physics",
+  "tagline": "Phenomenon → model → prediction → measurement.",
+  "intro": "Physics starts here with practice: a ladder of four levels that climbs from first problems to olympiad problems, then four topic sets from Newton's laws to quantum tunnelling. Every problem has a full worked solution, written so you can learn the method from it. Lessons for each topic will follow, and the problems will stay as their practice.",
+  "partLabel": "Part",
+  "parts": {
+    "1": {
+      "title": "The ladder",
+      "blurb": "Four levels of problems, from basics through intermediate and advanced to olympiad. Climb in order.",
+      "label": "Ladder"
+    },
+    "2": {
+      "title": "Topic sets",
+      "blurb": "Mechanics, waves and electromagnetism, heat and statistical physics, relativity and quantum physics.",
+      "label": "Topics"
+    }
+  }
+}

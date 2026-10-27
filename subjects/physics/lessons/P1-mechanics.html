@@ -1,0 +1,154 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P1 · Mechanics</div>
+  <h1>Problem set: mechanics</h1>
+  <p class="lede">Fourteen problems on Newton's laws, energy, rotation and oscillation. They run from what dimensional analysis alone can tell you, through the skier who flies off a dome and the rocket equation, to the bead whose resting place splits in two as its hoop spins faster, the pendulum whose period depends on its swing, and the tennis racket that flips when you spin it about its middle axis. Make a guess before you calculate, then try each problem on paper before opening the solution.</p>
+  <div class="meta"><span><b>Needs:</b> calculus, vectors, $F = ma$, and a first look at the Lagrangian for problems 7–11</span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="units-and-motion">
+    <h2>Units, motion and energy</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (What units alone can tell you.) A pendulum's period $T$ could depend on its length $L$, its mass $m$, gravity $g$ and its amplitude $\theta_0$. Use dimensions to show that $T = \sqrt{L/g}\,f(\theta_0)$ for some function $f$, so mass cannot matter. Then do the same for deep-water waves, whose speed can depend only on $g$ and the wavelength $\lambda$: how much faster is a swell with $\lambda = 200$ m than a chop with $\lambda = 2$ m?</p>
+        <details><summary>Hint</summary><div><p>Write $T = C\,L^a m^b g^c$ and match the powers of metres, kilograms and seconds. An angle has no units, so it can enter in any way it likes.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$[L^am^bg^c] = \mathrm{m}^{a + c}\,\mathrm{kg}^b\,\mathrm{s}^{-2c}$ must equal $\mathrm{s}$. So $b = 0$, $c = -\tfrac12$ and $a = \tfrac12$. Mass is the only quantity carrying kilograms, so nothing can cancel them, and $m$ drops out. The amplitude is dimensionless and survives as an arbitrary factor: $T = \sqrt{L/g}\,f(\theta_0)$. The small-angle calculation gives $f(0) = 2\pi$; problem 9 finds the rest of $f$.</p>
+          <p>For waves, $v = C g^a\lambda^b$ with $\mathrm{m\,s^{-1}} = \mathrm{m}^{a + b}\mathrm{s}^{-2a}$, so $a = b = \tfrac12$ and $v = C\sqrt{g\lambda}$. (The full theory gives $C = 1/\sqrt{2\pi}$.) A wavelength 100 times longer travels $\sqrt{100} = 10$ times faster, which is why long swells from a distant storm arrive at a beach hours before the short chop. Units fixed the exponent; only the constant needed real physics.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (The bouncing ball.) A ball is dropped from height $h$ and each bounce returns it with a fraction $e$ of its impact speed ($0 &lt; e &lt; 1$). It bounces infinitely often. Show that it nevertheless stops after a finite time, and find that time and the total distance travelled. Evaluate both for $h = 1$ m and $e = 0.8$.</p>
+        <details><summary>Solution</summary><div>
+          <p>The first fall takes $t_0 = \sqrt{2h/g}$ and ends at speed $v_0 = \sqrt{2gh}$. After bounce $n$ the speed is $e^nv_0$; a flight up and down at launch speed $v$ lasts $2v/g$ and rises $v^2/2g$. So</p>
+          $$t = t_0 + \sum_{n\ge1}\frac{2e^nv_0}{g} = t_0\Big(1 + \frac{2e}{1 - e}\Big) = \sqrt{\frac{2h}{g}}\;\frac{1 + e}{1 - e},\qquad d = h + 2\sum_{n\ge1}e^{2n}h = h\,\frac{1 + e^2}{1 - e^2}.$$
+          <p>Both are geometric series, so infinitely many bounces fit into a finite time (Zeno's paradox, made of rubber). For $h = 1$ m and $e = 0.8$: $t = 0.452 \times 9 = 4.06$ s and $d = 1.64/0.36 = 4.56$ m. In reality $e$ is not constant at tiny speeds, and the ball ends by rattling and then rolling.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The skier on the dome.) A skier starts from rest at the top of a frictionless hemisphere of radius $R$ and slides down. Guess first: does she leave the surface halfway down, a third of the way, or never? Find the angle from the vertical at which she leaves, and her speed there.</p>
+        <details><summary>Hint</summary><div><p>While she is on the surface, gravity's inward component minus the normal force supplies $mv^2/R$. She leaves when the normal force reaches zero. Energy gives $v^2$ as a function of the angle.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>At angle $\theta$ from the top she has fallen $R(1 - \cos\theta)$, so $v^2 = 2gR(1 - \cos\theta)$. The radial equation is $mg\cos\theta - N = mv^2/R = 2mg(1 - \cos\theta)$, so $N = mg(3\cos\theta - 2)$. The normal force vanishes at $\cos\theta = \tfrac23$, $\theta = 48.2^\circ$, when she has dropped a third of the radius. Her speed is then $v = \sqrt{2gR/3}$.</p>
+          <p>The answer doesn't depend on $g$, $R$ or her mass, only on geometry. With any starting push $v_0$, $N = mg(3\cos\theta - 2) - mv_0^2/R$ and she leaves earlier; with $v_0^2 \ge gR$ she leaves at the very top.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Throwing up a hill.) A stone is thrown at speed $v$ from the foot of a slope inclined at angle $\alpha$. Show that the greatest distance along the slope is $R_{\max} = \dfrac{v^2}{g(1 + \sin\alpha)}$, reached when the launch direction bisects the angle between the slope and the vertical. Check that $\alpha = 0$ gives the familiar $45^\circ$ and $v^2/g$.</p>
+        <details><summary>Hint</summary><div><p>Tilt the axes so that $x$ runs along the slope. Then gravity has components $-g\sin\alpha$ along it and $-g\cos\alpha$ across it. The identity $2\sin A\cos B = \sin(A + B) + \sin(A - B)$ finishes it.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let $\phi$ be the launch angle measured from the slope. Across the slope, $y = v\sin\phi\,t - \tfrac12g\cos\alpha\,t^2$, so the stone lands at $t = 2v\sin\phi/(g\cos\alpha)$. Along the slope, $x = v\cos\phi\,t - \tfrac12g\sin\alpha\,t^2$. Substituting,</p>
+          $$R = \frac{2v^2\sin\phi}{g\cos^2\alpha}\big(\cos\phi\cos\alpha - \sin\phi\sin\alpha\big) = \frac{2v^2\sin\phi\cos(\phi + \alpha)}{g\cos^2\alpha} = \frac{v^2\big(\sin(2\phi + \alpha) - \sin\alpha\big)}{g\cos^2\alpha}.$$
+          <p>This is largest when $2\phi + \alpha = 90^\circ$, so $\phi = 45^\circ - \alpha/2$: the launch direction makes angle $\phi + \alpha = 45^\circ + \alpha/2$ with the horizontal, halfway between the slope ($\alpha$) and the vertical ($90^\circ$). Then $R_{\max} = \dfrac{v^2(1 - \sin\alpha)}{g(1 - \sin^2\alpha)} = \dfrac{v^2}{g(1 + \sin\alpha)}$. At $\alpha = 0$ this is $v^2/g$ at $45^\circ$; throwing downhill ($\alpha &lt; 0$) the range grows without bound as the slope steepens towards a cliff.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The rocket equation.) A rocket ejects exhaust at speed $u$ relative to itself, with no gravity or drag. Derive Tsiolkovsky's equation $\Delta v = u\ln(m_0/m_1)$ from conservation of momentum. Reaching low Earth orbit takes about $\Delta v = 9.4$ km/s including losses; with $u = 3$ km/s, what fraction of the launch mass can reach orbit? Explain why rockets use stages.</p>
+        <details><summary>Solution</summary><div>
+          <p>In the instantaneous rest frame, the rocket of mass $m$ ejects $-dm &gt; 0$ of exhaust backwards at speed $u$ and gains $dv$. Momentum before is zero; after, $m\,dv + (-dm)(-u) = 0$, so $dv = -u\,dm/m$. Integrating from $m_0$ to $m_1$ gives $\Delta v = u\ln(m_0/m_1)$. It is exact even though the exhaust velocity in the ground frame changes during the burn: each step is a rest-frame calculation and the frames are related by Galilean boosts.</p>
+          <p>Here $m_0/m_1 = e^{9.4/3} \approx 23$, so at most about 4% of the launch mass reaches orbit, and that 4% includes the empty tanks and engines. The logarithm is the problem: each extra $u$ of speed costs another factor $e$ in mass. Staging throws the empty structure away so it doesn't have to be accelerated further. Two stages with mass ratios $\sqrt{23} \approx 4.8$ each give the same $\Delta v$, but each stage only needs to carry its own dead weight to half the speed.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Rolling races.) A hoop, a solid disc, a solid sphere and a frictionless sliding block are released together on an incline of angle $\alpha$. The round ones roll without slipping. Show that an object with moment of inertia $I = \beta mr^2$ accelerates at $a = g\sin\alpha/(1 + \beta)$, and give the finishing order. Why don't mass and radius matter?</p>
+        <details><summary>Solution</summary><div>
+          <p>Rolling without slipping means $v = r\omega$, so the kinetic energy is $\tfrac12mv^2 + \tfrac12\beta mr^2\omega^2 = \tfrac12(1 + \beta)mv^2$. Static friction does no work on a rolling body (the contact point is momentarily at rest), so energy is conserved: after a drop $h$, $v^2 = 2gh/(1 + \beta)$. Comparing with a body sliding with constant acceleration down the slope, $a = g\sin\alpha/(1 + \beta)$.</p>
+          <p>The block ($\beta = 0$) wins with $a = g\sin\alpha$, then the sphere ($\beta = \tfrac25$, $a = \tfrac57g\sin\alpha$), the disc ($\beta = \tfrac12$, $\tfrac23g\sin\alpha$), and last the hoop ($\beta = 1$, $\tfrac12g\sin\alpha$). Mass and radius cancel because both the translational and the rotational energy are proportional to $mv^2$; only the shape, through $\beta$, decides how the energy is shared. A hollow sphere ($\beta = \tfrac23$) would beat only the hoop.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="oscillations">
+    <h2>Oscillations and stability</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The bead on a spinning hoop.) A bead slides without friction on a circular hoop of radius $R$ that spins at angular velocity $\omega$ about its vertical diameter. Using the angle $\theta$ from the bottom, find all equilibria and their stability. Show that the bottom is stable only while $\omega^2 &lt; g/R$, that above this speed two new equilibria appear at $\cos\theta_0 = g/(\omega^2R)$, and that small oscillations about them have angular frequency $\omega\sin\theta_0$. Sketch $\theta_0$ against $\omega$.</p>
+        <details><summary>Hint</summary><div><p>The Lagrangian is $\mathcal L = \tfrac12mR^2(\dot\theta^2 + \omega^2\sin^2\theta) + mgR\cos\theta$. Treat everything except $\tfrac12mR^2\dot\theta^2$ as minus an effective potential, and look at its first and second derivatives.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The bead moves with speed $R\dot\theta$ along the hoop and $\omega R\sin\theta$ around the axis, which gives the Lagrangian above. It has the form $\tfrac12mR^2\dot\theta^2 - U(\theta)$ with effective potential $U(\theta) = -mgR\cos\theta - \tfrac12mR^2\omega^2\sin^2\theta$. Then</p>
+          $$U'(\theta) = mR\sin\theta\,(g - R\omega^2\cos\theta),\qquad U''(\theta) = mgR\cos\theta - mR^2\omega^2\cos2\theta.$$
+          <p>Equilibria are at $\sin\theta = 0$ (bottom and top) and, if $\omega^2R &gt; g$, at $\cos\theta_0 = g/(\omega^2R)$. At the bottom $U''(0) = mR(g - R\omega^2)$, positive exactly when $\omega^2 &lt; g/R$, with small-oscillation frequency $\Omega^2 = U''/(mR^2) = g/R - \omega^2$. The top always has $U''(\pi) = -mR(g + R\omega^2) &lt; 0$: unstable. At $\theta_0$, substituting $g = R\omega^2\cos\theta_0$, $U''(\theta_0) = mR^2\omega^2(\cos^2\theta_0 - \cos2\theta_0) = mR^2\omega^2\sin^2\theta_0 &gt; 0$, so the new equilibria are stable with $\Omega = \omega\sin\theta_0$.</p>
+          <p>The graph of $\theta_0$ against $\omega$ is a pitchfork: zero until $\omega_c = \sqrt{g/R}$, then two branches $\pm\arccos(\omega_c^2/\omega^2)$ rising towards $\pm 90^\circ$. The system is symmetric under $\theta \to -\theta$, but the bead must pick a side: a spontaneously broken symmetry, the same mathematics as a magnet below its Curie point. Right at $\omega_c$ the restoring force is cubic, not linear, and oscillations become very slow ("critical slowing down").</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Coupled pendulums and beats.) Two identical pendulums of length $L$ and mass $m$ are joined by a weak spring of stiffness $k$. Find the normal modes and their frequencies. If one pendulum starts swinging and the other at rest, show that the motion passes completely from one to the other and back, and find the period of that exchange.</p>
+        <details><summary>Solution</summary><div>
+          <p>For small angles, with displacements $x_1, x_2$: $m\ddot x_1 = -\frac{mg}{L}x_1 - k(x_1 - x_2)$ and $m\ddot x_2 = -\frac{mg}{L}x_2 + k(x_1 - x_2)$. The sum $s = x_1 + x_2$ obeys $\ddot s = -\omega_1^2s$ with $\omega_1^2 = g/L$ (both swing together and the spring never stretches), and the difference $d = x_1 - x_2$ obeys $\ddot d = -\omega_2^2d$ with $\omega_2^2 = g/L + 2k/m$.</p>
+          <p>Start with $x_1 = A$, $x_2 = 0$, at rest: $s = d = A$ initially, so $x_1 = \tfrac A2(\cos\omega_1t + \cos\omega_2t) = A\cos\frac{\omega_2 - \omega_1}{2}t\,\cos\frac{\omega_1 + \omega_2}2t$ and $x_2 = A\sin\frac{\omega_2 - \omega_1}{2}t\,\sin\frac{\omega_1 + \omega_2}2t$. Each is a fast oscillation inside a slow envelope, and the envelopes are a cosine and a sine: when one pendulum's swing is zero the other's is full. The energy goes from one to the other and back with period $T_{\text{exchange}} = 2\pi/(\omega_2 - \omega_1) \approx 2\pi\,\omega_1m/k$ for a weak spring. Two tuning forks a few hertz apart beat in the same way.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The pendulum's real period.) Guess first: released from horizontal ($\theta_0 = 90^\circ$), is the period 2%, 18% or 50% longer than the small-angle $T_0 = 2\pi\sqrt{L/g}$? Show from energy conservation that $T = 4\sqrt{L/g}\int_0^{\pi/2}\big(1 - k^2\sin^2\varphi\big)^{-1/2}\,d\varphi$ with $k = \sin(\theta_0/2)$, and expand it to get $T \approx T_0\big(1 + \theta_0^2/16\big)$. Use the slider below to compare the exact period with that approximation.</p>
+        <figure class="plate wide" data-scene="pendulum">
+          <div class="stage">
+            <canvas aria-label="Two pendulums released from the same angle, one exact and one obeying the small-angle law, with the period ratio T over T0 plotted against amplitude"></canvas>
+            <div class="toolbar">
+              <div class="sliders">
+                <label for="pd-a">amplitude θ₀ (degrees) <input id="pd-a" type="range" data-k="amp" min="5" max="175" step="1"><output data-out="amp"></output></label>
+                <button type="button" data-act="restart">Release again</button>
+              </div>
+              <div class="readout" data-role="readout"></div>
+            </div>
+          </div>
+        </figure>
+        <details><summary>Hint</summary><div><p>Energy gives $\dot\theta^2 = \frac{2g}{L}(\cos\theta - \cos\theta_0)$, and a quarter period is $\int_0^{\theta_0}d\theta/\dot\theta$. Write $\cos\theta = 1 - 2\sin^2(\theta/2)$ and substitute $\sin(\theta/2) = k\sin\varphi$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $\cos\theta - \cos\theta_0 = 2(k^2 - \sin^2\frac\theta2)$, a quarter period is $\frac T4 = \sqrt{\frac{L}{4g}}\int_0^{\theta_0}\frac{d\theta}{\sqrt{k^2 - \sin^2(\theta/2)}}$. Put $\sin\frac\theta2 = k\sin\varphi$, so that $\varphi$ runs from 0 to $\frac\pi2$ and $\tfrac12\cos\frac\theta2\,d\theta = k\cos\varphi\,d\varphi$. Then $d\theta = \frac{2k\cos\varphi\,d\varphi}{\sqrt{1 - k^2\sin^2\varphi}}$ and $\sqrt{k^2 - \sin^2\frac\theta2} = k\cos\varphi$, which gives the formula. The integral is the complete elliptic integral $K(k)$; nothing in it diverges, even though the original integrand blew up at the turning point.</p>
+          <p>Expanding $(1 - k^2\sin^2\varphi)^{-1/2} = 1 + \tfrac12k^2\sin^2\varphi + \dots$ and using $\int_0^{\pi/2}\sin^2\varphi\,d\varphi = \frac\pi4$ gives $T = T_0\big(1 + \frac{k^2}{4} + \dots\big)$, and $k^2 \approx \theta_0^2/4$, so $T \approx T_0(1 + \theta_0^2/16)$. At $90^\circ$ the series gives 1.154; the exact value is $T/T_0 = 1.180$, 18% longer. A beautiful exact form is $T = T_0/\operatorname{AGM}(1, \cos\frac{\theta_0}{2})$, the arithmetic-geometric mean, which converges in three or four steps. As $\theta_0 \to 180^\circ$ the period grows like $\ln\frac{1}{\pi - \theta_0}$ and diverges: a pendulum balanced upside down never falls. Galileo's claim that the swing doesn't matter is true only to second order, which is why pendulum clocks use small swings.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Slowly shortening the string.) A pendulum swings with small amplitude $\theta_0$ while its string is pulled up through a hole in the ceiling, slowly compared with the period. Show that the energy of oscillation $E$ and the frequency $\omega$ change together so that $E/\omega$ stays constant, and deduce that $\theta_0 \propto L^{-3/4}$.</p>
+        <details><summary>Hint</summary><div><p>The person pulling does work $-\langle T\rangle\,dL$, where $\langle T\rangle$ is the tension averaged over a swing. Compute it to order $\theta_0^2$: the tension is $mg\cos\theta + mL\dot\theta^2$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>For small swings $\theta = \theta_0\cos\omega t$ with $\omega^2 = g/L$, so $\langle\theta^2\rangle = \theta_0^2/2$ and $\langle\dot\theta^2\rangle = \omega^2\theta_0^2/2$. Then $\langle T\rangle = mg(1 - \langle\theta^2\rangle/2) + mL\langle\dot\theta^2\rangle = mg(1 + \theta_0^2/4)$. Measure the bob's energy from the pivot: $E_{\text{tot}} = -mgL + E$, where $E = \tfrac12mgL\theta_0^2$ is the oscillation energy. The pull changes it by $dE_{\text{tot}} = -\langle T\rangle\,dL$. So</p>
+          $$-mg\,dL + dE = -mg\,dL - \frac{mg\theta_0^2}{4}\,dL\quad\Longrightarrow\quad dE = -\frac{E}{2L}\,dL,$$
+          <p>and $E \propto L^{-1/2}$. Since $\omega \propto L^{-1/2}$ too, $E/\omega$ is constant. With $E = \tfrac12mgL\theta_0^2$, $\theta_0^2 \propto L^{-3/2}$, so $\theta_0 \propto L^{-3/4}$: pull the string to a quarter of its length and the angular swing grows by $4^{3/4} \approx 2.8$, while the swing's arc length $L\theta_0 \propto L^{1/4}$ shrinks. $E/\omega$ is the action $\oint p\,dq/2\pi$, an adiabatic invariant. Einstein used this very pendulum at the 1911 Solvay conference to explain why quantum numbers ($E = n\hbar\omega$) survive slow changes.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="rotation-and-gravity">
+    <h2>Rotation, tides and orbits</h2>
+    <ol start="11">
+      <li>
+        <p><span class="tag hard">hard</span> (The tennis racket theorem.) A rigid body has principal moments $I_1 &lt; I_2 &lt; I_3$. Using Euler's equations $I_1\dot\omega_1 = (I_2 - I_3)\omega_2\omega_3$ (and cyclic), show that steady rotation about axis 1 or axis 3 is stable, but rotation about the intermediate axis 2 is unstable. Toss a phone or a book spinning about each axis and watch.</p>
+        <details><summary>Solution</summary><div>
+          <p>Spin about axis 2: $\omega_2 = \Omega$ plus small $\omega_1, \omega_3$. To first order $\omega_2$ stays $\Omega$, and $I_1\dot\omega_1 = (I_2 - I_3)\Omega\,\omega_3$, $I_3\dot\omega_3 = (I_1 - I_2)\Omega\,\omega_1$. Differentiating the first and substituting,</p>
+          $$\ddot\omega_1 = \frac{(I_2 - I_3)(I_1 - I_2)}{I_1I_3}\,\Omega^2\,\omega_1.$$
+          <p>Both brackets are negative, so the coefficient is positive and $\omega_1$ grows exponentially: the wobble runs away and the body flips over, then returns, again and again (the Dzhanibekov effect seen on the International Space Station). Spin about axis 1 gives instead $\ddot\omega_2 = \frac{(I_3 - I_1)(I_1 - I_2)}{I_2I_3}\Omega^2\omega_2$, a positive bracket times a negative one: a bounded oscillation. Axis 3 is the same. The energy-and-momentum picture agrees: with $|\mathbf L|$ fixed, the energy $L^2/2I$ is extreme for the smallest and largest $I$ and a saddle for the middle one. (Rotation about axis 3 is the only truly stable one once energy can leak away, which is why Explorer 1, spinning about its long axis, tumbled within hours.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Why the Moon wins the tides.) The Sun pulls on the Earth about 180 times harder than the Moon does. Show that the tidal acceleration (the difference in pull across the Earth) from a body of mass $M$ at distance $d$ is about $2GMR/d^3$, and compute the ratio of lunar to solar tides. Explain spring and neap tides.</p>
+        <details><summary>Solution</summary><div>
+          <p>On the near side the pull is $GM/(d - R)^2$, at the centre $GM/d^2$. The difference is $\frac{GM}{d^2}\big((1 - R/d)^{-2} - 1\big) \approx \frac{2GMR}{d^3}$. Tides depend on $M/d^3$, not on $M/d^2$. With $M_{\text{Moon}} = 7.35\times10^{22}$ kg at $3.84\times10^8$ m and $M_\odot = 1.99\times10^{30}$ kg at $1.50\times10^{11}$ m,</p>
+          $$\frac{\text{lunar}}{\text{solar}} = \frac{M_{\text{Moon}}}{M_\odot}\Big(\frac{d_\odot}{d_{\text{Moon}}}\Big)^3 = 3.70\times10^{-8}\times(389)^3 \approx 2.2.$$
+          <p>The Sun's far greater pull is almost uniform across the Earth, and a uniform pull just accelerates everything together. When Sun and Moon line up (new and full Moon) their bulges add, $1 + 0.46$: spring tides. At quarter Moon they are at right angles and partly cancel, $1 - 0.46$: neap tides, about a third the range of springs.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The virial theorem and the satellite drag paradox.) For a particle bound in a potential $V \propto r^n$, show that the time averages obey $2\langle K\rangle = n\langle V\rangle$, by differentiating $\mathbf r\cdot\mathbf p$. For gravity ($n = -1$), deduce $E = -\langle K\rangle$. Use this to explain why air drag makes a satellite in a low orbit speed up.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\frac{d}{dt}(\mathbf r\cdot\mathbf p) = \dot{\mathbf r}\cdot\mathbf p + \mathbf r\cdot\dot{\mathbf p} = 2K - \mathbf r\cdot\nabla V = 2K - nV$, using Euler's theorem for homogeneous functions, $\mathbf r\cdot\nabla V = nV$. For a bounded orbit $\mathbf r\cdot\mathbf p$ is bounded, so its derivative averages to zero over a long time: $2\langle K\rangle = n\langle V\rangle$.</p>
+          <p>For gravity $\langle V\rangle = -2\langle K\rangle$, so $E = \langle K\rangle + \langle V\rangle = -\langle K\rangle$. Drag removes energy, $E$ becomes more negative, so $\langle K\rangle$ must grow: the satellite sinks and speeds up. Gravity does twice as much work on the falling satellite as drag takes away. For a circular orbit you can see it directly: $v = \sqrt{GM/r}$ grows as $r$ shrinks. The same logic makes a star heat up as it radiates energy and contracts, which is how stars ignite (astronomy P2).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The Foucault pendulum.) Show that a pendulum at latitude $\lambda$ has its plane of swing turn at angular velocity $\Omega\sin\lambda$ relative to the ground, where $\Omega$ is the Earth's rotation rate. How long did Foucault's 1851 pendulum in Paris ($\lambda = 48.85^\circ$) take to turn full circle?</p>
+        <details><summary>Hint</summary><div><p>Split the Earth's angular velocity vector into a vertical part $\Omega\sin\lambda$ and a horizontal part $\Omega\cos\lambda$. For a horizontal swing, only the vertical part's Coriolis force acts sideways.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>In the rotating frame the bob feels the Coriolis acceleration $-2\boldsymbol\Omega\times\mathbf v$. For nearly horizontal velocity $\mathbf v$, the horizontal component of $\boldsymbol\Omega$ gives a vertical force (absorbed by the string), while the vertical component $\Omega\sin\lambda\,\hat{\mathbf z}$ gives the horizontal force $-2\Omega\sin\lambda\,\hat{\mathbf z}\times\mathbf v$. A horizontal oscillator with that extra term is exactly an ordinary pendulum seen from a frame turning at $\Omega\sin\lambda$ (the Larmor theorem, here exact to first order in $\Omega$), so the swing plane turns at that rate, clockwise in the north. The period is one sidereal day over $\sin\lambda$: $23.93\text{ h}/\sin48.85^\circ = 31.8$ h. At the pole it is one day; on the equator the plane doesn't turn at all.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>The mechanics problems in Irodov's <i>Problems in General Physics</i> and Kleppner and Kolenkow's <i>An Introduction to Mechanics</i> are the classic next step; Taylor's <i>Classical Mechanics</i> develops the Lagrangian methods of problems 7–11 slowly and well, and Landau and Lifshitz's <i>Mechanics</i> treats adiabatic invariants (problem 10) in a few unforgettable pages.</p>
+  </section>
+</article>

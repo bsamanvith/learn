@@ -12,6 +12,7 @@ with solutions, simulations that check the maths, and figures you can play with.
 **Status:**
 - Machine learning: Stage 1 written (linear regression, gradient descent, logistic regression).
 - Probability: Parts 0–1 drafted (8 chapters, exercises, widgets, sims).
+- Physics, astronomy and mathematics: problem books first (131 problems in 10 sets, each with a worked solution, plus named classics and key books). Lessons to follow.
 
 ## Layout
 

@@ -1,0 +1,166 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 2 of 4 · Intermediate</div>
+  <h1>Level 2: intermediate</h1>
+  <p class="lede">Twenty problems where Newton's gravity and the physics of light start to do real work. You will weigh the Earth, the black hole at the centre of the Galaxy and a pair of stars; size up a red supergiant and a white dwarf from their light; find how far away a supernova remnant is from how fast it grows. Most need one formula from physics and one idea about how to apply it. Read the first sentence of a solution as a hint if you are stuck.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/astronomy/L1-basics/">Level 1</a>, Newton's law of gravity, logarithms</span><span><b>Next:</b> <a href="/astronomy/L3-advanced/">Level 3</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag core">core</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="weighing">
+    <h2>Weighing with orbits</h2>
+    <ol>
+      <li>
+        <p><span class="tag core">core</span> (Kepler's third law from Newton.) For a small body in a circular orbit of radius $a$ round a mass $M$, derive $T^2 = 4\pi^2a^3/GM$. Use it to find the period of the International Space Station, 420 km above the Earth ($GM_\oplus = 3.986\times10^{14}$ m³/s², $R_\oplus = 6371$ km).</p>
+        <details><summary>Solution</summary><div>
+          <p>Gravity supplies the centripetal force: $GMm/a^2 = m\omega^2a$, with $\omega = 2\pi/T$. So $4\pi^2/T^2 = GM/a^3$, which rearranges to $T^2 = 4\pi^2a^3/GM$. The orbiting body's mass $m$ has cancelled: a spanner let go by an astronaut stays beside the station.</p>
+          <p>For the ISS, $a = 6791$ km and $T = 2\pi\sqrt{a^3/GM} = 5570$ s $= 92.8$ minutes, so the crew see sixteen sunrises a day. In units of years, AU and solar masses the constant becomes $4\pi^2/G = 1$, giving $T^2 = a^3/M$, the form used in the rest of this set.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Newton's Moon test.) The Moon orbits in 27.32 days at a distance of 384 400 km, about 60 Earth radii. Find its centripetal acceleration and compare it with $g = 9.81$ m/s² at the surface. What did Newton conclude?</p>
+        <details><summary>Solution</summary><div>
+          <p>$a = 4\pi^2r/T^2 = 4\pi^2\times3.844\times10^8/(27.32\times86\,400)^2 = 2.72\times10^{-3}$ m/s². The ratio $g/a$ is $9.81/0.00272 = 3600 = 60^2$. The Moon is 60 times further from the Earth's centre than an apple, and its acceleration is $60^2$ times smaller.</p>
+          <p>Newton concluded that the force that makes an apple fall is the same force that holds the Moon, and that it falls as $1/r^2$. That was the first evidence that the laws of physics on Earth also rule the sky. He did the calculation around 1666, but a poor value for the Earth's radius spoiled the agreement, and he did not publish until the <i>Principia</i> in 1687.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Weighing the Earth.) From $g = 9.81$ m/s² and $R = 6371$ km, with $G = 6.674\times10^{-11}$ N m² kg⁻², find the Earth's mass and its mean density. Surface rocks have a density of about 2700 kg/m³. What does the comparison tell you?</p>
+        <details><summary>Solution</summary><div>
+          <p>$g = GM/R^2$ gives $M = gR^2/G = 9.81\times(6.371\times10^6)^2/6.674\times10^{-11} = 5.97\times10^{24}$ kg. Dividing by $\frac43\pi R^3 = 1.08\times10^{21}$ m³ gives 5510 kg/m³. This is twice the density of the rocks on top, so the inside must be much denser: the Earth has a core of iron and nickel at about 13 000 kg/m³. The hard part historically was $G$; Cavendish measured it with a torsion balance in 1798, which is why his experiment is called "weighing the Earth".</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The black hole at the centre of the Galaxy.) The star S2 orbits the Milky Way's central dark object every 16.05 years. Its orbit has a semi-major axis of 0.125 arcseconds as seen from 8.28 kpc away. Find the semi-major axis in AU and the central mass in solar masses. (A distance of 1 pc is where 1 AU subtends 1 arcsecond.)</p>
+        <details><summary>Solution</summary><div>
+          <p>By the definition of the parsec, an angle of $\theta$ arcseconds at $d$ parsecs corresponds to $\theta d$ AU. So $a = 0.125\times8280 = 1035$ AU. Using $M = a^3/T^2$ in solar units:</p>
+          $$M = \frac{1035^3}{16.05^2} = 4.3\times10^6\ M_\odot.$$
+          <p>Four million Suns inside an orbit about 30 times the size of Neptune's. At its closest S2 comes within 120 AU, so the mass must be packed within that, and no cluster of stars could be so compact for long. It must be a black hole. Genzel and Ghez shared the 2020 Nobel Prize for this measurement, which took over 25 years of watching the star.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Weighing a pair of stars.) Sirius A and its white-dwarf companion Sirius B orbit each other every 50.1 years. The semi-major axis of their relative orbit is 19.8 AU, and B is always about twice as far as A from their centre of mass. Find the mass of each star.</p>
+        <details><summary>Solution</summary><div>
+          <p>For two bodies orbiting each other, Kepler's law holds with the total mass and the relative orbit: $M_A + M_B = a^3/T^2 = 19.8^3/50.1^2 = 3.09\ M_\odot$. Both stars circle the centre of mass, which balances like a seesaw: $M_Ar_A = M_Br_B$. B is twice as far out, so A is twice as heavy: $M_A = 2.06\ M_\odot$ and $M_B = 1.03\ M_\odot$.</p>
+          <p>This is the only direct way to weigh a star, and binaries are the source of almost every stellar mass we know. Sirius B packs the mass of the Sun into a star the size of the Earth (problem 7).</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="stars">
+    <h2>Sizing up the stars</h2>
+    <ol start="6">
+      <li>
+        <p><span class="tag core">core</span> (How big is Betelgeuse?) A star's luminosity is $L = 4\pi R^2\sigma T^4$. Betelgeuse has about $9\times10^4$ times the Sun's luminosity and a surface temperature of 3600 K, against the Sun's 5772 K. How many times the Sun's radius is it? If it replaced the Sun, which planets would be inside it? ($R_\odot = 6.96\times10^5$ km.)</p>
+        <details><summary>Solution</summary><div>
+          <p>Divide by the same formula for the Sun, so that the constants cancel: $R/R_\odot = \sqrt{L/L_\odot}\,(T_\odot/T)^2 = 300\times(5772/3600)^2 = 770$. That is $770\times6.96\times10^5$ km $= 5.4\times10^8$ km, or 3.6 AU. Mercury, Venus, Earth and Mars would all be inside, with the edge in the asteroid belt. Despite its size, Betelgeuse's outer layers are so thin, about a millionth of the density of air, that it would be hard to say where it ends. Working in ratios to the Sun, as here, saves almost all the arithmetic.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (A star the size of the Earth.) Sirius B has 0.025 times the Sun's luminosity and a surface temperature of 25 000 K, and a mass of $1.02\ M_\odot$. Find its radius in kilometres and its mean density. How heavy would a teaspoon (5 cm³) of it be?</p>
+        <details><summary>Solution</summary><div>
+          <p>As in problem 6, $R/R_\odot = \sqrt{0.025}\times(5772/25\,000)^2 = 0.158\times0.0533 = 0.0084$, so $R = 5900$ km, a little smaller than the Earth. Very hot but very dim means very small. The density is $M/\frac43\pi R^3 = 2.03\times10^{30}/8.4\times10^{20} = 2.4\times10^9$ kg/m³, and a teaspoon weighs $2.4\times10^9\times5\times10^{-6} = 12$ tonnes. Matter that dense can't be held up by ordinary pressure; it is supported by the quantum pressure of electrons packed as tightly as the Pauli principle allows (problem 11 of <a href="/astronomy/P2-light-and-the-stars/">P2</a>).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The distance modulus.) Apparent magnitude $m$ and absolute magnitude $M$ (the magnitude at 10 pc) are related by $m - M = 5\log_{10}(d/10\text{ pc})$. Derive this from the definition that 5 magnitudes is a factor of 100 in brightness, with larger magnitudes fainter. A Cepheid variable star with $M = -4$ is observed in a distant galaxy at $m = 21$. How far away is the galaxy?</p>
+        <details><summary>Solution</summary><div>
+          <p>A factor of 100 per 5 magnitudes means $m_1 - m_2 = -2.5\log_{10}(F_1/F_2)$. Compare the same star at distance $d$ and at 10 pc: brightness goes as $1/d^2$, so $F_d/F_{10} = (10/d)^2$, and</p>
+          $$m - M = -2.5\log_{10}\frac{100}{d^2} = 5\log_{10}\frac{d}{10\text{ pc}}.$$
+          <p>Here $m - M = 25$, so $d/10\text{ pc} = 10^5$, and $d = 10^6$ pc $= 1$ Mpc. Cepheids pulsate with a period that reveals their absolute magnitude, which Henrietta Leavitt discovered in 1912; with this formula, Hubble used them in 1924 to show that Andromeda lies far outside the Milky Way. Dust along the way dims the star and makes it look further away, so careful work corrects for it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (A planet next door.) Proxima Centauri has 0.00155 times the Sun's luminosity and 0.122 times its mass. At what distance from it would a planet get the same sunlight as the Earth? Its planet Proxima b orbits at 0.0485 AU: how much light does it get compared with Earth, and what is its year?</p>
+        <details><summary>Solution</summary><div>
+          <p>Flux goes as $L/d^2$, so equal flux needs $d = \sqrt{L/L_\odot}$ AU $= \sqrt{0.00155} = 0.039$ AU, ten times closer than Mercury to the Sun. Proxima b gets $0.00155/0.0485^2 = 0.66$ of the Earth's sunlight, similar to Mars's share: within the range where liquid water might be possible. Its year is $T = \sqrt{a^3/M} = \sqrt{0.0485^3/0.122} = 0.0306$ years, 11.2 days. So close in, the planet is probably tidally locked, with one side always facing the star, and Proxima flares violently. Whether it has kept an atmosphere is unknown.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (How fast is the Sun's surface turning?) A sunspot near the Sun's equator takes about 27 days to come back to the same place on the Sun's disc, as seen from Earth. But the Earth moves along its orbit in the meantime. Find the Sun's true rotation period, relative to the stars.</p>
+        <details><summary>Solution</summary><div>
+          <p>The Sun turns in the same direction as the Earth orbits. The spot must catch up with the Earth's moving viewpoint, so it has to turn a bit more than once: the rates subtract, $1/P_{\text{syn}} = 1/P_{\text{sid}} - 1/P_\oplus$. Hence $1/P_{\text{sid}} = 1/27 + 1/365.25$, and $P_{\text{sid}} = 25.1$ days. The same reasoning gives the difference between the solar and sidereal days and between the Moon's months. Spots near the poles take over 30 days: the Sun is a fluid and spins faster at its equator, a "differential rotation" that winds up its magnetic field and drives the 11-year sunspot cycle.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The Sun is a poor heater.) Find the Sun's power per kilogram ($L = 3.83\times10^{26}$ W, $M = 1.99\times10^{30}$ kg) and compare it with a resting human, who gives out about 100 W from 70 kg. Why does the Sun shine so brightly if its power per kilogram is so small?</p>
+        <details><summary>Solution</summary><div>
+          <p>The Sun produces $3.83\times10^{26}/1.99\times10^{30} = 1.9\times10^{-4}$ W/kg; a human makes $100/70 = 1.4$ W/kg, seven thousand times more. Even the Sun's core, where all the fusion happens, makes only about 280 watts per cubic metre, about as much as a compost heap. The Sun is bright because it is enormous, and it is hot because the energy leaks out so slowly: a photon takes over 100 000 years to work its way out (problem 8 of <a href="/astronomy/P2-light-and-the-stars/">P2</a>). Slow fusion is also why the Sun lasts ten billion years.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="solar-system">
+    <h2>The Solar System</h2>
+    <ol start="12">
+      <li>
+        <p><span class="tag core">core</span> (Leaving the Solar System.) What speed relative to the Sun is needed to escape from the Solar System from the Earth's orbit? How much of it does the Earth's own orbital motion (29.8 km/s) provide, and what launch speed from the Earth's surface is then needed? Ignore the other planets.</p>
+        <details><summary>Hint</summary><div><p>Escape speed is $\sqrt2$ times circular speed. Launching along the Earth's motion, you need the difference. To leave the Earth with a speed $v_\infty$ to spare, energy says the launch speed is $\sqrt{v_{\text{esc},\oplus}^2 + v_\infty^2}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Solar escape speed at 1 AU is $\sqrt2\times29.8 = 42.1$ km/s. Launching in the direction the Earth is moving, a spacecraft needs only $42.1 - 29.8 = 12.3$ km/s relative to the Earth, once it is clear of the Earth's gravity. To leave the Earth with that speed left over, energy conservation gives $\frac12v^2 - GM_\oplus/R = \frac12v_\infty^2$, so $v = \sqrt{11.2^2 + 12.3^2} = 16.7$ km/s.</p>
+          <p>Speeds don't simply add: 11.2 plus 12.3 would be 23.5 km/s, but squares do add, because the deep Earth well gives the rocket a bigger boost when it is moving fast (the Oberth effect). In practice, Voyager and New Horizons used gravity assists from Jupiter to make up much of the difference.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Where does the angular momentum live?) Compare the orbital angular momentum of Jupiter ($1.90\times10^{27}$ kg, 5.20 AU, 13.1 km/s) with the spin of the Sun (radius $6.96\times10^8$ m, period 25.4 days, moment of inertia $0.07MR^2$, smaller than a uniform ball's $0.4MR^2$ because its mass is concentrated at the centre). Why is this a puzzle?</p>
+        <details><summary>Solution</summary><div>
+          <p>Jupiter: $L = mvr = 1.90\times10^{27}\times1.31\times10^4\times7.78\times10^{11} = 1.9\times10^{43}$ kg m²/s. The Sun: $L = 0.07MR^2\omega = 0.07\times1.99\times10^{30}\times(6.96\times10^8)^2\times2.86\times10^{-6} = 1.9\times10^{41}$. Jupiter carries a hundred times as much, although it has a thousandth of the mass. The Sun has 99.9% of the Solar System's mass but only about 1% of its angular momentum.</p>
+          <p>A cloud collapsing to form a star should spin faster and faster as it shrinks, like a skater pulling in their arms. So why does the Sun spin so slowly? The answer is that young stars shed their angular momentum through magnetic fields that drag on the surrounding disc and on their own wind. Without that, stars could not form at all: they would fly apart.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Shooting stars.) A typical meteor is a grain of about 1 g hitting the atmosphere at 40 km/s. What is its kinetic energy? The Chelyabinsk meteor of 2013 had a mass of about 12 000 tonnes and a speed of 19 km/s. Express its energy in kilotonnes of TNT (1 kt $= 4.18\times10^{12}$ J).</p>
+        <details><summary>Solution</summary><div>
+          <p>The grain has $\frac12\times10^{-3}\times(4\times10^4)^2 = 8\times10^5$ J: as much energy as 200 g of TNT, delivered by something the size of a small pebble. The speed matters more than the mass, because it is squared. Burning up 80 to 100 km high, it makes a brilliant streak. Chelyabinsk carried $\frac12\times1.2\times10^7\times(1.9\times10^4)^2 = 2.2\times10^{15}$ J, about 500 kt, thirty times the Hiroshima bomb. It exploded 30 km up, and its shock wave broke windows across the city.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Why comets have dust tails.) Sunlight pushes on a dust grain with a force $L\pi s^2/4\pi r^2c$ (for a grain of radius $s$ that absorbs all the light falling on it), while gravity pulls with $GM\cdot\frac43\pi s^3\rho/r^2$. Show that their ratio doesn't depend on distance from the Sun, and find the grain size at which they balance, for $\rho = 3000$ kg/m³.</p>
+        <details><summary>Solution</summary><div>
+          <p>Both forces fall as $1/r^2$, so $r$ cancels in their ratio:</p>
+          $$\frac{F_{\text{rad}}}{F_{\text{grav}}} = \frac{3L}{16\pi GMc\rho s}.$$
+          <p>Setting this equal to 1, $s = 3L/16\pi GMc\rho = 1.9\times10^{-7}$ m, about 0.2 μm. Grains much smaller than this are pushed out of the Solar System altogether; grains around this size feel a much weaker effective gravity and drift onto wider, slower orbits than the comet, so they trail behind it in a curved tail. The straight blue tail is different: ionised gas, swept straight out by the solar wind. (For grains much smaller than the wavelength of light the formula overstates the push, since such grains absorb poorly.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Spotting another Earth.) Seen from 10 pc, how far apart in the sky are the Sun and the Earth, in arcseconds? The Earth reflects a fraction of the light that hits it; at full phase its brightness compared with the Sun is about $p(R_\oplus/a)^2$ with $p = 0.37$. Evaluate this. Why is imaging an Earth-like planet so hard?</p>
+        <details><summary>Solution</summary><div>
+          <p>By the definition of the parsec, 1 AU at 10 pc subtends $0.1''$. The brightness ratio is $0.37\times(6371/1.496\times10^8)^2 = 6.7\times10^{-10}$, and at other phases, less. So we would have to find something ten billion times fainter than its star, a tenth of an arcsecond away from it. The star's light, blurred by diffraction and by the atmosphere, swamps the planet completely. Future telescopes plan to block the starlight with a coronagraph inside the telescope or a "starshade" flying thousands of kilometres in front of it. In the infrared the contrast is better, about $10^{-7}$, because the planet glows with its own heat.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="galaxy-and-universe">
+    <h2>The Galaxy and the universe</h2>
+    <ol start="17">
+      <li>
+        <p><span class="tag core">core</span> (The cosmic year.) The Sun orbits the centre of the Milky Way at about 230 km/s, at a distance of 8.2 kpc (1 pc $= 3.09\times10^{13}$ km). How long is one orbit? How many has the Sun completed in its 4.6 billion years?</p>
+        <details><summary>Solution</summary><div>
+          <p>$T = 2\pi r/v = 2\pi\times8.2\times10^3\times3.09\times10^{13}/230$ s $= 6.9\times10^{15}$ s $= 220$ million years. So the Sun has been round about $4.6\times10^9/2.2\times10^8 = 21$ times. The last time it was where it is now, the first dinosaurs were appearing. The orbits of stars at different distances also reveal how mass is spread through the Galaxy, which is how dark matter was found (problem 4 of <a href="/astronomy/P3-galaxies-and-the-universe/">P3</a>).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The Crab Nebula's age and distance.) The Crab Nebula, the remains of an exploded star, is about $180''$ in radius, and photographs taken decades apart show its edge moving outward at $0.19''$ per year. Doppler shifts show the gas at the edge moving at about 1500 km/s. Estimate the nebula's age, and its distance.</p>
+        <details><summary>Hint</summary><div><p>Assume the expansion speed has been constant. The age is the angular size over the angular rate. The distance comes from comparing a speed in km/s with the same speed in arcseconds per year.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>At a constant rate, the expansion began $180/0.19 = 950$ years before the photographs, putting the explosion around 1000 to 1100 AD. Chinese astronomers recorded a "guest star" in that part of the sky in 1054 AD, visible in daylight for three weeks. (The date found this way is about a century too late, because the nebula has actually been speeding up, pushed by the pulsar at its centre.)</p>
+          <p>For the distance, a transverse speed $v$ at distance $d$ moves through an angle $v/d$ per unit time. The angular rate is $0.19'' = 9.2\times10^{-7}$ rad per year, or $2.9\times10^{-14}$ rad/s, so $d = v/\mu = 1.5\times10^6/2.9\times10^{-14} = 5.1\times10^{19}$ m $= 1.7$ kpc. The accepted distance is about 2 kpc. This method, called expansion parallax, works only for objects that expand roughly evenly in all directions, so that the speed along the line of sight matches the speed across it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Redshift.) The hydrogen-alpha line, at 656.3 nm in the laboratory, appears at 721.9 nm in a galaxy's spectrum. Find its redshift $z = \Delta\lambda/\lambda$. Using $v \approx cz$ and Hubble's law with $H_0 = 70$ km/s/Mpc, how far away is it? Why does $v = cz$ break down for large $z$?</p>
+        <details><summary>Solution</summary><div>
+          <p>$z = (721.9 - 656.3)/656.3 = 0.100$, so $v \approx 0.1c = 30\,000$ km/s, and $d = 30\,000/70 = 430$ Mpc, about 1.4 billion light-years. Redshifts can exceed 1 (the most distant galaxies have $z &gt; 10$), which by this formula would mean faster than light. The resolution is that cosmological redshift is not a Doppler shift through space, but the stretching of light by the expansion of space while it travels: $1 + z$ is the factor by which the universe has grown since the light left. At $z = 0.1$ the simple formula is accurate to about 5%.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The wandering pole.) The Earth's axis traces a cone of half-angle $23.4^\circ$ round the pole of its orbit every 25 800 years, a motion called precession. In 13 000 years, how far will the north celestial pole be from Polaris? Over the 2000 years since the signs of the zodiac were fixed, by how much have they shifted against the constellations?</p>
+        <details><summary>Solution</summary><div>
+          <p>In half a cycle, the pole moves to the opposite side of the circle, $2\times23.4^\circ = 46.8^\circ$ from where it is now. Then the bright star Vega, about $5^\circ$ from that point, will serve as the pole star. In 2000 years the equinoxes have moved $2000/25\,800\times360^\circ = 28^\circ$, almost a whole sign of $30^\circ$: when the Sun is "in Aries" by the astrological calendar, it is actually in Pisces. The precession is caused by the Moon's and Sun's tidal pull on the Earth's equatorial bulge, the same gyroscope physics as a spinning top.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

@@ -1,0 +1,113 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P2 · Light and the stars</div>
+  <h1>Problem set: light and the stars</h1>
+  <p class="lede">Thirteen problems on what starlight tells us and what holds stars up. You will weigh the Sun's output with a solar panel's worth of data, take the Earth's temperature, show that the centre of the Sun must be at millions of degrees and crushed by billions of atmospheres, settle the nineteenth-century argument about the age of the Sun, explain how protons fuse at a thousandth of the temperature they classically need, find the heaviest possible star, and see why white dwarfs cannot weigh more than 1.4 Suns. Try each problem on paper before opening its solution.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/astronomy/P1-orbits-and-the-sky/">P1</a>, the black-body laws and the virial theorem from <a href="/physics/P3-heat-and-statistical-physics/">physics P3</a> and <a href="/physics/P1-mechanics/">P1</a>, and tunnelling from <a href="/physics/P4-relativity-and-quantum/">physics P4</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="starlight">
+    <h2>Measuring starlight</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Magnitudes.) Astronomers measure brightness on a backwards logarithmic scale: $m = -2.5\log_{10}F + \text{const}$, so 5 magnitudes is a factor of exactly 100 and fainter stars have larger $m$. The Sun has $m = -26.74$ and Sirius $-1.46$. How many times brighter does the Sun look? The absolute magnitude $M$ is the apparent magnitude a star would have at 10 pc. Show that $m - M = 5\log_{10}(d/10\text{ pc})$, and find the Sun's $M$.</p>
+        <details><summary>Solution</summary><div>
+          <p>A difference $\Delta m$ is a flux ratio $10^{0.4\Delta m}$. The Sun is $10^{0.4\times25.28} = 1.3\times10^{10}$ times brighter than Sirius. Flux falls as $1/d^2$, so moving a star from $d$ to 10 pc multiplies its flux by $(d/10\text{ pc})^2$ and changes its magnitude by $-2.5\log_{10}(d/10)^2 = -5\log_{10}(d/10)$. Hence $m - M = 5\log_{10}(d/10\text{ pc})$, the distance modulus. The Sun is at $1/206\,265$ pc, so $m - M = 5\log_{10}(4.85\times10^{-7}) = -31.57$ and $M_\odot = -26.74 + 31.57 = 4.83$. At 10 pc the Sun would be a faint naked-eye star; Sirius ($M = 1.4$) is intrinsically 25 times more luminous, and also very close.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The Sun's power and temperature.) Above the atmosphere, sunlight delivers $S = 1361$ W/m² at 1 AU. Find the Sun's luminosity $L_\odot$. With radius $R_\odot = 6.96\times10^8$ m and $L = 4\pi R^2\sigma T^4$, find its surface temperature, and the wavelength where its spectrum peaks.</p>
+        <details><summary>Solution</summary><div>
+          <p>All of the Sun's output crosses a sphere of radius 1 AU: $L_\odot = 4\pi(1.496\times10^{11})^2\times1361 = 3.83\times10^{26}$ W. Then $T = \big(L/4\pi R^2\sigma\big)^{1/4} = \big(3.83\times10^{26}/(4\pi\times(6.96\times10^8)^2\times5.67\times10^{-8})\big)^{1/4} = 5770$ K, the "effective temperature". Wien's law (physics P3, problem 11) puts the peak at $2.898\times10^{-3}/5772 = 502$ nm, blue-green. The Sun looks white from space because its spectrum is broad; it looks yellow from the ground because the atmosphere scatters some of the blue away (physics P2, problem 4).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The Earth's temperature.) A planet at distance $a$ from a star of temperature $T_\star$ and radius $R_\star$ reflects a fraction $A$ (its albedo) of the light and radiates the rest as a black body at uniform temperature. Show that $T = T_\star\sqrt{R_\star/2a}\,(1 - A)^{1/4}$, independent of the planet's size. Evaluate it for the Earth with $A = 0.3$ and compare with the measured mean surface temperature of 288 K.</p>
+        <details><summary>Solution</summary><div>
+          <p>The planet intercepts sunlight on its cross-section $\pi R^2$ and absorbs $(1 - A)\,\pi R^2\cdot\frac{L_\star}{4\pi a^2}$, with $L_\star = 4\pi R_\star^2\sigma T_\star^4$. It radiates from its whole surface, $4\pi R^2\sigma T^4$. Equating, $T^4 = (1 - A)\frac{R_\star^2}{4a^2}T_\star^4$, so $T = T_\star\sqrt{R_\star/2a}\,(1 - A)^{1/4}$, and $R$ cancels. For the Earth, $5772\times\sqrt{6.96\times10^8/(2\times1.496\times10^{11})}\times0.7^{1/4} = 255$ K, or $-18$ °C. The real surface averages 288 K: the extra 33 K is the greenhouse effect, from the atmosphere absorbing and re-emitting infrared. Without it the oceans would freeze. (A perfectly black planet at 1 AU would sit at 278 K.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (How sharp can a telescope be?) A circular aperture of diameter $D$ blurs a point of light into a disc whose first dark ring is at angle $1.22\lambda/D$ (the Rayleigh criterion). Find the resolution of the human eye (pupil 6 mm), of the Hubble Space Telescope (2.4 m), both at 550 nm. How big a telescope would you need to see the 1 m flag left on the Moon by Apollo 11?</p>
+        <details><summary>Solution</summary><div>
+          <p>The eye: $1.22\times550\times10^{-9}/0.006 = 1.1\times10^{-4}$ rad $= 23''$ (in practice the retina limits us to about $60''$). Hubble: $2.8\times10^{-7}$ rad $= 0.058''$. The flag subtends $1/3.84\times10^8 = 2.6\times10^{-9}$ rad, so $D = 1.22\times550\times10^{-9}/2.6\times10^{-9} = 258$ m, six times larger than the biggest telescope under construction. The landing sites have been photographed, but from lunar orbit, by the Lunar Reconnaissance Orbiter at 50 km. Radio interferometers beat the limit by making $D$ the size of the Earth: the Event Horizon Telescope resolves 20 micro-arcseconds.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="inside-stars">
+    <h2>What holds a star up</h2>
+    <ol start="5">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (A lower bound on the Sun's central pressure.) A star in hydrostatic equilibrium obeys $\frac{dP}{dr} = -\frac{GM(r)\rho(r)}{r^2}$, with $\frac{dM}{dr} = 4\pi r^2\rho$. Show that $P + \frac{GM(r)^2}{8\pi r^4}$ decreases outwards, and deduce that the central pressure satisfies $P_c &gt; \frac{GM^2}{8\pi R^4}$ whatever the density profile. Evaluate the bound for the Sun. Then use the virial theorem to estimate the Sun's mean internal temperature, for an ideal gas of mean particle mass $0.6m_p$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\frac{d}{dr}\Big(\frac{GM^2}{8\pi r^4}\Big) = \frac{GM\,M'}{4\pi r^4} - \frac{GM^2}{2\pi r^5} = \frac{GM\rho}{r^2} - \frac{GM^2}{2\pi r^5}$. Adding $\frac{dP}{dr}$, the first term cancels, leaving $-\frac{GM^2}{2\pi r^5} &lt; 0$. So the sum decreases outwards. At the centre, $M \approx\frac43\pi\rho_cr^3$ makes $M^2/r^4\to0$, so the sum is $P_c$; at the surface it is $0 + \frac{GM^2}{8\pi R^4}$. Hence $P_c &gt; \frac{GM^2}{8\pi R^4} = \frac{6.67\times10^{-11}\times(1.99\times10^{30})^2}{8\pi\times(6.96\times10^8)^4} = 4.5\times10^{13}$ Pa, 450 million atmospheres. The true value, from solar models, is about $2.5\times10^{16}$ Pa; the bound is weak because the Sun is centrally concentrated, but it holds for any star.</p>
+          <p>For the temperature, the virial theorem (physics P1, problem 13) says the thermal kinetic energy is half the magnitude of the gravitational energy. For a uniform sphere $|U| = \frac35\frac{GM^2}{R}$, and the thermal energy is $\frac32kT\cdot\frac{M}{0.6m_p}$. So $\langle T\rangle = \frac{0.6m_p}{3k}\cdot\frac35\frac{GM}{R} \approx 2.8\times10^6$ K, a lower bound on the typical temperature inside, since the Sun is denser (and hotter) at the centre. The centre is at $1.57\times10^7$ K. Either way the interior is millions of degrees, and the gas is fully ionised.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (How old can the Sun be?) Kelvin and Helmholtz proposed that the Sun shines by slowly contracting. Show that gravity can supply the Sun's present luminosity for a time of order $t_{\text{KH}} = GM^2/RL$, and evaluate it. Compare with the nuclear time if 10% of the Sun's hydrogen fuses, releasing 0.7% of its rest energy. Why did the Kelvin–Helmholtz time trouble Darwin?</p>
+        <details><summary>Solution</summary><div>
+          <p>The gravitational energy available from contracting to radius $R$ is of order $GM^2/R$ (by the virial theorem, half of it is radiated and half heats the gas). At luminosity $L$ it lasts $GM^2/RL = \frac{6.67\times10^{-11}\times(1.99\times10^{30})^2}{6.96\times10^8\times3.83\times10^{26}} = 9.9\times10^{14}$ s $\approx 30$ million years. Fusion gives $0.007\times0.1\times Mc^2/L = 0.0007\times1.99\times10^{30}\times9\times10^{16}/3.83\times10^{26} = 3.3\times10^{17}$ s $= 10$ billion years.</p>
+          <p>In 1862 Kelvin used the contraction time to argue that the Sun, and so the Earth, could be at most a few tens of millions of years old. Darwin's estimates of erosion and evolution needed hundreds of millions. Darwin was right: nuclear energy, unknown until the twentieth century, keeps the Sun shining for 300 times longer. Contraction does power stars, but only while they are forming, which is why young stars take tens of millions of years to settle onto the main sequence.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Fusion by tunnelling.) Two protons must get within about 1 fm to fuse. Find the Coulomb barrier there and compare it with $kT$ at the Sun's centre ($1.57\times10^7$ K). Quantum tunnelling makes the probability of passing the barrier roughly $e^{-\sqrt{E_G/E}}$, where $E_G = 2m_rc^2(\pi\alpha)^2$ is the Gamow energy, $m_r$ the reduced mass and $\alpha = 1/137$. Combined with the Boltzmann factor $e^{-E/kT}$, show that most reactions happen near the Gamow peak $E_0 = (E_G(kT)^2/4)^{1/3}$, and evaluate it.</p>
+        <details><summary>Solution</summary><div>
+          <p>The barrier is $\frac{e^2}{4\pi\varepsilon_0r} = 1.44$ MeV at $r = 1$ fm, while $kT = 8.62\times10^{-5}\text{ eV/K}\times1.57\times10^7\text{ K} = 1.35$ keV, a thousand times smaller. Classically, even the Maxwell tail would contain essentially no protons energetic enough: $e^{-1000}$. The Sun would need $10^{10}$ K.</p>
+          <p>For two protons $m_r = m_p/2$, so $E_G = m_pc^2(\pi\alpha)^2 = 938.3\text{ MeV}\times(\pi/137.0)^2 = 493$ keV. The reaction rate at energy $E$ goes as $\exp\big(-E/kT - \sqrt{E_G/E}\big)$: the first factor falls with $E$ and the second rises. The exponent is largest where $\frac1{kT} = \frac12\sqrt{E_G}E^{-3/2}$, i.e. $E_0 = \big(\tfrac12\sqrt{E_G}kT\big)^{2/3} = (E_G(kT)^2/4)^{1/3} = (493\times1.35^2/4)^{1/3}$ keV $= 6.1$ keV, about $4.5kT$. Protons with a few times the average energy tunnel through often enough. Even so, the first step, $p + p\to d + e^+ + \nu$, also needs the weak force, and a proton in the Sun waits about 10 billion years on average to fuse, which is exactly why the Sun lasts so long.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A photon's long walk.) A photon made in the Sun's core scatters off electrons with cross-section $\sigma_T = 6.65\times10^{-29}$ m². Using the Sun's mean density (1410 kg/m³, nearly all hydrogen), estimate its mean free path, and the time a random walk takes to cover a solar radius. Why is the real answer longer still?</p>
+        <details><summary>Solution</summary><div>
+          <p>The electron density is about $\rho/m_p = 1410/1.67\times10^{-27} = 8.4\times10^{29}$ m⁻³, so the mean free path is $\ell = 1/n\sigma_T = 1.8$ cm. A random walk of $N$ steps of length $\ell$ goes a distance $\sqrt N\ell$, so covering $R$ takes $N = (R/\ell)^2$ steps, and the time is $N\ell/c = R^2/\ell c = (6.96\times10^8)^2/(0.018\times3.0\times10^8)$ s $= 9\times10^{10}$ s, about 3000 years. In the deep interior, absorption by partly ionised heavier atoms makes the opacity much larger than pure electron scattering and the gas is far denser than average, so detailed models give tens to hundreds of thousands of years. The light you see today left the core before the last ice age, while the neutrinos made alongside it left eight minutes ago.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Big stars die young.) Energy leaks out of a star by radiative diffusion: $L \sim R^2\cdot\frac{c}{\kappa\rho}\cdot\frac{aT^4}{R}$, where $\kappa$ is the opacity per unit mass and $aT^4$ the radiation energy density. Using $\rho\sim M/R^3$ and the virial temperature $T\sim GM\mu m_p/kR$, show that $L\propto M^3$ for constant opacity. Observed main-sequence stars have roughly $L\propto M^{3.5}$. How long does a 10 solar-mass star live, if the Sun lives 10 billion years?</p>
+        <details><summary>Solution</summary><div>
+          <p>Substituting, $L \sim \frac{acR^4T^4}{\kappa M}$, and $T^4R^4 \propto M^4$ from the virial temperature, so $L\propto M^3/\kappa$: the radius drops out. Stars are not more luminous because they burn faster by choice; their luminosity is set by how fast radiation can leak out, and the fuel burning adjusts to match. The lifetime is fuel over luminosity, $t\propto M/L\propto M^{-2.5}$ with the observed law. A 10 $M_\odot$ star lives $10^{10}\times10^{-2.5} \approx 3\times10^7$ years, 30 million years, which is why massive blue stars are only found in regions where stars are still forming. A 0.2 $M_\odot$ red dwarf would live $10^{10}\times0.2^{-2.5} \approx 5\times10^{11}$ years, far longer than the universe's age: none has ever died.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The heaviest star.) Radiation pushes on electrons with force $\sigma_TL/4\pi r^2c$ per electron, and gravity pulls the attached proton with $GMm_p/r^2$. Find the Eddington luminosity $L_E$ above which radiation blows the star apart, in solar luminosities per solar mass. Combine it with $L/L_\odot = (M/M_\odot)^{3.5}$ to estimate the largest possible mass of a star.</p>
+        <details><summary>Solution</summary><div>
+          <p>Each electron drags its proton along (they are held together electrically), so the outward force on an electron–proton pair is $\sigma_TL/4\pi r^2c$, and the inward force is $GMm_p/r^2$. Both fall as $1/r^2$, so the balance is the same at every radius: $L_E = \frac{4\pi GMm_pc}{\sigma_T} = 1.26\times10^{31}\,\frac{M}{M_\odot}$ W $= 3.3\times10^4\,L_\odot\frac{M}{M_\odot}$. Setting $(M/M_\odot)^{3.5} = 3.3\times10^4\,(M/M_\odot)$ gives $M = (3.3\times10^4)^{1/2.5}M_\odot \approx 64M_\odot$. Real massive stars follow a shallower mass–luminosity relation at the top end, and the heaviest known (R136a1) is about 200 $M_\odot$, shedding mass in a fierce wind as it sits close to its Eddington limit. The same limit caps how fast black holes can grow by swallowing gas, and makes quasars the brightest steady objects in the universe.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="dead-stars">
+    <h2>Dead stars</h2>
+    <ol start="11">
+      <li>
+        <p><span class="tag hard">hard</span> (White dwarfs and Chandrasekhar's limit.) When a star's fuel runs out, its core is held up by electron degeneracy pressure. For non-relativistic electrons $P\sim\hbar^2n_e^{5/3}/m_e$, and for relativistic ones $P\sim\hbar cn_e^{4/3}$, where $n_e\sim M/(\mu_em_pR^3)$ with $\mu_e = 2$ nucleons per electron. Balance each against the gravitational pressure $GM^2/R^4$. Show that non-relativistic white dwarfs obey $R\propto M^{-1/3}$, so heavier ones are smaller, and estimate $R$ for one solar mass. Show that in the relativistic case $R$ cancels, leaving a single mass of order $(\hbar c/G)^{3/2}/(\mu_em_p)^2$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Non-relativistic: $\frac{\hbar^2}{m_e}\Big(\frac{M}{\mu_em_pR^3}\Big)^{5/3}\sim\frac{GM^2}{R^4}$ gives $R\sim\frac{\hbar^2}{Gm_e(\mu_em_p)^{5/3}}M^{-1/3}$. For $M = M_\odot$ this is about 2000 km; a careful solution of the structure equations gives a few times more, and Sirius B (1.0 $M_\odot$) has $R = 5800$ km, smaller than the Earth. A teaspoon of it weighs several tonnes. Adding mass squeezes it, so the electrons move faster, until they become relativistic.</p>
+          <p>Relativistic: $\hbar c\Big(\frac{M}{\mu_em_pR^3}\Big)^{4/3}\sim\frac{GM^2}{R^4}$. Both sides go as $R^{-4}$, so the radius cancels and the balance fixes the mass: $M\sim\frac{(\hbar c/G)^{3/2}}{(\mu_em_p)^2}$. Degeneracy pressure can then no longer adjust by shrinking, and above that mass nothing stops the collapse. $(\hbar c/G)^{3/2}/m_p^2 = 1.85M_\odot$; Chandrasekhar's exact calculation (1931) gives $3.10\times(\hbar c/G)^{3/2}/(\mu_em_p)^2 = 1.44M_\odot$. Stellar cores above it collapse to neutron stars or black holes, and white dwarfs pushed over it by accreting matter explode as type Ia supernovae, the standard candles of P3. The limit is made of $\hbar$, $c$, $G$ and the proton mass alone.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (How fast can a neutron star spin?) A neutron star has mass $1.4M_\odot$ and radius 12 km. Find its escape speed, and the shortest spin period before its equator would fling matter off (where gravity just supplies the centripetal force). The fastest pulsar known spins 716 times a second; is it close to the limit?</p>
+        <details><summary>Solution</summary><div>
+          <p>$v_{\text{esc}} = \sqrt{2GM/R} = \sqrt{2\times6.67\times10^{-11}\times2.79\times10^{30}/1.2\times10^4} = 1.8\times10^8$ m/s $= 0.59c$, so general relativity matters. At breakup $\Omega^2R = GM/R^2$, so $P_{\min} = 2\pi\sqrt{R^3/GM} = 2\pi\sqrt{(1.2\times10^4)^3/1.87\times10^{20}} = 0.6$ ms, about 1650 rotations per second. PSR J1748−2446ad spins at 716 Hz, a period of 1.40 ms, a bit under half the limit, with its equator moving at about a fifth of the speed of light. Such millisecond pulsars were spun up by accreting matter from a companion star. Real neutron stars flatten and lose mass a little before the Newtonian limit, and how close they can get depends on the unknown pressure of nuclear matter, which is one reason fast pulsars are watched closely.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (How dense is a black hole?) A non-rotating black hole of mass $M$ has event horizon radius $r_s = 2GM/c^2$. Evaluate it for the Sun. Define the "mean density" as $M$ over the volume $\frac43\pi r_s^3$. Show that it falls as $1/M^2$, and evaluate it for Sagittarius A* ($4\times10^6M_\odot$) and M87* ($6.5\times10^9M_\odot$).</p>
+        <details><summary>Solution</summary><div>
+          <p>$r_s = 2\times6.67\times10^{-11}\times1.99\times10^{30}/(3.0\times10^8)^2 = 2.95$ km for one solar mass, so $r_s\propto M$ and the density $\frac{M}{\frac43\pi r_s^3} = \frac{3c^6}{32\pi G^3M^2}\propto M^{-2}$. For Sgr A*, at the centre of our Galaxy, $1.2\times10^6$ kg/m³, a hundred times denser than lead; for M87*, $0.44$ kg/m³, a third of the density of air. A big enough black hole needs no extreme density at all: a large star cluster or galaxy core that is compact enough collapses just as surely. Its horizon is about 130 AU in radius, and the Event Horizon Telescope photographed its shadow in 2019. (The "density" is only a ratio, since inside the horizon there is no static matter at all.)</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Carroll and Ostlie's <i>An Introduction to Modern Astrophysics</i> works out every result here in detail, with problems. Phillips's <i>The Physics of Stars</i> is a short, clear guide to stellar structure and nuclear burning, and Prialnik's <i>An Introduction to the Theory of Stellar Structure and Evolution</i> derives the bound of problem 5 and many like it.</p>
+  </section>
+</article>

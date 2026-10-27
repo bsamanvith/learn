@@ -1,0 +1,190 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 3 of 4 · Advanced</div>
+  <h1>Level 3: advanced</h1>
+  <p class="lede">Twenty problems at the level of first-year university mathematics or national olympiad training. They bring in the tools that competition problems are built from: Bézout and Euler in number theory, recurrences and linearity of expectation in counting, Cauchy–Schwarz and Jensen for inequalities, roots of unity, power of a point, invariants and Euler's formula for graphs. Each problem teaches one tool; the hint (or the solution's first lines) names it, and the solution shows it at work.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/mathematics/L2-intermediate/">Level 2</a>, calculus, and complex numbers</span><span><b>Next:</b> <a href="/mathematics/L4-olympiad/">Level 4</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="number-theory">
+    <h2>Number theory</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Bézout's identity.) Find integers $x$ and $y$ with $252x + 198y = 18$. Then prove that for any integers $a$ and $b$, not both zero, $\gcd(a, b)$ is the smallest positive number of the form $ax + by$.</p>
+        <details><summary>Hint</summary><div><p>Run Euclid's algorithm (problem 7 of <a href="/mathematics/L1-basics/">Level 1</a>), then work backwards, substituting each remainder. For the proof, take the smallest positive $d = ax + by$ and show that it divides $a$, by dividing $a$ by $d$ and looking at the remainder.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Euclid gave $252 = 198 + 54$, $198 = 3\times54 + 36$, $54 = 36 + 18$. Backwards: $18 = 54 - 36 = 54 - (198 - 3\times54) = 4\times54 - 198 = 4(252 - 198) - 198 = 4\times252 - 5\times198$. So $x = 4$, $y = -5$ works (and so does $x = 4 + 11t$, $y = -5 - 14t$ for any integer $t$).</p>
+          <p>For the proof, let $d = ax + by$ be the smallest positive such number. Divide: $a = qd + r$ with $0 \le r &lt; d$. Then $r = a - qd = a(1 - qx) + b(-qy)$ is of the same form and smaller than $d$, so it can't be positive: $r = 0$, and $d$ divides $a$. Likewise $d$ divides $b$. And any common divisor of $a$ and $b$ divides $ax + by = d$. So $d$ is the greatest common divisor. The smallest-element argument, choosing the least counterexample or least positive value, is the "well-ordering principle", induction in disguise.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Stamps of 7 and 11.) Find all ways to make 100 from stamps of value 7 and 11. Show that every amount above 59 can be made, and that 59 cannot.</p>
+        <details><summary>Hint</summary><div><p>Reduce modulo 7 to find $y$. For the second part, show that the numbers $0, 11, 22, \dots, 66$ cover every remainder mod 7, and ask what is the first amount that can be reached with each remainder.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$7x + 11y = 100$ with $x, y \ge 0$. Mod 7: $11y \equiv 4y \equiv 100 \equiv 2$, so $y \equiv 4 \pmod 7$ (since $4\times4 = 16 \equiv 2$). $y = 4$ gives $x = 8$; $y = 11$ is too large. So the only way is $8\times7 + 4\times11$.</p>
+          <p>Multiples of 11 from 0 to 66 have the remainders $0, 4, 1, 5, 2, 6, 3$ modulo 7: all seven, each once. For each remainder, the smallest reachable amount is the multiple of 11 with that remainder, and then every larger amount with the same remainder is reachable by adding 7s. The largest of these smallest amounts is 66, so 66 is reachable but $66 - 7 = 59$ is not, and every amount from 60 on is. In general, for coprime $a$ and $b$, the largest unreachable amount is $ab - a - b$ (Sylvester, 1884): here $77 - 18 = 59$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (RSA by hand.) Euler's theorem says $a^{\varphi(n)} \equiv 1 \pmod n$ when $\gcd(a, n) = 1$, where $\varphi(n)$ counts the numbers from 1 to $n$ coprime to $n$. Take $n = 5\times11 = 55$ and public exponent $e = 3$. Find $\varphi(55)$ and a private exponent $d$ with $ed \equiv 1 \pmod{\varphi(n)}$. Encrypt the message $m = 7$ as $c = m^e \bmod n$, then decrypt it, and explain why decryption works.</p>
+        <details><summary>Hint</summary><div><p>For distinct primes, $\varphi(pq) = (p - 1)(q - 1)$. For the decryption, write $ed = 1 + k\varphi(n)$ and use Euler's theorem.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\varphi(55) = 4\times10 = 40$. We need $3d \equiv 1 \pmod{40}$: $d = 27$, since $81 = 2\times40 + 1$. Encrypt: $7^3 = 343 = 6\times55 + 13$, so $c = 13$. Decrypt: $13^{27} \bmod 55$, by repeated squaring: $13^2 = 169 \equiv 4$, $13^4 \equiv 16$, $13^8 \equiv 256 \equiv 36$, $13^{16} \equiv 1296 \equiv 31$. Then $13^{27} = 13^{16}13^813^213 \equiv 31\times36\times4\times13$; $31\times36 = 1116 \equiv 16$, $16\times4 = 64 \equiv 9$, $9\times13 = 117 \equiv 7$. The message comes back.</p>
+          <p>It works because $c^d = m^{ed} = m^{1 + 40k} = m\,(m^{40})^k \equiv m$, by Euler's theorem. Anyone may know $n$ and $e$, but finding $d$ needs $\varphi(n)$, which needs the factors of $n$. With primes of hundreds of digits, factorising $n$ is beyond any known computer, and that asymmetry protects most of the internet's traffic.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Infinite descent.) Prove that $x^2 + y^2 = 3z^2$ has no solutions in integers other than $x = y = z = 0$.</p>
+        <details><summary>Hint</summary><div><p>Squares are $\equiv 0$ or $1 \pmod 3$. Show that $x$ and $y$ must both be multiples of 3, and then that $z$ must be too. What does that say about the smallest solution?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Suppose there is a solution other than zero, and take one with $|z|$ as small as possible, but positive. (If $z = 0$ then $x = y = 0$.) Mod 3, the right side is 0, and a sum of two squares is $\equiv 0$ only if both are $\equiv 0$, since squares are 0 or 1. So $3 \mid x$ and $3 \mid y$. Write $x = 3x'$, $y = 3y'$: then $9(x'^2 + y'^2) = 3z^2$, so $z^2 = 3(x'^2 + y'^2)$, and $3 \mid z$. With $z = 3z'$, we get $x'^2 + y'^2 = 3z'^2$: a smaller solution, $|z'| = |z|/3$. Contradiction.</p>
+          <p>Fermat invented this "infinite descent": from any solution, build a smaller one, which is impossible for positive integers. Equivalently, the equation says $\sqrt3$ is the ratio of the length of a vector with integer coordinates to an integer, a cousin of the irrationality of $\sqrt3$. Geometrically, the circle $x^2 + y^2 = 3$ has no points with rational coordinates at all.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Making change.) In how many ways can 20p be made from coins of 1p, 2p, 5p and 10p? Describe a systematic method that would work for any amount.</p>
+        <details><summary>Hint</summary><div><p>Let $W_k(n)$ be the number of ways to make $n$ using only the first $k$ kinds of coin. Either you use none of the $k$-th coin, or you use at least one.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The recurrence is $W_k(n) = W_{k-1}(n) + W_k(n - c_k)$: either avoid coin $c_k$, or use one and make the rest in any way. Fill a table, coin by coin. With 1p alone, every amount has 1 way. Adding 2p, the number of ways for $n$ becomes $\lfloor n/2\rfloor + 1$, so 11 for 20p. Adding 5p: for 20p, use 0, 1, 2, 3 or 4 fives, leaving 20, 15, 10, 5 or 0 for 1p and 2p: $11 + 8 + 6 + 3 + 1 = 29$ ways. Adding 10p: use one 10p and make 10p from the smaller coins, which can be done in $6 + 3 + 1 = 10$ ways; or two 10p, 1 way. Total $29 + 10 + 1 = 40$.</p>
+          <p>The table method is dynamic programming: each answer is built from smaller ones already computed. The same counts are the coefficients of the generating function $\prod_k 1/(1 - x^{c_k})$, since expanding each factor as a geometric series $1 + x^c + x^{2c} + \dots$ chooses how many of each coin to use.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="combinatorics">
+    <h2>Counting and probability</h2>
+    <ol start="6">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Hats in the cloakroom.) $n$ people leave their hats in a cloakroom, and the hats are handed back at random. Let $D_n$ be the number of ways in which nobody gets their own hat (a "derangement"). Show that $D_n = (n - 1)(D_{n-1} + D_{n-2})$, find $D_n$ for $n \le 6$, and show that the probability $D_n/n!$ tends to $1/e$.</p>
+        <details><summary>Hint</summary><div><p>Person 1 gets the hat of some person $k$ ($n - 1$ choices). Then either $k$ gets hat 1 (a swap), or $k$ does not. For the limit, use inclusion–exclusion to get $D_n/n! = \sum_{j=0}^n(-1)^j/j!$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Say person 1 gets hat $k$, $n - 1$ choices. If person $k$ gets hat 1, the other $n - 2$ people form a derangement: $D_{n-2}$ ways. If not, then treat hat 1 as "person $k$'s forbidden hat": the $n - 1$ people other than person 1 must each avoid one hat, which is a derangement of $n - 1$: $D_{n-1}$ ways. So $D_n = (n - 1)(D_{n-1} + D_{n-2})$, with $D_1 = 0$, $D_2 = 1$, giving $D_3 = 2$, $D_4 = 9$, $D_5 = 44$, $D_6 = 265$.</p>
+          <p>By inclusion–exclusion, the number of permutations fixing at least the people in a given set of $j$ is $(n - j)!$, and there are $\binom nj$ such sets, so</p>
+          $$D_n = \sum_{j=0}^n(-1)^j\binom nj(n - j)! = n!\sum_{j=0}^n\frac{(-1)^j}{j!}\quad\Longrightarrow\quad\frac{D_n}{n!}\to e^{-1} = 0.3679.$$
+          <p>The convergence is astonishingly fast: $D_{10}/10! = 0.3678795$, correct to six places. Whether there are 10 people or 10 million, the chance that nobody gets their own hat is almost exactly 37%.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Linearity of expectation.) In the cloakroom of problem 6, what is the expected number of people who get their own hat back? Then: a cereal box contains one of 6 different toys, equally likely. On average, how many boxes must you buy to collect all six?</p>
+        <details><summary>Hint</summary><div><p>Write the count as a sum of indicator variables, one per person, and use $E[X + Y] = E[X] + E[Y]$, which holds even when $X$ and $Y$ are dependent. For the toys, split the wait into stages: waiting for the first new toy, then the second, and so on.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let $X_i = 1$ if person $i$ gets their own hat, else 0. Then $E[X_i] = 1/n$, and the expected number of matches is $E[\sum X_i] = n\times\frac1n = 1$, for any $n$. The $X_i$ are dependent, but linearity doesn't care.</p>
+          <p>For the toys, once you have $k$ different ones, each new box brings a new toy with probability $(6 - k)/6$, so the expected wait for the next is $6/(6 - k)$ boxes (problem 15 of <a href="/mathematics/L2-intermediate/">Level 2</a>). Adding the stages:</p>
+          $$E = 6\Big(\frac16 + \frac15 + \frac14 + \frac13 + \frac12 + 1\Big) = 6H_6 = 14.7.$$
+          <p>With $n$ toys, $nH_n \approx n\ln n$. The last toy is the slowest: it alone takes 6 boxes on average. Linearity of expectation solves many problems that would otherwise need the full, horribly tangled probability distribution.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The broken stick.) A stick is broken at two points chosen independently and uniformly at random. What is the probability that the three pieces form a triangle?</p>
+        <details><summary>Hint</summary><div><p>Three lengths form a triangle exactly when each is less than half the total. Represent the two break points as a point in the unit square and shade the region where the condition holds.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let the stick have length 1 and the breaks be at $x$ and $y$, a uniform point in the unit square. Take $x &lt; y$ first: the pieces are $x$, $y - x$ and $1 - y$, and each must be less than $\frac12$: $x &lt; \frac12$, $y &gt; \frac12$ and $y - x &lt; \frac12$. In the triangle $x &lt; y$ (area $\frac12$), this region is a small triangle with corners $(0, \frac12)$, $(\frac12, \frac12)$ and $(\frac12, 1)$, of area $\frac18$. By symmetry the case $y &lt; x$ gives the same, so the probability is $\frac18 + \frac18 = \frac14$.</p>
+          <p>A different way of breaking, such as breaking once and then breaking the longer piece at random, gives a different answer, which is why such problems must state exactly how the randomness works. Probability over continuous choices is area (or volume), and a careful picture is most of the solution.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (An invariant.) The numbers $1, 2, \dots, 10$ are written on a board. You repeatedly pick two numbers, erase them, and write their difference (larger minus smaller). After nine steps one number is left. Can it be 0?</p>
+        <details><summary>Hint</summary><div><p>Find something that doesn't change. Look at the sum of the numbers modulo 2.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Replacing $a$ and $b$ by $|a - b|$ changes the sum by $(a + b) - |a - b|$, which is $2\min(a, b)$: an even number. So the parity of the sum never changes. It starts at $1 + 2 + \dots + 10 = 55$, odd, so the last number is odd, and can't be 0. (It can be 1, for instance.) When a process can go many ways, look for an invariant: a quantity it cannot change. The answer to "can it reach this state?" is often "no, because the invariant differs".</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="inequalities-and-calculus">
+    <h2>Inequalities, series and calculus</h2>
+    <ol start="10">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Cauchy–Schwarz.) Prove that $(a_1b_1 + \dots + a_nb_n)^2 \le (a_1^2 + \dots + a_n^2)(b_1^2 + \dots + b_n^2)$ for real numbers, and say when equality holds. Use it to show that $(a + b + c)\big(\frac1a + \frac1b + \frac1c\big) \ge 9$ for positive $a, b, c$.</p>
+        <details><summary>Hint</summary><div><p>The quadratic $q(t) = \sum(a_it + b_i)^2$ is never negative, so its discriminant is $\le 0$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Expanding, $q(t) = t^2\sum a_i^2 + 2t\sum a_ib_i + \sum b_i^2 \ge 0$ for every $t$. A quadratic that never goes below zero has at most one real root, so its discriminant is $\le 0$: $4(\sum a_ib_i)^2 - 4\sum a_i^2\sum b_i^2 \le 0$, which is the inequality. Equality means $q$ has a root, so $a_it + b_i = 0$ for all $i$ at once: the two lists are proportional.</p>
+          <p>Take $a_i = \sqrt a, \sqrt b, \sqrt c$ and $b_i = 1/\sqrt a, 1/\sqrt b, 1/\sqrt c$: then $\sum a_ib_i = 3$, and Cauchy–Schwarz gives $9 \le (a + b + c)(\frac1a + \frac1b + \frac1c)$, with equality when $a = b = c$. In vector language it says $|\mathbf a\cdot\mathbf b| \le |\mathbf a||\mathbf b|$, the reason that cosines lie between $-1$ and 1, and it is the most used inequality in mathematics.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The best triangle in a circle.) A function $f$ is concave on an interval if $f\big(\frac{x_1 + \dots + x_n}{n}\big) \ge \frac{f(x_1) + \dots + f(x_n)}{n}$ there (Jensen's inequality, which holds when $f'' \le 0$). Use it to show that for the angles of any triangle, $\sin A + \sin B + \sin C \le \frac{3\sqrt3}{2}$. Deduce that of all triangles inscribed in a circle, the equilateral one has the largest perimeter.</p>
+        <details><summary>Solution</summary><div>
+          <p>On $[0, \pi]$, $(\sin x)'' = -\sin x \le 0$, so sine is concave. With $A + B + C = \pi$, Jensen gives $\frac13(\sin A + \sin B + \sin C) \le \sin\frac\pi3 = \frac{\sqrt3}{2}$, with equality only when $A = B = C$. For a triangle in a circle of radius $R$, the law of sines says each side is $a = 2R\sin A$, so the perimeter is $2R(\sin A + \sin B + \sin C) \le 3\sqrt3R$, and only the equilateral triangle achieves it. Jensen reduces many "which shape is best" questions to checking the sign of a second derivative.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Where $e$ comes from.) Show that $(1 + \frac1n)^n \to e$, where $e$ is the number with $\ln e = 1$ and $\ln x = \int_1^x dt/t$. Interpret it as compound interest.</p>
+        <details><summary>Hint</summary><div><p>Take logarithms: $n\ln(1 + \frac1n) = \ln(1 + h)/h$ with $h = 1/n$. That is a difference quotient for the derivative of $\ln$ at 1.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $h = 1/n$, $\ln\big((1 + h)^{1/h}\big) = \big(\ln(1 + h) - \ln1\big)/h$, which tends to the derivative of $\ln x$ at $x = 1$, that is $1/1 = 1$. Since $\exp$ is continuous, $(1 + \frac1n)^n \to e^1 = e = 2.71828\dots$ (Bounding the integral $\int_1^{1+h}dt/t$ between $h/(1 + h)$ and $h$ gives the same limit without derivatives.)</p>
+          <p>A bank paying 100% interest a year turns 1 into 2 if it pays once a year, $(1.5)^2 = 2.25$ if twice, $(1 + \frac1{12})^{12} = 2.61$ if monthly, and at most $e$ however often it pays. That is how Jacob Bernoulli first met $e$ in 1683. More generally $(1 + \frac xn)^n \to e^x$, which is why continuous growth is exponential.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Factorials as integrals.) Show by integration by parts that $\int_0^\infty x^ne^{-x}\,dx = n!$. What does this suggest for $\left(\frac12\right)!$? You may use $\int_0^\infty e^{-u^2}du = \frac{\sqrt\pi}{2}$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $I_n = \int_0^\infty x^ne^{-x}dx$. Integrating by parts, with $u = x^n$ and $dv = e^{-x}dx$: $I_n = [-x^ne^{-x}]_0^\infty + n\int_0^\infty x^{n-1}e^{-x}dx = 0 + nI_{n-1}$, since $x^ne^{-x}$ vanishes at both ends. With $I_0 = 1$, $I_n = n!$.</p>
+          <p>The integral makes sense for any $n &gt; -1$, not just whole numbers, so it defines $\Gamma(n + 1) = \int_0^\infty x^ne^{-x}dx$ as a factorial for all real $n$. For $n = \frac12$, put $x = u^2$: $\int_0^\infty ue^{-u^2}2u\,du = 2\int_0^\infty u^2e^{-u^2}du$, and integrating by parts once more, this is $\int_0^\infty e^{-u^2}du = \frac{\sqrt\pi}{2}$. So $(\frac12)! = \frac{\sqrt\pi}{2} = 0.886$. The Gaussian integral behind it is problem 6 of <a href="/mathematics/P2-analysis-and-the-infinite/">P2</a>; the factorial of a half is why $\pi$ turns up in the volume of a sphere in any dimension.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A series for $\ln2$.) Integrate the geometric series $\frac{1}{1 + t} = 1 - t + t^2 - \dots$ from 0 to $x$ to show that $\ln(1 + x) = x - \frac{x^2}2 + \frac{x^3}3 - \dots$ for $|x| &lt; 1$. Prove that it also holds at $x = 1$, giving $\ln2 = 1 - \frac12 + \frac13 - \frac14 + \dots$, by bounding the error.</p>
+        <details><summary>Hint</summary><div><p>Stop the geometric series after $n$ terms and keep the exact remainder: $\frac{1}{1 + t} = \sum_{k=0}^{n-1}(-t)^k + \frac{(-t)^n}{1 + t}$. Integrate the remainder and bound it.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The finite geometric sum gives, exactly, $\frac{1}{1 + t} = 1 - t + \dots + (-t)^{n-1} + \frac{(-t)^n}{1 + t}$. Integrating from 0 to $x$:</p>
+          $$\ln(1 + x) = x - \frac{x^2}{2} + \dots + (-1)^{n-1}\frac{x^n}{n} + (-1)^n\int_0^x\frac{t^n}{1 + t}\,dt.$$
+          <p>For $0 \le x \le 1$, the last integral is between 0 and $\int_0^xt^ndt = x^{n+1}/(n + 1) \le 1/(n + 1)$, which tends to 0. So the series converges to $\ln(1 + x)$ even at $x = 1$: $\ln2 = 1 - \frac12 + \frac13 - \dots = 0.6931\dots$. Notice the convergence is slow, with an error of about $\frac1{2n}$ after $n$ terms. Problem 5 of <a href="/mathematics/P2-analysis-and-the-infinite/">P2</a> shows that rearranging this very series can change its sum.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="complex-geometry-graphs">
+    <h2>Complex numbers, geometry and graphs</h2>
+    <ol start="15">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Roots of unity.) Let $\omega = e^{2\pi i/n}$. Show that $1 + \omega + \omega^2 + \dots + \omega^{n-1} = 0$ for $n \ge 2$, and that $(1 - \omega)(1 - \omega^2)\cdots(1 - \omega^{n-1}) = n$. Deduce that if a regular $n$-gon is inscribed in a circle of radius 1, the product of the lengths of the $n - 1$ chords from one corner to all the others is $n$.</p>
+        <details><summary>Hint</summary><div><p>The $n$-th roots of unity are the roots of $x^n - 1$, so $x^n - 1 = (x - 1)(x - \omega)\cdots(x - \omega^{n-1})$. Divide by $x - 1$ and put $x = 1$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The sum is a geometric series with ratio $\omega \ne 1$: it equals $(1 - \omega^n)/(1 - \omega) = 0$, since $\omega^n = 1$. Geometrically, the $n$ vectors pointing to the corners of a regular polygon add to zero, by symmetry.</p>
+          <p>Since the roots of $x^n - 1$ are $1, \omega, \dots, \omega^{n-1}$, we have $x^n - 1 = (x - 1)\prod_{k=1}^{n-1}(x - \omega^k)$. Also $x^n - 1 = (x - 1)(1 + x + \dots + x^{n-1})$. So $\prod_{k=1}^{n-1}(x - \omega^k) = 1 + x + \dots + x^{n-1}$ for every $x$, and at $x = 1$ the right side is $n$. The chord from the corner 1 to the corner $\omega^k$ has length $|1 - \omega^k|$, so the product of the chords is $n$. For a square: $\sqrt2\times2\times\sqrt2 = 4$. Equivalently, $\prod_{k=1}^{n-1}2\sin\frac{k\pi}{n} = n$, a trigonometric identity that is hard to prove any other way.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Why you can't trisect 60°.) Use de Moivre's theorem, $(\cos\theta + i\sin\theta)^3 = \cos3\theta + i\sin3\theta$, to show that $\cos3\theta = 4\cos^3\theta - 3\cos\theta$. Deduce that $x = 2\cos20^\circ$ satisfies $x^3 - 3x - 1 = 0$, and show that this cubic has no rational root. (Constructions with ruler and compass only produce lengths built from rationals by square roots, and a cubic with no rational root cannot have its roots built that way.)</p>
+        <details><summary>Solution</summary><div>
+          <p>Expanding the left side with $c = \cos\theta$ and $s = \sin\theta$, the real part is $c^3 - 3cs^2 = c^3 - 3c(1 - c^2) = 4c^3 - 3c$, which must equal $\cos3\theta$. For $\theta = 20^\circ$, $\cos60^\circ = \frac12$, so $4c^3 - 3c = \frac12$. With $x = 2c$ this is $\frac{x^3}{2} - \frac{3x}{2} = \frac12$, that is $x^3 - 3x - 1 = 0$.</p>
+          <p>If $x = p/q$ in lowest terms were a root, then $p^3 - 3pq^2 - q^3 = 0$. So $p$ divides $q^3$ and $q$ divides $p^3$; with no common factor, $p, q = \pm1$, and $x = \pm1$. But $1 - 3 - 1 = -3$ and $-1 + 3 - 1 = 1$: neither is zero. So the cubic has no rational root, and by the fact quoted, $\cos20^\circ$ cannot be constructed. A $60^\circ$ angle is easy to draw, but its third cannot be drawn with ruler and compass, as Wantzel proved in 1837, ending a 2000-year search.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The power of a point.) Two chords $AB$ and $CD$ of a circle meet at a point $P$ inside it. Prove that $PA\cdot PB = PC\cdot PD$. Show that the product equals $r^2 - d^2$, where $r$ is the radius and $d$ the distance from $P$ to the centre.</p>
+        <details><summary>Hint</summary><div><p>Find two similar triangles: join $AC$ and $BD$, and use the fact that angles standing on the same arc are equal. For the formula, take the chord through the centre.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Triangles $PAC$ and $PDB$ have equal angles at $P$ (vertically opposite), and $\angle PAC = \angle BAC = \angle BDC = \angle PDB$, since they stand on the same arc $BC$. So the triangles are similar, and $PA/PD = PC/PB$, which gives $PA\cdot PB = PC\cdot PD$.</p>
+          <p>Since the product is the same for every chord through $P$, compute it for the diameter through $P$: its pieces are $r - d$ and $r + d$, with product $r^2 - d^2$. This "power of the point" is also defined for $P$ outside, as $d^2 - r^2$, where it equals the square of the tangent length. It turns up whenever circles and lengths meet, and lets you prove, for example, that the three common chords of three mutually intersecting circles meet in a point.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The 13–14–15 triangle.) A triangle has sides 13, 14 and 15. Find its area, its inradius $r$ and its circumradius $R$, using $\text{area} = rs$ ($s$ the semi-perimeter) and $\text{area} = abc/4R$. Prove both formulas.</p>
+        <details><summary>Solution</summary><div>
+          <p>Heron: $s = 21$, area $= \sqrt{21\times8\times7\times6} = \sqrt{7056} = 84$. Then $r = 84/21 = 4$ and $R = 13\times14\times15/(4\times84) = 2730/336 = 65/8$. (The triangle splits along its 12-unit height into the 5-12-13 and 9-12-15 right triangles, which is why everything comes out rational.)</p>
+          <p>For $\text{area} = rs$: joining the incentre to the three corners splits the triangle into three triangles with heights $r$ and bases $a$, $b$, $c$, with total area $\frac12r(a + b + c) = rs$. For $\text{area} = abc/4R$: the law of sines gives $c = 2R\sin C$, and $\text{area} = \frac12ab\sin C = \frac12ab\cdot c/2R$. Both are instances of computing an area by cutting it up in a clever way.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The bridges of Königsberg.) Prove that in any finite graph the number of vertices of odd degree is even. Then prove that a connected graph can be traced in one stroke, using each edge exactly once and returning to the start, only if every vertex has even degree. Königsberg's four land masses had 5, 3, 3 and 3 bridges: could you walk across every bridge exactly once?</p>
+        <details><summary>Solution</summary><div>
+          <p>Adding the degrees of all vertices counts each edge twice, once from each end, so the sum is twice the number of edges: even. A sum of integers is even only if an even number of them are odd. (This is the "handshake lemma": at any party, the number of people who shook an odd number of hands is even.)</p>
+          <p>On a closed walk, each time you enter a vertex you leave it again, using two of its edges; the start is left at the beginning and entered at the end. So every vertex has even degree. A walk that need not return uses an odd number of edges at its two ends only, so it needs exactly 0 or 2 odd vertices. Königsberg had four odd vertices, so no such walk exists, as Euler proved in 1736, founding graph theory. The converse, that even degrees are enough, is also true, by a construction that splices together closed walks.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Drawing without crossings.) Use Euler's formula $V - E + F = 2$ for a connected graph drawn in the plane without crossings to show that such a graph with $V \ge 3$ has $E \le 3V - 6$. Deduce that the complete graph on 5 vertices, with every pair joined, can't be drawn in the plane without crossings. Show also that three houses can't each be joined to three utilities without crossings.</p>
+        <details><summary>Hint</summary><div><p>Every face is bounded by at least 3 edges, and every edge borders at most 2 faces, so $3F \le 2E$. For the houses and utilities, the graph has no triangles, so every face has at least 4 edges.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Counting edge–face incidences, $3F \le 2E$. Substituting $F = 2 - V + E$: $3(2 - V + E) \le 2E$, so $E \le 3V - 6$. The complete graph on 5 vertices has $E = 10$ but $3V - 6 = 9$, so it can't be drawn without crossings.</p>
+          <p>The houses-and-utilities graph has $V = 6$, $E = 9$. A cycle in it alternates houses and utilities, so it has even length, at least 4. So $4F \le 2E$, giving $F \le 4.5$. But Euler's formula needs $F = 2 - 6 + 9 = 5$. Contradiction. Kuratowski's theorem (1930) says these two graphs are essentially the only obstructions: a graph is planar exactly when it contains neither of them in a subdivided form. Electronic circuit layout is the practical form of this question.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

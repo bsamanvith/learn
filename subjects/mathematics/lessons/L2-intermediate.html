@@ -1,0 +1,191 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 2 of 4 · Intermediate</div>
+  <h1>Level 2: intermediate</h1>
+  <p class="lede">Twenty-four problems at the level of a strong final year of school: modular arithmetic, telescoping sums, the roots and remainders of polynomials, counting paths and sharing sweets, inclusion and exclusion, Bayes's rule, circle theorems, a first look at derivatives and integrals, and proofs by contradiction and by pigeonhole. Each needs a technique you may not have seen before; the solution names it first, so read just its first sentence if you are stuck.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/mathematics/L1-basics/">Level 1</a>, algebra with confidence, and basic trigonometry</span><span><b>Next:</b> <a href="/mathematics/L3-advanced/">Level 3</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag core">core</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="numbers">
+    <h2>Numbers and remainders</h2>
+    <ol>
+      <li>
+        <p><span class="tag core">core</span> (Squares and remainders.) Show that every square leaves remainder 0 or 1 on division by 4. Deduce that 2027 is not a sum of two squares, and that no number of the form $4k + 3$ is.</p>
+        <details><summary>Solution</summary><div>
+          <p>Work modulo 4: write $a \equiv b \pmod 4$ when $a - b$ is divisible by 4. Remainders can be added and multiplied like numbers. Every integer is $\equiv 0, 1, 2$ or $3$, and their squares are $\equiv 0, 1, 4 \equiv 0, 9 \equiv 1$. So a square is $\equiv 0$ or $1$, and a sum of two squares is $\equiv 0, 1$ or $2$, never 3. Since $2027 = 4\times506 + 3$, it is not a sum of two squares. Checking remainders is a cheap way to prove that something is impossible; Fermat proved the deep converse, that a prime $\equiv 1 \pmod 4$ always is a sum of two squares.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (A huge power, a small remainder.) Find the remainder when $2^{100}$ is divided by 7, and when $3^{2026}$ is divided by 10.</p>
+        <details><summary>Solution</summary><div>
+          <p>Look for a power that is $\equiv 1$. Here $2^3 = 8 \equiv 1 \pmod 7$, so $2^{100} = (2^3)^{33}\times2 \equiv 1^{33}\times2 = 2$. For the second, $3^4 = 81 \equiv 1 \pmod{10}$, and $2026 = 4\times506 + 2$, so $3^{2026} \equiv 3^2 = 9$. Once a power is 1, every higher power cycles. Fermat's little theorem guarantees that $a^{p-1} \equiv 1 \pmod p$ for a prime $p$ not dividing $a$ (proved in problem 3 of <a href="/mathematics/P1-numbers-and-counting/">P1</a>), so such a cycle always exists for primes.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Three in a row.) Prove that $n^3 - n$ is divisible by 6 for every integer $n$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Factorise: $n^3 - n = (n - 1)n(n + 1)$, a product of three consecutive integers. Among any two consecutive integers one is even, and among any three, one is a multiple of 3. So the product is divisible by 2 and by 3, and since they have no common factor, by 6. Factorising first turns an algebra question into a question about consecutive numbers, which is much easier. (In fact $n^p - n$ is divisible by $p$ for every prime $p$: Fermat again.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (A sum that collapses.) Find $\frac{1}{1\cdot2} + \frac{1}{2\cdot3} + \frac{1}{3\cdot4} + \dots + \frac{1}{n(n + 1)}$, and the infinite sum.</p>
+        <details><summary>Solution</summary><div>
+          <p>Split each term into partial fractions: $\frac{1}{k(k + 1)} = \frac1k - \frac{1}{k + 1}$. Then the sum is</p>
+          $$\Big(1 - \frac12\Big) + \Big(\frac12 - \frac13\Big) + \dots + \Big(\frac1n - \frac{1}{n + 1}\Big) = 1 - \frac{1}{n + 1},$$
+          <p>since everything in between cancels. As $n \to \infty$, the sum tends to 1. A sum like this is called "telescoping", after a collapsing telescope. The skill is to write each term as a difference $f(k) - f(k + 1)$; once you can, any such sum is easy.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Not a fraction.) Prove that $\log_23$ is irrational.</p>
+        <details><summary>Solution</summary><div>
+          <p>Suppose instead that $\log_23 = p/q$ with $p$ and $q$ positive integers. Then $2^{p/q} = 3$, and raising both sides to the power $q$, $2^p = 3^q$. But the left side is even and the right side is odd: a contradiction. So $\log_23$ is not a fraction. This is proof by contradiction: assume the opposite, and follow it until something impossible appears. It also shows that no number of perfect fifths in music can ever equal a number of octaves, since that would need $(3/2)^a = 2^b$.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="algebra">
+    <h2>Algebra</h2>
+    <ol start="6">
+      <li>
+        <p><span class="tag core">core</span> (Roots without solving.) The roots of $x^2 - 5x + 3 = 0$ are $\alpha$ and $\beta$. Without finding them, compute $\alpha^2 + \beta^2$, $\frac1\alpha + \frac1\beta$ and $\alpha^3 + \beta^3$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Since $x^2 - 5x + 3 = (x - \alpha)(x - \beta) = x^2 - (\alpha + \beta)x + \alpha\beta$, comparing coefficients gives Vieta's formulas: $\alpha + \beta = 5$ and $\alpha\beta = 3$. Now express everything in terms of these:</p>
+          $$\alpha^2 + \beta^2 = (\alpha + \beta)^2 - 2\alpha\beta = 19,\qquad \frac1\alpha + \frac1\beta = \frac{\alpha + \beta}{\alpha\beta} = \frac53,\qquad \alpha^3 + \beta^3 = (\alpha + \beta)^3 - 3\alpha\beta(\alpha + \beta) = 80.$$
+          <p>Every symmetric expression in the roots can be written this way, a theorem of Newton. Here the roots are $(5 \pm \sqrt{13})/2$, and the answers are integers even though the roots aren't.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The remainder theorem.) Find the remainder when $x^{100}$ is divided by $x^2 - 1$. When $x^{100} + x^{51}$ is divided by $x^2 - 1$?</p>
+        <details><summary>Solution</summary><div>
+          <p>Dividing by a quadratic leaves a remainder of degree at most 1: $x^{100} = (x^2 - 1)Q(x) + ax + b$. Substitute the roots of the divisor, where $Q$ is multiplied by zero: at $x = 1$, $1 = a + b$; at $x = -1$, $1 = -a + b$. So $a = 0$, $b = 1$, and the remainder is 1. For $x^{100} + x^{51}$: at $x = 1$, $2 = a + b$; at $x = -1$, $0 = -a + b$. So the remainder is $x + 1$. Substituting the roots of the divisor avoids doing any long division at all.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The binomial theorem.) Find the coefficient of $x^3$ in $(2x - 1)^6$, and the sum of all its coefficients.</p>
+        <details><summary>Solution</summary><div>
+          <p>Expanding $(a + b)^6$, a term $a^kb^{6-k}$ arises by choosing $a$ from $k$ of the six brackets, which can be done in $\binom6k$ ways. With $a = 2x$, $b = -1$ and $k = 3$: $\binom63(2x)^3(-1)^3 = 20\times8\times(-1)x^3 = -160x^3$. The sum of all the coefficients is the polynomial's value at $x = 1$: $(2 - 1)^6 = 1$. Putting in special values, such as $x = 1$ or $x = -1$, is a quick way to get sums of coefficients without expanding.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The Tower of Hanoi.) Discs of $n$ different sizes sit on one of three pegs, largest at the bottom. You may move one disc at a time to another peg, never putting a larger disc on a smaller. Find the least number of moves $a_n$ needed to move the whole tower to another peg, by finding a recurrence for $a_n$ and solving it.</p>
+        <details><summary>Solution</summary><div>
+          <p>To move the largest disc, all the others must first be on the third peg: $a_{n-1}$ moves. Then the largest disc moves (one move), and the $n - 1$ others must come back on top of it: $a_{n-1}$ more. Nothing better is possible, since the largest disc must move at least once and each time it does, the rest must be stacked elsewhere. So $a_n = 2a_{n-1} + 1$ with $a_1 = 1$.</p>
+          <p>The first values are 1, 3, 7, 15, 31, which suggests $a_n = 2^n - 1$. Proof: adding 1 to both sides gives $a_n + 1 = 2(a_{n-1} + 1)$, so $a_n + 1$ doubles each time, and equals $2^n$. The legend's 64 golden discs would take $2^{64} - 1 \approx 1.8\times10^{19}$ moves, about 600 billion years at one a second.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (An infinite square root.) What number is $\sqrt{2 + \sqrt{2 + \sqrt{2 + \dots}}}$? Be careful to say why it means anything.</p>
+        <details><summary>Solution</summary><div>
+          <p>Define it as the limit of $x_1 = \sqrt2$, $x_{n+1} = \sqrt{2 + x_n}$. If the limit $x$ exists, it satisfies $x = \sqrt{2 + x}$, so $x^2 - x - 2 = 0$, $(x - 2)(x + 1) = 0$, and $x = 2$, since $x &gt; 0$. To be sure the limit exists: if $x_n &lt; 2$ then $x_{n+1} &lt; \sqrt4 = 2$, and $x_{n+1} &gt; x_n$ exactly when $2 + x_n &gt; x_n^2$, which holds for $0 &lt; x_n &lt; 2$. So the sequence rises and stays below 2, and an increasing sequence that is bounded above converges. Without that check, the same algebra would "prove" that $1 - 1 + 1 - 1 + \dots$ is $\frac12$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (An exponential equation.) Solve $2^x = 3^{x - 1}$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Take logarithms of both sides, which turns exponents into factors: $x\ln2 = (x - 1)\ln3$. Collect $x$: $x(\ln3 - \ln2) = \ln3$, so</p>
+          $$x = \frac{\ln3}{\ln3 - \ln2} = \frac{\ln3}{\ln1.5} = 2.71.$$
+          <p>Check: $2^{2.71} = 6.5$ and $3^{1.71} = 6.5$. There is one solution, because $3^{x-1}/2^x = \frac13(1.5)^x$ is increasing, so it equals 1 only once.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="counting-and-probability">
+    <h2>Counting and probability</h2>
+    <ol start="12">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Paths on a grid.) On a grid of streets 4 blocks wide and 3 blocks high, how many shortest routes go from the bottom-left corner to the top-right? How many of them pass through the point 2 across and 1 up?</p>
+        <details><summary>Solution</summary><div>
+          <p>Every shortest route is a sequence of 4 moves right and 3 moves up, in some order. Choosing which 3 of the 7 moves are "up" fixes the route, so there are $\binom73 = 35$ routes. Through the point $(2, 1)$: there are $\binom31 = 3$ routes to it and $\binom42 = 6$ from it to the end (2 more across, 2 more up), so $3\times6 = 18$. Turning a geometric question into a choice of positions in a word is the key step in many counting problems.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Sharing sweets.) In how many ways can 10 identical sweets be shared among 3 children? In how many ways if each child gets at least one?</p>
+        <details><summary>Solution</summary><div>
+          <p>Line up the 10 sweets and add 2 dividers: the sweets before the first divider go to the first child, those between to the second, and those after to the third. Every sharing corresponds to exactly one arrangement of 10 stars and 2 bars, so there are $\binom{12}{2} = 66$. If each child must get at least one, first give each child one sweet, then share the remaining 7 freely: $\binom92 = 36$. This "stars and bars" trick counts the ways to write $n$ as an ordered sum of $k$ non-negative integers: $\binom{n + k - 1}{k - 1}$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Inclusion and exclusion.) How many of the numbers 1 to 1000 are divisible by 3, 5 or 7?</p>
+        <details><summary>Solution</summary><div>
+          <p>Count each set, subtract the overlaps counted twice, and add back what was subtracted too often. Writing $\lfloor x\rfloor$ for the whole part of $x$: multiples of 3, 5 and 7 number $333, 200, 142$; of 15, 21 and 35, $66, 47, 28$; of 105, $9$. So</p>
+          $$333 + 200 + 142 - 66 - 47 - 28 + 9 = 543.$$
+          <p>A number divisible by all three was counted 3 times, subtracted 3 times, and added back once, so it is counted once, as it should be. In general an element in $m$ of the sets is counted $\binom m1 - \binom m2 + \binom m3 - \dots = 1$ times, by the binomial theorem applied to $(1 - 1)^m = 0$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Waiting for a six.) On average, how many times must you roll a die to get a six? Prove it.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $E$ be the expected number of rolls. Roll once: with probability $\frac16$ it's a six and you are done after 1 roll; otherwise you have used 1 roll and are back where you started, needing $E$ more on average. So $E = 1 + \frac56E$, and $E = 6$. The same argument shows that an event of probability $p$ takes $1/p$ tries on average. Setting up an equation by thinking about the first step is a very general method; the direct sum $\sum k(5/6)^{k-1}\frac16$ gives the same answer with more work.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A positive test.) A disease affects 1% of people. A test detects it in 99% of people who have it, and wrongly says "positive" for 5% of those who don't. You test positive. What is the probability you have the disease? Guess first.</p>
+        <details><summary>Solution</summary><div>
+          <p>Imagine 10 000 people. 100 have the disease, and 99 of them test positive. Of the 9900 who don't, 5% test positive: 495. So of the $99 + 495 = 594$ positive tests, only 99 are true:</p>
+          $$P(\text{disease} \mid \text{positive}) = \frac{99}{594} = \frac16 \approx 17\%.$$
+          <p>Most people guess about 95%. The test is good, but the disease is rare, so false positives from the healthy majority swamp the true ones. This is Bayes's rule, $P(A\mid B) = P(B\mid A)P(A)/P(B)$, and imagining a concrete crowd is the easiest way to use it. A second, independent positive test would raise the probability to about 80%.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Five points in a square.) Show that among any 5 points inside a square of side 1, two are at most $\sqrt2/2$ apart.</p>
+        <details><summary>Solution</summary><div>
+          <p>Divide the square into four smaller squares of side $\frac12$. Five points in four squares: by the pigeonhole principle, two points lie in the same small square (or on its edge). Two points in a square of side $\frac12$ are at most its diagonal apart, $\sqrt2/2$. The bound is the best possible, since the four corners and the centre are exactly $\sqrt2/2$ from their nearest neighbours. The art of pigeonhole proofs is choosing the boxes.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="geometry-and-calculus">
+    <h2>Geometry and a first look at calculus</h2>
+    <ol start="18">
+      <li>
+        <p><span class="tag core">core</span> (The angle in a semicircle.) Prove that the angle at the centre of a circle is twice the angle at the circumference standing on the same arc. Deduce that any angle in a semicircle is a right angle.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $O$ be the centre, and $A$, $B$, $C$ points on the circle; we compare $\angle AOB$ with $\angle ACB$. Draw the diameter through $C$. Triangle $OAC$ is isosceles ($OA = OC$, both radii), so its base angles are equal, say $x$, and the outside angle it makes at $O$ is $2x$. Similarly for triangle $OBC$, with angle $y$ and outside angle $2y$. So $\angle ACB = x + y$ and $\angle AOB = 2x + 2y$. (If $C$ is placed so that the diameter falls outside the angle, subtract instead of adding; the result is the same.) If $AB$ is a diameter, $\angle AOB = 180^\circ$, so $\angle ACB = 90^\circ$: Thales's theorem.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A triangle with a nice angle.) A triangle has sides 5, 7 and 8. Find the angle opposite the side of length 7, and the triangle's area.</p>
+        <details><summary>Solution</summary><div>
+          <p>The law of cosines, $c^2 = a^2 + b^2 - 2ab\cos C$, generalises Pythagoras. With $c = 7$: $49 = 25 + 64 - 80\cos C$, so $\cos C = \frac12$ and $C = 60^\circ$. The area is $\frac12ab\sin C = \frac12\times5\times8\times\frac{\sqrt3}{2} = 10\sqrt3 \approx 17.3$. Triangles with integer sides and a $60^\circ$ angle are rare and pleasant; Heron's formula (problem 2 of <a href="/mathematics/P3-geometry-symmetry-and-puzzles/">P3</a>) gives the same area from the sides alone.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (An exact value.) Find $\sin15^\circ$ exactly, using $\sin(A - B) = \sin A\cos B - \cos A\sin B$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$15^\circ = 45^\circ - 30^\circ$, and both have known values:</p>
+          $$\sin15^\circ = \frac{\sqrt2}{2}\cdot\frac{\sqrt3}{2} - \frac{\sqrt2}{2}\cdot\frac12 = \frac{\sqrt6 - \sqrt2}{4} = 0.2588.$$
+          <p>Check with a calculator: $\sin15^\circ = 0.2588$. Addition formulas let you build exact values for all multiples of $15^\circ$, and, with the half-angle formula, $7.5^\circ$ and so on. Gauss showed which angles have values expressible with square roots alone: exactly those of regular polygons that can be drawn with ruler and compass, such as the 17-gon.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Area from coordinates.) Find the area of the triangle with corners $(0, 0)$, $(4, 1)$ and $(1, 3)$.</p>
+        <details><summary>Solution</summary><div>
+          <p>For a triangle with one corner at the origin and the others at $(x_1, y_1)$ and $(x_2, y_2)$, the area is $\frac12|x_1y_2 - x_2y_1|$. Here that is $\frac12|4\times3 - 1\times1| = \frac{11}{2}$. One way to see it: draw the $4\times3$ rectangle around the triangle and subtract the three right triangles around it, $12 - 2 - 1.5 - 3 = 5.5$. The expression $x_1y_2 - x_2y_1$ is a determinant, which measures signed area; its sign tells you whether the corners go round anticlockwise.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The best enclosure.) A farmer has 20 m of fence. What is the largest rectangular area it can enclose? What if one side of the rectangle is a long wall that needs no fence?</p>
+        <details><summary>Solution</summary><div>
+          <p>With sides $x$ and $10 - x$, the area is $A = x(10 - x) = 25 - (x - 5)^2$, which is largest, 25 m², at $x = 5$: a square. With a wall, the fence makes three sides, $x + x + y = 20$, and the area is $x(20 - 2x)$. Its derivative $20 - 4x$ vanishes at $x = 5$, so the best is $5\times10 = 50$ m², twice as much: half of a $10\times10$ square, reflected in the wall. Completing the square and setting the derivative to zero are the two standard ways to find a maximum; the reflection is a third, and often the neatest.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The slope of a curve.) Using the definition $f'(x) = \lim_{h\to0}\big(f(x + h) - f(x)\big)/h$, find the derivative of $x^2$. Find the tangent line to $y = x^2$ at the point $(3, 9)$, and where it meets the $x$-axis.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\big((x + h)^2 - x^2\big)/h = (2xh + h^2)/h = 2x + h$, which tends to $2x$ as $h \to 0$. So the slope at $x = 3$ is 6, and the tangent is $y - 9 = 6(x - 3)$, that is $y = 6x - 9$. It meets the $x$-axis at $x = 1.5$, half of 3. In general the tangent to $y = x^2$ at $x = a$ crosses the axis at $a/2$, a fact used to construct parabolas' tangents with a ruler.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Archimedes's area.) Find the area under $y = x^2$ from $x = 0$ to $x = 1$ by adding up thin rectangles: divide $[0, 1]$ into $n$ strips and use rectangles of height $(k/n)^2$. You will need $1^2 + 2^2 + \dots + n^2 = n(n + 1)(2n + 1)/6$.</p>
+        <details><summary>Solution</summary><div>
+          <p>The $k$-th rectangle has width $\frac1n$ and height $(k/n)^2$, so the total area of the rectangles is</p>
+          $$\sum_{k=1}^n\frac{k^2}{n^3} = \frac{n(n + 1)(2n + 1)}{6n^3} = \frac16\Big(1 + \frac1n\Big)\Big(2 + \frac1n\Big)\;\longrightarrow\;\frac13.$$
+          <p>The rectangles stick out above the curve, but by less and less as $n$ grows, and the limit is the true area, $\frac13$. Archimedes found it around 250 BC, by a cleverer method. The fundamental theorem of calculus explains why the answer is $\frac13$: $\frac13x^3$ is a function whose derivative is $x^2$, so the area is $\frac13\times1^3 - 0$.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

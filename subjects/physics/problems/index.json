@@ -1,0 +1,210 @@
+{
+  "_about": "The physics problem book's registry: key books and named classics. See principles/problem-books.md. Every named classic here is solved in a problem set; \"where\" points to it.",
+  "intro": "Physics problems are worth doing when the answer surprises you. Each set asks for a guess first, then the calculation, then a check against a number you know.",
+  "lede": "Climb the ladder from Level 1, or pick a topic, and guess before you calculate.",
+  "search": "Search: pendulum, entropy, tunnelling…",
+  "volumes": {
+    "stage": {
+      "title": "By topic",
+      "blurb": "One set per area of physics, each running from warm-ups to hard problems, every one with a worked solution."
+    }
+  },
+  "books": [
+    {
+      "title": "Problems in General Physics",
+      "author": "I. E. Irodov",
+      "level": "Intermediate → hard",
+      "free": false,
+      "when": "The classic: 1,900 short, sharp problems across all of first-year physics. Pick any chapter after the matching set here."
+    },
+    {
+      "title": "Physics Olympiad: Basic to Advanced Exercises",
+      "author": "The Committee of Japan Physics Olympiad",
+      "level": "Intermediate → hard",
+      "free": false,
+      "when": "Long problems that build an idea over several parts, with full solutions. For after P1–P3."
+    },
+    {
+      "title": "200 Puzzling Physics Problems",
+      "author": "Péter Gnädig, Gyula Honyek & Ken Riley",
+      "level": "Intermediate",
+      "free": false,
+      "when": "Clever problems that need one idea rather than a long calculation, with hints and solutions. Great for the guess-first habit."
+    },
+    {
+      "title": "Introduction to Classical Mechanics",
+      "author": "David Morin",
+      "level": "Intermediate → hard",
+      "free": false,
+      "when": "Hundreds of problems with full solutions, including a superb relativity section. Alongside P1 and P4."
+    },
+    {
+      "title": "An Introduction to Thermal Physics",
+      "author": "Daniel V. Schroeder",
+      "level": "Intermediate",
+      "free": false,
+      "when": "Builds statistical mechanics from counting, with problems that compute real numbers. After P3."
+    },
+    {
+      "title": "Guesstimation",
+      "author": "Lawrence Weinstein & John A. Adam",
+      "level": "Beginner",
+      "free": false,
+      "when": "Order-of-magnitude estimates from everyday life. Any time, to sharpen the habit of checking an answer's size."
+    },
+    {
+      "title": "The Feynman Lectures on Physics",
+      "author": "Richard Feynman, Robert Leighton & Matthew Sands",
+      "level": "Beginner → intermediate",
+      "free": true,
+      "when": "Not a problem book, but the best explanations to read when a solution here leaves you asking why. Free online at Caltech."
+    }
+  ],
+  "hard": [
+    {
+      "id": "skier-dome",
+      "title": "The skier on the dome",
+      "stars": 2,
+      "unlocks": "P1",
+      "idea": "A skier slides off a frictionless hemisphere. She leaves the surface when the normal force hits zero: at cos θ = 2/3, a third of the way down, whatever R, g or her mass.",
+      "visual": "The dome with the skier's path, the point of departure, and N(θ) falling to zero.",
+      "source": "Classic mechanics",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#3"
+    },
+    {
+      "id": "spinning-hoop",
+      "title": "The bead on a spinning hoop",
+      "stars": 3,
+      "unlocks": "P1",
+      "idea": "Spin the hoop past √(g/R) and the bottom stops being stable; the bead picks a side. A pitchfork bifurcation, the simplest broken symmetry.",
+      "visual": "Equilibrium angle against spin rate: one branch splitting into two.",
+      "source": "Classic mechanics",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#7"
+    },
+    {
+      "id": "real-pendulum",
+      "title": "The pendulum's real period",
+      "stars": 3,
+      "unlocks": "P1",
+      "idea": "From horizontal, a pendulum takes 18% longer than Galileo's rule. The exact answer is an elliptic integral, or the arithmetic-geometric mean.",
+      "visual": "Two pendulums drifting apart, and T/T₀ against amplitude (interactive).",
+      "source": "Classic mechanics",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#9"
+    },
+    {
+      "id": "tennis-racket",
+      "title": "The tennis racket theorem",
+      "stars": 3,
+      "unlocks": "P1",
+      "idea": "Spin about the axis with the middle moment of inertia is unstable: Euler's equations give exponential growth of any wobble.",
+      "visual": "A spinning book flipping over, again and again.",
+      "source": "Euler; Dzhanibekov",
+      "status": "planned",
+      "notes": "",
+      "where": "P1#11"
+    },
+    {
+      "id": "earth-tunnel",
+      "title": "A tunnel through the Earth",
+      "stars": 2,
+      "unlocks": "P2",
+      "idea": "Any straight frictionless tunnel takes 42 minutes end to end: Gauss's law makes the motion harmonic with the period of a grazing orbit.",
+      "visual": "Chords through a sphere, all crossed in the same time.",
+      "source": "Classic",
+      "status": "planned",
+      "notes": "",
+      "where": "P2#5"
+    },
+    {
+      "id": "resistor-grid",
+      "title": "The infinite resistor grid",
+      "stars": 3,
+      "unlocks": "P2",
+      "idea": "Between adjacent nodes of an infinite square grid of resistors R, the resistance is exactly R/2: symmetry plus superposition.",
+      "visual": "Current spreading out from one node, and the superposed flow.",
+      "source": "Classic puzzle",
+      "status": "planned",
+      "notes": "",
+      "where": "P2#8"
+    },
+    {
+      "id": "atom-collapse",
+      "title": "The classical atom collapses",
+      "stars": 3,
+      "unlocks": "P2",
+      "idea": "Larmor radiation makes a classical hydrogen atom spiral into its nucleus in 16 picoseconds. Atoms existing at all is evidence for quantum mechanics.",
+      "visual": "The shrinking spiral and its rising chirp.",
+      "source": "Classic electrodynamics",
+      "status": "planned",
+      "notes": "",
+      "where": "P2#12"
+    },
+    {
+      "id": "gibbs-paradox",
+      "title": "Gibbs's paradox",
+      "stars": 3,
+      "unlocks": "P3",
+      "idea": "Mixing two identical gases can't raise the entropy, but classical counting says it does. Dividing by N! fixes it, for a reason only quantum mechanics explains.",
+      "visual": "A partition lifting between two gases, different and identical.",
+      "source": "Gibbs, 1902",
+      "status": "planned",
+      "notes": "",
+      "where": "P3#6"
+    },
+    {
+      "id": "szilard-engine",
+      "title": "The price of forgetting",
+      "stars": 3,
+      "unlocks": "P3",
+      "idea": "A one-molecule engine extracts kT ln 2 from one bit of knowledge; erasing the bit costs at least as much. Maxwell's demon pays its bill.",
+      "visual": "The Szilard cycle: insert, measure, expand, erase.",
+      "source": "Szilard 1929; Landauer 1961",
+      "status": "planned",
+      "notes": "",
+      "where": "P3#12"
+    },
+    {
+      "id": "twin-paradox",
+      "title": "The twin paradox by birthday cards",
+      "stars": 3,
+      "unlocks": "P4",
+      "idea": "Count the light signals each twin receives: 10 for one and 6 for the other, and both agree. The asymmetry is when each one sees the turnaround.",
+      "visual": "A spacetime diagram with the two streams of signals.",
+      "source": "Classic relativity",
+      "status": "planned",
+      "notes": "",
+      "where": "P4#4"
+    },
+    {
+      "id": "antiproton",
+      "title": "Making the first antiproton",
+      "stars": 3,
+      "unlocks": "P4",
+      "idea": "Making a proton–antiproton pair needs 6 m c² of beam energy on a fixed target, not 2: the invariant s explains why colliders collide.",
+      "visual": "Threshold energy against the mass made, fixed target vs collider.",
+      "source": "Bevatron, 1955",
+      "status": "planned",
+      "notes": "",
+      "where": "P4#6"
+    },
+    {
+      "id": "three-polarisers",
+      "title": "Three polarisers",
+      "stars": 2,
+      "unlocks": "P4",
+      "idea": "Crossed polarisers block everything; add a third between them and a quarter gets through. Many small steps let almost everything through.",
+      "visual": "Transmitted fraction against the number of steps, approaching 1.",
+      "source": "Classic optics",
+      "status": "planned",
+      "notes": "",
+      "where": "P4#12"
+    }
+  ],
+  "assignments": []
+}

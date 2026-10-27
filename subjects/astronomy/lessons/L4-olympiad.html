@@ -1,0 +1,136 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 4 of 4 · Olympiad</div>
+  <h1>Level 4: olympiad</h1>
+  <p class="lede">Fourteen problems in the style of the International Olympiad on Astronomy and Astrophysics. They need nothing beyond Level 3, but each hides its method: a diagram to draw, a quantity to maximise, a light curve to read, a relativistic illusion to see through. Draw a careful picture before writing any equation; in astronomy the geometry is usually the problem. Every one has a full solution, and the ones with a hidden method have a hint.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/astronomy/L3-advanced/">Level 3</a>, and a ruler and pencil</span><span><b>Then:</b> the topic sets, starting with <a href="/astronomy/P1-orbits-and-the-sky/">orbits and the sky</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag olympiad">olympiad</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="geometry">
+    <h2>Geometry of the sky</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (The Earth's shadow and the eclipsed Moon.) Find the length of the Earth's umbra (full shadow) and its radius at the Moon's distance, 384 400 km. ($R_\oplus = 6371$ km, $R_\odot = 696\,000$ km, 1 AU $= 1.496\times10^8$ km, Moon radius 1737 km.) How many Moon diameters wide is the shadow, and what is the longest possible total lunar eclipse? How did Aristarchus use this, around 270 BC, to measure the Moon?</p>
+        <details><summary>Hint</summary><div><p>Similar triangles: the umbra is a cone whose sides graze both the Sun and the Earth. For the eclipse's duration, the Moon moves through the shadow at its orbital speed, minus the speed at which the shadow itself moves as the Earth orbits.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The shadow cone narrows from radius $R_\oplus$ at the Earth to zero at its tip, while from the Sun's edge to the Earth's edge the radius falls by $R_\odot - R_\oplus$ over 1 AU. By similar triangles, the length is $L = R_\oplus\times1\text{ AU}/(R_\odot - R_\oplus) = 1.38\times10^6$ km, 3.6 times the Moon's distance. At the Moon, the radius is $R_\oplus(1 - 384\,400/L) = 4600$ km: 2.65 Moon radii, so the shadow is 2.65 Moon diameters across.</p>
+          <p>The Moon moves at $2\pi\times384\,400/27.32$ days $= 1.02$ km/s, and the shadow follows the Sun's apparent motion at $2\pi\times384\,400/365.25$ days $= 0.08$ km/s, so the Moon crosses it at 0.95 km/s. Through the centre, the time from the Moon being fully inside to its starting to leave is $(2\times4600 - 3474)/0.95$ s, about 1.7 hours. The record totality is 1 h 47 min. Aristarchus timed eclipses and saw that the shadow was about two and a half Moons wide; since the shadow at the Moon is only a little smaller than the Earth, the Moon must be roughly a third of the Earth's size. With its angular size, that gave its distance in Earth radii, in the right range.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Watch the sunset twice.) Lie on a beach and watch the Sun set over a flat sea. As its last sliver vanishes, stand up quickly, raising your eyes by 1.7 m. How long can you watch the sunset again, at the equator on an equinox? At latitude $60^\circ$? (Ignore refraction.)</p>
+        <details><summary>Hint</summary><div><p>Raising your eye lowers your horizon by the dip angle, about $\sqrt{2h/R}$ radians. On an equinox the Sun sets along a path tilted from the vertical by your latitude, so the Sun's vertical drop rate is $15^\circ$ per hour times $\cos\phi$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>From height $h$ the line to the horizon tilts below the horizontal by $\alpha$ with $\cos\alpha = R/(R + h)$, so $\alpha \approx \sqrt{2h/R} = \sqrt{3.4/6.371\times10^6} = 7.3\times10^{-4}$ rad $= 0.042^\circ$. At the equator on an equinox the Sun goes straight down at $15^\circ$ per hour, $1^\circ$ every 4 minutes, so it takes $0.042\times240 = 10$ s to sink through the dip angle: ten seconds of second sunset. At $60^\circ$ latitude the Sun slides down at an angle, sinking at $15^\circ\cos60^\circ$ per hour, so the encore lasts twice as long, 20 s.</p>
+          <p>Turned around, this is a way to measure the Earth with a stopwatch: Zachary Rawlins did it in 1979 with a time of about 10 s. Near the poles in summer the Sun skims along the horizon, and the effect lasts for minutes.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Out of sight of the satellites.) A geostationary satellite orbits at 42 164 km from the Earth's centre, above the equator. Up to what latitude can it be seen at all? A space station at 420 km passes directly overhead at 7.66 km/s. How long does it take to cross the face of the Sun, $0.53^\circ$ across?</p>
+        <details><summary>Solution</summary><div>
+          <p>The satellite is visible where it is above the horizon. At the limit the line of sight is tangent to the Earth, so the angle at the Earth's centre between the observer and the satellite has $\cos\theta = R/r = 6378/42\,164$, giving $\theta = 81.3^\circ$. For a satellite on the observer's meridian, that is the latitude. Beyond $81.3^\circ$ (in practice a few degrees lower, for a useful elevation), satellite TV and communication fail, which is why polar regions need satellites in other orbits.</p>
+          <p>Overhead, the station's angular speed is $v/h = 7.66/420$ rad/s $= 1.04^\circ$ per second, so it crosses the Sun in about $0.53/1.04 = 0.5$ s. Photographers who catch it plan by the minute and the metre, since the strip on the ground from which the transit is visible is only a few kilometres wide.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (When is Venus brightest?) Venus orbits at 0.723 AU. Its brightness is proportional to the fraction of its disc that is lit, $(1 + \cos\phi)/2$ where $\phi$ is the angle Sun–Venus–Earth, divided by the square of its distance from the Earth. Show that Venus is not brightest when nearest (it is then dark side on) nor when full (it is then far). Find the Earth–Venus distance, the elongation from the Sun and the lit fraction when it is brightest.</p>
+        <details><summary>Hint</summary><div><p>Use the Sun–Venus–Earth triangle with sides 1, 0.723 and $d$: the cosine rule gives $\cos\phi = (0.723^2 + d^2 - 1)/(2\times0.723\,d)$. Maximise $(1 + \cos\phi)/d^2$ as a function of $d$ alone.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $r = 0.723$, $1 + \cos\phi = \big((r + d)^2 - 1\big)/2rd$, so the brightness is proportional to</p>
+          $$B(d) = \frac{(r + d)^2 - 1}{d^3}.$$
+          <p>Differentiating, $B'(d) = 0$ when $2(r + d)d = 3\big((r + d)^2 - 1\big)$, which is a quadratic: $d^2 + 4rd + 3r^2 - 3 = 0$, so $d = -2r + \sqrt{r^2 + 3} = 0.431$ AU. Then $\cos\phi = -0.468$, so $\phi = 118^\circ$ and only 27% of the disc is lit. By the sine rule the elongation (angle Sun–Earth–Venus) is $39.7^\circ$. This happens about 36 days before and after inferior conjunction, when Venus is a fat crescent in the evening or morning sky, bright enough to cast shadows. The answer depends only on $r$. The maximum exists only if $d \le 1 + r$, which needs $r &gt; 0.25$. For Mercury ($r = 0.387$) the model predicts a greatest brilliancy too, but Mercury's rough, airless surface reflects far less at crescent phases than this simple model assumes, and in fact it is brightest near full.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Rømer measures light.) In 1676 Ole Rømer noticed that eclipses of Jupiter's moon Io came later than predicted when the Earth was moving away from Jupiter, and earlier when it approached. Between the times the Earth is nearest to Jupiter and furthest from it, the eclipses fall behind by about 16.6 minutes in total. Find the speed of light. Why does the delay build up gradually rather than all at once?</p>
+        <details><summary>Solution</summary><div>
+          <p>Nearest and furthest, the Earth is on the same side of the Sun as Jupiter and then on the opposite side, so the extra distance light must travel is the diameter of the Earth's orbit, 2 AU. Then $c = 2\times1.496\times10^{11}/(16.6\times60) = 3.0\times10^8$ m/s. Rømer's own figure for the delay was about 22 minutes, and Huygens turned it into a speed about a quarter too low; the poor value of the AU at the time didn't help.</p>
+          <p>Io circles Jupiter every 42.5 hours, a very regular clock. Each eclipse is delayed relative to the previous one by the extra distance the Earth has moved away during one period, at most $v_\oplus\times42.5$ h$/c$, about 15 seconds. Those small delays accumulate over the six months, and Rømer's insight was to see them as a single effect of light's travel time, not an irregularity of Io.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="stars">
+    <h2>Stars and their light</h2>
+    <ol start="6">
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (Reading an eclipsing binary.) Two stars orbit each other in circular orbits seen exactly edge on. Their spectra show radial velocities varying with a period of 10.0 days and amplitudes of 100 km/s and 50 km/s. Each eclipse lasts 0.40 days from first contact to last, and during the deeper eclipse the light is flat at its minimum for 0.25 days of that. Find both radii and both masses, in solar units.</p>
+        <details><summary>Hint</summary><div><p>Relative to the large star, the small one moves at $100 + 50 = 150$ km/s across the line of sight during eclipses. From first to last contact it moves a distance $2(R_L + R_S)$; during the flat part it is wholly in front of or behind the large star, moving $2(R_L - R_S)$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Distances: $2(R_L + R_S) = 150\times0.40\times86\,400$ km and $2(R_L - R_S) = 150\times0.25\times86\,400$ km. So $R_L + R_S = 2.59\times10^6$ km and $R_L - R_S = 1.62\times10^6$ km, giving $R_L = 2.11\times10^6$ km $= 3.0\ R_\odot$ and $R_S = 4.9\times10^5$ km $= 0.70\ R_\odot$.</p>
+          <p>The separation is $a = (v_1 + v_2)P/2\pi = 150\times864\,000/2\pi = 2.06\times10^7$ km $= 0.138$ AU. Kepler's law in solar units gives $M_1 + M_2 = a^3/P^2 = 0.138^3/0.0274^2 = 3.5\ M_\odot$. The heavier star moves more slowly, in the ratio of the masses: $M(50\text{ km/s}) = 2.3\ M_\odot$ and $M(100\text{ km/s}) = 1.2\ M_\odot$. The edge-on tilt, implied by the eclipses, removes the usual unknown $\sin i$. Eclipsing binaries with double-lined spectra are the source of the most accurate stellar masses and radii there are, to about 1%.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (A star blinks out.) When the Moon passes in front of a star, the star seems to vanish instantly. In fact, light passing the Moon's sharp edge makes a diffraction pattern with fringes of scale $\sqrt{\lambda D/2}$, where $D$ is the Moon's distance. Evaluate this for $\lambda = 550$ nm. The Moon's edge moves across the sky at about 1 km/s at the distance of the Moon. How long does the disappearance take for a point star? What changes for a star whose angular diameter is 0.005 arcseconds, and how can this be used?</p>
+        <details><summary>Hint</summary><div><p>Compare the size of the Fresnel scale with the size of the star's disc, projected onto the Moon's distance.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\sqrt{550\times10^{-9}\times3.844\times10^8/2} = 10$ m. At 1 km/s the edge crosses this pattern in about 10 ms: the star fades over a few hundredths of a second, rippling as the fringes sweep past.</p>
+          <p>A star of angular diameter $0.005''$ $= 2.4\times10^{-8}$ rad spans $2.4\times10^{-8}\times3.844\times10^8 = 9$ m at the Moon's distance, comparable to the fringe scale. Light from different parts of its disc makes patterns shifted by up to 9 m, which blur the fringes together. Fitting the blurred light curve gives the star's diameter, to about a thousandth of an arcsecond, far below the atmosphere's blurring of about one arcsecond. Lunar occultations measured the first diameters of many stars, and resolved close binaries, with nothing more than a fast photometer.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Faster than light?) A blob of gas is shot out of a quasar at speed $\beta c$, at angle $\theta$ to our line of sight. Show that it appears to move across the sky at $\beta_{\text{app}} = \beta\sin\theta/(1 - \beta\cos\theta)$ times $c$. Find the largest possible apparent speed for $\beta = 0.99$, and the angle at which it occurs.</p>
+        <details><summary>Hint</summary><div><p>Follow two flashes emitted a time $\Delta t$ apart. The second is emitted $\beta c\Delta t\cos\theta$ closer to us, so its light has less distance to travel. Compare the sideways displacement with the time between the arrivals of the two flashes.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>In time $\Delta t$ the blob moves $\beta c\Delta t\sin\theta$ sideways and $\beta c\Delta t\cos\theta$ towards us. So the second flash arrives after an interval $\Delta t(1 - \beta\cos\theta)$, not $\Delta t$. The apparent sideways speed is</p>
+          $$\beta_{\text{app}} = \frac{\beta\sin\theta}{1 - \beta\cos\theta}.$$
+          <p>Differentiating in $\theta$, the maximum is at $\cos\theta = \beta$, where $\beta_{\text{app}} = \beta/\sqrt{1 - \beta^2} = \gamma\beta$. For $\beta = 0.99$ that is $7.0c$, at $\theta = 8.1^\circ$. Jets in quasars such as 3C 273 show blobs moving at several times $c$ in radio images. Nothing moves faster than light: the blob nearly keeps up with its own light, so its history is compressed in time. Seeing such motions tells us the jets are relativistic and pointed nearly at us.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The nearest flyby.) Barnard's star is 1.83 pc away, with a proper motion of $10.36''$ per year across the sky and a radial velocity of $-110.6$ km/s (approaching). Find its speed across the line of sight, using the fact that $1''$ per year at 1 pc is 4.74 km/s. Assuming straight-line motion, when will it be closest to us, and how close?</p>
+        <details><summary>Hint</summary><div><p>The star moves along a straight line with known velocity components along and across the line of sight. The closest approach is the perpendicular distance from the Sun to that line.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$v_t = 4.74\times10.36\times1.83 = 89.9$ km/s, so the total speed is $v = \sqrt{89.9^2 + 110.6^2} = 142.5$ km/s. The star's path makes an angle with the line of sight whose sine is $v_t/v$, so the closest distance is $d\,v_t/v = 1.83\times89.9/142.5 = 1.15$ pc, reached after it has travelled the distance $d\,|v_r|/v$ along its path:</p>
+          $$t = \frac{d\,|v_r|}{v^2} = \frac{1.83\times3.086\times10^{13}\times110.6}{142.5^2}\text{ s} = 9700\text{ years}.$$
+          <p>Around the year 11 800, Barnard's star will be the nearest star to the Sun, until Proxima's path eventually brings it back. Its proper motion, the largest of any star, is itself a sign that it is near: transverse speed is distance times angular speed, and few stars move faster than 100 km/s.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="large-scale">
+    <h2>Big objects and big ideas</h2>
+    <ol start="10">
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A Dyson sphere.) A civilisation encloses the Sun in a thin shell of radius 1 AU that absorbs all its light and re-radiates it from its outer surface. What is the shell's temperature, and at what wavelength does it glow most? How would astronomers search for such things?</p>
+        <details><summary>Solution</summary><div>
+          <p>In a steady state the shell radiates the Sun's luminosity from its outer area $4\pi(1\text{ AU})^2$: $L = 4\pi d^2\sigma T^4$, so $T = \big(L/4\pi d^2\sigma\big)^{1/4} = 394$ K, about 120 °C. (Radiation from the inner surface just goes back and forth inside, and doesn't change the balance.) Its peak wavelength is $2.90\times10^{-3}/394 = 7.4$ μm, in the mid-infrared.</p>
+          <p>A Dyson sphere would look like a star-sized object glowing at about 400 K with no visible light, or, if partial, a star with too much infrared for its type. Searches through infrared sky surveys have found candidates, all of which so far have natural explanations such as dust. Whatever a civilisation does with energy, the second law insists the waste heat comes out, which makes this one of the few searches for intelligence that relies only on thermodynamics.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (Weighing a star cluster.) A globular cluster has a radius of about 5 pc, and the stars in it have a spread in radial velocity of $\sigma = 10$ km/s. For a cluster in equilibrium, the virial theorem gives a mass of roughly $M \approx 5\sigma^2R/G$. Estimate the mass, explain where the formula comes from, and say why the number of stars in it is a little less than $M/M_\odot$.</p>
+        <details><summary>Solution</summary><div>
+          <p>$M \approx 5\times(10^4)^2\times5\times3.09\times10^{16}/6.67\times10^{-11} = 1.2\times10^{36}$ kg $= 6\times10^5\ M_\odot$. The virial theorem says $2K + U = 0$ for a bound system in equilibrium. A uniform sphere has $U = -\frac35GM^2/R$, and the kinetic energy is $\frac12M\langle v^2\rangle = \frac32M\sigma^2$, since the radial dispersion is one of three equal components. Then $3M\sigma^2 = \frac35GM^2/R$ gives $M = 5\sigma^2R/G$.</p>
+          <p>Globular clusters are old, so their stars are mostly less massive than the Sun, around 0.3 to 0.8 $M_\odot$, and the cluster holds perhaps a million stars. The same method applied to clusters of galaxies gave the first evidence of dark matter, in 1933: Zwicky found that the Coma cluster's galaxies moved far too fast for the mass of its visible stars.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag olympiad">olympiad</span> (Why galaxies don't fade with distance.) Show that, in a static Euclidean space, the surface brightness of an extended object (the flux per unit solid angle) does not depend on its distance. So a galaxy twice as far away looks just as bright per square arcsecond, only smaller. In an expanding universe the surface brightness instead falls as $(1 + z)^{-4}$. Account for each of the four factors.</p>
+        <details><summary>Hint</summary><div><p>Flux goes as $1/d^2$, and so does the solid angle the object covers. For the expanding case, think about the energy of each photon, the rate at which photons arrive, and how the object's apparent size relates to the distance its light has travelled.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>An object of area $A$ and luminosity $L$ at distance $d$ delivers flux $L/4\pi d^2$ and covers a solid angle $A/d^2$. Their ratio, the surface brightness, is $L/4\pi A$, independent of $d$. That is also why the night sky would be as bright as the Sun's surface in an infinite static universe full of stars (Olbers's paradox, problem 3 of <a href="/astronomy/P3-galaxies-and-the-universe/">P3</a>), and why a wall looks equally bright from across a room as from close up.</p>
+          <p>In an expanding universe, four factors of $1 + z$ appear. Each photon's energy is reduced by $1 + z$, since its wavelength has been stretched. The photons also arrive spread out in time by $1 + z$, so fewer arrive per second (supernovae at high redshift are seen to brighten and fade more slowly, by exactly that factor). And the object appears larger than its distance would suggest, because its light set out when the universe was smaller: its angular area is enlarged by $(1 + z)^2$ relative to the "flux distance", so the light is spread over more solid angle. Altogether, $(1 + z)^{-4}$. This is the Tolman test, which has been checked against galaxies, and shows that redshift really is the expansion of space, not light simply getting "tired" on its way.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (The Sun among the stars.) The Sun's absolute magnitude is 4.83. How far away could it be and still be seen with the naked eye, down to magnitude 6? Roughly how many stars like it are within that distance, if the local density of stars is about 0.1 per cubic parsec and about 10% of them are at least as bright as the Sun? Most of the stars we see with the naked eye are much more luminous than the Sun: explain why.</p>
+        <details><summary>Solution</summary><div>
+          <p>From $m - M = 5\log_{10}(d/10\text{ pc})$: $d = 10^{(6 - 4.83)/5 + 1} = 17$ pc. The sphere of that radius has volume $\frac43\pi17^3 = 2.1\times10^4$ pc³, holding about 2000 stars, of which perhaps 200 are at least as bright as the Sun. That is only a small fraction of the 5000 or so stars visible on a dark night.</p>
+          <p>The rest are rare but luminous stars, visible from much further away. A star 10 000 times the Sun's luminosity is visible out to 100 times further, from a volume a million times larger. So the naked-eye sky is dominated by giants and hot stars, which make up a tiny fraction of the stars in space. This bias, called Malmquist bias, affects any sample limited by apparent brightness: the most common stars by far, faint red dwarfs, include not one that is visible to the naked eye.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag olympiad">olympiad</span> (A light echo.) In 2002 the star V838 Monocerotis flared briefly, and over the following years a ring of light appeared to expand around it. The ring is light from the flash scattered towards us by dust near the star. Show that the dust we see lit up a time $t$ after we saw the flash lies on a paraboloid with the star at its focus. How large is the ring for dust lying in the plane of the sky through the star, and can a light echo appear to expand faster than light?</p>
+        <details><summary>Hint</summary><div><p>Light scattered at a point and reaching us at time $t$ after the direct flash travelled an extra distance $ct$: its path from the star to the dust, minus the dust's lead along the line of sight. Write $r - z = ct$, where $r$ is the distance from the star to the dust and $z$ the dust's distance towards us, measured from the star.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Put the star at the origin with the $z$ axis towards us. Light that goes to dust at position $(x, y, z)$ and then to us travels the distance $r = \sqrt{x^2 + y^2 + z^2}$ to the dust, but then starts its journey to us from $z$ closer, so its delay relative to the direct light is $r - z$. The dust we see lit at time $t$ satisfies $r - z = ct$. With $R^2 = x^2 + y^2$, this is $R^2 = (z + ct)^2 - z^2 = 2ctz + (ct)^2$: a paraboloid with the star at its focus, opening away from us.</p>
+          <p>Dust in the plane of the sky through the star ($z = 0$) is seen at $R = ct$ after time $t$. The ring seems to expand at the speed of light at first, and its rate depends on where the dust is, so the image of a light echo is a slice through the dust cloud. The apparent expansion can be faster than light (for dust in front, $z &gt; 0$), which caused confusion about V838 Mon. Measuring the polarisation of the scattered light, which is greatest for scattering through $90^\circ$, that is $z = 0$, gave the distance to the star: about 6 kpc.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

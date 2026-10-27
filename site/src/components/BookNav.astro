@@ -1,11 +1,13 @@
 ---
-import { chaptersOf, partTitle, partName, subjectTitle, pagesOf, u, chapterUrl } from "../subjects";
+import { chaptersOf, partTitle, partName, subjectTitle, pagesOf, widgetsOf, u, chapterUrl } from "../subjects";
 
 interface Props { subject: string; current?: string; hasExercises?: (id: string) => boolean; }
 const { subject, current, hasExercises = () => false } = Astro.props;
 const chapters = await chaptersOf(subject);
 const parts = [...new Set(chapters.map((c) => c.part))];
 const pages = pagesOf(subject);
+// Only subjects with widgets or pages appear in the Playground; the others have no section to link to.
+const playable = pages.length + widgetsOf(subject).length > 0;
 const path = Astro.url.pathname;
 ---
 <nav class="book-nav" aria-label="Chapters">
@@ -28,9 +30,13 @@ const path = Astro.url.pathname;
       </ol>
     </>
   ))}
-  <h4>Play</h4>
-  <ol>
-    {pages.map((p) => <li><a href={u(`/${subject}/${p.file}/`)} aria-current={path === u(`/${subject}/${p.file}/`) ? "page" : undefined}><span class="num">▶︎</span><span>{p.title}</span></a></li>)}
-    <li><a href={u(`/animations/#${subject}`)}><span class="num">▶︎</span><span>All {subjectTitle(subject).toLowerCase()} animations</span></a></li>
-  </ol>
+  {playable && (
+    <>
+      <h4>Play</h4>
+      <ol>
+        {pages.map((p) => <li><a href={u(`/${subject}/${p.file}/`)} aria-current={path === u(`/${subject}/${p.file}/`) ? "page" : undefined}><span class="num">▶︎</span><span>{p.title}</span></a></li>)}
+        <li><a href={u(`/animations/#${subject}`)}><span class="num">▶︎</span><span>All {subjectTitle(subject).toLowerCase()} animations</span></a></li>
+      </ol>
+    </>
+  )}
 </nav>

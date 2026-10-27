@@ -1,0 +1,132 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P1 · Orbits and the sky</div>
+  <h1>Problem set: orbits and the sky</h1>
+  <p class="lede">Thirteen problems on the geometry of the sky and the mechanics of orbits. You will measure distances with parallax, explain why a star rises four minutes earlier each night, weigh the Sun and Jupiter, prove that orbits are conic sections, plan a trip to Mars, find out why it is easier to leave the Solar System than to fall into the Sun, and see why Saturn's rings sit where they do. Play with the orbit below, then try each problem on paper before opening its solution.</p>
+  <div class="meta"><span><b>Needs:</b> Newton's law of gravity, conservation of energy and angular momentum, and <a href="/physics/P1-mechanics/">physics P1</a> for problems 5–6</span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="the-sky">
+    <h2>Angles, distances and clocks</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (The parsec.) A star at distance $d$ shifts back and forth against the far background as the Earth orbits the Sun; half the total shift is the parallax angle $p$. Show that $d = 1\text{ AU}/\tan p \approx 1\text{ AU}/p$, and that a star with $p = 1''$ is at $206\,265$ AU $= 3.09\times10^{16}$ m $= 3.26$ light-years: one parsec. Proxima Centauri has $p = 0.768''$. How far is it?</p>
+        <details><summary>Solution</summary><div>
+          <p>The Sun, the Earth and the star make a right triangle with the 1 AU side opposite the angle $p$, so $\tan p = 1\text{ AU}/d$. For small angles $\tan p \approx p$ in radians. One arcsecond is $\frac{\pi}{180\times3600} = 4.848\times10^{-6}$ rad, so $d = 1/4.848\times10^{-6} = 206\,265$ AU $= 206\,265\times1.496\times10^{11}$ m $= 3.086\times10^{16}$ m, which light covers in 3.26 years. In general $d = 1/p$ parsecs with $p$ in arcseconds, so Proxima is $1/0.768 = 1.30$ pc $= 4.25$ light-years away. Even the nearest star's parallax is smaller than a coin seen from 5 km, which is why it wasn't measured until Bessel in 1838. The Gaia satellite now measures parallaxes of bright stars to about 0.00002 arcseconds.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Four minutes a night.) The Earth turns once relative to the stars in a sidereal day and once relative to the Sun in a solar day of 24 hours. Show that $\frac{1}{P_{\text{sid}}} = \frac{1}{P_{\text{sol}}} + \frac{1}{P_{\text{year}}}$ and compute the sidereal day. How many times does the Earth spin relative to the stars in one year?</p>
+        <details><summary>Solution</summary><div>
+          <p>In one solar day the Earth also moves about $1/365.24$ of its orbit, so it must turn a little more than once (relative to the stars) to bring the Sun back overhead. In rates: spin relative to the stars = spin relative to the Sun + the Sun's apparent motion around the stars, $\frac{1}{P_{\text{sid}}} = \frac{1}{P_{\text{sol}}} + \frac1{P_{\text{year}}}$. With $P_{\text{year}} = 365.2422$ solar days, $P_{\text{sid}} = 24\text{ h}/(1 + 1/365.2422) = 23$ h 56 min 4 s. A star therefore rises 3 min 56 s earlier each night, and the night sky shifts by two hours a month. In a year the Earth spins 366.24 times relative to the stars: one more than the number of days, because going once round the Sun adds a turn.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (When does Mars come back?) A planet's synodic period is the time between successive oppositions (or for an inner planet, successive inferior conjunctions). Show that $\frac1S = \big|\frac1{P_{\text{Earth}}} - \frac1{P}\big|$, and compute $S$ for Mars ($P = 1.881$ years) and Venus ($P = 0.615$ years). Why is Mars's synodic period so long?</p>
+        <details><summary>Solution</summary><div>
+          <p>The two planets move round the Sun at angular rates $2\pi/P_{\text{Earth}}$ and $2\pi/P$. The angle between them changes at the difference of the rates, and returns to the same value after a full $2\pi$: $\frac{2\pi}{S} = \big|\frac{2\pi}{P_{\text{Earth}}} - \frac{2\pi}{P}\big|$. For Mars, $\frac1S = 1 - \frac1{1.881} = 0.4684$ per year, so $S = 2.135$ years $= 780$ days. For Venus, $\frac1S = \frac1{0.615} - 1$, so $S = 1.60$ years $= 584$ days. Mars's period is long because it moves almost as fast as the Earth, so the Earth takes a long time to lap it. This is why Mars missions launch every 26 months, and why Venus's five synodic periods equal almost exactly eight years, tracing a five-pointed star in the sky.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (A perfect eclipse coincidence.) The Sun's diameter is $1.392\times10^6$ km at 1.496 × 10⁸ km; the Moon's is 3475 km at a distance that varies from 363,300 km to 405,500 km. Compute the angular sizes. Why are some solar eclipses total and others annular? Will this always be so?</p>
+        <details><summary>Solution</summary><div>
+          <p>The Sun spans $1.392\times10^6/1.496\times10^8 = 0.00930$ rad $= 0.533^\circ$. The Moon spans $3475/363\,300 = 0.548^\circ$ at its closest and $3475/405\,500 = 0.491^\circ$ at its farthest. At perigee the Moon covers the Sun completely: a total eclipse, with the corona visible. At apogee it is too small and leaves a bright ring: an annular eclipse. The Sun is 400 times larger and, by pure coincidence, about 400 times farther. It won't last: the Moon is receding by 3.8 cm a year (problem 13), and in roughly 600 million years total eclipses will stop.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="keplers-laws">
+    <h2>Kepler's laws from Newton</h2>
+    <ol start="5">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Weighing the Sun and Jupiter.) For two bodies in a circular orbit of separation $a$ and period $P$, show that $P^2 = \dfrac{4\pi^2a^3}{G(M + m)}$. Use the Earth's orbit to find the Sun's mass, and the orbit of Io ($a = 421\,700$ km, $P = 1.769$ days) to find Jupiter's.</p>
+        <details><summary>Solution</summary><div>
+          <p>Both bodies circle their common centre of mass, at distances $a\frac{m}{M + m}$ and $a\frac{M}{M + m}$, with the same angular velocity $\omega = 2\pi/P$. For $m$: $\frac{GMm}{a^2} = m\omega^2\cdot a\frac{M}{M + m}$, so $\omega^2a^3 = G(M + m)$, which is Kepler's third law. Since $m \ll M$ in both cases we can drop it.</p>
+          <p>For the Sun: $M_\odot = \frac{4\pi^2(1.496\times10^{11})^3}{6.674\times10^{-11}\times(3.156\times10^7)^2} = 1.99\times10^{30}$ kg. For Jupiter: $M_J = \frac{4\pi^2(4.217\times10^8)^3}{6.674\times10^{-11}\times(1.528\times10^5)^2} = 1.90\times10^{27}$ kg, about a thousandth of the Sun. Every mass in astronomy, from planets to supermassive black holes, is weighed this way: find something orbiting it and time the orbit. (Strictly the method gives $GM$, which is known far more precisely than $G$ itself.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Orbits are conic sections.) For a particle in the force $\mathbf F = -k\hat{\mathbf r}/r^2$ with $k = GMm$, show that the Laplace–Runge–Lenz vector $\mathbf A = \mathbf p\times\mathbf L - mk\,\hat{\mathbf r}$ is conserved. Taking its dot product with $\mathbf r$, deduce the orbit $r = \dfrac{L^2/mk}{1 + e\cos\theta}$ with $e = |\mathbf A|/mk$, and say which values of $e$ give circles, ellipses, parabolas and hyperbolas.</p>
+        <details><summary>Hint</summary><div><p>$\mathbf L = m\,\mathbf r\times\mathbf v$ is constant, so $\frac{d}{dt}(\mathbf p\times\mathbf L) = \dot{\mathbf p}\times\mathbf L$. Expand with the triple product rule and compare with $\frac{d\hat{\mathbf r}}{dt} = \frac{\mathbf v}{r} - \frac{\dot r\,\mathbf r}{r^2}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>$\dot{\mathbf p}\times\mathbf L = -\frac{k}{r^3}\mathbf r\times(m\,\mathbf r\times\mathbf v) = -\frac{mk}{r^3}\big(\mathbf r(\mathbf r\cdot\mathbf v) - \mathbf v r^2\big) = mk\Big(\frac{\mathbf v}{r} - \frac{\dot r\,\mathbf r}{r^2}\Big)$, using $\mathbf r\cdot\mathbf v = r\dot r$. That is exactly $mk\,\frac{d\hat{\mathbf r}}{dt}$, so $\dot{\mathbf A} = 0$.</p>
+          <p>Let $\theta$ be the angle between $\mathbf r$ and the fixed vector $\mathbf A$. Then $\mathbf A\cdot\mathbf r = rA\cos\theta$, while also $\mathbf r\cdot(\mathbf p\times\mathbf L) = (\mathbf r\times\mathbf p)\cdot\mathbf L = L^2$ and $mk\,\hat{\mathbf r}\cdot\mathbf r = mkr$. So $rA\cos\theta = L^2 - mkr$, i.e. $r = \dfrac{L^2/mk}{1 + e\cos\theta}$: a conic with a focus at the Sun, eccentricity $e$ and $\mathbf A$ pointing to the closest approach. $e = 0$ is a circle, $0 &lt; e &lt; 1$ an ellipse, $e = 1$ a parabola, $e &gt; 1$ a hyperbola. One can show $e^2 = 1 + \frac{2EL^2}{mk^2}$, so the sign of the energy decides bound or unbound. The extra conserved vector is special to $1/r^2$ forces (and to the harmonic oscillator); it is why Newtonian orbits close instead of precessing, and why Mercury's slow precession pointed to general relativity.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The vis-viva equation.) Show that on any Kepler orbit of semi-major axis $a$ the speed at distance $r$ is given by $v^2 = GM\big(\frac2r - \frac1a\big)$, so the energy $E = -GMm/2a$ depends on $a$ alone. Use the scene below: launch sideways from $r = 1$ at different speeds and check that the orbit closes for $v &lt; \sqrt2\,v_{\text{circ}}$ and escapes above.</p>
+        <figure class="plate wide" data-scene="orbit">
+          <div class="stage">
+            <canvas aria-label="An orbit around the Sun launched sideways from one astronomical unit at a chosen speed, with the conic it follows"></canvas>
+            <div class="toolbar">
+              <div class="sliders">
+                <label for="ob-v">launch speed ÷ circular speed <input id="ob-v" type="range" data-k="v" min="0.3" max="1.6" step="0.01"><output data-out="v"></output></label>
+                <button type="button" data-act="circle">Circle</button>
+                <button type="button" data-act="mars">Hohmann to Mars</button>
+                <button type="button" data-act="escape">Escape</button>
+              </div>
+              <div class="readout" data-role="readout"></div>
+            </div>
+          </div>
+        </figure>
+        <details><summary>Solution</summary><div>
+          <p>Let $r_p$ and $r_a$ be the closest and farthest distances, so $r_p + r_a = 2a$. At both, the velocity is perpendicular to the radius, so angular momentum gives $v_pr_p = v_ar_a$, and energy gives $\frac12v_p^2 - \frac{GM}{r_p} = \frac12v_a^2 - \frac{GM}{r_a}$. Substituting $v_a = v_pr_p/r_a$: $\frac12v_p^2\big(1 - \frac{r_p^2}{r_a^2}\big) = GM\big(\frac1{r_p} - \frac1{r_a}\big)$, which simplifies to $v_p^2 = \frac{2GMr_a}{r_p(r_p + r_a)}$. The energy per mass is then $\frac12v_p^2 - \frac{GM}{r_p} = \frac{GM}{r_p}\big(\frac{r_a}{r_p + r_a} - 1\big) = -\frac{GM}{r_p + r_a} = -\frac{GM}{2a}$. Energy is conserved along the orbit, so at any $r$, $\frac12v^2 - \frac{GM}r = -\frac{GM}{2a}$, which is the vis-viva equation.</p>
+          <p>Launching sideways from $r$ with speed $v$ fixes $a$ through $\frac1a = \frac2r - \frac{v^2}{GM}$. The orbit is bound ($a &gt; 0$) exactly when $v^2 &lt; 2GM/r$, i.e. below $\sqrt2$ times the circular speed $\sqrt{GM/r}$. At exactly $\sqrt2$ it is a parabola, and above it a hyperbola. A launch below circular speed puts you at the far point of an ellipse that dips inwards; above, at the near point of one that swings out.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A trip to Mars.) A Hohmann transfer is the ellipse that just touches the Earth's orbit (1 AU) at perihelion and Mars's (1.524 AU) at aphelion. Using vis-viva, find the two velocity changes needed and the travel time. Where must Mars be in its orbit at launch?</p>
+        <details><summary>Solution</summary><div>
+          <p>The transfer has $a = (1 + 1.524)/2 = 1.262$ AU. The Earth's orbital speed is $v_E = \sqrt{GM_\odot/1\text{ AU}} = 29.8$ km/s. At perihelion of the transfer, vis-viva gives $v = v_E\sqrt{2 - 1/1.262} = v_E\sqrt{2r_2/(r_1 + r_2)} = 1.099v_E$, so $\Delta v_1 = 2.9$ km/s (on top of escaping the Earth). At aphelion, $v = v_E\sqrt{2/1.524 - 1/1.262} = 21.5$ km/s, while Mars moves at $v_E/\sqrt{1.524} = 24.1$ km/s, so $\Delta v_2 = 2.6$ km/s to match it.</p>
+          <p>By Kepler's third law the transfer orbit's period is $1.262^{3/2} = 1.418$ years, and the trip is half of it: 0.709 years, 259 days. In that time Mars moves $0.709\times360^\circ/1.881 = 136^\circ$, so to arrive at the meeting point, $180^\circ$ round from the launch, Mars must start $44^\circ$ ahead of the Earth. That geometry recurs once per synodic period (problem 3): the 26-month launch windows. Hohmann transfers use the least fuel for a two-burn trip, but they are slow, and the crew would need to wait over a year on Mars for the return window.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (It's hard to hit the Sun.) Find the Earth's escape speed, and the speed needed at 1 AU to escape the Sun. Compare the extra speed a probe launched from the Earth's orbit needs to leave the Solar System with the speed it needs to lose to fall straight into the Sun.</p>
+        <details><summary>Solution</summary><div>
+          <p>Escape needs $\frac12v^2 = GM/r$, so $v_{\text{esc}} = \sqrt{2GM/r}$: 11.2 km/s from the Earth's surface, and 42.1 km/s from the Sun at 1 AU, which is $\sqrt2$ times the Earth's orbital speed of 29.8 km/s. Because the probe already shares the Earth's motion, leaving the Solar System takes only $42.1 - 29.8 = 12.3$ km/s extra (in the direction of the Earth's motion). Falling straight into the Sun needs the probe to cancel all of the Earth's sideways motion, 29.8 km/s, which is why the Parker Solar Probe needed seven Venus flybys to edge inwards. It is easier to leave the Sun's grip than to fall into it, and gravity assists (problem 11) are how missions do either.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="three-bodies">
+    <h2>Tides, spheres of influence and rings</h2>
+    <ol start="10">
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The Hill sphere.) A planet of mass $m$ orbits a star of mass $M \gg m$ at distance $a$. In the frame rotating with the planet, find the point between them where a small body can stay at rest (the Lagrange point L1), and show that its distance from the planet is $r \approx a\,(m/3M)^{1/3}$. Evaluate it for the Earth. Is the Moon safely inside?</p>
+        <details><summary>Hint</summary><div><p>In the rotating frame the body feels the star's pull, the planet's pull and the centrifugal force $\Omega^2\times$(distance from the centre of mass), with $\Omega^2 = G(M + m)/a^3$. Expand to first order in $r/a$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Put the body at distance $a - r$ from the star, between star and planet. With $M \gg m$ the centre of mass is at the star, and balance requires $\frac{GM}{(a - r)^2} - \frac{Gm}{r^2} = \Omega^2(a - r) = \frac{GM}{a^3}(a - r)$. For $r \ll a$, $\frac{GM}{(a - r)^2} \approx \frac{GM}{a^2}\big(1 + \frac{2r}{a}\big)$ and the right-hand side is $\frac{GM}{a^2}\big(1 - \frac ra\big)$. Subtracting, $\frac{GM}{a^2}\cdot\frac{3r}{a} = \frac{Gm}{r^2}$, so $r^3 = \frac{m}{3M}a^3$. The $3$ combines the tidal stretch ($2$) and the centrifugal term ($1$).</p>
+          <p>For the Earth, $r = 1.496\times10^8\text{ km}\times(5.97\times10^{24}/(3\times1.99\times10^{30}))^{1/3} = 1.5\times10^6$ km. The Moon orbits at 384,400 km, a quarter of the way out; orbits are stable to roughly half the Hill radius, so it is safe. L1 is where the solar observatory SOHO sits, always between us and the Sun; the James Webb telescope sits at L2, the same distance on the far side.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The gravitational slingshot.) A probe approaches a planet moving at velocity $\mathbf U$ round the Sun. In the planet's frame, the encounter just turns the probe's velocity, leaving its speed unchanged. Show that in the Sun's frame the probe's speed can grow by up to $2U$, and explain where the energy comes from.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let the probe's velocity in the Sun's frame be $\mathbf v$, so in the planet's frame it is $\mathbf v - \mathbf U$. The flyby is elastic in the planet's frame (gravity is conservative and the planet is far heavier), so the probe leaves with $\mathbf w$, $|\mathbf w| = |\mathbf v - \mathbf U|$, in a new direction. Back in the Sun's frame its velocity is $\mathbf w + \mathbf U$. The gain is largest for a head-on approach that is turned right round: $\mathbf v = -v\hat{\mathbf U}$, $\mathbf w = (v + U)\hat{\mathbf U}$, giving final speed $v + 2U$. Like a tennis ball off a moving racket. The energy comes from the planet's orbit, which slows by an immeasurably small amount: Voyager 2 picked up more than 10 km/s at Jupiter, and Jupiter slowed by a few times $10^{-21}$ m/s in return.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Why rings sit where they do.) A small moon of density $\rho_m$ orbits a planet of radius $R$ and density $\rho_M$. Show that a loose rock on the moon's surface is pulled off by the planet's tide inside a distance $d \approx 1.26\,R\,(\rho_M/\rho_m)^{1/3}$, the rigid-body Roche limit. (For a fluid moon, which deforms, the factor is 2.44.) Saturn's mean density is 687 kg/m³ and its main rings are ice. Where should the rings end?</p>
+        <details><summary>Solution</summary><div>
+          <p>For a moon of radius $r$ and mass $m$ at distance $d$, the tidal acceleration across its radius is $2GMr/d^3$ (physics P1, problem 12), and its own surface gravity is $Gm/r^2$. The rock leaves when $\frac{2GMr}{d^3} &gt; \frac{Gm}{r^2}$, i.e. $d^3 &lt; 2r^3\frac Mm = 2R^3\frac{\rho_M}{\rho_m}$, using $M = \frac43\pi R^3\rho_M$ and the same for $m$. So $d_{\text{Roche}} = 2^{1/3}R(\rho_M/\rho_m)^{1/3} = 1.26R(\rho_M/\rho_m)^{1/3}$. (Including the moon's rotation, which adds centrifugal force, raises it to $1.44$.)</p>
+          <p>For Saturn with ice ($\rho_m = 920$ kg/m³), $(\rho_M/\rho_m)^{1/3} = 0.91$: the rigid limit is $1.14R$ and the fluid limit $2.2R$. The main rings extend to $2.27$ Saturn radii, the edge of the A ring, and the nearest substantial moons orbit just outside. Inside the Roche limit, tides keep ice and rock from gathering into a moon; outside it, they clump. Comets that pass inside it break up, as Shoemaker–Levy 9 did at Jupiter in 1992 before it hit the planet two years later.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The lengthening day.) Lunar laser ranging shows the Moon receding by 3.8 cm a year, pushed outwards by the tidal bulge it raises on the Earth. Assume the angular momentum of the Earth's spin plus the Moon's orbit is conserved. With the Earth's moment of inertia $0.331M_ER_E^2$, how fast must the day lengthen? Compare with the 2 ms per century found from ancient eclipse records.</p>
+        <details><summary>Solution</summary><div>
+          <p>The orbital angular momentum is $L_{\text{orb}} = \mu\sqrt{G(M_E + M_m)a}$, with reduced mass $\mu = M_EM_m/(M_E + M_m)$; numerically $L_{\text{orb}} = 2.86\times10^{34}$ kg m²/s. Since $L_{\text{orb}} \propto\sqrt a$, $\frac{dL_{\text{orb}}}{L_{\text{orb}}} = \frac{da}{2a}$, so each year the orbit gains $2.86\times10^{34}\times\frac{0.038}{2\times3.844\times10^8} = 1.41\times10^{24}$ kg m²/s. The Earth's spin, $I\omega$ with $I = 0.331\times5.97\times10^{24}\times(6.371\times10^6)^2 = 8.0\times10^{37}$ kg m² and $\omega = 7.29\times10^{-5}$ s⁻¹ (spin angular momentum $5.8\times10^{33}$, a fifth of the orbit's), must lose the same. So $\Delta\omega = -1.76\times10^{-14}$ s⁻¹ per year, and the day $P = 2\pi/\omega$ grows by $\Delta P = 2\pi\,|\Delta\omega|/\omega^2 = 2.1\times10^{-5}$ s per year: 2.1 ms per century.</p>
+          <p>That matches the tidal braking deduced from where ancient eclipses were seen (about 2.3 ms per century, with the Sun's tides adding a little). The net observed lengthening is closer to 1.8 ms per century because the Earth is still rebounding from the ice ages, getting rounder and spinning up. Run back 400 million years and the day was about 22 hours: growth rings in Devonian corals record roughly 400 days a year.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Murray and Dermott's <i>Solar System Dynamics</i> treats Hill spheres, Roche limits and tides in depth; Curtis's <i>Orbital Mechanics for Engineering Students</i> turns problems 7–9 into real mission design; and Roy's <i>Orbital Motion</i> covers the three-body problem behind problem 10.</p>
+  </section>
+</article>

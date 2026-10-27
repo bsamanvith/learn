@@ -1,0 +1,217 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 2 of 4 · Intermediate</div>
+  <h1>Level 2: intermediate</h1>
+  <p class="lede">Twenty-four problems that each need two ideas instead of one: energy together with forces, momentum together with energy, a law of circuits together with a law of fields. They cover the core of a first-year physics course. The solutions start by naming the idea, then carry it through, so read the first sentence of a solution as a hint if you are stuck. Use $g = 9.8$ m/s² throughout.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/physics/L1-basics/">Level 1</a>, and derivatives for a few problems</span><span><b>Next:</b> <a href="/physics/L3-advanced/">Level 3</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag core">core</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="mechanics">
+    <h2>Mechanics</h2>
+    <ol>
+      <li>
+        <p><span class="tag core">core</span> (The best angle.) A ball is launched from level ground at speed $v$ and angle $\theta$ above the horizontal. Show that its range is $R = v^2\sin2\theta/g$. Which angle gives the longest range? For $v = 20$ m/s, find that range, and show that $30^\circ$ and $60^\circ$ land in the same place.</p>
+        <details><summary>Solution</summary><div>
+          <p>Split the velocity into $v\cos\theta$ across and $v\sin\theta$ up. The vertical motion alone decides the time of flight: the ball is back on the ground when $v\sin\theta\,t - \frac12gt^2 = 0$, so $t = 2v\sin\theta/g$. Meanwhile it moves across at constant speed, so $R = v\cos\theta\cdot t = 2v^2\sin\theta\cos\theta/g = v^2\sin2\theta/g$.</p>
+          <p>$\sin2\theta$ is largest, equal to 1, at $\theta = 45^\circ$, giving $R = 400/9.8 = 40.8$ m. Because $\sin2\theta = \sin(180^\circ - 2\theta)$, the angles $\theta$ and $90^\circ - \theta$ have the same range: $30^\circ$ and $60^\circ$ both give $400\sin60^\circ/9.8 = 35.3$ m. The high throw takes longer, $\sqrt3$ times as long. (With air resistance the best angle drops below $45^\circ$, and for a golf ball with backspin it is lower still.)</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A banked curve.) A road curve of radius 100 m is designed for 20 m/s (72 km/h). At what angle should it be banked so that a car needs no friction at all to take it at that speed?</p>
+        <details><summary>Solution</summary><div>
+          <p>With no friction, only gravity and the normal force $N$ act. $N$ is perpendicular to the road, tilted by the bank angle $\theta$. Its vertical part holds the car up and its horizontal part, pointing to the centre, supplies the centripetal force:</p>
+          $$N\cos\theta = mg,\qquad N\sin\theta = \frac{mv^2}{r}\quad\Longrightarrow\quad \tan\theta = \frac{v^2}{rg} = \frac{400}{980} = 0.408,\quad \theta = 22.2^\circ.$$
+          <p>The mass cancels, so the same bank suits a bicycle and a lorry. Slower cars need friction pointing up the slope to stop them sliding in; faster ones need it pointing down. A cyclist leans at the same angle on a flat road, for the same reason.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Loop the loop.) A small car rolls without friction down a ramp and round a vertical loop of radius $R$, on the inside of the track. From what height above the bottom of the loop must it start to get round without falling off at the top?</p>
+        <details><summary>Hint</summary><div><p>Two ideas. At the top, the car stays on the track only if the track still pushes on it, which needs $mv^2/R \ge mg$. Energy then tells you the height needed to arrive with that speed.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>At the top, gravity and the track both push down towards the centre: $N + mg = mv^2/R$. The track can push but not pull, so $N \ge 0$, which needs $v^2 \ge gR$. The top of the loop is at height $2R$, so energy conservation from a start at height $h$ gives $v^2 = 2g(h - 2R)$. Then $2g(h - 2R) \ge gR$, so</p>
+          $$h \ge \tfrac52R.$$
+          <p>The guess $h = 2R$ (just enough to reach the top) fails: the car would need to arrive at the top with zero speed, and long before that it would fall off. A rolling ball needs even more height, $2.7R$, because part of its energy goes into spinning.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Elastic collisions and the stacked balls.) A ball of mass $m$ moving at $u$ hits a ball of mass $M$ at rest head-on, and kinetic energy is conserved. Find both final velocities. Then hold a tennis ball (57 g) on top of a basketball (600 g) and drop them together from height $h$. Assuming every bounce is elastic, how high does the tennis ball go?</p>
+        <details><summary>Hint</summary><div><p>Momentum and energy together give $u = v_2 - v_1$: in an elastic collision the speed of approach equals the speed of separation. That linear equation is much easier to use than the energy equation. For the stack, work in the basketball's frame just after it bounces off the floor.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Momentum: $mu = mv_1 + Mv_2$. Energy: $mu^2 = mv_1^2 + Mv_2^2$. Rewrite them as $m(u - v_1) = Mv_2$ and $m(u - v_1)(u + v_1) = Mv_2^2$ and divide: $u + v_1 = v_2$. Solving the two linear equations,</p>
+          $$v_1 = \frac{m - M}{m + M}\,u,\qquad v_2 = \frac{2m}{m + M}\,u.$$
+          <p>Equal masses swap velocities (Newton's cradle). A heavy ball hitting a light one sends it off at almost $2u$.</p>
+          <p>Now the stack. Both balls hit the floor region at speed $v = \sqrt{2gh}$. The basketball bounces first and moves up at $v$ while the tennis ball is still coming down at $v$. In the basketball's frame, the tennis ball approaches at $2v$ and bounces off a heavy ball. In the ground frame, using the formula above with the basketball as the heavy partner, the tennis ball leaves with</p>
+          $$v' = \frac{3M - m}{M + m}\,v = \frac{1.8 - 0.057}{0.657}\,v = 2.65\,v.$$
+          <p>Height goes as speed squared, so it rises to $2.65^2h \approx 7h$. In the limit $M \gg m$ it would be $3v$ and $9h$. Real balls lose energy, but the trick still sends the tennis ball far above where it started. The same mechanism, a heavy layer below a light one, concentrates the energy of a collapsing star into its outer layers in a supernova.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The conical pendulum.) A 1 m string holds a small mass that moves in a horizontal circle, the string making $30^\circ$ with the vertical. Find the period of the circle.</p>
+        <details><summary>Solution</summary><div>
+          <p>The tension $T$ balances gravity vertically and provides the centripetal force horizontally. The circle has radius $r = L\sin\theta$. So $T\cos\theta = mg$ and $T\sin\theta = m\omega^2L\sin\theta$. Dividing, $\omega^2 = g/(L\cos\theta)$, and the period is</p>
+          $$P = 2\pi\sqrt{\frac{L\cos\theta}{g}} = 2\pi\sqrt{\frac{0.866}{9.8}} = 1.87\text{ s}.$$
+          <p>It is the period of a simple pendulum of length $L\cos\theta$, the height of the cone. As the circle gets wider, the cone gets flatter and the period shorter.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The leaning ladder.) A uniform ladder leans against a frictionless wall. The floor has coefficient of static friction $\mu = 0.4$. What is the smallest angle with the floor at which the ladder does not slip?</p>
+        <details><summary>Hint</summary><div><p>For a body at rest, both the total force and the total torque are zero. Take torques about the foot of the ladder, so that the two forces there (normal force and friction) drop out.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let the ladder have length $L$, weight $W$ and angle $\theta$ to the floor. The floor pushes up with $N$ and sideways with friction $f$; the wall pushes horizontally with $P$ (no friction there). Forces: $N = W$ and $f = P$. Torques about the foot: the weight acts at the middle with lever arm $\frac L2\cos\theta$, and the wall force acts at the top with lever arm $L\sin\theta$, so</p>
+          $$P L\sin\theta = W\tfrac L2\cos\theta\quad\Longrightarrow\quad f = P = \frac{W}{2\tan\theta}.$$
+          <p>Friction can supply at most $\mu N = \mu W$, so the ladder holds while $1/(2\tan\theta) \le \mu$, that is $\tan\theta \ge 1/(2\mu) = 1.25$, or $\theta \ge 51.3^\circ$. The mass and the length cancel. When a person climbs, their weight moves the centre of mass up, $f$ grows, and the ladder becomes more likely to slip: which is why someone should stand on the bottom.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The geostationary orbit.) A satellite in a geostationary orbit circles the equator once per sidereal day, 86 164 s, so it stays above one place. Find its orbital radius and its height above the equator (radius 6378 km). Use $GM_\oplus = 3.986\times10^{14}$ m³/s². How fast is it moving?</p>
+        <details><summary>Solution</summary><div>
+          <p>Gravity provides the centripetal force: $GMm/r^2 = m\omega^2r$ with $\omega = 2\pi/T$. So $r^3 = GMT^2/4\pi^2$, which is Kepler's third law:</p>
+          $$r = \left(\frac{3.986\times10^{14}\times86\,164^2}{4\pi^2}\right)^{1/3} = 4.216\times10^7\text{ m} = 42\,164\text{ km}.$$
+          <p>That is 35 786 km above the equator, about 5.6 Earth radii. Its speed is $2\pi r/T = 3.07$ km/s. It uses the sidereal day, not 24 hours, because the Earth turns once relative to the stars in 23 h 56 min; the extra four minutes in a solar day come from our motion round the Sun.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Escape velocity.) Find the speed needed to escape from the Earth's surface without further thrust (radius 6371 km), and compare it with the speed of a low circular orbit. Why is the ratio exactly $\sqrt2$?</p>
+        <details><summary>Solution</summary><div>
+          <p>To escape, the kinetic energy must at least cancel the negative gravitational potential energy: $\frac12mv^2 = GMm/R$, so $v_{\text{esc}} = \sqrt{2GM/R} = 11.2$ km/s. A circular orbit just above the surface needs $mv^2/R = GMm/R^2$, so $v_{\text{orb}} = \sqrt{GM/R} = 7.9$ km/s.</p>
+          <p>The ratio is $\sqrt2$ because a circular orbit's kinetic energy is exactly half the depth of the potential well: $\frac12mv_{\text{orb}}^2 = \frac12GMm/R$. To escape, you need to double the kinetic energy. The direction doesn't matter for escape (ignoring the atmosphere): energy is a scalar.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Dropping onto a spring.) A 1 kg block is dropped from 0.5 m above the top of a vertical spring of stiffness 1000 N/m. How far does the spring compress?</p>
+        <details><summary>Solution</summary><div>
+          <p>Use energy from the release to the lowest point, where the block is momentarily at rest. If the spring compresses by $x$, the block has fallen $h + x$ in total, and all that gravitational energy is now in the spring:</p>
+          $$mg(h + x) = \tfrac12kx^2\quad\Longrightarrow\quad 500x^2 - 9.8x - 4.9 = 0\quad\Longrightarrow\quad x = 0.109\text{ m}.$$
+          <p>The common mistake is to forget the extra fall $x$ while the spring compresses. Ignoring it gives $x = \sqrt{2mgh/k} = 0.099$ m. The second root of the quadratic is negative: it describes where the block would be at rest if the spring were stretched instead, and has no meaning here.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A swinging rod.) A uniform rod 1 m long swings about a pivot at one end. Find its period for small swings, and the length of the simple pendulum with the same period. Its moment of inertia about the end is $\frac13mL^2$.</p>
+        <details><summary>Solution</summary><div>
+          <p>For a rotating body, torque = moment of inertia × angular acceleration. Gravity acts at the centre, $L/2$ from the pivot, so for a small angle $\theta$:</p>
+          $$\tfrac13mL^2\,\ddot\theta = -mg\tfrac L2\sin\theta \approx -mg\tfrac L2\theta\quad\Longrightarrow\quad \omega^2 = \frac{3g}{2L},\quad T = 2\pi\sqrt{\frac{2L}{3g}} = 1.64\text{ s}.$$
+          <p>A simple pendulum of length $\frac23L = 0.67$ m has the same period. The rod is not equivalent to a point at its centre ($L/2$), because the mass far from the pivot is harder to swing. The point at $\frac23L$ is the "centre of percussion": hit the rod there and the pivot feels no jolt, which is the sweet spot of a bat.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="waves-and-electricity">
+    <h2>Waves, circuits and fields</h2>
+    <ol start="11">
+      <li>
+        <p><span class="tag core">core</span> (Organ pipes.) A pipe 0.50 m long is open at both ends. Find its lowest note and the next two. Then close one end: what are the lowest three notes now? Sound travels at 343 m/s.</p>
+        <details><summary>Solution</summary><div>
+          <p>Air at an open end is free to move, so the standing wave has a displacement antinode there; at a closed end the air cannot move, so there is a node. An open pipe fits half a wavelength between its two antinodes, so $\lambda_1 = 2L = 1.0$ m and $f_1 = c/2L = 343$ Hz, with all the harmonics $nf_1$: 343, 686 and 1029 Hz.</p>
+          <p>A closed pipe has a node at one end and an antinode at the other, a quarter of a wavelength: $f_1 = c/4L = 171.5$ Hz, an octave lower. Only odd numbers of quarter-wavelengths fit, so the notes are 171.5, 514.5 and 857.5 Hz, with the even harmonics missing. That missing half gives a stopped organ pipe or a clarinet its hollow sound, compared with a flute.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Beats from a wall.) You walk at 1.0 m/s towards a wall holding a 440 Hz tuning fork. You hear the sound directly and also its echo from the wall. What beat frequency do you hear? Sound travels at 343 m/s.</p>
+        <details><summary>Solution</summary><div>
+          <p>Two Doppler shifts happen in a row. The wall receives the sound from a source approaching at $u$: $f' = f\,c/(c - u)$. The wall then re-emits at $f'$ and you, approaching it, hear $f'' = f'(c + u)/c$. Together,</p>
+          $$f'' = f\,\frac{c + u}{c - u} = 440\times\frac{344}{342} = 442.57\text{ Hz}.$$
+          <p>The direct sound reaches you at 440 Hz, since you and the fork move together. Two tones $\Delta f$ apart add up to a loudness that rises and falls $\Delta f$ times a second, so you hear 2.6 beats per second. For $u \ll c$ the beat frequency is $2uf/c$, and this is how police radar measures a car's speed, with radio waves instead of sound.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The battery's limit.) A 12 V battery has internal resistance 0.5 Ω. Connected to a load $R$, how much power does the load receive? Which $R$ gets the most power, and how much is it? What is the efficiency then?</p>
+        <details><summary>Solution</summary><div>
+          <p>The current through both resistances is $I = \mathcal E/(R + r)$, so the load gets $P = I^2R = \mathcal E^2R/(R + r)^2$. Setting $dP/dR = 0$: $(R + r)^2 = 2R(R + r)$, so $R = r$. The maximum is</p>
+          $$P_{\max} = \frac{\mathcal E^2}{4r} = \frac{144}{2} = 72\text{ W}.$$
+          <p>At that point the battery wastes as much heat inside itself as it delivers, so the efficiency is only 50%. Maximum power and maximum efficiency are different goals. Power grids aim for efficiency, with loads far larger than the source resistance; radio antennas and amplifiers aim for maximum power, and "match" their resistances.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Charging a capacitor.) A 100 μF capacitor is charged through a 10 kΩ resistor from a 9 V battery. Show that the voltage on it is $V(t) = 9(1 - e^{-t/RC})$ volts. How long does it take to reach 90% of 9 V, and how much energy does it store at the end?</p>
+        <details><summary>Hint</summary><div><p>Kirchhoff's voltage law: the battery's 9 V is shared between the resistor, $IR$, and the capacitor, $Q/C$. Since $I = dQ/dt$, this is a first-order differential equation.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Around the loop, $\mathcal E = IR + Q/C$ with $I = dQ/dt$. Writing $V = Q/C$ gives $RC\,\dot V = \mathcal E - V$. Separate the variables: $\int dV/(\mathcal E - V) = \int dt/RC$, so $-\ln(\mathcal E - V) = t/RC + \text{const}$. With $V(0) = 0$:</p>
+          $$V(t) = \mathcal E\left(1 - e^{-t/RC}\right),\qquad RC = 10^4\times10^{-4} = 1.0\text{ s}.$$
+          <p>The time constant $RC$ sets the pace. 90% is reached when $e^{-t/RC} = 0.1$, at $t = RC\ln10 = 2.3$ s. The stored energy is $\frac12CV^2 = \frac12\times10^{-4}\times81 = 4.05$ mJ. The battery supplied $QV = CV^2$, twice as much: the resistor turned the other half into heat, whatever its resistance (problem 7 of <a href="/physics/P2-waves-and-electromagnetism/">P2</a> explores why).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A proton in a magnetic field.) A proton is accelerated from rest through 1000 V and enters a 0.10 T magnetic field at right angles to it. Find its speed, the radius of its circle, and how many times a second it goes round. Does the last answer depend on the speed? ($m_p = 1.673\times10^{-27}$ kg, $e = 1.602\times10^{-19}$ C.)</p>
+        <details><summary>Solution</summary><div>
+          <p>The electric field gives it energy $eV = \frac12mv^2$, so $v = \sqrt{2eV/m} = 4.38\times10^5$ m/s. The magnetic force $evB$ is always at right angles to the velocity, so it changes the direction but not the speed, and supplies the centripetal force: $evB = mv^2/r$, so</p>
+          $$r = \frac{mv}{eB} = 4.6\text{ cm},\qquad f = \frac{v}{2\pi r} = \frac{eB}{2\pi m} = 1.52\text{ MHz}.$$
+          <p>The frequency does not depend on the speed: a faster proton runs a bigger circle in the same time. That is the principle of the cyclotron, which kicks the protons with an alternating voltage at this fixed frequency, once every half turn. (It fails once relativity makes the mass effectively grow.) The radius depends on $m/e$, which is how a mass spectrometer sorts ions.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Inside a charged ball.) A ball of radius $R$ carries charge $Q$ spread evenly through its volume. Use Gauss's law to find the electric field at distance $r$ from its centre, both inside and outside. Sketch $E(r)$.</p>
+        <details><summary>Solution</summary><div>
+          <p>By symmetry the field points radially and has the same size everywhere on a sphere of radius $r$. Gauss's law says the flux through that sphere, $4\pi r^2E$, equals the charge inside divided by $\varepsilon_0$. Outside, all of $Q$ is enclosed; inside, only the fraction $(r/R)^3$:</p>
+          $$E(r) = \frac{Q}{4\pi\varepsilon_0}\times\begin{cases} r/R^3 &amp; r \le R,\\ 1/r^2 &amp; r \ge R.\end{cases}$$
+          <p>The field rises linearly from zero at the centre, peaks at the surface, and then falls as $1/r^2$, exactly as if all the charge were at the centre. Gravity obeys the same law, so inside a uniform planet gravity is proportional to the distance from the centre; problem 5 of <a href="/physics/P2-waves-and-electromagnetism/">P2</a> uses this to send a train through the Earth.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The falling rod.) A metal rod of mass 0.10 kg and length 1.0 m slides without friction down two vertical rails joined at the top by a 1.0 Ω resistor. A horizontal magnetic field of 0.50 T crosses the circuit. Explain why the rod reaches a terminal speed, and find it.</p>
+        <details><summary>Solution</summary><div>
+          <p>As the rod falls at speed $v$, the area of the circuit changes, and Faraday's law gives an EMF $\mathcal E = BLv$. The current $I = BLv/R$ flows through the rod, which feels a magnetic force $BIL = B^2L^2v/R$. By Lenz's law it opposes the motion, so it points up. The rod speeds up until this force balances its weight:</p>
+          $$\frac{B^2L^2v_t}{R} = mg\quad\Longrightarrow\quad v_t = \frac{mgR}{B^2L^2} = \frac{0.98\times1}{0.25} = 3.9\text{ m/s}.$$
+          <p>At terminal speed, gravity does work at the rate $mgv_t = 3.8$ W, and the resistor dissipates $I^2R = (BLv_t)^2/R = 3.8$ W: the energy is not lost, it becomes heat. Magnetic brakes on trains and roller coasters work this way, and need no contact.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="heat-light-and-atoms">
+    <h2>Heat, light and atoms</h2>
+    <ol start="18">
+      <li>
+        <p><span class="tag core">core</span> (How fast is the air?) Find the root-mean-square speed of nitrogen molecules (molar mass 28 g/mol) at 300 K, using $\frac12m\overline{v^2} = \frac32k_BT$. Compare it with the speed of sound, 343 m/s.</p>
+        <details><summary>Solution</summary><div>
+          <p>Per mole, $\frac12M\overline{v^2} = \frac32RT$, so $v_{\text{rms}} = \sqrt{3RT/M} = \sqrt{3\times8.314\times300/0.028} = 517$ m/s. Sound is carried by these molecules, so it travels at a similar but somewhat smaller speed; for an ideal gas $c = \sqrt{\gamma RT/M}$ with $\gamma = 1.4$, which is $\sqrt{1.4/3} = 0.68$ times $v_{\text{rms}}$, giving 353 m/s at this temperature. Hydrogen, 14 times lighter, moves almost four times faster, which is part of why the Earth has lost its hydrogen to space.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Ice in a drink.) 200 g of ice at 0 °C is dropped into 1.0 kg of water at 30 °C in an insulated flask. What is the final temperature? Latent heat of melting: 334 kJ/kg. Specific heat of water: 4186 J/(kg K).</p>
+        <details><summary>Solution</summary><div>
+          <p>First decide whether all the ice melts. Melting it needs $0.2\times334\,000 = 66.8$ kJ. Cooling the water all the way to 0 °C would release $1\times4186\times30 = 125.6$ kJ, which is more, so all the ice melts and the final temperature $T$ is above 0 °C. Then heat lost equals heat gained:</p>
+          $$1\times4186\,(30 - T) = 66\,800 + 0.2\times4186\,T\quad\Longrightarrow\quad T = \frac{125\,580 - 66\,800}{1.2\times4186} = 11.7\ ^\circ\text{C}.$$
+          <p>If the first check had failed, the answer would be exactly 0 °C with some ice left over, and you would find how much from the energy. Notice how much melting costs: of the 76.6 kJ the warm water gives up, 66.8 kJ go into melting the ice and only 9.8 kJ into warming the melt-water.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The best possible fridge.) A fridge keeps its inside at 5 °C in a 25 °C kitchen. What is the largest possible coefficient of performance (heat removed per joule of electricity)? If it must remove 100 W of heat leaking in, what is the least power it needs?</p>
+        <details><summary>Solution</summary><div>
+          <p>The second law says entropy cannot decrease in total. Removing heat $Q_c$ from the cold inside lowers its entropy by $Q_c/T_c$, so at least $Q_h/T_h \ge Q_c/T_c$ must be dumped into the kitchen. Energy says $Q_h = Q_c + W$. Together,</p>
+          $$\text{COP} = \frac{Q_c}{W} \le \frac{T_c}{T_h - T_c} = \frac{278}{20} = 13.9.$$
+          <p>So at least $100/13.9 = 7.2$ W is needed. Real fridges manage a COP of about 2 to 4. The formula shows why a heat pump heating a house is so efficient when the temperature difference is small, and why a fridge in a hot garage works much harder.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A magnifying glass.) A thin converging lens of focal length 10 cm forms an image of an object placed 15 cm in front of it. Where is the image, is it real, and what is the magnification? Then move the object to 5 cm.</p>
+        <details><summary>Solution</summary><div>
+          <p>The thin-lens equation is $1/u + 1/v = 1/f$, with distances positive for a real object and real image. At $u = 15$ cm: $1/v = 1/10 - 1/15 = 1/30$, so $v = 30$ cm behind the lens. The image is real (you could catch it on a screen), inverted, and magnified by $m = -v/u = -2$.</p>
+          <p>At $u = 5$ cm, inside the focal length: $1/v = 1/10 - 1/5 = -1/10$, so $v = -10$ cm. The negative sign means the image is virtual, on the same side as the object. It is upright and magnified $m = 10/5 = 2$: this is how a magnifying glass is used. Drawing the two standard rays (one through the centre, one parallel then through the focus) checks both answers.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Young's slits.) Red laser light of wavelength 633 nm passes through two slits 0.25 mm apart and falls on a screen 2.0 m away. How far apart are the bright fringes? What changes if the apparatus is put under water?</p>
+        <details><summary>Solution</summary><div>
+          <p>At a point at angle $\theta$, the paths from the two slits differ by $d\sin\theta$. Bright fringes occur where this is a whole number of wavelengths. For small angles, the position on the screen is $y = L\theta$, so neighbouring fringes are</p>
+          $$\Delta y = \frac{\lambda L}{d} = \frac{633\times10^{-9}\times2.0}{0.25\times10^{-3}} = 5.1\text{ mm}$$
+          <p>apart. Under water the wavelength shrinks by $n = 1.33$, while the frequency stays the same, so the fringes close up to 3.8 mm. Measuring fringe spacing was how Young first measured the wavelength of light in 1801, and showed that light is a wave.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The photoelectric effect.) Zinc has a work function of 4.3 eV. Ultraviolet light of wavelength 200 nm shines on it. What is the maximum kinetic energy of the ejected electrons, what voltage stops them, and what is the longest wavelength that ejects any? Why doesn't brighter red light work?</p>
+        <details><summary>Solution</summary><div>
+          <p>Each electron absorbs one photon. Using $E = 1240/\lambda$ eV with $\lambda$ in nm, the photon has 6.2 eV; the electron spends at least 4.3 eV escaping, and leaves with up to $6.2 - 4.3 = 1.9$ eV. A reverse voltage of 1.9 V stops even the fastest. The threshold wavelength is where the photon energy equals the work function: $1240/4.3 = 288$ nm.</p>
+          <p>Red light has photons of about 1.9 eV, below the threshold. Making it brighter means more photons, not bigger ones, so no electron ever gets enough energy. This was Einstein's 1905 argument for light quanta, the work for which he received the Nobel Prize.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Carbon dating.) Carbon-14 has a half-life of 5730 years. A piece of wood has 25% of the carbon-14 of living wood. How old is it? What if it has 10%? Show that the general formula is $t = t_{1/2}\log_2(N_0/N)$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Each half-life halves the amount, so after time $t$, $N = N_0\,2^{-t/t_{1/2}}$. Solving for $t$: $t = t_{1/2}\log_2(N_0/N)$. With 25% left, $N_0/N = 4 = 2^2$: two half-lives, 11 460 years. With 10% left, $\log_210 = 3.32$, so $t = 19\,000$ years.</p>
+          <p>This works because a living tree keeps topping up its carbon-14 from the air, so its fraction stays fixed until it dies. After about ten half-lives (57 000 years) less than a thousandth is left, and the method runs out. The same equation is often written $N = N_0e^{-t/\tau}$ with mean life $\tau = t_{1/2}/\ln2 = 8270$ years.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

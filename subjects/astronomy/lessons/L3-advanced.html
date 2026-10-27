@@ -1,0 +1,147 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 3 of 4 · Advanced</div>
+  <h1>Level 3: advanced</h1>
+  <p class="lede">Eighteen problems at the level of a university astrophysics course. They use spherical trigonometry, Kepler's equation, the virial theorem, plasma physics and a little general relativity, and each ends in a number that someone has measured. Several of them are how astronomers actually proved something: that a black hole is there, that neutron stars accrete, that the Solar System moves through the cosmic background. The harder ones have a hint.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/astronomy/L2-intermediate/">Level 2</a>, calculus, and the physics of <a href="/physics/L3-advanced/">physics Level 3</a></span><span><b>Next:</b> <a href="/astronomy/L4-olympiad/">Level 4</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="sky-and-orbits">
+    <h2>The sky and orbits</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (How long is the day?) The altitude $h$ of a star of declination $\delta$, seen from latitude $\phi$ at hour angle $H$, obeys $\sin h = \sin\phi\sin\delta + \cos\phi\cos\delta\cos H$. Show that the Sun is up for $2H_0/15^\circ$ hours, where $\cos H_0 = -\tan\phi\tan\delta$. Find the length of the longest and shortest days at latitude $51.5^\circ$ N, where the Sun's declination ranges over $\pm23.44^\circ$. Where does the formula break down, and what does that mean?</p>
+        <details><summary>Hint</summary><div><p>The Sun rises and sets when $h = 0$. The hour angle increases at $15^\circ$ per hour as the Earth turns, and the Sun is up from $-H_0$ to $+H_0$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Setting $h = 0$: $\cos H_0 = -\sin\phi\sin\delta/\cos\phi\cos\delta = -\tan\phi\tan\delta$. The Sun is above the horizon from $H = -H_0$ to $+H_0$, a span of $2H_0$, and the sky turns $15^\circ$ per hour. At midsummer, $\cos H_0 = -\tan51.5^\circ\tan23.44^\circ = -0.545$, so $H_0 = 123.0^\circ$ and the day lasts 16.4 hours; at midwinter, $\delta$ changes sign, and the day is 7.6 hours. The two add to 24 hours, as they must by symmetry.</p>
+          <p>The formula breaks down when $|\tan\phi\tan\delta| &gt; 1$: then the Sun never reaches the horizon. At midsummer this happens for $\phi &gt; 90^\circ - 23.44^\circ = 66.56^\circ$, the Arctic Circle, where the Sun stays up all night. In reality days are a few minutes longer: the atmosphere bends the Sun's image up by about $0.57^\circ$ near the horizon, and sunrise is counted from the Sun's top edge, not its centre.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Halley's comet near the Sun.) Halley's comet has a semi-major axis of 17.83 AU and an eccentricity of 0.967. Find its period and its closest distance to the Sun. The distance on an elliptical orbit is $r = a(1 - e\cos E)$, and time from perihelion is given by Kepler's equation, $M = E - e\sin E$, where the "mean anomaly" $M$ grows uniformly, by $2\pi$ per orbit. How many days of each orbit does the comet spend closer to the Sun than the Earth?</p>
+        <details><summary>Hint</summary><div><p>Find the eccentric anomaly $E$ at which $r = 1$ AU. The comet is inside from $-E$ to $+E$, so the fraction of the orbit spent inside is $2M/2\pi$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The period is $a^{3/2} = 75.3$ years, and perihelion is $a(1 - e) = 0.59$ AU, inside Venus's orbit. Setting $r = 1$: $\cos E = (1 - 1/a)/e = 0.976$, so $E = 0.219$ rad. Then $M = E - e\sin E = 0.219 - 0.967\times0.2172 = 0.0089$ rad. The comet is inside the Earth's orbit for a fraction $2M/2\pi = 0.0028$ of its period, or 78 days.</p>
+          <p>Notice how $M$ is a small difference between two nearly equal numbers: precision matters here, and a small error in $e$ changes the answer a lot. A comet spends almost all its time far out near aphelion, moving slowly, and sweeps round the Sun in a few weeks, which is Kepler's second law at its most extreme. Kepler's equation has no solution in elementary functions; going the other way, from time to position, needs iteration, such as Newton's method.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Mercury's long day.) Mercury spins once relative to the stars every 58.65 days, and orbits the Sun in 87.97 days, in the same sense. How long is its solar day, from one noon to the next? Why are these two numbers in the ratio 2 : 3?</p>
+        <details><summary>Solution</summary><div>
+          <p>The rates subtract, as for a sunspot: $1/S = 1/58.65 - 1/87.97$, so the solar day is $S = 176$ days, exactly two of Mercury's years. A person standing on Mercury would see one sunrise every two orbits. The 3 : 2 spin–orbit resonance comes from tides: the Sun's pull on Mercury's slightly elongated shape locks the long axis to point at the Sun at every perihelion, where the tidal torque is strongest. Because Mercury's orbit is eccentric ($e = 0.21$), it was likely to be captured by this lock as its spin slowed, before reaching the 1 : 1 lock our Moon has. Until radar measurements in 1965, astronomers thought Mercury always kept one face to the Sun.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The Moon's path round the Sun.) Compare the Sun's gravitational pull on the Moon with the Earth's. Show that the Moon's path round the Sun is always curved towards the Sun, never looping back, even though it goes round the Earth.</p>
+        <details><summary>Solution</summary><div>
+          <p>The Sun's pull on the Moon gives an acceleration $GM_\odot/(1\text{ AU})^2 = 5.9\times10^{-3}$ m/s²; the Earth's gives $GM_\oplus/r^2 = 2.7\times10^{-3}$ m/s². The Sun pulls the Moon more than twice as hard as the Earth does. The total acceleration therefore always has a component towards the Sun, even at new Moon, when the two pulls are opposite: $5.9 - 2.7 &gt; 0$.</p>
+          <p>A path curves towards the side its acceleration points to, so the Moon's path round the Sun is everywhere concave towards the Sun: a gently wavy circle, never a loop, and not even an S-bend. It is more accurate to say the Earth and the Moon are a double planet orbiting the Sun together, while weaving round each other. Why then doesn't the Sun steal the Moon? Because the Sun pulls the Earth almost equally; only the difference, the tidal force, tries to separate them, and it is far weaker than the Earth's grip.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Saturn's rings are not solid.) In 1895 James Keeler measured Doppler shifts across Saturn's rings. Find the orbital speed of ring particles at the inner edge of the B ring (92 000 km from Saturn's centre) and the outer edge of the A ring (137 000 km), with $GM_{\text{Saturn}} = 3.79\times10^{16}$ m³/s². What would a solid ring show instead? Saturn's equator turns once every 10.55 hours: how fast is the planet's cloud-top equator (radius 60 000 km) moving, and what does that comparison tell you?</p>
+        <details><summary>Solution</summary><div>
+          <p>Each particle is on its own orbit, with $v = \sqrt{GM/r}$: 20.3 km/s at the inner edge and 16.6 km/s at the outer. The inside moves faster. A solid ring would turn at one angular speed, so its outer edge would be the faster, by the ratio of the radii, 1.5. Keeler's spectrum showed the slanted lines of the Keplerian case, proving the rings are a swarm of separate bodies, as Maxwell had argued in 1859 on grounds of stability.</p>
+          <p>Saturn's equator moves at $2\pi\times6.0\times10^7/(10.55\times3600) = 9.9$ km/s, much slower than the orbital speed near its surface, 25 km/s. The rings, which are in orbit, and the planet, held up by its own pressure, follow quite different rules: the rings feel only gravity, while the planet's rotation is whatever its history left it with.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="stars-and-compact-objects">
+    <h2>Stars and compact objects</h2>
+    <ol start="6">
+      <li>
+        <p><span class="tag core">core</span> (When does a cloud collapse?) A uniform spherical gas cloud of mass $M$, radius $R$ and temperature $T$ collapses if its gravitational energy, $\frac35GM^2/R$, exceeds twice its thermal energy, $2\times\frac32Nk_BT$ (the virial theorem). Show that the smallest mass that collapses, the Jeans mass, is $M_J = \big(\frac{5k_BT}{G\mu m_H}\big)^{3/2}\big(\frac{3}{4\pi\rho}\big)^{1/2}$. Evaluate it for a molecular cloud core at 10 K with $10^{10}$ molecules per cubic metre and mean molecular mass $\mu = 2.33$ (in units of $m_H = 1.67\times10^{-27}$ kg).</p>
+        <details><summary>Hint</summary><div><p>Write $N = M/\mu m_H$ and $R = (3M/4\pi\rho)^{1/3}$, then solve the inequality for $M$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The condition is $\frac35GM^2/R &gt; 3Mk_BT/\mu m_H$, so $M &gt; 5k_BTR/G\mu m_H$. Substituting $R = (3M/4\pi\rho)^{1/3}$ gives $M^{2/3} &gt; (5k_BT/G\mu m_H)(3/4\pi\rho)^{1/3}$, and raising to the power $\frac32$ gives the formula. With $\rho = 10^{10}\times2.33\times1.67\times10^{-27} = 3.9\times10^{-17}$ kg/m³:</p>
+          $$M_J \approx 5\ M_\odot.$$
+          <p>Clumps heavier than this collapse; lighter ones are held up by their own pressure. Because $M_J \propto T^{3/2}\rho^{-1/2}$, the Jeans mass falls as a collapsing cloud gets denser while staying cold (it radiates its heat away), so it breaks into smaller and smaller pieces. That is one explanation of why stars are born in clusters, and why their masses cluster around the Sun's.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The free-fall time.) A uniform sphere of density $\rho$ starts at rest and has no pressure. Each shell falls inwards under the mass inside it. Show that the whole sphere collapses to a point in $t_{\text{ff}} = \sqrt{3\pi/32G\rho}$. Evaluate it for the cloud of problem 6, and for the Sun (mean density 1410 kg/m³) if its pressure suddenly vanished.</p>
+        <details><summary>Hint</summary><div><p>A shell starting at radius $R$ falls like a body falling radially onto a point mass $M$. Its motion is a degenerate Kepler orbit: an ellipse of eccentricity 1 with semi-major axis $R/2$. The fall takes half that orbit's period.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>In a uniform sphere every shell takes the same time to fall, as the result will show, so shells never cross, and a shell starting at $R$ always has the same mass $M = \frac43\pi R^3\rho$ inside it. Its radial fall is a Kepler orbit squeezed flat, with semi-major axis $R/2$. By Kepler's third law its period is $2\pi\sqrt{(R/2)^3/GM}$, and the fall from aphelion to the centre takes half of that:</p>
+          $$t_{\text{ff}} = \pi\sqrt{\frac{R^3}{8GM}} = \pi\sqrt{\frac{3}{32\pi G\rho}} = \sqrt{\frac{3\pi}{32G\rho}}.$$
+          <p>$R$ cancels, so every shell arrives at once. For the cloud, $t_{\text{ff}} = 3.4\times10^5$ years, quick by astronomical standards: real clouds collapse more slowly, held up by magnetic fields and turbulence. For the Sun, only 29 minutes. That is how fast a star responds if its support fails, which is what happens to the core of a massive star when it runs out of fuel: it collapses in under a second, being far denser.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Accretion beats fusion.) Gas falling onto a star of mass $M$ and radius $R$ releases energy $GM/R$ per kilogram. Compare this with $c^2$ for a neutron star (1.4 $M_\odot$, radius 10 km) and a white dwarf (0.6 $M_\odot$, radius 7000 km), and with the 0.7% released by hydrogen fusion. Why are the brightest X-ray sources in the Galaxy neutron stars and black holes in binaries?</p>
+        <details><summary>Solution</summary><div>
+          <p>For the neutron star, $GM/Rc^2 = 6.67\times10^{-11}\times2.8\times10^{30}/(10^4\times9\times10^{16}) = 0.21$: falling onto it releases 21% of the gas's rest-mass energy, thirty times what fusion gives from the same gas. For the white dwarf, $1.3\times10^{-4}$, much less than fusion. Fusion is a property of nuclei; accretion depends on how deep the well is, that is, on $M/R$.</p>
+          <p>The gas, heated as it spirals in, reaches temperatures of $10^7$ K or more, so it shines in X-rays. Accreting $10^{-8}\ M_\odot$ per year onto a neutron star gives a luminosity $0.21\dot Mc^2 \approx 10^{31}$ W, tens of thousands of Suns. Accretion onto supermassive black holes, with an efficiency of 6% to 40% depending on spin, powers quasars, the brightest steady sources in the universe.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Spaghettification.) The difference in gravitational acceleration between your head and feet, a height $h$ apart, at distance $r$ from a mass $M$ is about $2GMh/r^3$. Evaluate this at the event horizon, $r = 2GM/c^2$, for $h = 2$ m, for a 10 $M_\odot$ black hole and for the $4.3\times10^6\ M_\odot$ black hole at the centre of the Galaxy. What do you notice about how the result depends on $M$?</p>
+        <details><summary>Solution</summary><div>
+          <p>Differentiating $GM/r^2$ gives the tidal acceleration $2GMh/r^3$. At the horizon, $r = 2GM/c^2$, so it becomes $c^6h/4G^2M^2$, falling as $1/M^2$. For 10 $M_\odot$, $r = 30$ km and the stretch is $2\times10^8$ m/s², twenty million $g$: you would be pulled apart long before reaching the horizon. For the Galactic centre, $r = 1.3\times10^7$ km and the stretch is $10^{-3}$ m/s², which you would not feel.</p>
+          <p>Big black holes are gentle at their horizons, because their horizons are far from the centre. So a star can fall whole into a black hole above about $10^8\ M_\odot$, but is torn apart outside a smaller one, which is seen as a "tidal disruption event", a flare lasting months.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Light climbing out of a white dwarf.) Light leaving the surface of a star of mass $M$ and radius $R$ is redshifted by $z \approx GM/Rc^2$ when $GM/Rc^2 \ll 1$. Find $z$ for Sirius B ($1.02\ M_\odot$, radius 5900 km) and express it as the equivalent Doppler velocity $cz$. The Hubble Space Telescope measured 80 km/s. Why is this a test of two theories at once?</p>
+        <details><summary>Solution</summary><div>
+          <p>A photon climbing out of the well loses energy $h\nu\cdot GM/Rc^2$, treating its energy as mass $h\nu/c^2$; general relativity gives the same result to first order. For Sirius B, $z = 6.67\times10^{-11}\times2.03\times10^{30}/(5.9\times10^6\times9.0\times10^{16}) = 2.6\times10^{-4}$, equivalent to $cz = 77$ km/s, close to the measured 80 km/s. (For the Sun, $z$ is 0.6 km/s, hard to separate from motions in its atmosphere.)</p>
+          <p>The redshift tests general relativity, and also the theory of white dwarfs: it measures $M/R$, which combined with the mass from the orbit gives a radius, and that radius is the one that electron degeneracy pressure predicts. In 1925 the first attempt at this measurement on Sirius B was hailed as a confirmation of both, but its result was later shown to have been contaminated by light from Sirius A.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Proving a black hole.) A star in a binary has a radial velocity that varies with period $P$ and semi-amplitude $K$. Show that the "mass function" $f = PK^3/2\pi G$ equals $M_2^3\sin^3i/(M_1 + M_2)^2$, where $M_2$ is the unseen companion and $i$ the tilt of the orbit, and that $f$ is a lower bound on $M_2$. For the X-ray binary V404 Cygni, $P = 6.473$ days and $K = 208.5$ km/s. Evaluate $f$ and explain what it proves.</p>
+        <details><summary>Hint</summary><div><p>For a circular orbit, the visible star moves on a circle of radius $a_1 = aM_2/(M_1 + M_2)$ with speed $v_1 = 2\pi a_1/P$, and you see only $K = v_1\sin i$. Combine with Kepler's law, $G(M_1 + M_2)P^2 = 4\pi^2a^3$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>From $K = 2\pi a_1\sin i/P$, $a_1\sin i = KP/2\pi$. Since $a_1 = aM_2/(M_1 + M_2)$, Kepler's law becomes $G(M_1 + M_2)P^2 = 4\pi^2a_1^3(M_1 + M_2)^3/M_2^3$. Rearranging and multiplying both sides by $\sin^3i$:</p>
+          $$\frac{M_2^3\sin^3i}{(M_1 + M_2)^2} = \frac{4\pi^2(a_1\sin i)^3}{GP^2} = \frac{PK^3}{2\pi G} = f.$$
+          <p>Since $\sin i \le 1$ and $M_1 \ge 0$, $M_2 \ge f$. For V404 Cygni, $f = 6.473\times86\,400\times(2.085\times10^5)^3/(2\pi\times6.674\times10^{-11}) = 1.2\times10^{31}$ kg $= 6.1\ M_\odot$. No neutron star can be heavier than about $3\ M_\odot$: above that, nothing known can hold it up. So the unseen companion, at least $6\ M_\odot$, dark and compact enough to emit X-rays from its surroundings, must be a black hole. The measurement needs only a spectrograph and a clock; no assumption about the visible star is used.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="radio-and-cosmos">
+    <h2>Radio, neutrinos and the cosmos</h2>
+    <ol start="12">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Weighing the gas between the stars.) Radio waves travel through a plasma of electron density $n_e$ with group velocity $v_g = c\sqrt{1 - \nu_p^2/\nu^2}$, where the plasma frequency is $\nu_p = 8.98\sqrt{n_e}$ Hz ($n_e$ per m³). Show that a pulse at frequency $\nu \gg \nu_p$ is delayed by $\Delta t = (e^2/8\pi^2\varepsilon_0m_ec)\,\text{DM}/\nu^2$, where $\text{DM} = \int n_e\,dl$ is the "dispersion measure". In practical units this is $\Delta t = 4.15$ ms $\times\,\text{DM}/(\text{pc cm}^{-3})\times(\nu/\text{GHz})^{-2}$. A pulsar has $\text{DM} = 50$ pc cm⁻³. How much later do its pulses arrive at 400 MHz than at 1.4 GHz? If the gas has $n_e = 0.03$ cm⁻³, how far away is the pulsar?</p>
+        <details><summary>Hint</summary><div><p>Expand $1/v_g \approx (1/c)(1 + \nu_p^2/2\nu^2)$ for $\nu \gg \nu_p$, and integrate the extra time along the path. Note that $\nu_p^2 \propto n_e$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The travel time is $\int dl/v_g \approx L/c + \int\nu_p^2\,dl/2c\nu^2$. With $\nu_p^2 = n_ee^2/4\pi^2\varepsilon_0m_e$, the extra time is $(e^2/8\pi^2\varepsilon_0m_ec)\,\text{DM}/\nu^2$: proportional to the number of electrons along the path, and to $1/\nu^2$. For DM $= 50$:</p>
+          $$\Delta t = 4.15\text{ ms}\times50\times\left(\frac{1}{0.4^2} - \frac{1}{1.4^2}\right) = 1.19\text{ s}.$$
+          <p>A pulse at 400 MHz arrives over a second after the same pulse at 1.4 GHz, so radio astronomers must "de-disperse" before they can see the pulses at all. The distance is $\text{DM}/n_e = 50/0.03 = 1700$ pc. Turned around, with pulsars of known distance, this maps the free electrons of the Galaxy. Fast radio bursts, with DMs of hundreds to thousands, come from other galaxies, and their dispersion measures have been used to count the "missing" ordinary matter between galaxies.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The 21 cm line.) The ground state of hydrogen is split in two by the interaction of the electron's and proton's spins, and a flip between them emits a photon at 1420.406 MHz. Find the energy of this transition in eV, and its equivalent temperature $h\nu/k_B$. The upper level decays spontaneously only once every 11 million years. Why is the line nevertheless the most useful in radio astronomy?</p>
+        <details><summary>Solution</summary><div>
+          <p>$E = h\nu = 6.63\times10^{-34}\times1.42\times10^9$ J $= 5.9\times10^{-6}$ eV, and $h\nu/k_B = 0.068$ K. Even the coldest gas, at 10 to 100 K, has enough energy to keep the two levels populated in their statistical ratio, about 3 : 1, through collisions. So every cloud of neutral hydrogen emits, however cold.</p>
+          <p>Each atom emits rarely, but the Galaxy has $10^{66}$ or so hydrogen atoms, and the radio waves pass through dust that blocks visible light. Doppler shifts of the line map the rotation of the Galaxy and show its spiral arms. The line is so well known that it was used as a unit on the plaques carried by the Pioneer and Voyager spacecraft.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Neutrinos from the Sun.) Each conversion of four protons into helium releases 26.7 MeV and two neutrinos. The Sun's luminosity is $3.83\times10^{26}$ W. Find the number of neutrinos the Sun emits per second, and the number passing through each square centimetre at the Earth each second. Why can neutrinos tell us about the Sun's core directly?</p>
+        <details><summary>Solution</summary><div>
+          <p>The reaction rate is $L/26.7\text{ MeV} = 3.83\times10^{26}/4.28\times10^{-12} = 9\times10^{37}$ per second, so $1.8\times10^{38}$ neutrinos per second. (The neutrinos carry off about 2% of the energy, which we have neglected.) Spread over a sphere of radius 1 AU, $4\pi(1.5\times10^{13}\text{ cm})^2 = 2.8\times10^{27}$ cm², that is $6.4\times10^{10}$ per cm² per second: tens of billions through your thumbnail every second, day and night, since the Earth is nearly transparent to them.</p>
+          <p>Light made in the core takes over 100 000 years to diffuse out, but neutrinos fly straight out in two seconds and reach us eight minutes later, so they show the core as it is now. Early detectors found only a third of the expected number: the "solar neutrino problem", solved in 2001 by showing that neutrinos change type on the way, which requires them to have mass.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Our speed through the universe.) The cosmic microwave background is 2.7255 K on average, but 3.36 mK hotter in one direction and as much colder in the opposite one. Show that a motion $v \ll c$ through a black-body background of temperature $T_0$ makes the temperature seen at angle $\theta$ to the motion $T(\theta) \approx T_0(1 + (v/c)\cos\theta)$. Find our speed.</p>
+        <details><summary>Solution</summary><div>
+          <p>Each photon arriving from angle $\theta$ is Doppler shifted by a factor $1 + (v/c)\cos\theta$ to first order. A black body with every frequency scaled by a factor is again a black body, at temperature scaled by the same factor (since Planck's law depends only on $h\nu/k_BT$). So the sky looks like a black body in every direction, hotter ahead: $T(\theta) = T_0(1 + (v/c)\cos\theta)$.</p>
+          <p>The amplitude gives $v/c = 3.36\times10^{-3}/2.7255 = 1.23\times10^{-3}$, so $v = 370$ km/s, towards the constellation Crater. This is the Sun's motion round the Galaxy plus the Galaxy's fall towards neighbouring mass concentrations. The background gives the universe a natural rest frame; it doesn't conflict with relativity, which says only that the laws of physics, not the contents of the universe, look the same to every observer.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (How old was the universe then?) In a universe containing only matter, the scale factor grows as $a \propto t^{2/3}$. Show that the age at redshift $z$ is $t = t_0(1 + z)^{-3/2}$, using $1 + z = a(t_0)/a(t)$. With $t_0 = 13.8$ billion years, find the age at $z = 10$ (where the James Webb Space Telescope has found galaxies) and at $z = 1100$ (when the cosmic background was released). Which answer is more reliable, and why?</p>
+        <details><summary>Solution</summary><div>
+          <p>From $a \propto t^{2/3}$, $1 + z = (t_0/t)^{2/3}$, so $t = t_0(1 + z)^{-3/2}$. At $z = 10$: $13.8\times10^9/11^{1.5} = 380$ million years. At $z = 1100$: $13.8\times10^9/1101^{1.5} = 380\,000$ years.</p>
+          <p>The second is close to the accepted 380 000 years, but the first is too low: the accepted age at $z = 10$ is about 470 million years. The flaw is the constant. Our universe has not been matter-only all along: dark energy took over in the last few billion years, so its age, 13.8 billion years, is not the age a matter-only universe with today's expansion rate would have. At high redshift the expansion is matter-dominated, and $t \propto (1 + z)^{-3/2}$ does hold, but with the constant $\frac{2}{3H_0\sqrt{\Omega_m}} \approx 17$ billion years ($H_0 = 68$ km/s/Mpc, $\Omega_m = 0.31$). That gives 470 million years at $z = 10$, correct. At $z = 1100$ it gives 470 000 years, but radiation, which made the early universe expand faster, cuts that to 380 000. So the "right" answer at $z = 1100$ came from two errors that cancelled. Getting both right needs the full Friedmann equation (problem 7 of <a href="/astronomy/P3-galaxies-and-the-universe/">P3</a>).</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

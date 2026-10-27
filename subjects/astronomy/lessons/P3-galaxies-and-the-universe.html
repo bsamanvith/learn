@@ -1,0 +1,124 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P3 · Planets, galaxies and the universe</div>
+  <h1>Problem set: planets, galaxies and the universe</h1>
+  <p class="lede">Thirteen problems from other solar systems out to the edge of the observable universe. You will find out how small a wobble betrays an Earth-like planet, why the night sky is dark, how flat rotation curves revealed dark matter, how old the universe is and why a universe of matter alone would be younger than its oldest stars, why the cosmic background has the same temperature in every direction when its two sides were never in contact, and why GPS would drift by ten kilometres a day without relativity. Try each problem on paper before opening its solution.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/astronomy/P1-orbits-and-the-sky/">P1</a>, <a href="/astronomy/P2-light-and-the-stars/">P2</a>, and a little integration for problems 8–10</span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="exoplanets">
+    <h2>Other worlds</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The wobble.) A star of mass $M$ and a planet of mass $m \ll M$ orbit their centre of mass in a circle with period $P$, seen edge-on. Show that the star's speed is $K = \Big(\dfrac{2\pi G}{P}\Big)^{1/3}\dfrac{m}{M^{2/3}}$. Evaluate $K$ for Jupiter ($m = 1.90\times10^{27}$ kg, $P = 11.9$ years) and the Earth around the Sun. The best spectrographs measure about 30 cm/s. Can they find a second Earth?</p>
+        <details><summary>Solution</summary><div>
+          <p>The star circles at distance $a\,m/(M + m)$ from the centre of mass, where $a$ is the separation, so its speed is $K = \frac{2\pi a}{P}\cdot\frac{m}{M + m}$. Kepler's third law gives $a = \big(G(M + m)P^2/4\pi^2\big)^{1/3}$, so $K = \big(\frac{2\pi G}{P}\big)^{1/3}\frac{m}{(M + m)^{2/3}}\approx\big(\frac{2\pi G}{P}\big)^{1/3}\frac{m}{M^{2/3}}$. Jupiter moves the Sun at 12.5 m/s, a brisk walk, and the Earth at 8.9 cm/s, a slow crawl. Below 30 cm/s an Earth twin is out of reach for now, and the star's own surface, boiling at hundreds of m/s, adds noise. Hot Jupiters (big $m$, short $P$) were found first for exactly this reason (51 Pegasi b, 1995, with $K = 56$ m/s).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Transits.) When a planet of radius $R_p$ crosses its star's disc, the star dims by the fraction $(R_p/R_\star)^2$. Find the dip for Jupiter ($R = 69\,900$ km) and for the Earth crossing the Sun. For randomly oriented circular orbits, show that the chance that the orbit is lined up well enough to transit is about $R_\star/a$, and evaluate it for an Earth twin.</p>
+        <details><summary>Solution</summary><div>
+          <p>Jupiter: $(69\,900/696\,000)^2 = 1.0\%$. The Earth: $(6371/696\,000)^2 = 8.4\times10^{-5}$, or 84 parts per million, which is why Kepler and TESS fly above the atmosphere. A transit is seen if the observer lies within angle $R_\star/a$ of the orbital plane, as seen from the star. For a random orbital orientation, the direction to the observer is uniform on the sphere, and the band of latitudes $|\beta| &lt; R_\star/a$ covers a fraction $\sin(R_\star/a)\approx R_\star/a$ of it. For an Earth twin, $696\,000/1.496\times10^8 = 0.47\%$: you have to watch about 200 Sun-like stars to catch one aligned Earth, which is why Kepler stared at 150,000 stars at once.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="galaxies">
+    <h2>Galaxies</h2>
+    <ol start="3">
+      <li>
+        <p><span class="tag core">core</span> (Why is the night sky dark?) Suppose stars like the Sun filled an infinite, static, eternal universe with uniform number density $n$. Show that each thin shell around us contributes the same amount of light, so the whole sky would be as bright as the surface of the Sun (Olbers's paradox). Estimate the distance a line of sight must travel before it hits a star, for $n\approx10^9$ stars per cubic megaparsec, and compare with the distance light has travelled since the universe began.</p>
+        <details><summary>Solution</summary><div>
+          <p>A shell of radius $r$ and thickness $dr$ holds $4\pi r^2n\,dr$ stars, each giving flux $L/4\pi r^2$. Their total, $nL\,dr$, doesn't depend on $r$, so infinitely many shells give infinite flux. More carefully, nearer stars block farther ones, so every line of sight ends on a stellar surface, and the sky everywhere would look like the Sun's surface, at 5800 K.</p>
+          <p>A line of sight hits a star after a mean free path $\ell = 1/(n\pi R_\odot^2)$. With $n = 10^9/(3.09\times10^{22}\text{ m})^3 = 3.4\times10^{-59}$ m⁻³ and $\pi R_\odot^2 = 1.5\times10^{18}$ m², $\ell\approx2\times10^{40}$ m $\approx 2\times10^{24}$ light-years. The universe is 13.8 billion years old, so we only see light from within about $10^{10}$ light-years (and somewhat more because of expansion): a hundred trillion times too short to fill the sky. The darkness of the night sky is evidence that the universe had a beginning. Redshift helps too, dimming the most distant light. Edgar Allan Poe guessed the finite-age answer in 1848.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Dark matter from a rotation curve.) Stars and gas in a disc galaxy orbit the centre in near-circular orbits. Show that if the orbital speed $v$ is the same at every radius (a flat rotation curve) then the mass inside radius $r$ grows like $M(r) = v^2r/G$. The Sun orbits at $v = 220$ km/s at $r = 8.2$ kpc: find the mass inside. What does a flat curve far beyond the visible disc imply?</p>
+        <details><summary>Solution</summary><div>
+          <p>For a spherical mass distribution, a circular orbit at $r$ feels only the mass inside it (Newton's shell theorem), and $v^2/r = GM(r)/r^2$, so $M(r) = v^2r/G$. (A flattened disc changes the constant a little, not the conclusion.) Inside the Sun's orbit, $M = (2.2\times10^5)^2\times8.2\times3.09\times10^{19}/6.67\times10^{-11} = 1.8\times10^{41}$ kg $= 9\times10^{10}M_\odot$.</p>
+          <p>If the visible matter were all, beyond the disc $M$ would stop growing and $v$ would fall as $r^{-1/2}$, like the planets. Instead, Vera Rubin and Kent Ford's optical curves (1970s) and radio maps of hydrogen gas far beyond the stars stay flat, so $M(r)$ keeps growing linearly: most of a galaxy's mass is in an invisible halo, extending many times beyond the stars. A flat curve needs density $\rho(r) = v^2/(4\pi Gr^2)$, the "isothermal sphere". Along with galaxy clusters, lensing and the cosmic background, this is the case for dark matter: about five times as much as ordinary matter.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Bending light.) General relativity says light passing a mass $M$ at closest distance $b$ is deflected by $\alpha = 4GM/c^2b$, twice the Newtonian value. Find the deflection of starlight grazing the Sun. A galaxy of $10^{12}M_\odot$ lies halfway to a source 2 Gpc away. Show that a source exactly behind it appears as a ring of angular radius $\theta_E = \sqrt{\frac{4GM}{c^2}\frac{D_{LS}}{D_LD_S}}$, and evaluate it (ignore the expansion of space).</p>
+        <details><summary>Solution</summary><div>
+          <p>At the Sun's limb, $\alpha = \frac{4\times6.67\times10^{-11}\times1.99\times10^{30}}{(3.0\times10^8)^2\times6.96\times10^8} = 8.5\times10^{-6}$ rad $= 1.75''$. Eddington's eclipse expedition of 1919 measured it and made Einstein famous.</p>
+          <p>For the ring, a light ray from the source passes the lens at $b = D_L\theta$ and is bent by $\alpha$. For small angles the geometry requires $\alpha D_{LS} = \theta D_S$ (the bend turns a ray aimed $\theta$ off the lens back onto the observer). So $\frac{4GM}{c^2D_L\theta}D_{LS} = \theta D_S$, giving $\theta_E^2 = \frac{4GM}{c^2}\frac{D_{LS}}{D_LD_S}$. With $D_L = D_{LS} = 1$ Gpc and $D_S = 2$ Gpc, $\theta_E^2 = \frac{4GM}{c^2}\cdot\frac{1}{2\text{ Gpc}} = 9.6\times10^{-11}$, so $\theta_E = 9.8\times10^{-6}$ rad $= 2.0''$. Arcs and rings of about this size are seen around massive galaxies and clusters, and their sizes weigh the lens, dark matter included.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="cosmology">
+    <h2>The expanding universe</h2>
+    <ol start="6">
+      <li>
+        <p><span class="tag core">core</span> (Hubble's law and the age of the universe.) Galaxies recede at $v = H_0d$ with $H_0\approx70$ km/s/Mpc. If every galaxy had always moved at its present speed, how long ago were they all together? Express $1/H_0$ in billions of years and $c/H_0$ in gigaparsecs. Explain why a uniform expansion looks the same from every galaxy, so we are not at a centre.</p>
+        <details><summary>Solution</summary><div>
+          <p>At constant speed, a galaxy at $d$ took $d/v = 1/H_0$ to get there, the same for all. $H_0 = 70\times10^3/3.086\times10^{22}$ s⁻¹ $= 2.27\times10^{-18}$ s⁻¹, so $1/H_0 = 4.4\times10^{17}$ s $= 14.0$ billion years, and $c/H_0 = 4.3$ Gpc. If every distance scales by the same factor, $\mathbf r_i(t) = a(t)\mathbf x_i$, then the velocity of galaxy $j$ seen from galaxy $i$ is $\dot a(\mathbf x_j - \mathbf x_i) = \frac{\dot a}{a}(\mathbf r_j - \mathbf r_i)$: Hubble's law with $H = \dot a/a$, seen identically from every galaxy. Raisins in a rising loaf all see the others receding. The true age depends on how $\dot a$ has changed (problem 8), and comes out at 13.8 billion years, close to $1/H_0$ by what looks like a coincidence of our epoch.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (Friedmann's equation from Newton.) Consider a uniform ball of matter of density $\rho$ expanding with the universe. A galaxy on its surface at radius $r = a(t)x$ has energy $\frac12\dot r^2 - \frac{GM}{r} = $ constant. Show that this gives $H^2 = \Big(\dfrac{\dot a}{a}\Big)^2 = \dfrac{8\pi G}{3}\rho - \dfrac{kc^2}{a^2}$ for a constant $k$. Find the critical density for which the universe is flat ($k = 0$), with $H_0 = 70$ km/s/Mpc, in kg/m³ and in protons per cubic metre.</p>
+        <details><summary>Solution</summary><div>
+          <p>The mass inside is $M = \frac43\pi r^3\rho$, constant as the ball expands. Dividing the energy equation by $\frac12r^2 = \frac12a^2x^2$: $\frac{\dot a^2}{a^2} - \frac{8\pi G}{3}\rho = \frac{2E}{a^2x^2}$, a constant over $a^2$. Writing that constant as $-kc^2/a^2$ gives Friedmann's equation, which general relativity confirms exactly, with $k$ now describing the curvature of space. Positive energy ($k &lt; 0$) means expansion forever; negative ($k &gt; 0$) means eventual recollapse, in a matter-only universe.</p>
+          <p>Flatness needs $\rho_c = \frac{3H_0^2}{8\pi G} = \frac{3\times(2.27\times10^{-18})^2}{8\pi\times6.67\times10^{-11}} = 9.2\times10^{-27}$ kg/m³, about 5.5 protons per cubic metre. The universe is measured to be flat to within a fraction of a percent, but ordinary matter supplies only 5% of $\rho_c$, dark matter 27%, and dark energy the remaining 68%. Space is emptier than any vacuum made on Earth, and its average density is set by $H_0$ and $G$ alone.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (A universe younger than its stars.) For a flat universe of matter only, show from Friedmann's equation that $a\propto t^{2/3}$ and the age is $t_0 = \frac{2}{3H_0}$. Evaluate it, and compare with the ages of the oldest globular-cluster stars, about 12–13 billion years. Now add dark energy, $H^2 = H_0^2(\Omega_ma^{-3} + \Omega_\Lambda)$ with $\Omega_m = 0.3$, $\Omega_\Lambda = 0.7$, and show that $t_0 = \frac{2}{3H_0\sqrt{\Omega_\Lambda}}\operatorname{arsinh}\sqrt{\Omega_\Lambda/\Omega_m}$.</p>
+        <details><summary>Hint</summary><div><p>$t_0 = \int_0^1\frac{da}{aH(a)}$. For the second part, substitute $x = a^{3/2}$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $\rho\propto a^{-3}$ and $k = 0$, $\dot a^2\propto a^{-1}$, so $a^{1/2}\dot a$ is constant, $a^{3/2}\propto t$ and $a\propto t^{2/3}$. Then $H = \dot a/a = \frac{2}{3t}$, so today $t_0 = \frac{2}{3H_0} = \frac23\times14.0 = 9.3$ billion years. The universe would be younger than stars in it, a real crisis of the 1990s.</p>
+          <p>With dark energy, $t_0 = \int_0^1\frac{da}{aH_0\sqrt{\Omega_ma^{-3} + \Omega_\Lambda}} = \frac1{H_0}\int_0^1\frac{a^{1/2}\,da}{\sqrt{\Omega_m + \Omega_\Lambda a^3}}$. With $x = a^{3/2}$, $dx = \frac32a^{1/2}da$, this is $\frac{2}{3H_0}\int_0^1\frac{dx}{\sqrt{\Omega_m + \Omega_\Lambda x^2}} = \frac{2}{3H_0\sqrt{\Omega_\Lambda}}\operatorname{arsinh}\sqrt{\frac{\Omega_\Lambda}{\Omega_m}}$. Numerically, $\frac{2\times14.0}{3\times0.837}\times\operatorname{arsinh}(1.528) = 11.15\times1.208 = 13.5$ billion years (13.8 with the measured parameters). Dark energy makes the expansion accelerate, so it was slower in the past, and the universe needed longer to reach today's $H_0$. The age problem and the 1998 supernova measurements pointed to the same answer.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The cooling glow.) Light emitted when the universe had scale factor $a$ arrives today stretched: $1 + z = 1/a$. Show that black-body radiation stays black-body as the universe expands, with $T\propto1/a$. The cosmic microwave background is at 2.725 K today and was released when hydrogen first became neutral, at about 3000 K. Find that redshift. Why 3000 K, when hydrogen's ionisation energy of 13.6 eV corresponds to 158,000 K?</p>
+        <details><summary>Solution</summary><div>
+          <p>Every photon's wavelength stretches by the same factor $1/a$, and the number of photons in a comoving volume is fixed while the volume grows as $a^3$. Planck's distribution has photon number density per wavelength $\propto\lambda^{-4}/(e^{hc/\lambda kT} - 1)$; stretching every $\lambda$ by $s$ and diluting by $s^3$ gives exactly the Planck distribution at temperature $T/s$. So the spectrum stays black-body with $T\propto1/a$. Then $1 + z = 3000/2.725 = 1100$: the CMB comes from when the universe was $1/1100$ of its present size, about 380,000 years old.</p>
+          <p>There are about $1.6\times10^9$ photons per baryon. Even when $kT$ is far below 13.6 eV, the far tail of the Planck spectrum still holds about one ionising photon per atom as long as $1.6\times10^9\,e^{-13.6\text{ eV}/kT}\gtrsim1$, i.e. down to $kT\approx13.6/\ln(1.6\times10^9) = 0.64$ eV. Solving the Saha equation properly brings it lower, to about 0.3 eV, or 3000 K. The vast number of photons keeps the universe ionised long after the average photon is too weak.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (When light gave way to matter.) The energy density of radiation falls as $a^{-4}$ and that of matter as $a^{-3}$. Explain the extra power. Today $\Omega_rh^2 = 4.15\times10^{-5}$ (photons and neutrinos) and $\Omega_mh^2 = 0.143$, where $h = H_0/(100\text{ km/s/Mpc})$. At what redshift and temperature were they equal? Show that in a radiation-dominated universe $a\propto t^{1/2}$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Both are diluted by the growing volume, $a^{-3}$; radiation also loses energy per photon as each wavelength stretches, another factor $a^{-1}$. The ratio $\rho_r/\rho_m = (\Omega_r/\Omega_m)\,a^{-1}$ reached 1 at $1 + z_{\text{eq}} = \Omega_m/\Omega_r = 0.143/4.15\times10^{-5} = 3450$ (the $h^2$ cancels), when the CMB temperature was $2.725\times3450 = 9400$ K, about 50,000 years after the Big Bang. Before that, radiation ruled: Friedmann with $\rho\propto a^{-4}$ gives $\dot a^2\propto a^{-2}$, so $a\dot a$ is constant and $a\propto t^{1/2}$. Matter domination began then, and with it the growth of structure: before equality, the rapid expansion driven by radiation kept small overdensities of dark matter from growing much.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The horizon problem.) In a flat matter-dominated universe, light emitted at the Big Bang has travelled a comoving distance $\chi_h(a) = \int_0^t\frac{c\,dt'}{a(t')} = \frac{2c}{H_0}a^{1/2}$ by the time the scale factor is $a$. Show this, find the comoving distance from us to the last-scattering surface at $1 + z = 1100$, and show that two points on the CMB more than about $2^\circ$ apart on the sky had never been in causal contact when the light left them. Yet the CMB has the same temperature in every direction to one part in $10^5$. Why is that a problem?</p>
+        <details><summary>Solution</summary><div>
+          <p>With $dt = da/\dot a = da/(aH)$ and $H = H_0a^{-3/2}$, $\chi_h = \int_0^a\frac{c\,da'}{a'^2H} = \frac{c}{H_0}\int_0^aa'^{-1/2}da' = \frac{2c}{H_0}a^{1/2}$. Today ($a = 1$) the horizon is $2c/H_0$; at last scattering, $a = 1/1100$, it was $\frac{2c}{H_0}\times1100^{-1/2}$. Light from last scattering has travelled from there to us, the comoving distance $\chi_h(1) - \chi_h(1/1100) = \frac{2c}{H_0}\big(1 - 1100^{-1/2}\big)$.</p>
+          <p>The horizon at last scattering therefore spans an angle (comoving size over comoving distance) of $\frac{1100^{-1/2}}{1 - 1100^{-1/2}} = \frac{1}{\sqrt{1100} - 1} = 0.031$ rad $= 1.8^\circ$. The sky contains tens of thousands of such patches that had never exchanged a signal, yet they all sit at 2.725 K to within 0.001%. Nothing in the Big Bang model explains why. Cosmic inflation answers it: a brief early burst of accelerated expansion took one small region that had time to equilibrate and stretched it larger than everything we can see. (With dark energy and radiation included, the angle comes out close to $1^\circ$. The typical size of the bright and dark spots on CMB maps, a little under a degree, is set by the related distance that sound could travel in the hot plasma by then.)</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="relativity-at-work">
+    <h2>Relativity at work</h2>
+    <ol start="12">
+      <li>
+        <p><span class="tag core">core</span> (GPS needs relativity.) GPS satellites orbit at radius 26,560 km. Compare their clocks with clocks on the ground. Special relativity slows a clock moving at $v$ by the fraction $v^2/2c^2$; general relativity speeds up a clock higher in a gravitational potential by $\Delta\Phi/c^2$. Find each effect in microseconds per day (ignore the Earth's rotation), the net drift, and the position error it would cause after a day.</p>
+        <details><summary>Solution</summary><div>
+          <p>With $GM_E = 3.986\times10^{14}$ m³/s², the orbital speed obeys $v^2 = GM_E/r$, so the special-relativistic slowing is $\frac{GM_E}{2rc^2} = \frac{3.986\times10^{14}}{2\times2.656\times10^7\times(3.0\times10^8)^2} = 8.3\times10^{-11}$, or $7.2$ μs per day. The gravitational speed-up is $\frac{GM_E}{c^2}\big(\frac1{R_E} - \frac1r\big) = 5.3\times10^{-10}$, $45.7$ μs per day. Net, the satellite clocks run fast by $38.5$ μs per day. A position comes from light-travel times, so the error grows as $c\times38.5$ μs $\approx 11.5$ km per day. The satellite clocks are deliberately tuned slow before launch, to 10.22999999543 MHz instead of 10.23 MHz, so that they tick correctly in orbit. Relativity is in every phone.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (A standard candle and a cosmic chirp.) A type Ia supernova reaches absolute magnitude $M = -19.3$ at peak. One peaks at apparent magnitude $m = 24.0$; find its luminosity distance. Separately, the first gravitational-wave signal, GW150914, radiated about $3M_\odot c^2$ in roughly 0.2 s. Find that energy and the average power.</p>
+        <details><summary>Solution</summary><div>
+          <p>The distance modulus is $m - M = 43.3$, so $d = 10^{(43.3 + 5)/5}$ pc $= 10^{9.66}$ pc $= 4.6$ Gpc. At such distances the "luminosity distance" is not the distance you would lay a ruler along; converting needs the expansion history, which is exactly what the 1998 supernova surveys measured, finding the acceleration of problem 8.</p>
+          <p>The merger radiated $3\times1.99\times10^{30}\times(3.0\times10^8)^2 = 5.4\times10^{47}$ J, all as ripples in spacetime, about $3\times10^{48}$ W on average and more at the peak: for a fraction of a second, more power than all the starlight in the observable universe. Yet the stretch it caused in LIGO's 4 km arms was $10^{-21}$ of their length, a few thousandths of a proton's width.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Ryden's <i>Introduction to Cosmology</i> derives problems 6–11 carefully and has excellent exercises; Weinberg's <i>The First Three Minutes</i> tells the story of problems 9–10 for a general reader. Perryman's <i>The Exoplanet Handbook</i> covers problems 1–2 and every other detection method in depth.</p>
+  </section>
+</article>

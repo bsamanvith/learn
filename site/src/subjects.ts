@@ -17,7 +17,10 @@ type Lessons = { lessons?: LessonInfo[]; pages?: PageInfo[] };
 export type Book = { title: string; author: string; level: string; free: boolean; when: string };
 export type HardProblem = { id: string; title: string; stars: number; unlocks: string; idea: string; visual: string; source: string; status: string; notes: string; where?: string };
 export type Assignment = { id: string; title: string; time: string; after: string; build: string; check: string; visual: string; status: string; notes: string; where?: string };
-export type ProblemBook = { intro?: string; books: Book[]; hard: HardProblem[]; assignments: Assignment[] };
+// A subject's problem book can rename the volumes ("stage", "toolkit", "hard") and reword the cover, so a
+// book of topic sets (physics, astronomy) doesn't talk about stages of a course.
+type Volume = { title?: string; blurb?: string };
+export type ProblemBook = { intro?: string; lede?: string; search?: string; volumes?: Record<string, Volume>; books: Book[]; hard: HardProblem[]; assignments: Assignment[] };
 
 export type Entry = {
   id: string;          // "probability/1.3-counting"

@@ -1,0 +1,211 @@
+<header class="lesson-head">
+  <div class="eyebrow">The ladder · Level 3 of 4 · Advanced</div>
+  <h1>Level 3: advanced</h1>
+  <p class="lede">Twenty-two problems at the level of a strong final year of school or the second year of university. Most need calculus: a differential equation to solve, an integral to set up, a quantity to maximise. Several need you to choose the right frame, the right conserved quantity or the right point to take torques about, and that choice is the real problem. The harder ones have a hint; try for twenty minutes before opening it.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/physics/L2-intermediate/">Level 2</a>, derivatives and integrals, and simple differential equations</span><span><b>Next:</b> <a href="/physics/L4-olympiad/">Level 4</a></span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="mechanics">
+    <h2>Mechanics</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The skydiver.) Air drag at high speed is $F = \frac12\rho C_dAv^2$. A skydiver of mass 80 kg falls belly down with $C_dA = 0.70$ m² through air of density 1.2 kg/m³. Find the terminal speed. Then solve $m\dot v = mg - kv^2$ to find $v(t)$, and the time to reach 90% of terminal speed.</p>
+        <details><summary>Hint</summary><div><p>Terminal speed is where the acceleration is zero. For the differential equation, write it in terms of $v_t$ as $\dot v = g(1 - v^2/v_t^2)$, separate the variables, and use $\int dv/(1 - v^2) = \operatorname{artanh}v$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>At terminal speed, drag equals weight: $v_t = \sqrt{2mg/\rho C_dA} = \sqrt{2\times80\times9.8/(1.2\times0.70)} = 43$ m/s, about 155 km/h. With $k = mg/v_t^2$ the equation of motion becomes $\dot v = g(1 - v^2/v_t^2)$. Separating,</p>
+          $$\int_0^v\frac{dv}{1 - v^2/v_t^2} = \int_0^tg\,dt\quad\Longrightarrow\quad v_t\operatorname{artanh}\frac{v}{v_t} = gt\quad\Longrightarrow\quad v(t) = v_t\tanh\frac{gt}{v_t}.$$
+          <p>The natural time scale is $v_t/g = 4.4$ s. To reach $0.9v_t$ takes $(v_t/g)\operatorname{artanh}0.9 = 4.4\times1.47 = 6.5$ s. Integrating once more, $x(t) = (v_t^2/g)\ln\cosh(gt/v_t)$, so the diver has fallen 158 m by then. At first, while $v \ll v_t$, $\tanh u \approx u$ and the fall is free, $v \approx gt$. A diver who tucks into a head-down position cuts $C_dA$ by about four times and doubles $v_t$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The rope sliding off a table.) A uniform rope of length $L$ lies on a frictionless table with a length $x_0$ hanging over the edge, and is released from rest. Find the length hanging, $x(t)$, and the rope's speed as its last bit leaves the table.</p>
+        <details><summary>Hint</summary><div><p>The whole rope moves together with one speed. Only the hanging part is pulled by gravity, but the whole mass has to be accelerated.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Let $\lambda = M/L$. The hanging part weighs $\lambda xg$, and it accelerates all of the mass $\lambda L$: $\lambda L\ddot x = \lambda gx$, so $\ddot x = (g/L)x$. With $x(0) = x_0$ and $\dot x(0) = 0$,</p>
+          $$x(t) = x_0\cosh\Big(\sqrt{g/L}\,t\Big).$$
+          <p>This grows exponentially, unlike the sine of an oscillation, because the force pushes away from $x = 0$ rather than back. For the final speed, energy is quicker: the centre of mass of the hanging part is at depth $x/2$, so the potential energy is $-\lambda gx^2/2$, and $\frac12\lambda Lv^2 = \frac12\lambda g(L^2 - x_0^2)$, giving $v = \sqrt{g(L^2 - x_0^2)/L}$. If $x_0 \to 0$ it takes forever to start, but the final speed tends to $\sqrt{gL}$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Getting to geostationary orbit.) A satellite in a circular orbit of radius 6671 km (300 km up) is to be moved to the geostationary radius of 42 164 km. A Hohmann transfer uses half of an ellipse that just touches both circles, with one burn at each end. Find the two speed changes, their total, and the time for the transfer. Use the vis-viva equation $v^2 = GM(2/r - 1/a)$, and $GM_\oplus = 3.986\times10^{14}$ m³/s².</p>
+        <details><summary>Hint</summary><div><p>The transfer ellipse has its nearest point at $r_1$ and its farthest at $r_2$, so its semi-major axis is $a = (r_1 + r_2)/2$. Compare the speed on the circle with the speed on the ellipse at each end. Kepler's third law gives the period of the ellipse; the transfer takes half of it.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The circular speeds are $\sqrt{GM/r}$: 7.73 km/s low down and 3.07 km/s at the top. The ellipse has $a = 24\,418$ km. Vis-viva gives its speed at perigee as $\sqrt{GM(2/r_1 - 1/a)} = 10.16$ km/s and at apogee 1.61 km/s. So:</p>
+          $$\Delta v_1 = 10.16 - 7.73 = 2.43\text{ km/s},\qquad \Delta v_2 = 3.07 - 1.61 = 1.47\text{ km/s},\qquad \Delta v_{\text{total}} = 3.90\text{ km/s}.$$
+          <p>Both burns are forwards. The odd result is that the satellite ends up moving more slowly than it started, though both burns sped it up: in between it climbed the gravity well and lost 8.6 km/s on the way up. The transfer takes half the ellipse's period, $\pi\sqrt{a^3/GM} = 5.3$ hours. Speed changes add up because each one costs fuel through the rocket equation (problem 5 of <a href="/physics/P1-mechanics/">P1</a>); the sum, not the distance, is the price of a journey in space.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Earth's fastest and slowest.) The Earth is 147.1 million km from the Sun at perihelion and 152.1 million km at aphelion. Using $GM_\odot = 1.327\times10^{20}$ m³/s², find its speed at each, and check that angular momentum is conserved. Derive the vis-viva equation from energy and angular momentum.</p>
+        <details><summary>Solution</summary><div>
+          <p>At both ends the velocity is perpendicular to the radius, so conservation of angular momentum gives $r_pv_p = r_av_a$. Energy gives $\frac12v_p^2 - GM/r_p = \frac12v_a^2 - GM/r_a$. Substituting $v_a = v_pr_p/r_a$ and simplifying gives $v_p^2 = 2GMr_a/[r_p(r_p + r_a)]$. With $a = (r_p + r_a)/2$ this is $v_p^2 = GM(2/r_p - 1/a)$, and the same form holds at every point, since the total energy of an orbit is $-GMm/2a$:</p>
+          $$\tfrac12v^2 - \frac{GM}{r} = -\frac{GM}{2a}\quad\Longrightarrow\quad v^2 = GM\left(\frac2r - \frac1a\right).$$
+          <p>Numerically $v_p = 30.29$ km/s and $v_a = 29.29$ km/s; their ratio, 1.034, equals $r_a/r_p$, as angular momentum requires. Because the Earth moves faster in early January, the northern winter half of the year (equinox to equinox) is about seven days shorter than the summer half. Kepler's second law, equal areas in equal times, is exactly this conservation of angular momentum.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Resonance and the quality factor.) Solve the driven, damped oscillator $\ddot x + (\omega_0/Q)\dot x + \omega_0^2x = (F/m)\cos\omega t$ for the steady-state amplitude, and show that for large $Q$ the resonance peak has height $Q$ times the static response and full width $\omega_0/Q$ at half power. A 440 Hz tuning fork, struck, rings with an amplitude that falls by a factor $e$ in 10 s. Find its $Q$ and how far off pitch a driving sound can be and still excite it strongly.</p>
+        <details><summary>Hint</summary><div><p>Try $x = \operatorname{Re}(Ae^{i\omega t})$. Each time derivative becomes a factor of $i\omega$. For the free decay, the amplitude goes as $e^{-\gamma t/2}$ with $\gamma = \omega_0/Q$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Substituting $Ae^{i\omega t}$ turns the equation into algebra: $A(\omega_0^2 - \omega^2 + i\omega\omega_0/Q) = F/m$. The amplitude is</p>
+          $$|A| = \frac{F/m}{\sqrt{(\omega_0^2 - \omega^2)^2 + (\omega\omega_0/Q)^2}}.$$
+          <p>At $\omega = 0$ this is $F/m\omega_0^2 = F/k$, the static stretch. At $\omega = \omega_0$ it is $QF/k$: $Q$ times larger. Near resonance, $\omega_0^2 - \omega^2 \approx 2\omega_0(\omega_0 - \omega)$, and the power, proportional to $|A|^2$, falls to half when $2|\omega_0 - \omega| = \omega_0/Q$. So the full width at half power is $\Delta\omega = \omega_0/Q$, or $\Delta f = f_0/Q$.</p>
+          <p>Without driving, the amplitude decays as $e^{-\omega_0t/2Q}$, so a decay time of $\tau = 10$ s means $Q = \omega_0\tau/2 = \pi\times440\times10 = 1.4\times10^4$. The width is then $\Delta f = 440/13\,800 = 0.03$ Hz. A tuning fork responds only to a nearly exact pitch, and this is why: a high $Q$ means a long ring and a sharp resonance, two faces of the same number.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A pendulum on a free cart.) A pendulum of length $L$ with a bob of mass $m$ hangs from a cart of mass $M$ that rolls freely on a level track. Find the frequency of small oscillations. Check the limits $M \to \infty$ and $M \to 0$.</p>
+        <details><summary>Hint</summary><div><p>No horizontal external force acts, so the centre of mass of cart and bob does not move sideways. For small swings the bob oscillates about a fixed point on the string: where is it?</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With $X$ the cart's position and $\theta$ the angle, the bob is at $X + L\sin\theta$. The centre of mass stays put: $MX + m(X + L\sin\theta) = \text{const}$, so the cart moves by $-\frac{m}{M + m}L\sin\theta$. The bob's horizontal displacement from the fixed centre of mass is then $\frac{M}{M + m}L\sin\theta$: it swings as though about a fixed pivot a distance $L' = \frac{M}{M + m}L$ above it: the point on the string that doesn't move sideways. The vertical motion is second order in $\theta$ and doesn't matter. So</p>
+          $$\omega^2 = \frac gL\Big(1 + \frac mM\Big).$$
+          <p>The same result comes from the Lagrangian: with $p_X$ conserved, eliminating $\dot X$ leaves an equation for $\theta$ alone. For a very heavy cart, $\omega^2 \to g/L$, the ordinary pendulum. For a light cart the frequency grows without bound: the cart does nearly all the moving, and the bob barely swings at all.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The obedient spool.) A spool of thread rests on a rough table. Its rims have radius $R$ and its axle radius $r$; the thread comes off the bottom of the axle. You pull the thread with force $F$ at angle $\theta$ above the horizontal. Show that the spool rolls towards you if $\cos\theta &gt; r/R$ and away if $\cos\theta &lt; r/R$. Find its acceleration when you pull horizontally. Try it with a real spool.</p>
+        <details><summary>Hint</summary><div><p>Take torques about the point where the rim touches the table. Friction and the normal force act there, so they drop out. For rolling without slipping the spool is momentarily rotating about that point, with moment of inertia $I + mR^2$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>The thread's line of action is a tangent to the axle, so it passes at distance $r$ from the centre. The contact point $P$ is at distance $R$ from the centre straight down. The perpendicular distance from $P$ to the line of action is $R\cos\theta - r$. If it is positive, the torque about $P$ turns the spool in the sense that rolls it towards you; if negative, away. The critical angle, $\cos\theta = r/R$, is where the thread's line passes exactly through $P$: then the spool slides or stays still, but does not roll.</p>
+          <p>Pulling horizontally, $\theta = 0$, the torque about $P$ is $F(R - r)$, and</p>
+          $$a = R\alpha = \frac{F(R - r)R}{I + mR^2}.$$
+          <p>It is safe to use the instantaneous contact point here only because, for rolling without slipping, the centre of mass accelerates parallel to the table, so no extra term appears. The puzzle that the spool can roll away from the pull, winding the thread up, catches almost everyone, which is why it is worth five minutes with a real spool.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Newton's bucket.) A cylindrical bucket of water spins about its vertical axis at angular speed $\omega$ until the water turns with it. Show that the surface is a paraboloid, $z = \omega^2r^2/2g$. For a bucket of radius 10 cm at 2 revolutions per second, how much higher is the water at the wall than at the centre?</p>
+        <details><summary>Solution</summary><div>
+          <p>In the rotating frame the water is at rest, under gravity $g$ downwards and the centrifugal acceleration $\omega^2r$ outwards. A liquid surface at rest is perpendicular to the total effective gravity, so its slope is $dz/dr = \omega^2r/g$. Integrating, $z = \omega^2r^2/2g$. Equivalently, the surface is a surface of constant effective potential $gz - \frac12\omega^2r^2$.</p>
+          <p>Here $\omega = 4\pi$ rad/s, so at the wall $z = (4\pi)^2\times0.01/19.6 = 8.1$ cm above the centre. Telescope makers spin molten glass to cast mirrors in this shape, and liquid-mercury telescopes use it directly. Newton used the bucket to argue that rotation is absolute: the water knows it is spinning, even with nothing to compare it to.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="electromagnetism">
+    <h2>Electromagnetism</h2>
+    <ol start="9">
+      <li>
+        <p><span class="tag core">core</span> (Helmholtz coils.) Use the Biot–Savart law to show that on the axis of a circular loop of radius $R$ carrying current $I$, the field at distance $z$ from its centre is $B = \mu_0IR^2/2(R^2 + z^2)^{3/2}$. Two such coaxial loops are placed a distance $d$ apart with equal currents. For which $d$ is the field at the midpoint as uniform as possible?</p>
+        <details><summary>Hint</summary><div><p>By symmetry the sum of two loops has no odd powers of $z$ around the midpoint. "As uniform as possible" means the $z^2$ term vanishes too, so set the second derivative to zero.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Each element $d\boldsymbol\ell$ of the loop is at distance $\sqrt{R^2 + z^2}$ from the point on the axis, and perpendicular to the line joining them. So $dB = \mu_0I\,d\ell/4\pi(R^2 + z^2)$. By symmetry, only the component along the axis survives, a fraction $R/\sqrt{R^2 + z^2}$. Going round the loop, $\int d\ell = 2\pi R$, and</p>
+          $$B(z) = \frac{\mu_0IR^2}{2(R^2 + z^2)^{3/2}}.$$
+          <p>Put the loops at $z = \pm d/2$. A short calculation gives $B''(z) \propto (4z^2 - R^2)$ for one loop, so the second derivative of the sum at the midpoint vanishes when $4(d/2)^2 = R^2$, that is $d = R$. Then the field near the centre varies only at fourth order in $z$: within $\pm0.1R$ of the centre it changes by only about 0.01%. The field there is $(4/5)^{3/2}\mu_0I/R$. Labs use these coils to cancel the Earth's field.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The current that isn't there.) A parallel-plate capacitor with circular plates of radius $R$ is being charged by a current $I$ in the wires. Find the magnetic field between the plates at distance $r$ from the axis, for $r &lt; R$ and $r &gt; R$. Why is Maxwell's displacement current needed to get a consistent answer?</p>
+        <details><summary>Solution</summary><div>
+          <p>Ampère's law, $\oint\mathbf B\cdot d\boldsymbol\ell = \mu_0I_{\text{through}}$, gives a contradiction without the displacement term. Take a circle round the wire: a flat disc on it is crossed by $I$, but a bag-shaped surface on the same circle that passes between the plates is crossed by no current at all. Maxwell fixed this by adding $\mu_0\varepsilon_0\,d\Phi_E/dt$. Between the plates $E = Q/\varepsilon_0\pi R^2$, so $\varepsilon_0\,dE/dt = I/\pi R^2$: a "current density" exactly continuing the real one.</p>
+          <p>On a circle of radius $r$ between the plates, $2\pi rB = \mu_0I\times\min(r^2/R^2, 1)$, so</p>
+          $$B = \frac{\mu_0Ir}{2\pi R^2}\ (r &lt; R),\qquad B = \frac{\mu_0I}{2\pi r}\ (r &gt; R),$$
+          <p>the same as around the wire. The term is tiny in a capacitor, but it is the one that lets a changing electric field make a magnetic field, and therefore lets electromagnetic waves exist at all.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Pushing in a dielectric.) A parallel-plate capacitor $C_0$ is charged to $V_0$. A slab of dielectric constant $\kappa$ that fills the gap is slid in. Find the change in stored energy if (a) the capacitor was disconnected first, (b) it stays connected to the battery. In each case, is the slab pulled in or must it be pushed? Account for all the energy in (b).</p>
+        <details><summary>Solution</summary><div>
+          <p>The slab multiplies the capacitance by $\kappa$. (a) Disconnected, the charge $Q = C_0V_0$ is fixed and $U = Q^2/2C$ falls from $U_0$ to $U_0/\kappa$. The field did positive work on the slab, so it was pulled in. (b) Connected, $V_0$ is fixed and $U = \frac12CV_0^2$ rises from $U_0$ to $\kappa U_0$.</p>
+          <p>It is tempting to say in (b) that the slab must be pushed in, since the energy went up. But the battery moved extra charge $\Delta Q = (\kappa - 1)C_0V_0$ through voltage $V_0$, doing work $(\kappa - 1)C_0V_0^2 = 2\Delta U$. Half of that raised the stored energy; the other half was work done by the field on the slab. So in both cases the slab is pulled in, as the fringing field at the edge of the plates makes physically clear. The rule "systems move towards lower energy" applies only to isolated systems; with a battery attached, the quantity to minimise is $U - QV_0$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Why power lines run at high voltage.) A power station sends 100 MW to a city through lines with a total resistance of 2 Ω. Find the power lost in the lines if it is sent at 10 kV and at 400 kV. Why not transmit at an even higher voltage?</p>
+        <details><summary>Solution</summary><div>
+          <p>The current is $I = P/V$, and the line wastes $I^2R$. At 10 kV the current would be 10 000 A, and the loss $10^8\times2 = 200$ MW, twice the power sent: the scheme is impossible, since the voltage drop on the line, 20 kV, would exceed the supply. At 400 kV the current is 250 A and the loss is $250^2\times2 = 125$ kW, about 0.1%.</p>
+          <p>Loss falls as $1/V^2$, which is why the AC transformer won the "war of the currents": it steps the voltage up for the line and back down for homes. Higher voltage is limited by insulation, corona discharge into the air, and the size of the towers. Very long lines now use high-voltage DC, which avoids losses from the line's capacitance and inductance.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="heat">
+    <h2>Heat and thermodynamics</h2>
+    <ol start="13">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (The diesel engine.) A diesel engine compresses air at 300 K and 1 atm to a twentieth of its volume, so quickly that no heat escapes. Show that for an adiabatic process $pV^\gamma$ and $TV^{\gamma - 1}$ are constant, and find the final temperature and pressure, with $\gamma = 1.4$. Why does a diesel need no spark plug?</p>
+        <details><summary>Hint</summary><div><p>First law with $dQ = 0$: $nC_V\,dT = -p\,dV$. Use $pV = nRT$ to replace $p$, and $C_p - C_V = R$, $\gamma = C_p/C_V$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>With no heat flow, $nC_V\,dT = -p\,dV = -nRT\,dV/V$. So $dT/T = -(R/C_V)\,dV/V = -(\gamma - 1)\,dV/V$, which integrates to $TV^{\gamma - 1} = \text{const}$. Using $pV \propto T$, also $pV^\gamma = \text{const}$. For a compression ratio of 20:</p>
+          $$T_2 = 300\times20^{0.4} = 994\text{ K},\qquad p_2 = 20^{1.4}\text{ atm} = 66\text{ atm}.$$
+          <p>Nearly 1000 K is far above the autoignition temperature of diesel fuel, about 500 K, so the fuel burns as soon as it is sprayed in. A petrol engine uses a ratio of about 10, which gives about 750 K: safely below the point where petrol would ignite early and "knock". Pump a bicycle tyre hard and the pump gets hot for the same reason.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The Otto cycle.) A petrol engine is modelled by the Otto cycle: adiabatic compression by a ratio $r$, heating at constant volume, adiabatic expansion, cooling at constant volume. Show that its efficiency is $\eta = 1 - r^{1 - \gamma}$, and evaluate it for $r = 10$ and $\gamma = 1.4$. Compare with Carnot between the same extreme temperatures.</p>
+        <details><summary>Solution</summary><div>
+          <p>Label the corners 1 (start), 2 (compressed), 3 (burnt), 4 (expanded). Heat enters at constant volume, $Q_{\text{in}} = nC_V(T_3 - T_2)$, and leaves at constant volume, $Q_{\text{out}} = nC_V(T_4 - T_1)$. On the two adiabats, $T_2 = r^{\gamma - 1}T_1$ and $T_3 = r^{\gamma - 1}T_4$. So $T_3 - T_2 = r^{\gamma - 1}(T_4 - T_1)$, and</p>
+          $$\eta = 1 - \frac{Q_{\text{out}}}{Q_{\text{in}}} = 1 - r^{1 - \gamma} = 1 - 10^{-0.4} = 60\%.$$
+          <p>The efficiency depends only on the compression ratio. A Carnot engine between $T_1$ and the much hotter $T_3$ would do better, because the Otto cycle takes in much of its heat at temperatures well below $T_3$. Real petrol engines reach about 30%, after friction, heat loss and incomplete burning. The diesel's higher ratio is a large part of its advantage.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Where entropy comes from.) (a) One mole of ideal gas expands freely into a vacuum, doubling its volume. Find its entropy change, although no heat flowed. (b) 1 kg of water at 20 °C is put in contact with a large reservoir at 80 °C. Find the entropy change of the water, of the reservoir and of the universe.</p>
+        <details><summary>Solution</summary><div>
+          <p>Entropy is a function of state, so compute it along any reversible path between the same end states. (a) The temperature doesn't change in a free expansion (no work, no heat, so no change in energy), so use a reversible isothermal expansion: $\Delta S = \int dQ/T = nR\ln(V_2/V_1) = 8.314\ln2 = 5.76$ J/K. The formula $\Delta S = Q/T$ does not apply to the real process, which was irreversible.</p>
+          <p>(b) Heat the water reversibly through a sequence of reservoirs: $\Delta S_{\text{water}} = \int mc\,dT/T = mc\ln(T_2/T_1) = 4186\ln(353.15/293.15) = +779$ J/K. The reservoir gives up $Q = mc\Delta T = 251$ kJ at a fixed temperature, so $\Delta S_{\text{res}} = -251\,000/353.15 = -711$ J/K. The total is $+68$ J/K, positive as the second law demands. The smaller the temperature gap, the smaller the total, and it vanishes as the heating becomes reversible.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (How fast does a lake freeze?) The air above a lake is at $-10$ °C and the water below the ice is at 0 °C. Heat of melting released as the water freezes must be conducted up through the ice. Show that the thickness grows as $x = \sqrt{2k\Delta T\,t/\rho L}$, and find it after one day and after one week. Ice: $k = 2.2$ W/(m K), $\rho = 917$ kg/m³, $L = 334$ kJ/kg.</p>
+        <details><summary>Hint</summary><div><p>Through a slab of thickness $x$ the heat flow per area is $k\Delta T/x$. Freezing a further layer $dx$ releases $\rho L\,dx$ per area.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>Balance the heat released by freezing against the heat conducted away: $\rho L\,dx/dt = k\Delta T/x$. So $x\,dx = (k\Delta T/\rho L)\,dt$, and integrating from $x = 0$,</p>
+          $$x = \sqrt{\frac{2k\Delta T\,t}{\rho L}}.$$
+          <p>After one day ($t = 86\,400$ s) this is 11 cm, and after a week $\sqrt7$ times as much, 29 cm. The ice protects the water below it: the thicker it gets, the slower it grows. This $\sqrt t$ law appears whenever growth is limited by diffusion, from rust layers to the cooling of the Earth that Kelvin used to estimate its age.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="light-and-modern">
+    <h2>Light and modern physics</h2>
+    <ol start="17">
+      <li>
+        <p><span class="tag core">core</span> (Soap films and coated lenses.) A soap film ($n = 1.33$) in air looks strongly green (550 nm) in reflected light. Find its smallest possible thickness. Then find the thickness of a magnesium fluoride coating ($n = 1.38$) on glass ($n = 1.5$) that cancels reflection at 550 nm.</p>
+        <details><summary>Solution</summary><div>
+          <p>Light reflected off the back of a film travels an extra $2nt$. A reflection off a denser medium also adds half a wavelength of phase. For the soap film in air, only the front reflection is off a denser medium, so the two waves reinforce when $2nt = (m + \frac12)\lambda$. The thinnest film has $m = 0$: $t = \lambda/4n = 103$ nm.</p>
+          <p>For the coating, both reflections (air to MgF₂ and MgF₂ to glass) are off a denser medium, so their half-wavelengths cancel. They interfere destructively when $2nt = \lambda/2$, again $t = \lambda/4n = 100$ nm. A perfect cancellation also needs the two reflections to be equally strong, which needs $n_{\text{coat}} = \sqrt{n_{\text{glass}}} = 1.22$; MgF₂ is close enough. The purple tint of camera lenses is the light at the ends of the spectrum that the coating does not cancel.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (How sharp can an eye be?) Two sources are just resolved through a circular aperture of diameter $D$ when their angular separation is $1.22\lambda/D$. For a pupil of 5 mm at 550 nm, find this angle, and the distance at which a car's two headlights, 1.5 m apart, merge into one. What is the limit for the Hubble telescope, with $D = 2.4$ m, in arcseconds?</p>
+        <details><summary>Solution</summary><div>
+          <p>For the eye, $\theta = 1.22\times550\times10^{-9}/0.005 = 1.34\times10^{-4}$ rad, about half an arcminute. Two headlights 1.5 m apart subtend this angle at $1.5/1.34\times10^{-4} = 11$ km. In practice the eye's retina and its imperfect optics give about 1 arcminute, so twice that resolving angle, and the lights merge at around 5 km.</p>
+          <p>For Hubble, $\theta = 1.22\times550\times10^{-9}/2.4 = 2.8\times10^{-7}$ rad $= 0.058''$. The limit comes from diffraction, which is a property of waves, not of any flaw: the only way to beat it is a larger aperture or a shorter wavelength. That is why radio telescopes, with wavelengths a million times longer, are linked across continents.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Seeing with electrons.) Find the de Broglie wavelength of an electron accelerated from rest through 100 V, and of a neutron with the typical kinetic energy $\frac32k_BT$ at room temperature (300 K). Why are both useful for studying crystals?</p>
+        <details><summary>Solution</summary><div>
+          <p>Non-relativistically, $p = \sqrt{2mE}$ and $\lambda = h/p$. For the electron, $E = 100$ eV: $\lambda = 6.63\times10^{-34}/\sqrt{2\times9.11\times10^{-31}\times1.60\times10^{-17}} = 0.123$ nm. For the neutron, $E = \frac32\times1.38\times10^{-23}\times300$, giving $\lambda = 0.145$ nm.</p>
+          <p>Both are comparable to the spacing of atoms in a crystal, about 0.1 to 0.5 nm, so a crystal acts as a diffraction grating for them, just as it does for X-rays. Davisson and Germer saw exactly this with 54 eV electrons in 1927, confirming de Broglie. Neutrons have no charge and a magnetic moment, so they reveal light atoms and magnetic order that X-rays miss.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (What powers the Sun.) The Sun radiates $3.83\times10^{26}$ W. How much mass does it lose each second? In the Sun's core, four hydrogen atoms become one helium atom. With atomic masses $m_{\text{H}} = 1.007825$ u and $m_{\text{He}} = 4.002603$ u, and $1\text{ u} = 931.5$ MeV/$c^2$, find the energy released and the fraction of the mass converted.</p>
+        <details><summary>Solution</summary><div>
+          <p>$E = mc^2$ applies to any energy: $\dot m = L/c^2 = 3.83\times10^{26}/(3.00\times10^8)^2 = 4.3\times10^9$ kg/s, over four million tonnes every second. Over the Sun's 4.6 billion years that adds up to less than a tenth of a percent of its mass.</p>
+          <p>The mass defect is $4\times1.007825 - 4.002603 = 0.028697$ u, so the energy released is $0.028697\times931.5 = 26.7$ MeV, or 0.71% of the mass. (Using atomic masses counts the electrons correctly: the two positrons made along the way annihilate with two electrons.) A chemical reaction releases a few eV per atom, about ten million times less, which is why no chemical Sun could have shone for longer than some thousands of years.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Colours of quantum dots.) An electron trapped in a one-dimensional box of length $L$ has energies $E_n = n^2h^2/8mL^2$. Derive this from fitting de Broglie waves in the box. Find $E_1$ for $L = 1.0$ nm in electronvolts, and the wavelength of the photon emitted in the jump from $n = 2$ to $n = 1$. How does the colour change if the box gets smaller?</p>
+        <details><summary>Solution</summary><div>
+          <p>The wavefunction must vanish at both walls, so a whole number of half-wavelengths fits: $\lambda_n = 2L/n$. Then $p = h/\lambda = nh/2L$ and $E = p^2/2m = n^2h^2/8mL^2$. For $L = 1$ nm,</p>
+          $$E_1 = \frac{(6.63\times10^{-34})^2}{8\times9.11\times10^{-31}\times10^{-18}}\text{ J} = 0.376\text{ eV}.$$
+          <p>The jump from 2 to 1 releases $3E_1 = 1.13$ eV, a photon of $1240/1.13 = 1100$ nm, in the infrared. Energies grow as $1/L^2$: smaller boxes glow bluer. Semiconductor "quantum dots" a few nanometres across use exactly this to make every colour from one material, simply by choosing the size (the electron's effective mass inside the crystal is smaller, which shifts the numbers).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (How small is a nucleus?) In Rutherford's experiment, alpha particles of 5.0 MeV were fired at gold nuclei ($Z = 79$). How close can one get to a nucleus in a head-on collision? Use $e^2/4\pi\varepsilon_0 = 1.44$ MeV fm. What did the experiment show?</p>
+        <details><summary>Solution</summary><div>
+          <p>In a head-on collision with a heavy nucleus, the alpha particle stops when all its kinetic energy has become electric potential energy: $E = (2e)(79e)/4\pi\varepsilon_0d$. So $d = 2\times79\times1.44/5.0 = 46$ fm $= 4.6\times10^{-14}$ m.</p>
+          <p>The scattering followed Rutherford's formula for a point charge at all angles, even for these closest approaches. So the positive charge of the atom lives within about $10^{-14}$ m, ten thousand times smaller than the atom itself. (The gold nucleus in fact has a radius of about 7 fm.) An atom is almost entirely empty: if the nucleus were a marble, the electrons would range over a football stadium.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+</article>

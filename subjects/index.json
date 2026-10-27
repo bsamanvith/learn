@@ -14,6 +14,12 @@
       "tagline": "From “what does 70% mean?” to measure theory."
     },
     {
+      "slug": "mathematics",
+      "title": "Mathematics",
+      "mode": "Mathematics",
+      "tagline": "Proofs you can enjoy: numbers, the infinite, shape and symmetry."
+    },
+    {
       "slug": "statistics",
       "title": "Statistics",
       "mode": "Statistics",

@@ -20,12 +20,15 @@ const book = problemBookOf(subject);
 const chapters = await chaptersOf(subject);
 const assignments = chapters.filter((c) => /^A\d/.test(c.chapter));
 
-const volumeOf = (s: ProblemSet) => s.chapter.startsWith("H") ? "hard" : s.chapter === "PM" ? "toolkit" : "stage";
+// L1, L2, … are a graded ladder (basic to olympiad), H… the hard volumes, PM the math toolkit, the rest stage or topic sets.
+const volumeOf = (s: ProblemSet) => /^L\d/.test(s.chapter) ? "ladder" : s.chapter.startsWith("H") ? "hard" : s.chapter === "PM" ? "toolkit" : "stage";
+const NUMERALS = ["I", "II", "III", "IV", "V"];
 const VOLUMES = [
-  { key: "stage", n: "I", title: "Stage by stage", blurb: "One set per stage of the course, from warm-ups to hard proofs, each with worked solutions. Do a stage's set after its lessons." },
-  { key: "toolkit", n: "II", title: "The math toolkit", blurb: "Linear algebra, matrix calculus, probability, information theory, optimisation and sampling, the tools every stage leans on." },
-  { key: "hard", n: "III", title: "Hard problems", blurb: "Longer problems that take an evening each: proofs, constructions and derivations from the research literature. Each has a hint and a full solution. For a second pass." },
-].filter((v) => sets.some((s) => volumeOf(s) === v.key));
+  { key: "ladder", title: "The ladder", blurb: "Four levels, from basics through intermediate and advanced to olympiad problems. Climb in order: each level assumes the one before, and every problem has a full solution." },
+  { key: "stage", title: "Stage by stage", blurb: "One set per stage of the course, from warm-ups to hard proofs, each with worked solutions. Do a stage's set after its lessons." },
+  { key: "toolkit", title: "The math toolkit", blurb: "Linear algebra, matrix calculus, probability, information theory, optimisation and sampling, the tools every stage leans on." },
+  { key: "hard", title: "Hard problems", blurb: "Longer problems that take an evening each: proofs, constructions and derivations from the research literature. Each has a hint and a full solution. For a second pass." },
+].map((v) => ({ ...v, ...book?.volumes?.[v.key] })).filter((v) => sets.some((s) => volumeOf(s) === v.key)).map((v, i) => ({ ...v, n: NUMERALS[i] }));
 
 const all = sets.flatMap((s) => s.problems.map((p) => ({ set: s, p })));
 const count = (t: string) => all.filter(({ p }) => p.tags.includes(t)).length;
@@ -35,11 +38,13 @@ const TAGS = [
   { t: "core", label: "Core", hint: "the heart of each set" },
   { t: "hard", label: "Hard", hint: "proofs and long derivations" },
   { t: "code", label: "Code", hint: "a few lines of NumPy" },
+  { t: "olympiad", label: "Olympiad", hint: "competition level: needs a real idea" },
 ];
 const short = (s: ProblemSet) => s.chapter;
 const covers = (s: ProblemSet) => {
+  // In a course, P3 is the set for part 3; a book that renames its stage volume uses P… for topic sets instead.
   const stage = s.chapter.match(/^P(\d+)$/);
-  if (stage) return partTitle(subject, Number(stage[1]));
+  if (stage && !book?.volumes?.stage) return partTitle(subject, Number(stage[1]));
   const t = s.title.replace(/^Problem set: |^Hard problems: /, "");
   return t[0].toUpperCase() + t.slice(1);
 };
@@ -71,14 +76,14 @@ const evenings = builds.filter((a) => a.page).length;
           <div class="pb-cover-text">
             <p class="kicker">{title} · Practice</p>
             <h1>The problem book</h1>
-            <p class="lede">{all.length} problems in {sets.length} sets, every one with a worked solution{book && <>, plus {hard.length} named classics, {evenings} one-evening assignments and {book.books.length} key books</>}. Read a stage, then come here and test it. Mark what you solve, flag what you want to revisit, and the book keeps count in this browser.</p>
+            <p class="lede">{all.length} problems in {sets.length} sets, every one with a worked solution{book && <>, plus {hard.length} named classics{evenings > 0 && <>, {evenings} one-evening assignments</>} and {book.books.length} key books</>}. {book?.lede ?? "Read a stage, then come here and test it."} Mark what you solve, flag what you want to revisit, and the book keeps count in this browser.</p>
             <div class="pb-progress" data-total={all.length}>
               <div class="pb-bar"><span class="solved"></span><span class="revisit"></span></div>
               <span class="mono" data-progress-text>Nothing marked yet</span>
             </div>
           </div>
           <dl class="pb-stats">
-            {TAGS.map(({ t, label }) => <div><dt><span class={`tag ${t}`}>{t}</span></dt><dd>{count(t)}</dd><dd class="sr">{label}</dd></div>)}
+            {TAGS.filter(({ t }) => count(t) > 0).map(({ t, label }) => <div><dt><span class={`tag ${t}`}>{t}</span></dt><dd>{count(t)}</dd><dd class="sr">{label}</dd></div>)}
           </dl>
         </header>
 
@@ -88,18 +93,26 @@ const evenings = builds.filter((a) => a.page).length;
             <button type="button" class="pb-path" data-go-tag="key">
               <span class="pb-path-n">{count("key")}</span>
               <b>Key problems</b>
-              <span>The shortest path: four to six per set. If you can do these, you have the stage.</span>
+              <span>The shortest path: four to six per set. If you can do these, you have the {book?.volumes ? "topic" : "stage"}.</span>
             </button>
             <a class="pb-path" href="#volumes">
-              <span class="pb-path-n">{sets.filter((s) => volumeOf(s) !== "hard").length}</span>
-              <b>Stage by stage</b>
-              <span>Work through a whole set after its lessons, warm-ups first.</span>
+              <span class="pb-path-n">{sets.filter((s) => VOLUMES[0] ? volumeOf(s) === VOLUMES[0].key : volumeOf(s) !== "hard").length}</span>
+              <b>{VOLUMES[0]?.title ?? "Stage by stage"}</b>
+              <span>{VOLUMES[0]?.key === "ladder" ? "Four levels from basics to olympiad. Start at Level 1 and climb." : book?.volumes ? "Work through a whole set, warm-ups first." : "Work through a whole set after its lessons, warm-ups first."}</span>
             </a>
-            <button type="button" class="pb-path" data-go-tag="hard">
-              <span class="pb-path-n">{count("hard")}</span>
-              <b>Hard problems</b>
-              <span>Proofs and derivations for a second pass, across every set and the hard volumes.</span>
-            </button>
+            {count("olympiad") > 0 ? (
+              <button type="button" class="pb-path" data-go-tag="olympiad">
+                <span class="pb-path-n">{count("olympiad")}</span>
+                <b>Olympiad problems</b>
+                <span>The top of the ladder: each needs one real idea, and each has a hint.</span>
+              </button>
+            ) : (
+              <button type="button" class="pb-path" data-go-tag="hard">
+                <span class="pb-path-n">{count("hard")}</span>
+                <b>Hard problems</b>
+                <span>Proofs and derivations for a second pass, across every set{VOLUMES.some((v) => v.key === "hard") && " and the hard volumes"}.</span>
+              </button>
+            )}
             {hard.length > 0 && (
               <a class="pb-path" href="#hard">
                 <span class="pb-path-n">{hard.length}</span>
@@ -189,7 +202,7 @@ const evenings = builds.filter((a) => a.page).length;
           </div>
         </section>
 
-        <section class="pb-section" id="assignments">
+        {builds.length > 0 && <section class="pb-section" id="assignments">
           <div class="part-label">
             <div class="n">Assignments</div>
             <h2>Build it, break it, watch it work</h2>
@@ -213,7 +226,7 @@ const evenings = builds.filter((a) => a.page).length;
               );
             })}
           </div>
-        </section>
+        </section>}
 
         <section class="pb-section" id="books">
           <div class="part-label">
@@ -241,7 +254,7 @@ const evenings = builds.filter((a) => a.page).length;
           <div class="pb-filters" role="group" aria-label="Filter problems">
             <div class="seg" role="group" aria-label="Difficulty">
               <button type="button" data-tag="" aria-pressed="true">All</button>
-              {TAGS.map(({ t, label, hint }) => <button type="button" data-tag={t} aria-pressed="false" title={hint}>{label}</button>)}
+              {TAGS.filter(({ t }) => count(t) > 0).map(({ t, label, hint }) => <button type="button" data-tag={t} aria-pressed="false" title={hint}>{label}</button>)}
             </div>
             <select data-filter-set aria-label="Problem set">
               <option value="">All sets</option>
@@ -253,7 +266,7 @@ const evenings = builds.filter((a) => a.page).length;
               <option value="solved">Solved</option>
               <option value="revisit">Flagged to revisit</option>
             </select>
-            <input type="search" data-filter-text placeholder="Search: Bellman, softmax, KL…" aria-label="Search problems" />
+            <input type="search" data-filter-text placeholder={book?.search ?? "Search: Bellman, softmax, KL…"} aria-label="Search problems" />
           </div>
           <p class="pb-showing mono" data-showing>{all.length} problems</p>
         </div>
@@ -358,7 +371,7 @@ const evenings = builds.filter((a) => a.page).length;
 
     // Arriving with #key (or another tag) opens the index with that filter. #hard is the named-classics shelf.
     const hash = location.hash.slice(1);
-    if (["key", "warm-up", "core", "code"].includes(hash)) { setTag(hash); document.getElementById("index")!.scrollIntoView(); }
+    if (["key", "warm-up", "core", "code", "olympiad"].includes(hash)) { setTag(hash); document.getElementById("index")!.scrollIntoView(); }
     paintMarks(); filter();
   }
 

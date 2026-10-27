@@ -1,0 +1,116 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P3 · Heat and statistical physics</div>
+  <h1>Problem set: heat and statistical physics</h1>
+  <p class="lede">Twelve problems on temperature, entropy and counting. You will get the pressure of a gas from molecules bouncing off walls, prove that no engine beats Carnot's, find out why the atmosphere thins every 8 km, resolve Gibbs's paradox about mixing identical gases, see a system with a temperature below absolute zero, integrate Planck's law to get the Stefan–Boltzmann constant from $h$, $c$ and $k$, and pay the minimum price for erasing one bit. Try each problem on paper before opening its solution.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/physics/P1-mechanics/">P1</a>, the Boltzmann factor $e^{-E/kT}$, and some sums of series</span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="kinetic-theory">
+    <h2>Molecules in motion</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (Pressure from collisions.) $N$ molecules of mass $m$ fly around a box of volume $V$. By counting the momentum they deliver to one wall, show that $pV = \tfrac13Nm\langle v^2\rangle$. Combined with $pV = NkT$, find the root-mean-square speed of nitrogen molecules ($m = 28$ u) at 300 K, and compare it with the speed of sound in air.</p>
+        <details><summary>Solution</summary><div>
+          <p>Take a wall perpendicular to $x$, of area $A$. A molecule with velocity component $v_x &gt; 0$ hits it and bounces back, delivering momentum $2mv_x$. In time $dt$, the molecules that hit are those within $v_x\,dt$ of the wall, $n\,Av_x\,dt$ of them for each velocity class, where $n = N/V$. Summing over the half of the molecules moving towards the wall, the force per area is $p = \sum 2mv_x\cdot nv_x\cdot\tfrac12 = nm\langle v_x^2\rangle$. By isotropy $\langle v_x^2\rangle = \tfrac13\langle v^2\rangle$, so $pV = \tfrac13Nm\langle v^2\rangle$. Collisions between molecules don't change this; they only shuffle momentum around.</p>
+          <p>Matching with $pV = NkT$ gives $\tfrac12m\langle v^2\rangle = \tfrac32kT$, so $v_{\text{rms}} = \sqrt{3kT/m} = \sqrt{3\times1.381\times10^{-23}\times300/(28\times1.661\times10^{-27})} = 517$ m/s. Sound in air travels at 347 m/s at that temperature, a bit slower than the molecules, as it must be: sound is carried by molecular motion, and $c_s = \sqrt{\gamma kT/m}$ with $\gamma = 1.4$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Three typical speeds.) The Maxwell distribution of molecular speeds is $f(v) = 4\pi\big(\tfrac{m}{2\pi kT}\big)^{3/2}v^2e^{-mv^2/2kT}$. Find the most probable speed, the mean speed and the rms speed, and show that they stand in the ratio $\sqrt2 : \sqrt{8/\pi} : \sqrt3$. Where does the factor $v^2$ come from?</p>
+        <details><summary>Solution</summary><div>
+          <p>Each velocity component is Gaussian with variance $kT/m$ (the Boltzmann factor for kinetic energy). The number of velocity vectors with speed between $v$ and $v + dv$ is a spherical shell of volume $4\pi v^2\,dv$ in velocity space: that is the $v^2$. Write $a = m/2kT$. The peak of $v^2e^{-av^2}$ is where $2v - 2av^3 = 0$, so $v_p = \sqrt{2kT/m}$. The mean is $\langle v\rangle = 4\pi(a/\pi)^{3/2}\int_0^\infty v^3e^{-av^2}dv = 4\pi(a/\pi)^{3/2}\cdot\frac{1}{2a^2} = \frac{2}{\sqrt{\pi a}} = \sqrt{8kT/\pi m}$. And $\langle v^2\rangle = 3kT/m$ from equipartition. The three are in ratio $1 : 1.128 : 1.225$. The distribution has a long tail to high speeds, which pulls the mean above the peak; that tail is what lets light gases like hydrogen and helium leak out of the Earth's atmosphere.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Thin air.) Show that an isothermal atmosphere has pressure $p(z) = p_0e^{-z/H}$ with scale height $H = kT/mg$, and evaluate $H$ for air ($m = 29$ u) at 288 K. Real air is not isothermal: a parcel that rises expands adiabatically. Show that this makes temperature fall at the dry adiabatic lapse rate $g/c_p$, and evaluate it with $c_p = 1005$ J/(kg K).</p>
+        <details><summary>Solution</summary><div>
+          <p>A slab of thickness $dz$ is held up by the pressure difference across it: $dp = -\rho g\,dz$, with $\rho = pm/kT$. So $dp/p = -dz/H$ and $p = p_0e^{-z/H}$, with $H = 1.381\times10^{-23}\times288/(29\times1.661\times10^{-27}\times9.81) = 8.4$ km. Pressure falls by a factor $e$ every 8.4 km: at the top of Everest (8.8 km) it is about a third of sea level. Each molecule's height follows the Boltzmann distribution $e^{-mgz/kT}$.</p>
+          <p>For a parcel rising without exchanging heat, the first law per unit mass reads $c_p\,dT = dp/\rho$ (the enthalpy form, $dh = T\,ds + dp/\rho$ with $ds = 0$). Using hydrostatics, $dp/\rho = -g\,dz$, so $dT/dz = -g/c_p = -9.8$ K/km. Air that is cooler than this with height is unstable and convects; the observed average lapse rate is about 6.5 K/km, lower because rising moist air releases latent heat as its water condenses.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (A drop of perfume.) A molecule in a gas moves by a random walk, with $\langle x^2\rangle = 2Dt$ along each axis. Perfume molecules in still air have $D \approx 10^{-5}$ m²/s. How long would it take to smell perfume across a 5 m room by diffusion alone? What really carries it?</p>
+        <details><summary>Solution</summary><div>
+          <p>$t \approx x^2/2D = 25/(2\times10^{-5})$ s $= 1.25\times10^6$ s, about two weeks. Diffusion is fast over short distances (a millimetre in 0.05 s) and hopelessly slow over long ones, because distance grows only as $\sqrt t$. What actually carries the smell is air movement: convection from warm bodies and draughts at a few cm/s cross the room in minutes. Cells use diffusion for micrometres and pumps (blood) for anything longer, for the same reason.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="entropy">
+    <h2>Engines and entropy</h2>
+    <ol start="5">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Nothing beats Carnot.) An engine works in a cycle, taking heat $Q_h$ from a reservoir at $T_h$, giving $Q_c$ to one at $T_c$, and doing work $W = Q_h - Q_c$. Use the second law, total entropy never decreases, to prove that its efficiency is at most $1 - T_c/T_h$. Then find the best possible coefficient of performance of a heat pump warming a house to 20 °C from outside air at 0 °C.</p>
+        <details><summary>Solution</summary><div>
+          <p>After one cycle the engine is back where it started, so its entropy hasn't changed. The hot reservoir loses entropy $Q_h/T_h$ and the cold one gains $Q_c/T_c$. The second law requires $Q_c/T_c - Q_h/T_h \ge 0$, so $Q_c \ge Q_hT_c/T_h$ and $\eta = 1 - Q_c/Q_h \le 1 - T_c/T_h$, with equality only for a reversible engine. Some heat must be dumped: it is the only way to get rid of the entropy that came in with $Q_h$.</p>
+          <p>A heat pump runs the cycle backwards: work $W$ moves heat from outside and delivers $Q_h = W + Q_c$ indoors. The same inequality gives $Q_h/W \le T_h/(T_h - T_c) = 293/20 = 14.7$. Real heat pumps manage 3 to 4, which still beats burning fuel: each joule of electricity puts three or four joules of heat into the house.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Gibbs's paradox.) A box is divided into two halves of volume $V$, each holding $N$ molecules of ideal gas at the same temperature. The partition is removed. Show that if the gases are different the entropy rises by $2Nk\ln2$. If they are the same gas nothing happens, so the entropy shouldn't change. Show that the entropy formula $S = Nk\ln V + \dots$ wrongly gives $2Nk\ln 2$ again, and that dividing the partition function by $N!$ fixes it.</p>
+        <details><summary>Hint</summary><div><p>For a classical ideal gas, the number of microstates at fixed energy is proportional to $V^N$. With identical particles, which states are you counting $N!$ times? Use Stirling's formula $\ln N! \approx N\ln N - N$.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>For different gases each expands from $V$ to $2V$ at constant temperature, each gaining $Nk\ln(2V/V)$: $\Delta S = 2Nk\ln 2$. This is real; you could extract work $2NkT\ln2$ from the mixing with semi-permeable pistons.</p>
+          <p>Counting states as $V^N$ (times a function of energy) gives $S = Nk\ln V + Nf(T)$. Before: $2\times Nk\ln V$. After: $2Nk\ln 2V$. The difference is $2Nk\ln2$ even for identical gases, and worse, $S$ isn't extensive: doubling the system doesn't double $S$. The fix is that permuting identical particles gives the same state, so the true count is $V^N/N!$. Then $S = Nk\ln(V/N) + Nk + Nf(T)$, which depends on the density $V/N$. Before and after, $V/N$ is the same, so $\Delta S = 0$. With the momentum part done properly this is the Sackur–Tetrode formula $S = Nk\big[\ln\frac{V}{N\lambda^3} + \frac52\big]$, with $\lambda = h/\sqrt{2\pi mkT}$. Classical physics has no reason for the $N!$; it comes from quantum indistinguishability. Gibbs inserted it by hand in 1902, decades before quantum mechanics explained it.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Milk now or later?) Coffee at $T_0$ cools by Newton's law, $\dot T = -\kappa(T - T_r)$, in a room at $T_r$. You will drink it after time $t$, and will add cold milk at $T_m &lt; T_r$, a fraction $b$ of the final mixture. Assuming $\kappa$ is the same either way, show that adding the milk at the start leaves the coffee hotter, by exactly $b(T_r - T_m)(1 - e^{-\kappa t})$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Mixing gives the weighted average (equal specific heats assumed), with $a = 1 - b$. Milk first: $T_A = T_r + (aT_0 + bT_m - T_r)e^{-\kappa t}$. Milk last: $T_B = a\big[T_r + (T_0 - T_r)e^{-\kappa t}\big] + bT_m$. Subtract, using $a + b = 1$:</p>
+          $$T_A - T_B = (T_r - aT_r - bT_m) - (T_r - aT_r - bT_m)e^{-\kappa t} = b(T_r - T_m)(1 - e^{-\kappa t}) &gt; 0.$$
+          <p>Adding milk early cools the coffee, so it then loses heat more slowly; the coffee spends the whole wait closer to room temperature. If the milk were at room temperature, $T_m = T_r$, it wouldn't matter. In practice adding milk also changes the volume and colour of the cup, which changes $\kappa$ a little.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="statistical-mechanics">
+    <h2>Counting states</h2>
+    <ol start="8">
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Two levels and a negative temperature.) A system of $N$ independent particles each has two states, energies $0$ and $\Delta$. At temperature $T$, find the mean energy and the heat capacity. Show that the heat capacity has a peak (the Schottky anomaly) near $kT = 0.42\Delta$, and that if more than half the particles are in the upper state the system has a negative temperature. Is a negative-temperature system hotter or colder than any positive one?</p>
+        <details><summary>Solution</summary><div>
+          <p>The Boltzmann factors are $1$ and $e^{-x}$ with $x = \Delta/kT$, so the upper state's probability is $1/(e^x + 1)$ and $U = N\Delta/(e^x + 1)$. Differentiating, $C = dU/dT = Nk\,\dfrac{x^2e^x}{(e^x + 1)^2}$. It vanishes at low $T$ (too little energy to excite anything) and at high $T$ (both states already equally full, so extra heat changes nothing). Setting $\frac{d}{dx}\big[x^2e^x/(e^x + 1)^2\big] = 0$ gives $x\tanh(x/2) = 2$, so $x = 2.40$, $kT = 0.417\Delta$, with $C_{\max} = 0.44Nk$.</p>
+          <p>From the microcanonical side: with $n$ particles up, $S = k\ln\binom Nn$ and $U = n\Delta$, so $1/T = \partial S/\partial U$ is positive for $n &lt; N/2$, zero at $n = N/2$ and negative for $n &gt; N/2$, where adding energy reduces the number of arrangements. Such population inversions exist in lasers and nuclear spin systems. A negative-temperature system is hotter than any positive one: put them in contact and heat flows from it, because doing so increases both entropies. The coldness scale really runs through $1/T$: from $+\infty$ (absolute zero) down through 0 (infinite $T$) to negative values.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Frozen vibrations.) Equipartition says each quadratic term in the energy contributes $\tfrac12kT$. Predict the molar heat capacity $C_V$ of a diatomic gas with translation, rotation and vibration. Measured, nitrogen at room temperature has $C_V = \tfrac52R$. Treat the vibration as a quantum oscillator with $\hbar\omega/k = 3390$ K, find its mean energy, and explain the discrepancy.</p>
+        <details><summary>Solution</summary><div>
+          <p>Translation has 3 quadratic terms, rotation about the two axes perpendicular to the bond has 2, and vibration has 2 (kinetic and potential). Equipartition predicts $\tfrac72R$. A quantum oscillator with levels $n\hbar\omega$ has partition function $Z = \sum e^{-n\beta\hbar\omega} = 1/(1 - e^{-\beta\hbar\omega})$ and mean energy $\langle E\rangle = -\partial_\beta\ln Z = \dfrac{\hbar\omega}{e^{\hbar\omega/kT} - 1}$. For $kT \gg \hbar\omega$ it tends to $kT$, as equipartition says; for $kT \ll\hbar\omega$ it is exponentially small. At 300 K, $e^{-3390/300} = 1.2\times10^{-5}$: the vibration is frozen out, and $C_V = \tfrac52R$. It only switches on above about 1000 K. (Rotation about the bond axis is frozen too, at any accessible temperature.) This failure of equipartition, noted by Maxwell and Kelvin as one of the "clouds" over physics, was among the first signs of quantisation.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (The Einstein solid.) $N$ oscillators share $q$ quanta of energy $\varepsilon$. Show that the number of microstates is $\Omega = \binom{q + N - 1}{q}$. For $q \gg N \gg 1$, find $S(U)$, then $T$ from $1/T = \partial S/\partial U$, and show $U \approx NkT$: the law of Dulong and Petit, $C = 3R$ per mole, for $3N$ oscillators.</p>
+        <details><summary>Hint</summary><div><p>Stars and bars: arrange $q$ stars and $N - 1$ bars in a row. Then use Stirling's formula on the logarithm of the binomial.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>A microstate is a list of non-negative integers $(n_1, \dots, n_N)$ summing to $q$. Write $q$ stars and put $N - 1$ bars between them to mark where one oscillator's quanta end and the next begin. Each arrangement of $q + N - 1$ symbols with $q$ stars is one microstate, so $\Omega = \binom{q + N - 1}{q}$.</p>
+          <p>With Stirling and $q \gg N \gg 1$, $\ln\Omega \approx (q + N)\ln(q + N) - q\ln q - N\ln N \approx N\ln(q/N) + N$, using $\ln(1 + N/q) \approx N/q$. With $U = q\varepsilon$, $S = Nk\big[\ln\frac{U}{N\varepsilon} + 1\big]$, so $\frac1T = \frac{\partial S}{\partial U} = \frac{Nk}{U}$, and $U = NkT$. A solid with $N_A$ atoms has $3N_A$ oscillators, giving $C = 3R \approx 25$ J/(mol K), the Dulong–Petit law. At low temperatures, $q \lesssim N$, the exact count gives the full Einstein curve, $U = N\varepsilon/(e^{\varepsilon/kT} - 1)$, and the heat capacity falls to zero, as problem 9 found for one oscillator.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The Stefan–Boltzmann constant from first principles.) Planck's law gives the energy density of black-body radiation per unit frequency as $u(\nu) = \dfrac{8\pi h\nu^3}{c^3}\dfrac{1}{e^{h\nu/kT} - 1}$. Integrate it to show that the power radiated per unit area is $\sigma T^4$ with $\sigma = \dfrac{2\pi^5k^4}{15h^3c^2}$, using $\int_0^\infty\frac{x^3}{e^x - 1}dx = \frac{\pi^4}{15}$. Prove that integral, given $\zeta(4) = \sum 1/n^4 = \pi^4/90$. Then find Wien's displacement constant: at what wavelength does $u(\lambda)$ peak?</p>
+        <details><summary>Solution</summary><div>
+          <p>With $x = h\nu/kT$, $\int_0^\infty u\,d\nu = \frac{8\pi h}{c^3}\big(\frac{kT}{h}\big)^4\int_0^\infty\frac{x^3dx}{e^x - 1} = \frac{8\pi^5k^4}{15h^3c^3}T^4$. The flux through a small hole from isotropic radiation is $c/4$ times the energy density (average of $c\cos\theta$ over the outgoing hemisphere), giving $\sigma = \frac{2\pi^5k^4}{15h^3c^2} = 5.670\times10^{-8}$ W m⁻² K⁻⁴.</p>
+          <p>For the integral, expand $\frac{1}{e^x - 1} = \sum_{n\ge1}e^{-nx}$ and integrate term by term (all terms are positive, so this is allowed): $\int_0^\infty x^3e^{-nx}dx = 6/n^4$, and the sum is $6\zeta(4) = 6\pi^4/90 = \pi^4/15$.</p>
+          <p>Per unit wavelength, $u(\lambda) = u(\nu)\,|d\nu/d\lambda| \propto \lambda^{-5}/(e^{hc/\lambda kT} - 1)$. Setting its derivative to zero with $x = hc/\lambda kT$ gives $x = 5(1 - e^{-x})$, solved by $x = 4.965$. So $\lambda_{\max}T = hc/4.965k = 2.898\times10^{-3}$ m K. The Sun, at 5772 K, peaks at 502 nm, in the green; you, at 310 K, peak at 9.3 μm, in the infrared, which is where thermal cameras look. The peak per unit frequency is at $x = 2.82$ instead: "the peak" depends on how you bin the spectrum.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The price of forgetting.) A single molecule in a box of volume $V$ at temperature $T$ (Szilard's engine). Insert a partition in the middle, look which side the molecule is on, and let it push a piston outwards isothermally to fill the box. Show that you extract work $kT\ln2$ from one bit of information. Why doesn't this break the second law? Evaluate Landauer's limit, the minimum heat needed to erase one bit, at 300 K.</p>
+        <details><summary>Solution</summary><div>
+          <p>The one-molecule gas obeys $pV = kT$ on average. Expanding isothermally from $V/2$ to $V$, it does work $\int p\,dV = kT\ln2$, drawn as heat from the surroundings. Repeat forever and you turn heat into work with one reservoir, which is forbidden.</p>
+          <p>The catch is the memory. After each cycle the demon holds a bit ("left" or "right") and must reset it to be ready for the next. Landauer showed (1961) that erasing a bit, mapping two possible states onto one, reduces the memory's entropy by $k\ln2$, and that entropy must go somewhere: at least $kT\ln2$ of heat goes into the surroundings. That exactly cancels the gain. At 300 K the limit is $kT\ln 2 = 2.9\times10^{-21}$ J, or 0.018 eV. Today's chips spend about a million times more per bit operation, and experiments since 2012 have measured erasures that approach the limit. Information is physical.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Schroeder's <i>An Introduction to Thermal Physics</i> builds statistical mechanics from the Einstein solid of problem 10 and has many more problems in this spirit. Kittel and Kroemer's <i>Thermal Physics</i> and Blundell and Blundell's <i>Concepts in Thermal Physics</i> are good companions; Leff and Rex's <i>Maxwell's Demon 2</i> collects the papers behind problem 12.</p>
+  </section>
+</article>

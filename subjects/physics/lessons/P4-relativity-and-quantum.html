@@ -1,0 +1,115 @@
+<header class="lesson-head">
+  <div class="eyebrow">Problem set P4 · Relativity and quantum physics</div>
+  <h1>Problem set: relativity and quantum physics</h1>
+  <p class="lede">Thirteen problems from the two revolutions of the early twentieth century. On the relativity side: a clock made of light, muons that reach the ground only because their time runs slow, the twin paradox settled by counting birthday signals, and the beam energy needed to make the first antiproton. On the quantum side: why atoms have the size they do, the electron that leaks through a wall it cannot climb, and three polarisers that let through light that two of them block. Try each problem on paper before opening its solution.</p>
+  <div class="meta"><span><b>Needs:</b> <a href="/physics/P1-mechanics/">P1</a>, <a href="/physics/P2-waves-and-electromagnetism/">P2</a>, the Lorentz transformation, and the Schrödinger equation for problems 10–11</span><span><b>Tags:</b> <span class="tag key">key</span> <span class="tag warm-up">warm-up</span> <span class="tag core">core</span> <span class="tag hard">hard</span></span></div>
+</header>
+
+<article class="lesson problems">
+  <section id="special-relativity">
+    <h2>Special relativity</h2>
+    <ol>
+      <li>
+        <p><span class="tag key">key</span><span class="tag warm-up">warm-up</span> (A clock made of light.) A light pulse bounces between two mirrors a distance $L$ apart; each round trip is one tick. The clock moves at speed $v$ perpendicular to its arm. Using only the fact that light has speed $c$ in every inertial frame, show that a moving clock ticks slower by the factor $\gamma = 1/\sqrt{1 - v^2/c^2}$.</p>
+        <details><summary>Solution</summary><div>
+          <p>In the clock's frame a tick takes $\Delta t_0 = 2L/c$. In the frame where it moves, during half a tick $\Delta t/2$ the mirrors move sideways by $v\Delta t/2$, so the light travels the diagonal $\sqrt{L^2 + (v\Delta t/2)^2}$, and at speed $c$: $(c\Delta t/2)^2 = L^2 + (v\Delta t/2)^2$. Solving, $\Delta t = \dfrac{2L/c}{\sqrt{1 - v^2/c^2}} = \gamma\Delta t_0$. The arm's length is the same in both frames, because lengths perpendicular to the motion can't change (two such rods passing each other would otherwise each have to be shorter than the other). Any other clock moving with the light clock must agree with it, or you could tell which frame is "really" moving. So all moving clocks, including heartbeats and decaying particles, run slow.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Muons reach the ground.) Cosmic rays make muons about 15 km up. A muon at rest decays with mean lifetime $\tau = 2.2$ μs. For muons moving straight down at $0.995c$, what fraction would survive to sea level without time dilation, and what fraction survive with it? Explain the same result in the muon's own frame.</p>
+        <details><summary>Solution</summary><div>
+          <p>The trip takes $15\,000/(0.995\times3\times10^8) = 50.3$ μs in the Earth's frame, about $22.9\tau$. Without dilation the surviving fraction would be $e^{-22.9} \approx 10^{-10}$: essentially none. With $\gamma = 1/\sqrt{1 - 0.995^2} = 10.0$, the muons' clocks advance only 5.0 μs $= 2.29\tau$, and $e^{-2.29} = 10\%$ survive. Detectors at sea level do see them in about those numbers (Rossi and Hall in 1941, and Frisch and Smith's famous 1963 film).</p>
+          <p>In the muon's frame its clock is normal, but the atmosphere rushes up at $0.995c$ and is contracted to $15/10.0 = 1.5$ km thick, which passes in 5.0 μs. Same number of decays, as there must be: whether a muon reaches the detector is a fact both frames agree on.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (Adding speeds.) From the Lorentz transformation, show that a ball thrown at $u'$ forward inside a train moving at $v$ has ground speed $u = \dfrac{u' + v}{1 + u'v/c^2}$. Show that $u &lt; c$ whenever $u', v &lt; c$, and that $u' = c$ gives $u = c$. What is $0.9c$ "plus" $0.9c$?</p>
+        <details><summary>Solution</summary><div>
+          <p>With $x = \gamma(x' + vt')$ and $t = \gamma(t' + vx'/c^2)$, differentiate along the ball's path $x' = u't'$: $u = \frac{dx}{dt} = \frac{u' + v}{1 + u'v/c^2}$. Then $c - u = \frac{c(1 + u'v/c^2) - u' - v}{1 + u'v/c^2} = \frac{(c - u')(c - v)}{c(1 + u'v/c^2)}$, which is positive when both $u'$ and $v$ are below $c$ and zero when either equals $c$. Speeds never add up past $c$, and light moves at $c$ for everyone. $0.9c$ plus $0.9c$ is $1.8c/1.81 = 0.9945c$. The neat way to see it: rapidities $\phi = \operatorname{artanh}(v/c)$ add like ordinary numbers, and $\tanh$ is always below 1.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag hard">hard</span> (The twin paradox by birthday cards.) Alice stays on Earth. Bob flies at $0.8c$ to a star 4 light-years away and straight back. Each twin sends a light signal to the other on every one of their own birthdays. Using the relativistic Doppler factor $\sqrt{(1 + \beta)/(1 - \beta)}$, count how many signals each receives and when, and show that everything agrees: Alice ages 10 years and Bob 6. Where exactly is the asymmetry?</p>
+        <details><summary>Hint</summary><div><p>At $\beta = 0.8$ the Doppler factor is 3: receding, signals arrive at a third of the rate they are sent; approaching, three times the rate. The key question is when Alice <i>sees</i> Bob turn round.</p></div></details>
+        <details><summary>Solution</summary><div>
+          <p>In Alice's frame the trip takes $2\times4/0.8 = 10$ years, and Bob's clock runs slow by $\gamma = 5/3$, so he ages 6 years, 3 each way. Now count signals.</p>
+          <p><b>Bob receives.</b> Outbound, for 3 of his years, Alice's signals arrive at a third of the rate: 1 card. Inbound, for 3 years, at three times the rate: 9 cards. Total 10: Alice has aged 10 years. <b>Alice receives.</b> Bob turns round at Earth-time 5 years, 4 light-years away, so she sees the turnaround at year 9. For 9 years she receives his outbound signals at a third of the rate: 3 cards. In the final year she receives his inbound signals at three times the rate: 3 cards. Total 6: Bob has aged 6. Both counts agree.</p>
+          <p>The asymmetry is in the turnaround. Bob switches from a slow stream of cards to a fast one halfway through his trip; Alice sees the switch only in the last tenth of hers. Bob is the twin who changes inertial frame, and he can feel it (the acceleration), so the situations were never symmetric. No general relativity is needed.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (A pion decays.) A charged pion at rest ($m_\pi c^2 = 139.57$ MeV) decays into a muon ($m_\mu c^2 = 105.66$ MeV) and a nearly massless neutrino. Using conservation of energy and momentum, find the momentum and kinetic energy of the muon. Why is the muon's energy always the same?</p>
+        <details><summary>Solution</summary><div>
+          <p>The two products fly apart with equal and opposite momentum $p$. The neutrino has $E_\nu = pc$, and the muon $E_\mu = \sqrt{p^2c^2 + m_\mu^2c^4}$. Energy conservation, $m_\pi c^2 = pc + E_\mu$, gives $E_\mu = m_\pi c^2 - pc$; squaring, $p^2c^2 + m_\mu^2c^4 = m_\pi^2c^4 - 2m_\pi c^2\,pc + p^2c^2$, so</p>
+          $$pc = \frac{(m_\pi^2 - m_\mu^2)c^2}{2m_\pi} = 29.79\text{ MeV},\qquad K_\mu = E_\mu - m_\mu c^2 = 4.12\text{ MeV}.$$
+          <p>A two-body decay at rest has only one solution, so every muon comes out with the same energy: a sharp line. In beta decay, by contrast, the electrons came out with a continuous spread of energies, which led Pauli in 1930 to propose that a third, unseen particle (the neutrino) was carrying off the rest.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Making the first antiproton.) The reaction $p + p \to p + p + p + \bar p$ makes an antiproton. A beam proton hits a proton at rest. Using the invariant $s = (E_{\text{tot}})^2 - (p_{\text{tot}}c)^2$, show that the threshold kinetic energy of the beam is $6m_pc^2 = 5.6$ GeV. Why is it not just $2m_pc^2$, the rest energy of the new pair? The Bevatron at Berkeley was built to reach 6.2 GeV, and found the antiproton in 1955.</p>
+        <details><summary>Solution</summary><div>
+          <p>In the lab, with beam energy $E$ (rest energy included) and momentum $p$, $s = (E + m_pc^2)^2 - p^2c^2 = 2m_p^2c^4 + 2Em_pc^2$, using $E^2 - p^2c^2 = m_p^2c^4$. $s$ is the same in every frame. In the centre-of-momentum frame at threshold, the four final particles are created at rest, so $s = (4m_pc^2)^2$. Setting them equal, $2m_p^2c^4 + 2Em_pc^2 = 16m_p^2c^4$, so $E = 7m_pc^2$ and the kinetic energy is $6m_pc^2 = 6\times0.938 = 5.63$ GeV.</p>
+          <p>Only $2m_pc^2$ of new mass is made, but momentum must be conserved: the products must move with the total momentum of the beam, and that motion carries most of the energy. This is why colliders smash two beams head-on. With equal and opposite beams the total momentum is zero, and each beam needs only $m_pc^2$ of kinetic energy.</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="quanta">
+    <h2>Quanta of light and matter</h2>
+    <ol start="7">
+      <li>
+        <p><span class="tag core">core</span> (Compton scattering.) An X-ray photon of wavelength $\lambda$ scatters off an electron at rest and leaves at angle $\theta$. Treating the photon as a particle with $E = hc/\lambda$ and $p = h/\lambda$, show that $\lambda' - \lambda = \dfrac{h}{m_ec}(1 - \cos\theta)$, and evaluate the Compton wavelength $h/m_ec$.</p>
+        <details><summary>Solution</summary><div>
+          <p>Write four-momenta: photon $k$ and $k'$, electron $P = (m_ec, \mathbf 0)$ and $P'$. Conservation gives $P' = k + P - k'$; square both sides with the Minkowski product, using $k^2 = k'^2 = 0$ and $P^2 = P'^2 = m_e^2c^2$: $0 = 2k\cdot P - 2k'\cdot P - 2k\cdot k'$. Now $k\cdot P = m_ec\,(h/\lambda)$, $k'\cdot P = m_ec\,(h/\lambda')$ and $k\cdot k' = \frac{h^2}{\lambda\lambda'}(1 - \cos\theta)$. Multiplying through by $\lambda\lambda'/(m_ech)$ gives $\lambda' - \lambda = \frac{h}{m_ec}(1 - \cos\theta)$. The Compton wavelength is $h/m_ec = 2.43$ pm. The shift doesn't depend on $\lambda$ at all, so it is only noticeable for X-rays and gamma rays, whose wavelengths are a few picometres. Compton's 1923 measurement convinced most physicists that light comes in particles that carry momentum.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag warm-up">warm-up</span> (Hydrogen's red line.) The Rydberg formula $1/\lambda = R_H\big(1/n_1^2 - 1/n_2^2\big)$, with $R_H = 1.0968\times10^7$ m⁻¹, gives hydrogen's spectral lines. Compute the wavelength of the $3 \to 2$ transition (H-alpha) and say what colour it is. Show that the Bohr model, with energies $E_n = -13.6\text{ eV}/n^2$, gives the same formula.</p>
+        <details><summary>Solution</summary><div>
+          <p>$1/\lambda = 1.0968\times10^7\times(\tfrac14 - \tfrac19) = 1.523\times10^6$ m⁻¹, so $\lambda = 656.5$ nm in vacuum (656.3 nm in air): a deep red. It is the colour of glowing hydrogen in nebulae and of solar prominences. A photon carries away the energy difference $E_{n_2} - E_{n_1} = 13.6\text{ eV}\,(1/n_1^2 - 1/n_2^2)$, and $1/\lambda = E/hc$, so $R = 13.6\text{ eV}/hc = 1.097\times10^7$ m⁻¹. The Balmer lines ($n_1 = 2$) are the visible ones; the Lyman series ($n_1 = 1$) is in the ultraviolet.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Why atoms have a size.) An electron confined within radius $r$ has momentum of order $\hbar/r$ by the uncertainty principle. Write the energy of a hydrogen atom as $E(r) = \dfrac{\hbar^2}{2m_er^2} - \dfrac{e^2}{4\pi\varepsilon_0r}$, minimise it, and show that this gives exactly the Bohr radius and $-13.6$ eV. Why doesn't the atom collapse, as the classical calculation of P2 problem 12 says it should?</p>
+        <details><summary>Solution</summary><div>
+          <p>With $\kappa = e^2/4\pi\varepsilon_0$, $E'(r) = -\hbar^2/(m_er^3) + \kappa/r^2 = 0$ at $r = \hbar^2/(m_e\kappa) = 5.29\times10^{-11}$ m, the Bohr radius $a_0$. There $E = \frac{\hbar^2}{2m_ea_0^2} - \frac{\kappa}{a_0} = -\frac{\kappa}{2a_0} = -\frac{m_e\kappa^2}{2\hbar^2} = -13.6$ eV. Getting the factors exactly right is luck (the real ground state has $\langle p^2\rangle = \hbar^2/a_0^2$ and $\langle1/r\rangle = 1/a_0$, which happen to fit), but the scale is not luck.</p>
+          <p>Squeezing the electron closer than $a_0$ costs more kinetic energy, growing like $1/r^2$, than it gains in potential energy, which only grows like $1/r$. There is a lowest-energy state and no state below it to radiate down to. That stability, and with it all of chemistry, is a consequence of the uncertainty principle.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag core">core</span> (The ground state of an oscillator.) Show that $\psi_0(x) = Ae^{-m\omega x^2/2\hbar}$ solves the Schrödinger equation for $V = \tfrac12m\omega^2x^2$ with energy $\tfrac12\hbar\omega$. Compute $\Delta x$ and $\Delta p$ and show that $\Delta x\,\Delta p = \hbar/2$, the smallest value the uncertainty principle allows.</p>
+        <details><summary>Solution</summary><div>
+          <p>Let $\alpha = m\omega/\hbar$. Then $\psi_0'' = (\alpha^2x^2 - \alpha)\psi_0$, so $-\frac{\hbar^2}{2m}\psi_0'' + \frac12m\omega^2x^2\psi_0 = \big(-\frac{\hbar^2\alpha^2}{2m}x^2 + \frac{\hbar^2\alpha}{2m} + \frac12m\omega^2x^2\big)\psi_0 = \frac12\hbar\omega\,\psi_0$, since $\hbar^2\alpha^2/2m = \frac12m\omega^2$. The $x^2$ terms cancel exactly.</p>
+          <p>$|\psi_0|^2$ is a Gaussian with variance $\Delta x^2 = 1/(2\alpha) = \hbar/2m\omega$. In momentum space the Fourier transform of a Gaussian is a Gaussian, with $\Delta p^2 = \hbar^2\alpha/2 = m\omega\hbar/2$. So $\Delta x\,\Delta p = \hbar/2$. The energy is $\langle p^2\rangle/2m + \frac12m\omega^2\langle x^2\rangle = \frac14\hbar\omega + \frac14\hbar\omega$, shared equally, as in a classical oscillator. The zero-point energy $\frac12\hbar\omega$ is why helium stays liquid down to absolute zero at normal pressure.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (Through the wall.) An electron with energy $E = 1$ eV meets a rectangular barrier of height $V_0 = 5$ eV and width $a = 0.5$ nm. Inside, the wavefunction decays like $e^{-\kappa x}$ with $\kappa = \sqrt{2m_e(V_0 - E)}/\hbar$. Using the thick-barrier result $T \approx \dfrac{16E(V_0 - E)}{V_0^2}e^{-2\kappa a}$, estimate the transmission probability. By what factor does it change if the barrier gets 0.1 nm thinner? This is how a scanning tunnelling microscope sees single atoms.</p>
+        <details><summary>Solution</summary><div>
+          <p>$\kappa = \sqrt{2\times9.11\times10^{-31}\times4\times1.60\times10^{-19}}/1.055\times10^{-34} = 1.02\times10^{10}$ m⁻¹, so $2\kappa a = 10.2$ and $e^{-10.2} = 3.5\times10^{-5}$. The prefactor is $16\times1\times4/25 = 2.56$, so $T \approx 9\times10^{-5}$: about one electron in eleven thousand gets through a wall it has nowhere near the energy to climb.</p>
+          <p>Thinning the barrier by $0.1$ nm multiplies $T$ by $e^{2\kappa\times10^{-10}} = e^{2.05} \approx 7.8$. In a scanning tunnelling microscope the barrier is the vacuum gap between a sharp tip and a surface. Moving the tip by one atom's diameter changes the current by roughly a factor of ten, so holding the current constant while scanning maps the surface's height to a hundredth of a nanometre. The exponential sensitivity that makes tunnelling rare is what makes it such a good ruler. The same physics, with alpha particles and a Coulomb barrier, sets the lifetimes of radioactive nuclei (and powers the Sun; see astronomy P2).</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag key">key</span><span class="tag core">core</span> (Three polarisers.) A polariser passes light polarised along its axis and blocks light perpendicular to it; for a single photon polarised at angle $\theta$ to the axis, the probability of passing is $\cos^2\theta$ (Malus's law). Two crossed polarisers block everything. Show that putting a third one at $45^\circ$ between them lets through a quarter of the light that passes the first. Then put $N - 1$ polarisers between them at equal steps of $90^\circ/N$: show that the transmitted fraction is $\cos^{2N}(\pi/2N) \to 1$ as $N\to\infty$, and find how fast.</p>
+        <details><summary>Solution</summary><div>
+          <p>After the first polariser every photon is polarised along its axis, and a passed photon is polarised along the axis it just passed. With a $45^\circ$ middle polariser, each of the two steps has probability $\cos^245^\circ = \tfrac12$, so a quarter get through: adding a filter increases the transmission from zero. The middle polariser is a measurement that prepares a new state, which then has a fair chance at the last one.</p>
+          <p>With $N$ equal steps of $\pi/2N$ the fraction is $\big(\cos^2\frac{\pi}{2N}\big)^N$. Its logarithm is $2N\ln\cos\frac{\pi}{2N} \approx 2N\big(-\frac{\pi^2}{8N^2}\big) = -\frac{\pi^2}{4N}$, so the fraction is about $1 - \frac{\pi^2}{4N}$: 42% for $N = 3$, 78% for $N = 10$, 97.6% for $N = 100$. Many gentle measurements drag the state along with them; this is the quantum Zeno effect's cousin. The same mathematics holds for spin-$\frac12$ particles in Stern–Gerlach magnets, with $\theta$ replaced by $\theta/2$.</p>
+        </div></details>
+      </li>
+      <li>
+        <p><span class="tag hard">hard</span> (A sea of electrons.) Treat the conduction electrons in copper as a gas of free fermions, two per momentum state (spin), filling all states up to the Fermi momentum $p_F$. Show that $p_F = \hbar(3\pi^2n)^{1/3}$ for electron density $n$, and evaluate the Fermi energy $E_F = p_F^2/2m_e$ with $n = 8.47\times10^{28}$ m⁻³. Compare $E_F$ with $kT$ at room temperature, and explain why the electrons contribute so little to copper's heat capacity.</p>
+        <details><summary>Solution</summary><div>
+          <p>In a box of volume $V$ the allowed wave vectors form a grid with one point per $(2\pi)^3/V$ of $k$-space. Filling a sphere of radius $k_F$ with two electrons per point: $N = 2\cdot\frac{4\pi k_F^3/3}{(2\pi)^3/V}$, so $k_F^3 = 3\pi^2n$ and $p_F = \hbar k_F$. For copper, $k_F = 1.36\times10^{10}$ m⁻¹ and $E_F = \hbar^2k_F^2/2m_e = 7.0$ eV, a Fermi temperature $E_F/k$ of 82,000 K.</p>
+          <p>At 300 K, $kT = 0.026$ eV, so the electron sea is deeply degenerate: almost all the electrons sit in states far below the top, with every state they could move to already filled (Pauli). Only those within about $kT$ of $E_F$ can absorb heat, a fraction $\sim kT/E_F \approx 0.4\%$. So the electronic heat capacity is about $\frac{\pi^2}{2}\frac{kT}{E_F}Nk$, about eighty times below the classical $\frac32Nk$, which solved a big puzzle of pre-quantum metal theory. The same degeneracy pressure, with stars in place of copper, holds up white dwarfs (astronomy P2).</p>
+        </div></details>
+      </li>
+    </ol>
+  </section>
+
+  <section id="further">
+    <h2>Going further</h2>
+    <p>Taylor and Wheeler's <i>Spacetime Physics</i> is the most fun place to practise special relativity; Morin's <i>Introduction to Classical Mechanics</i> has a superb chapter of relativity puzzles. For quantum mechanics, Griffiths's <i>Introduction to Quantum Mechanics</i> and the problem collections by Squires (<i>Problems in Quantum Mechanics</i>) take these ideas through the hydrogen atom and beyond.</p>
+  </section>
+</article>
